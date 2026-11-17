@@ -1,0 +1,6 @@
+Fix pass for task 6 per logs/review-6.md. Do not rewrite unrelated modules.
+- MAJOR-1: keep the tuned Random thresholds, but update design.md to match the code with a one-paragraph rationale, and add a unit test that a mildly non-uniform map (e.g. 7% random fails plus a weak edge bias) is NOT classified Random.
+- MINOR-4: add a small adversarial test set (hand-built maps): a clean Center blob, a Donut ring, an off-center Loc cluster, an Edge-Loc arc, a diagonal Scratch at a non-axis angle, a Near-full wafer, a clean wafer (none). Each must classify correctly. If any fails, fix the rules (not the test), keeping D4 invariance and existing tests green.
+- MINOR-2: make the demo scratch chord seeded and non-axis-aligned, keeping ground truth recovery.
+- MINOR-1, MINOR-3, MINOR-5, MINOR-6, MINOR-7 (replace with a standard fab term, hedged), MINOR-8 (keep property runs fast: whole vitest suite should stay under ~60 s; lower numRuns if needed).
+Run `npx tsc --noEmit`, `npx eslint .`, `npx vitest run` until green. Append 2 lines to logs/progress.md. No web search. Finish within 15 minutes; if not done, leave tree compiling and note what remains.

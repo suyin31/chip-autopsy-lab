@@ -246,7 +246,19 @@ interface StaticGridDie {
   readonly y: number;
   readonly siteNum: 1 | 2 | 3 | 4;
   readonly ringIndex: number;
-  readonly onScratchChord: boolean;
+}
+
+export interface SeededScratchChordGeometry {
+  /** Signed chord tangent angle in radians (strictly non-axis-aligned). */
+  readonly angleRad: number;
+  /** Signed chord tangent angle in degrees (`±[22°, 38°]` or `±[52°, 68°]`). */
+  readonly angleDeg: number;
+  /** Signed perpendicular offset from `(0, 0)` in die pitches (`±[0.9, 2.0]`). */
+  readonly lateralOffset: number;
+  /** Half-length along the chord tangent in die pitches. */
+  readonly halfLength: number;
+  /** Perpendicular half-width of the scored band in die pitches. */
+  readonly halfWidth: number;
 }
 
 interface StaticWaferLayout {
@@ -259,8 +271,8 @@ let cachedLayout: StaticWaferLayout | null = null;
 
 /**
  * Builds and caches the 633-die circular wafer layout (`x^2 + y^2 <= 14.2^2`),
- * 4-neighbour edge-ring indices, scratch chord membership (`0.55x - y + 1.5 = 0`),
- * and serpentine `2x2` quad-site prober touchdown stepping order:
+ * 4-neighbour edge-ring indices, and serpentine `2x2` quad-site prober touchdown
+ * stepping order:
  * - Site 1: `(even X, even Y)`
  * - Site 2: `(odd X, even Y)`
  * - Site 3: `(even X, odd Y)`
@@ -273,7 +285,6 @@ function getStaticWaferLayout(): StaticWaferLayout {
 
   const radiusSq = DEMO_WAFER_RADIUS * DEMO_WAFER_RADIUS;
   const rawCoords: Array<{ readonly x: number; readonly y: number }> = [];
-  const coordLookup = new Map<string, number>();
 
   // Step 2x2 touchdown blocks in serpentine prober row order (bottom-to-top Y, alternating X)
   const touchdownGroups: number[][] = [];
@@ -304,7 +315,6 @@ function getStaticWaferLayout(): StaticWaferLayout {
           const idx = rawCoords.length;
           rawCoords.push({ x, y });
           siteNumsForIndex.push(off.siteNum);
-          coordLookup.set(`${x},${y}`, idx);
           group.push(idx);
         }
       }
@@ -319,21 +329,68 @@ function getStaticWaferLayout(): StaticWaferLayout {
 
   for (let i = 0; i < rawCoords.length; i += 1) {
     const { x, y } = rawCoords[i]!;
-    // Chord: 0.55x - y + 1.5 = 0 within x in [-11, 10], residual <= 1.05 (~1.84 perpendicular pitch)
-    const chordResidual = Math.abs(0.55 * x - y + 1.5);
-    const onScratchChord = x >= -11 && x <= 10 && chordResidual <= 1.05;
     dies[i] = {
       gridIndex: i,
       x,
       y,
       siteNum: siteNumsForIndex[i]!,
       ringIndex: ringIndices[i]!,
-      onScratchChord,
     };
   }
 
   cachedLayout = { dies, touchdownGroups };
   return cachedLayout;
+}
+
+const SCRATCH_CHORD_SALT = 0x5c7a7c4;
+
+/**
+ * Deterministically derives a seeded, strictly non-axis-aligned (and non-45°)
+ * robotic transfer-blade scratch chord for a given 32-bit `seed`.
+ */
+export function computeSeededScratchChordGeometry(
+  seed: number,
+): SeededScratchChordGeometry {
+  const chordRng = createPrng(mixSeed(normalizeSeed(seed), SCRATCH_CHORD_SALT));
+  const steepBand = chordRng.nextBool(0.5);
+  const magDeg = steepBand
+    ? chordRng.nextRange(52, 68)
+    : chordRng.nextRange(22, 38);
+  const slopeSign = chordRng.nextBool(0.5) ? 1 : -1;
+  const angleDeg = slopeSign * magDeg;
+  const angleRad = (angleDeg * Math.PI) / 180;
+  const offsetSign = chordRng.nextBool(0.5) ? 1 : -1;
+  const lateralOffset = offsetSign * chordRng.nextRange(0.9, 2.0);
+
+  return {
+    angleRad,
+    angleDeg,
+    lateralOffset,
+    halfLength: 11.6,
+    halfWidth: 0.92,
+  };
+}
+
+function buildSeededScratchChordMask(
+  seed: number,
+  dies: readonly StaticGridDie[],
+): Uint8Array {
+  const geom = computeSeededScratchChordGeometry(seed);
+  const tx = Math.cos(geom.angleRad);
+  const ty = Math.sin(geom.angleRad);
+  const nx = -ty;
+  const ny = tx;
+
+  const mask = new Uint8Array(dies.length);
+  for (let i = 0; i < dies.length; i += 1) {
+    const { x, y } = dies[i]!;
+    const along = Math.abs(x * tx + y * ty);
+    const perp = Math.abs(x * nx + y * ny - geom.lateralOffset);
+    if (along <= geom.halfLength && perp <= geom.halfWidth) {
+      mask[i] = 1;
+    }
+  }
+  return mask;
 }
 
 type FailureMode =
@@ -532,6 +589,7 @@ function planWaferDieOutcomes(
   presetId: DemoPresetId,
   waferIndex: number,
   dies: readonly StaticGridDie[],
+  scratchChordMask: Uint8Array | null,
 ): readonly DiePlan[] {
   const plans: DiePlan[] = new Array<DiePlan>(dies.length);
 
@@ -598,7 +656,9 @@ function planWaferDieOutcomes(
 
     if (presetId === 'handling-scratch') {
       const waferHasScratch = waferIndex >= 4 && waferIndex <= 21; // W05..W22
-      const isInjected = waferHasScratch && die.onScratchChord && rng.nextBool(0.84);
+      const onScratchChord =
+        scratchChordMask !== null && scratchChordMask[i] !== 0;
+      const isInjected = waferHasScratch && onScratchChord && rng.nextBool(0.85);
       if (isInjected) {
         const retest = rng.nextBool(0.06) ? SHORT_FAIL_OUTCOME : null;
         plans[i] = {
@@ -723,6 +783,10 @@ export function generateDemoLot(
   const resolvedSeed = normalizeSeed(seed ?? preset.defaultSeed);
   const rootRng = createPrng(mixSeed(resolvedSeed, config.salt));
   const layout = getStaticWaferLayout();
+  const scratchChordMask =
+    presetId === 'handling-scratch'
+      ? buildSeededScratchChordMask(resolvedSeed, layout.dies)
+      : null;
 
   const tsrAcc = createTsrAccumulators();
   const hbinCounts = new Map<number, number>();
@@ -747,7 +811,13 @@ export function generateDemoLot(
   for (let wIdx = 0; wIdx < DEMO_WAFER_COUNT; wIdx += 1) {
     const waferId = `W${String(wIdx + 1).padStart(2, '0')}`;
     const waferRng = rootRng.fork(wIdx + 1);
-    const plans = planWaferDieOutcomes(waferRng, presetId, wIdx, layout.dies);
+    const plans = planWaferDieOutcomes(
+      waferRng,
+      presetId,
+      wIdx,
+      layout.dies,
+      scratchChordMask,
+    );
 
     if (presetId === 'edge-ring-etch') {
       expectedWaferPatterns.push('Edge-Ring');

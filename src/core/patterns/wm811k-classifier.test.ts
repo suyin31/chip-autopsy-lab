@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildLotModel } from '../model/lot-builder';
+import { computeStackedHeatmap } from '../analytics/yield-summary';
+import { createPrng } from '../demo/prng';
+import { buildLotModel, computeWaferEdgeRingIndices } from '../model/lot-builder';
 import type { LotModel } from '../model/types';
 import {
   type ParsedLotBuildInput,
@@ -202,6 +204,14 @@ describe('WM-811K spatial classifier & root-cause hypotheses', () => {
       }
     }
 
+    const donutHyps = getPatternRootCauseHypotheses('Donut');
+    expect(
+      donutHyps.some((h) => h.summary.includes('recirculation vortex')),
+    ).toBe(false);
+    expect(
+      donutHyps.some((h) => h.summary.includes('showerhead flow non-uniformity')),
+    ).toBe(true);
+
     const siteHyps = getSiteConcentrationHypotheses({ headNum: 1, siteNum: 2 });
     const siteFormatted = formatSiteConcentrationHypotheses({ headNum: 1, siteNum: 2 });
     expect(siteHyps.length).toBeGreaterThanOrEqual(2);
@@ -211,6 +221,221 @@ describe('WM-811K spatial classifier & root-cause hypotheses', () => {
       expect(h.summary).toContain('Head 1 Site 2 (1:2)');
       expect(h.summary).toContain('Check next:');
       expect(h.summary).not.toMatch(forbiddenPattern);
+    }
+  });
+
+  it('rejects Random on mildly non-uniform maps (~7% random fails plus a weak edge bias, MAJOR-1)', () => {
+    const disc = makeDiscCoords(14.2); // 633 cells
+    const rings = computeWaferEdgeRingIndices(disc);
+
+    // Case A: ~7% uniform random baseline fails + weak asymmetric peripheral edge bias
+    const rngA = createPrng(0x2026_0701);
+    const crescentBiased = disc.map((c, idx) => {
+      const baselineRandom = rngA.nextBool(0.07);
+      const weakEdgeBias =
+        rings[idx]! <= 3 && c.x >= 2 && rngA.nextBool(0.26);
+      return { x: c.x, y: c.y, failed: baselineRandom || weakEdgeBias };
+    });
+    const resA = classifyWaferPattern(buildCircularTestLot([crescentBiased]), 0);
+    expect(resA.pattern).not.toBe('Random');
+
+    // Case B: ~7% uniform random baseline fails + weak concentric outer-ring bias
+    const rngB = createPrng(0x2026_0702);
+    const ringBiased = disc.map((c, idx) => {
+      const baselineRandom = rngB.nextBool(0.07);
+      const weakOuterBias = rings[idx]! <= 3 && rngB.nextBool(0.2);
+      return { x: c.x, y: c.y, failed: baselineRandom || weakOuterBias };
+    });
+    const resB = classifyWaferPattern(buildCircularTestLot([ringBiased]), 0);
+    expect(resB.pattern).not.toBe('Random');
+  });
+
+  it('classifies hand-built adversarial maps accurately across all classes and D4 transforms (MINOR-1, MINOR-4, MINOR-6)', () => {
+    const disc = makeDiscCoords(14.2); // 633 cells, symmetric about (0, 0)
+    const rings = computeWaferEdgeRingIndices(disc);
+
+    const hasPoint = (
+      pts: ReadonlyArray<readonly [number, number]>,
+      x: number,
+      y: number,
+    ): boolean => pts.some(([px, py]) => px === x && py === y);
+
+    // 1. Clean Center blob + sparse point noise
+    const centerMap = disc.map(({ x, y }) => {
+      const r = Math.hypot(x, y);
+      const inBlob = r <= 4.4 && (r <= 3.6 || (x + y) % 5 !== 0);
+      const noise = hasPoint(
+        [
+          [-9, 4],
+          [8, -7],
+          [-3, 11],
+          [10, 2],
+        ],
+        x,
+        y,
+      );
+      return { x, y, failed: inBlob || noise };
+    });
+
+    // 2. Donut ring (mid-radius annulus) + sparse point noise
+    const donutMap = disc.map(({ x, y }, idx) => {
+      const r = Math.hypot(x, y);
+      const inRing =
+        r >= 6.1 &&
+        r <= 9.6 &&
+        rings[idx]! > 3 &&
+        (((x * 3 + y * 5) & 1) === 0 || (x - y) % 3 === 0);
+      const noise = hasPoint(
+        [
+          [0, 1],
+          [-12, 0],
+          [0, -13],
+        ],
+        x,
+        y,
+      );
+      return { x, y, failed: inRing || noise };
+    });
+
+    // 3a. Off-center Loc cluster + sparse point noise
+    const offCenterLocMap = disc.map(({ x, y }, idx) => {
+      const inCluster = Math.hypot(x - 6, y + 4) <= 2.6 && rings[idx]! > 3;
+      const noise = hasPoint(
+        [
+          [-8, 5],
+          [-4, -9],
+          [2, 10],
+        ],
+        x,
+        y,
+      );
+      return { x, y, failed: inCluster || noise };
+    });
+
+    // 3b. Center-ward compact Loc cluster at rho ≈ 0.14 (MINOR-1: 3x5 block, not a Center disc)
+    const centerWardLocMap = disc.map(({ x, y }) => {
+      const inBlock = x >= 1 && x <= 3 && y >= -2 && y <= 2;
+      const noise = hasPoint(
+        [
+          [-9, 6],
+          [7, -9],
+        ],
+        x,
+        y,
+      );
+      return { x, y, failed: inBlock || noise };
+    });
+
+    // 4. Edge-Loc peripheral arc + sparse interior noise
+    const edgeLocMap = disc.map(({ x, y }, idx) => {
+      const theta = Math.atan2(y, x);
+      const angDiff = Math.abs(theta - 2.35);
+      const inArc = rings[idx]! <= 3 && angDiff <= 0.38;
+      const noise = hasPoint(
+        [
+          [2, -3],
+          [-4, 1],
+          [5, 4],
+        ],
+        x,
+        y,
+      );
+      return { x, y, failed: inArc || noise };
+    });
+
+    // 5. Diagonal Scratch at a non-axis angle (32° from +X, neither 0°/45°/90°, with 1-die gap)
+    const thetaScratch = (32 * Math.PI) / 180;
+    const tx = Math.cos(thetaScratch);
+    const ty = Math.sin(thetaScratch);
+    const nx = -ty;
+    const ny = tx;
+    const diagonalScratchMap = disc.map(({ x, y }) => {
+      const along = Math.abs(x * tx + y * ty);
+      const perp = Math.abs(x * nx + y * ny - 1.3);
+      const dropout = x === 1 && y === 2;
+      const onChord = along <= 10.8 && perp <= 0.82 && !dropout;
+      const noise = hasPoint(
+        [
+          [-8, 7],
+          [7, -8],
+          [-5, -9],
+        ],
+        x,
+        y,
+      );
+      return { x, y, failed: onChord || noise };
+    });
+
+    // 6. Near-full wafer (~85.7% deterministic fail across all zones)
+    const nearFullMap = disc.map(({ x, y }) => ({
+      x,
+      y,
+      failed: Math.abs(x * 7 + y * 13) % 7 !== 0,
+    }));
+
+    // 7. Clean wafer ('None': 3 isolated point defects on 633 dies)
+    const cleanWaferMap = disc.map(({ x, y }) => ({
+      x,
+      y,
+      failed: hasPoint(
+        [
+          [0, 0],
+          [-7, 5],
+          [9, -4],
+        ],
+        x,
+        y,
+      ),
+    }));
+
+    const adversarialCases = [
+      { name: 'clean Center blob', cells: centerMap, expected: 'Center' },
+      { name: 'Donut ring', cells: donutMap, expected: 'Donut' },
+      { name: 'off-center Loc cluster', cells: offCenterLocMap, expected: 'Loc' },
+      { name: 'center-ward Loc block', cells: centerWardLocMap, expected: 'Loc' },
+      { name: 'Edge-Loc arc', cells: edgeLocMap, expected: 'Edge-Loc' },
+      { name: 'diagonal non-axis Scratch', cells: diagonalScratchMap, expected: 'Scratch' },
+      { name: 'Near-full wafer', cells: nearFullMap, expected: 'Near-full' },
+      { name: 'clean wafer (None)', cells: cleanWaferMap, expected: 'None' },
+    ] as const;
+
+    const d4Ops: ReadonlyArray<
+      (x: number, y: number) => { readonly x: number; readonly y: number }
+    > = [
+      (x, y) => ({ x, y }),
+      (x, y) => ({ x: -y, y: x }),
+      (x, y) => ({ x: -x, y: -y }),
+      (x, y) => ({ x: y, y: -x }),
+      (x, y) => ({ x: -x, y }),
+      (x, y) => ({ x, y: -y }),
+      (x, y) => ({ x: y, y: x }),
+      (x, y) => ({ x: -y, y: -x }),
+    ];
+
+    for (const tc of adversarialCases) {
+      const lot = buildCircularTestLot([tc.cells]);
+      const base = classifyWaferPattern(lot, 0);
+      expect(base.pattern, tc.name).toBe(tc.expected);
+
+      // MINOR-6: Verify single-wafer stacked delegation matches wafer-0 classification
+      expect(classifyStackedPattern(lot)).toEqual(base);
+      expect(classifyStackedPattern(lot, computeStackedHeatmap(lot), 1)).toEqual(
+        base,
+      );
+
+      // Verify exact D4 invariance across all 8 rotations and reflections
+      for (const op of d4Ops) {
+        const rotatedCells = tc.cells.map((c) => ({
+          ...op(c.x, c.y),
+          failed: c.failed,
+        }));
+        const rotRes = classifyWaferPattern(
+          buildCircularTestLot([rotatedCells]),
+          0,
+        );
+        expect(rotRes.pattern, `${tc.name} D4`).toBe(tc.expected);
+        expect(rotRes.confidence).toBeCloseTo(base.confidence, 2);
+      }
     }
   });
 });

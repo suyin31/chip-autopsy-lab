@@ -38,6 +38,7 @@ type ParsedStdfStream = Extract<
   { readonly ok: true }
 >['value'];
 import {
+  computeSeededScratchChordGeometry,
   DEMO_DIES_PER_WAFER,
   DEMO_PARAMETRIC_SPECS,
   DEMO_WAFER_COUNT,
@@ -49,6 +50,7 @@ import {
 } from './demo-generator';
 import { createPrng, mulberry32 } from './prng';
 
+// MINOR-8: Keep full Vitest suite fast (well under ~60 s budget; override via env in deep soak).
 const PRNG_NUM_RUNS = Number(process.env.FC_NUM_RUNS ?? 200);
 const DEMO_LOT_NUM_RUNS = Number(process.env.FC_DEMO_NUM_RUNS ?? 15);
 
@@ -378,5 +380,26 @@ describe('Property 9: Demo Generator Determinism & Ground-Truth Recovery (fast-c
       }),
       { numRuns: DEMO_LOT_NUM_RUNS },
     );
+  });
+
+  it('varies the handling-scratch chord angle across seeds while staying non-axis-aligned and recovering ground truth (MINOR-2)', () => {
+    const distinctAngles = new Set<string>();
+    for (const seed of [0x20261202, 0, 1, 2, 7, 42, -99]) {
+      const geom = computeSeededScratchChordGeometry(seed);
+      const absDeg = Math.abs(geom.angleDeg);
+      // Strictly non-axis-aligned (away from 0° and 90°) and non-45°
+      expect(absDeg).toBeGreaterThanOrEqual(22);
+      expect(absDeg).toBeLessThanOrEqual(68);
+      expect(Math.abs(absDeg - 45)).toBeGreaterThanOrEqual(7);
+      distinctAngles.add(geom.angleDeg.toFixed(2));
+    }
+    expect(distinctAngles.size).toBeGreaterThanOrEqual(6);
+
+    // Explicit regression check for seed=2 alongside a contrasting seed
+    for (const seed of [2, 42]) {
+      const generated = generateDemoLot('handling-scratch', seed);
+      const { raw, lot } = parseAndBuildLot(generated.stdfBytes);
+      assertGroundTruthAndYieldSignature(raw, lot, generated.groundTruth, false);
+    }
   });
 });

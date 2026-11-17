@@ -131,7 +131,7 @@ const PATTERN_HYPOTHESIS_CATALOG: Readonly<
       'hyp:donut:cvd-spin-annulus',
       'Donut',
       'fab-process',
-      'Candidate mechanism: annular CVD gas recirculation vortex or spin-coat drying-front non-uniformity at mid-radius.',
+      'Candidate mechanism: radial CVD reactant depletion, showerhead flow non-uniformity, or spin-coat drying-front variation at mid-radius.',
       'review interlayer dielectric and metallization radial thickness maps across the lot.',
     ),
   ],

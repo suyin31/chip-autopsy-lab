@@ -130,7 +130,13 @@ export interface SpatialFeatureSummary {
 
 export interface PatternClassification {
   readonly pattern: Wm811kClass;
-  /** Heuristic feature score rounded to 2 decimals in `[0, 1]`. */
+  /**
+   * Uncalibrated heuristic feature score rounded to 2 decimals in `[0, 1]`.
+   * Note (MINOR-5): for any non-`'None'` call (`s1 >= MIN_CLASS_CONFIDENCE = 0.45`),
+   * the linear mapping `0.52 + 0.34 * s1 + 0.12 * gap` yields `[0.67, 0.98]`; `0.67`
+   * represents the marginal admission floor rather than a calibrated posterior probability
+   * (surface this distinction in UI tooltips).
+   */
   readonly confidence: number;
   /** Raw unrounded `[0, 1]` feature scores for the 8 non-`'None'` classes (`design.md` 3.4). */
   readonly rawClassScores: Readonly<Record<ScoredWm811kClass, number>>;
@@ -323,16 +329,15 @@ function evaluateScratchFormula(
   );
 }
 
-/**
- * D4-invariant Hough/line-band extractor along an elongated component's principal axis:
- * reunites collinear scratch segments separated by 2-die diagonal dropouts while
- * trimming off-axis background point defects that bridged onto the scratch flank.
- */
-function extractPrincipalLineBandRun(
+function findBestCollinearRun(
   pca: PcaShapeMetrics,
   failX: Int32Array,
   failY: Int32Array,
-): Uint32Array | null {
+  failRing: Uint16Array,
+  rMax: number,
+  maxPerp: number,
+  maxProjGap: number,
+): { readonly members: Uint32Array; readonly score: number; readonly pca: PcaShapeMetrics } | null {
   if (pca.eigDelta <= 1e-9) {
     return null;
   }
@@ -361,7 +366,7 @@ function extractPrincipalLineBandRun(
   for (let i = 0; i < failCount; i += 1) {
     const dx = failX[i]! - pca.meanX;
     const dy = failY[i]! - pca.meanY;
-    if (Math.abs(dx * nx + dy * ny) <= 1.45) {
+    if (Math.abs(dx * nx + dy * ny) <= maxPerp) {
       inliers.push({ idx: i, proj: dx * tx + dy * ty });
     }
   }
@@ -372,35 +377,91 @@ function extractPrincipalLineBandRun(
 
   inliers.sort((a, b) => a.proj - b.proj || a.idx - b.idx);
 
-  let bestStart = 0;
-  let bestLen = 1;
-  let runStart = 0;
+  let bestMembers: Uint32Array | null = null;
+  let bestScore = -1;
+  let bestLen = 0;
+  let bestPca: PcaShapeMetrics | null = null;
 
-  for (let i = 1; i < inliers.length; i += 1) {
-    if (inliers[i]!.proj - inliers[i - 1]!.proj > 3.5) {
-      const runLen = i - runStart;
-      if (runLen > bestLen) {
-        bestLen = runLen;
-        bestStart = runStart;
+  const considerRun = (start: number, end: number): void => {
+    const runLen = end - start;
+    if (runLen < 6) {
+      return;
+    }
+    const members = new Uint32Array(runLen);
+    let edge2 = 0;
+    for (let k = 0; k < runLen; k += 1) {
+      const fIdx = inliers[start + k]!.idx;
+      members[k] = fIdx;
+      if (failRing[fIdx]! <= 2) {
+        edge2 += 1;
       }
+    }
+    const runPca = computeMemberPcaMetrics(members, failX, failY);
+    const score = evaluateScratchFormula(
+      runLen,
+      runLen / failCount,
+      edge2 / runLen,
+      runPca.majorLength,
+      runPca.minorWidth,
+      runPca.elongation,
+      runPca.aspectRatio,
+      rMax,
+    );
+    if (
+      score > bestScore + SCORE_TIE_EPSILON ||
+      (Math.abs(score - bestScore) <= SCORE_TIE_EPSILON && runLen > bestLen)
+    ) {
+      bestScore = score;
+      bestLen = runLen;
+      bestMembers = members;
+      bestPca = runPca;
+    }
+  };
+
+  let runStart = 0;
+  for (let i = 1; i < inliers.length; i += 1) {
+    if (inliers[i]!.proj - inliers[i - 1]!.proj > maxProjGap) {
+      considerRun(runStart, i);
       runStart = i;
     }
   }
-  const tailLen = inliers.length - runStart;
-  if (tailLen > bestLen) {
-    bestLen = tailLen;
-    bestStart = runStart;
-  }
+  considerRun(runStart, inliers.length);
 
-  if (bestLen < 6) {
+  if (bestMembers === null || bestPca === null) {
     return null;
   }
+  return { members: bestMembers, score: bestScore, pca: bestPca };
+}
 
-  const out = new Uint32Array(bestLen);
-  for (let i = 0; i < bestLen; i += 1) {
-    out[i] = inliers[bestStart + i]!.idx;
+/**
+ * Two-stage D4-invariant Hough/line-band extractor along an elongated component's
+ * principal axis: reunites collinear scratch segments separated by intermittent 2-3 die
+ * dropouts while trimming off-axis background point defects bridged onto the flank.
+ */
+function extractPrincipalLineBandRun(
+  pca: PcaShapeMetrics,
+  failX: Int32Array,
+  failY: Int32Array,
+  failRing: Uint16Array,
+  rMax: number,
+): { readonly members: Uint32Array; readonly score: number; readonly pca: PcaShapeMetrics } | null {
+  const stage1 = findBestCollinearRun(pca, failX, failY, failRing, rMax, 1.75, 4.8);
+  if (stage1 === null) {
+    return null;
   }
-  return out;
+  const stage2 = findBestCollinearRun(
+    stage1.pca,
+    failX,
+    failY,
+    failRing,
+    rMax,
+    1.4,
+    4.6,
+  );
+  if (stage2 !== null && stage2.score >= stage1.score - SCORE_TIE_EPSILON) {
+    return stage2;
+  }
+  return stage1;
 }
 
 interface BridgedComponentStats {
@@ -514,6 +575,7 @@ function analyzeFailGraphAndComponents(
   cx: number,
   cy: number,
   rMax: number,
+  innerZoneDensity: number,
 ): {
   readonly clusteredFailFraction: number;
   readonly components: readonly BridgedComponentStats[];
@@ -664,45 +726,36 @@ function analyzeFailGraphAndComponents(
       rMax,
     );
 
-    if (size >= 4 && basePca.elongation >= 0.45) {
-      const bandRun = extractPrincipalLineBandRun(basePca, failX, failY);
-      if (bandRun !== null && bandRun.length >= 6) {
-        const bandPca = computeMemberPcaMetrics(bandRun, failX, failY);
-        let bandEdge2 = 0;
-        for (let i = 0; i < bandRun.length; i += 1) {
-          if (failRing[bandRun[i]!]! <= 2) {
-            bandEdge2 += 1;
-          }
-        }
-        const bandEdgeFrac2 = bandEdge2 / bandRun.length;
-        const bandShare = bandRun.length / failCount;
-        const bandScratchTerm = evaluateScratchFormula(
-          bandRun.length,
-          bandShare,
-          bandEdgeFrac2,
-          bandPca.majorLength,
-          bandPca.minorWidth,
-          bandPca.elongation,
-          bandPca.aspectRatio,
-          rMax,
-        );
-
-        if (bandScratchTerm > scratchTerm) {
-          scratchTerm = bandScratchTerm;
-          scratchMembers = bandRun;
-          majorLength = bandPca.majorLength;
-          minorWidth = bandPca.minorWidth;
-          elongation = bandPca.elongation;
-          aspectRatio = bandPca.aspectRatio;
-        }
+    if (size >= 4 && basePca.elongation >= 0.4) {
+      const bandRun = extractPrincipalLineBandRun(
+        basePca,
+        failX,
+        failY,
+        failRing,
+        rMax,
+      );
+      if (bandRun !== null && bandRun.score > scratchTerm) {
+        scratchTerm = bandRun.score;
+        scratchMembers = bandRun.members;
+        majorLength = bandRun.pca.majorLength;
+        minorWidth = bandRun.pca.minorWidth;
+        elongation = bandRun.pca.elongation;
+        aspectRatio = bandRun.pca.aspectRatio;
       }
     }
 
+    // MINOR-1: Allow compact localized clusters anywhere in the interior (including
+    // near-center rho < 0.22 when innerZoneDensity is below the Center disc regime),
+    // while suppressing Loc on broad Center blobs (high innerZoneDensity & low rho).
+    const notBroadCenterDisc = Math.max(
+      ramp(centroidRho, 0.12, 0.3),
+      1 - ramp(innerZoneDensity, 0.26, 0.42),
+    );
     const locTerm =
       size >= 4
         ? ramp(shareOfFails, 0.4, 0.72) *
           ramp(clusteredFailFraction, 0.55, 0.82) *
-          ramp(centroidRho, 0.22, 0.45) *
+          notBroadCenterDisc *
           ramp(0.55 - edgeFrac2, 0.0, 0.3)
         : 0;
 
@@ -919,6 +972,7 @@ function classifySpatialGrid(
     cx,
     cy,
     rMax,
+    innerZoneDensity,
   );
 
   let maxComponentShare = 0;
@@ -1043,7 +1097,14 @@ function classifySpatialGrid(
       (1 - ramp(globalFailFraction, 0.55, 0.7)),
   );
 
-  // Smoothed radial zone densities guard against small-sample Binomial variance in inner zone
+  // MAJOR-1 tuning rationale: Beta-Binomial (fail + 2) / (total + 20) smoothing (~10%
+  // prior) stabilizes small-sample Binomial variance in Z_inner (~90 dies on a 633-die
+  // wafer). Reaching full weight at 6% global fail fraction recognizes 4-6% baseline
+  // defectivity, while MIN_CLASS_CONFIDENCE = 0.45 applied to the product of the radial
+  // (3.8, span 1.4), angular (0.52, span 0.22), excess-clustering (0.25, span 0.16), and
+  // structured-competitor (1 - 0.8 * maxStructuredScore) ramps enforces effective cutoffs
+  // of r_zone < 3.17, M_ang < 0.42, and excessClust8 < 0.18 (and tighter joint rejection
+  // whenever mild radial and angular/clustering biases co-occur).
   const smoothInner = (innerFail + 2) / (innerTotal + 20);
   const smoothMid = (midFail + 2) / (midTotal + 20);
   const smoothEdge3 = (edge3Fail + 2) / (edge3Total + 20);
@@ -1108,6 +1169,9 @@ function classifySpatialGrid(
     return buildNoneClassification(1.0 - s1, features, rawClassScores);
   }
 
+  // MINOR-5: Because s1 >= MIN_CLASS_CONFIDENCE (0.45) here, this linear heuristic
+  // mapping spans [0.67, 0.98]; 0.67 marks the marginal admission floor rather than a
+  // calibrated posterior probability (UI tooltips should note this heuristic scale).
   const confidence = round2(
     Math.min(
       CLASSIFIER_THRESHOLDS.CONFIDENCE_CAP,
@@ -1379,6 +1443,9 @@ export function classifyStackedPattern(
     return buildNoneClassification(1.0, createZeroFeatures(0));
   }
 
+  // MINOR-6: On single-wafer lots (lot.wafers.length === 1, effectiveWaferCount === 1),
+  // stacked classification delegates directly to single-wafer classification so verdict
+  // precedence (Req 10.1) preserves exact wafer-0 ring indices and signatureDieIndices.
   if (cells === undefined && lot.wafers.length === 1 && effectiveWaferCount === 1) {
     return classifyWaferPattern(lot, 0);
   }

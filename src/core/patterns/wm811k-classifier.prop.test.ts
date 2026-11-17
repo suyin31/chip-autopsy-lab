@@ -36,8 +36,9 @@ import {
   type Wm811kClass,
 } from './wm811k-classifier';
 
-const NUM_RUNS = Number(process.env.FC_NUM_RUNS ?? 200);
-const D4_NUM_RUNS = Number(process.env.FC_D4_NUM_RUNS ?? 80);
+// MINOR-8: Sized so Property 8 completes in < 1.5 s and the full Vitest suite stays well under 60 s.
+const NUM_RUNS = Number(process.env.FC_NUM_RUNS ?? 150);
+const D4_NUM_RUNS = Number(process.env.FC_D4_NUM_RUNS ?? 64);
 
 interface GridCell {
   readonly x: number;
