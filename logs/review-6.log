@@ -1,0 +1,25 @@
+I'll start by reading all the key specification and source files in parallel.
+Now let me read all the source files in parallel:
+Let me read the rest of the classifier and the demo generator:
+Let me read the rest of the demo generator:
+Now I have all the data I need. Let me verify the Random score formula discrepancy between design.md and the code, then write my review.
+Now I have all the data I need. Let me write the comprehensive review document.
+Review complete. The findings are written to [logs/review-6.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/review-6.md).
+
+## Verdict: **NEEDS-FIX**
+
+### Key findings:
+
+| Severity | Count | Summary |
+|---|---|---|
+| **MAJOR** | 1 | Random-score formula constants (`ramp` thresholds, radial-disparity cap, angular-resultant cap, smoothed zone densities) have drifted from the locked `design.md` specification — four of five ramp parameters differ. The code values are arguably better-tuned, but the spec must be synchronized. |
+| **MINOR** | 8 | Loc excludes center-ward clusters (ρ < 0.22); scratch chord angle is hardcoded; dead `coordLookup` map; no adversarial boundary-case tests; confidence floor of 0.67 for all non-None; CVD wording nit; two informational confirmations |
+
+### What's solid:
+- **D₄ invariance is genuine** — mathematically exact (not approximate), verified across all 8 group elements with half-integer centers
+- **Nine-class rules are physically sensible** and correctly discriminate the standard WM-811K failure modes
+- **Root-cause hypotheses are excellent** — hedged, domain-correct, with concrete check-next steps that an experienced fab/test engineer would agree with
+- **No overfitting** to the three demo presets detected
+- **Performance is well within budget** — < 5 ms for 25 × 633 dies full pipeline
+- **Test suite runs in 5.3 s** — not painful at all
+- **Supporting die IDs are correct** — sorted, deduplicated, equivariant under D₄
