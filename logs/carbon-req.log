@@ -1,0 +1,27 @@
+Drafted [requirements.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/specs/chip-autopsy-lab/requirements.md) aligned with the steering rules in [product.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/.kiro/steering/product.md), [tech.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/.kiro/steering/tech.md), [structure.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/.kiro/steering/structure.md), and [design-language.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/.kiro/steering/design-language.md), as well as [design-research.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/docs/design-research.md) and [oss-references.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/docs/oss-references.md).
+
+Wait—note the active repo root links:
+- Spec written: [requirements.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/specs/chip-autopsy-lab/requirements.md)
+- Steering sources: [product.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/steering/product.md), [tech.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/steering/tech.md), [structure.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/steering/structure.md), [design-language.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/steering/design-language.md)
+
+### Summary of Contents
+- **Introduction & Glossary**: Defines system scope, STDF V4 domain entities, `First-Pass Yield` / `Final Yield`, `Cp` / `Cpk`, `WM-811K Classes`, `Engine Fact`, `Claim`, `Filter DSL`, `Selection Store`, and `Bins-Only Mode`.
+- **17 Numbered Requirements (User Stories + EARS Criteria)**:
+  1. STDF V4 ingest (`"Drop the body."` full-window drop zone, `0x1F 0x8B` gzip decompression, Web Worker parsing, `FAR` endianness, `PTR` defaults, multi-site interleaving, progress & skippable probe-sweep load)
+  2. Malformed-record bounds safety, truncated-tail recovery, plain-text string escaping, and `> 200 MB` Bins-Only Mode
+  3. Built-in seeded synthetic demo lots (`Edge-Ring` and `Scratch`, one-click load and raw binary download)
+  4. Two-layer Canvas2D wafer map (`Pass/Fail`, `HBIN`, `SBIN`, `Parametric`, $O(1)$ hover readout, legend bin toggles, zoom/pan, optional `Alt`/`Option` autopsy lamp)
+  5. Stacked multi-wafer failure heatmap (`magma` ramp, gallery collapse, cross-filtering)
+  6. Bin Pareto (`SBIN`/`HBIN` ranking, `#FF7A1A` top fail bin, click-to-filter)
+  7. Yield & retest resolution by Lot, Wafer, and Test Site (first/last `PRR` rule, site anomaly detection)
+  8. Parametric histograms with specification limits, SI scaling, scrub readout, and `Cp`/`Cpk` statistics
+  9. Deterministic 9-class WM-811K spatial failure-pattern classification, confidence scores, and hedged root-cause hypotheses
+  10. Verdict-first Autopsy Report (one-sentence cause-of-death first line, Claim-to-Die + Pareto linking, deterministic offline template default/fallback, Next.js LLM route with strict citation & numeric validation)
+  11. Real-time cross-chart wafer brushing
+  12. `Cmd-K` / `Ctrl-K` command palette and natural-language Filter DSL (deterministic offline grammar + validated LLM fallback)
+  13. Shareable URL view and filter state
+  14. Accessibility (WCAG 2.2 AA contrast, non-color secondary cues, keyboard navigation, ARIA live regions, `prefers-reduced-motion`)
+  15. Performance budgets (`>= 15 MB/s` worker parse, `<= 50 ms` main thread, `< 5 ms` 10k-die draw, `>= 50 fps` zoom/pan, `<= 100 ms` brush across 250k dies, `<= 3 s` demo load)
+  16. Local-first privacy, offline operation, and server-only LLM secret hygiene (raw STDF bytes never uploaded)
+  17. Locked dark design tokens (`#0A0A0B`, `#111113`, `#7CF2C1`, `#FF7A1A`, zero shadows, forbidden clutter list, `tabular-nums`, clinical copy restraint, and framework-free `src/core/`)
+- **14 Correctness Properties**: Universal invariants over `src/core/` ready for `fast-check` property-based tests (round-trip STDF serialization, parser fuzz/truncation safety, retest resolution, yield bounds, Pareto conservation, stacked heatmap conservation, `Cp`/`Cpk` affine invariance, WM-811K determinism & $90^\circ$ rotation robustness, demo signature recovery, report Die ID referential integrity, LLM hallucination rejection, brush/DSL idempotence & commutativity, URL/DSL round-trip, and outbound privacy redaction).

@@ -1,0 +1,62 @@
+# Keep .kiro/ tracked for Kiroween judging; negate any global gitignore rules.
+!.kiro/
+!.kiro/**
+
+# Keep logs/ tracked on purpose as evidence of the Kiro phase workflow.
+# Do NOT copy the Vite template's `logs` or `*.log` ignores.
+!logs/
+!logs/**
+
+# Dependencies and build outputs
+node_modules/
+dist/
+dist-ssr/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Package manager debug logs (explicit names only; never ignore *.log)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# Environment and local overrides
+.env
+.env.*
+!.env.example
+*.local
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Python caches for tools/
+__pycache__/
+*.pyc
+
+# Real STDF logs often contain confidential foundry or product data.
+# Ignore STDF files everywhere except synthetic demo and test fixture folders.
+*.stdf
+*.std
+*.stdf.gz
+*.std.gz
+!public/demo/**/*.stdf
+!public/demo/**/*.std
+!public/demo/**/*.stdf.gz
+!public/demo/**/*.std.gz
+!tests/fixtures/**/*.stdf
+!tests/fixtures/**/*.std
+!tests/fixtures/**/*.stdf.gz
+!tests/fixtures/**/*.std.gz

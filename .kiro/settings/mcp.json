@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "carbon": {
+      "command": "python3",
+      "args": [
+        "tools/carbon-mcp/carbon_mcp.py"
+      ],
+      "env": {
+        "AGY_WRAPPER": "/workspace/work/bin/viavps.sh"
+      },
+      "timeout": 1800000
+    }
+  }
+}

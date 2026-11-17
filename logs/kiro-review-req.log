@@ -1,0 +1,66 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=68
+[tool] status: Completed
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[tool] status: Completed
+Now I have the full picture. Applying focused edits in one pass, with a check that each target string matches exactly once.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=3611
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Fixing the Req 8 item order I inserted and one remaining Wafer ID reference in Property 13.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=153
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Failed: Run Command
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=220
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+I edited `.kiro/specs/chip-autopsy-lab/requirements.md` in place with 48 small edits, each checked to match exactly once. I also created `logs/review-requirements.md` with the 5-line log, since the file didn't exist yet. I checked the result by reading back the Stretch markers and the numbering of the edited sections; there is no test suite to run against a requirements document.
+
+**Contradictions fixed**
+- **Cause-of-death headline:** the spec said it must be a single sentence, but its own example is two sentences. It is now a fixed template, and Property 10 checks against that template. I also defined what the headline says when the lot has no failing dies.
+- **Fonts:** the spec allowed JetBrains Mono and SF Pro Display, but `tech.md` self-hosts only Inter and Geist Mono. Headings now use Inter's display cut, falling back to the system SF Pro Display, and numbers use Geist Mono.
+- **Pass-die colour:** `#3A4A43` on `#0A0A0B` is about 2.1:1, below the 3:1 contrast the design rules require for chart marks. It is now a starting value to tune in LCH, which is what `design-language.md` already says.
+- **"Pass/fail flag invalid" bit:** dies with this `PRR` flag were all being counted as failing. They now take pass/fail from their hardware bin's pass/fail flag (`HBR.HBIN_PF`), and only count as failing, with a warning, if that is missing too.
+- **URL privacy:** the URL stored the Wafer ID, a string from the STDF file, which the privacy rule forbids. It now stores a wafer index.
+- **Wafer map colour cue:** a text label on every die isn't realistic at 10,000 dies. The spec now relies on pass/fail lightness contrast plus the labelled legend and hover readout.
+
+**Untestable criteria made concrete**
+- The O(1) lookup and "smoothly" wording now point to measurable targets.
+- "Calibrated" confidence is impossible without labelled data in the repo, so it is now a heuristic score.
+- The site-anomaly rule had only "e.g." thresholds; it now has fixed values (more than 5 percentage points below the other sites, z ≥ 3, at least 30 dies per site).
+- The `None` class now uses named thresholds that `design.md` will document.
+- I defined the Edge Ring Index (`edge` means the outer 3 rings) and spelled out that `Cpk` filters select tests, not dies. Property 12 now applies only to die filters.
+- The probe sweep now counts inside the 3 s demo budget.
+- Demo-property confidence ≥ 0.75 now applies only to the shipped demo seeds.
+
+**Marked Stretch**
+- The autopsy lamp easter egg.
+- Parametric analysis of `MPR` records; they are still decoded.
+- The LLM narrator and LLM translation in the Cmd-K palette, plus the server route behind them.
+- Shareable URL state (all of Requirement 13).
+- Loading the app with no network on first visit.
+- Properties 11 and 14, and the URL part of Property 13.
+
+All Stretch items are optional in the steering files or not mentioned there.
+
+The performance numbers in Requirement 15 are now benchmark targets, as `tech.md` frames them. Two stay as hard pass/fail checks: no main-thread task over 50 ms during parsing, and the demo lot showing its cause of death within 3 s.
+
+Three decisions are deferred to `design.md`:
+- which verdict wins when a site problem and a spatial pattern both fire;
+- the classifier's thresholds;
+- the final tuned pass-die colour.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=243
+

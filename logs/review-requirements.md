@@ -1,0 +1,5 @@
+- Reviewed .kiro/specs/chip-autopsy-lab/requirements.md (Carbon draft) against .kiro/steering/*.md as spec owner; 48 focused in-place edits, no web or MCP calls.
+- Contradictions fixed: two-sentence headline vs "single sentence" (now a template), JetBrains Mono/SF Pro vs self-hosted Inter + Geist Mono, #3A4A43 pass dies at ~2.1:1 vs 3:1 AA (tune in LCH), PART_FLG bit 4 now falls back to HBR.HBIN_PF, Wafer ID in URL vs no-proprietary-strings rule.
+- Untestable criteria made concrete: O(1) lookup, "smoothly", "calibrated" confidence (no labelled data), "e.g." site-anomaly thresholds, None-class noise threshold, Edge Ring Index and capability-predicate semantics defined, probe sweep counted inside the 3 s demo budget.
+- Marked Stretch: autopsy lamp (4.8), MPR parametric analysis (8.7), LLM narrator (10.6-10.7), LLM Cmd-K translation (12.3), shareable URL state (Req 13), route handler (16.3), offline cold load, Properties 11/14 and the URL part of 13.
+- Req 15 perf numbers are now benchmark targets per tech.md (15.2 and 15.6 stay gates); still open for design.md: verdict precedence rule, classifier thresholds, final pass colour.
