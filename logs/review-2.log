@@ -1,0 +1,20 @@
+I'll start by reading the specs and source files in parallel, then do a thorough review.
+Now let me read all the source files and test files in parallel:
+Now I need to read the remaining parts of the parser and the types file, and also check whether the `stdf-parser-safety.prop.test.ts` exists:
+Now let me run the test suite to see current state:
+I now have a thorough understanding of all the code. Let me check one more thing - the FAR header reading for endianness:
+Now let me compile all my findings and write the review document:
+The review task is already complete from the previous session. Let me verify the review document is in place:
+The review is complete. Here's a quick summary:
+
+**Review document:** [logs/review-2.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/review-2.md)
+
+**Verdict: NEEDS-FIX**
+
+| Severity | Count | Key Items |
+|----------|-------|-----------|
+| BLOCKER | 0 | — |
+| MAJOR | 1 | Missing `stdf-parser-safety.prop.test.ts` (Property 2 fuzz test, task 2.5) |
+| MINOR | 6 | No CPU_TYPE=3 test, no writer finite-result validation, missing MPR/FTR arbitraries, inconsistent TSR non-finite warnings, missing readC1 edge cases, minor improvements |
+
+The core STDF V4 implementation is high quality — all field types/widths, endianness, REC_LEN bounds, optional trailing fields, PTR default inheritance, scaling exponents, multi-site PIR/PRR, kxTYPE arrays, and error recovery are correctly implemented. The single blocking issue is the missing Property 2 fuzz test required by task 2.5.
