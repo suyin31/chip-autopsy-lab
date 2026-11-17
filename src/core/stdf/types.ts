@@ -76,6 +76,7 @@ export interface BitArrayData {
 export type ParseFatalCode =
   | 'EMPTY_INPUT'
   | 'GZIP_DECOMPRESS_FAILED'
+  /** Covers missing/short FAR (0, 10), malformed FAR.REC_LEN, and unknown FAR.CPU_TYPE (3..255). */
   | 'MISSING_FAR_HEADER'
   | 'UNSUPPORTED_STDF_VERSION'
   | 'UNSUPPORTED_CPU_TYPE_VAX'

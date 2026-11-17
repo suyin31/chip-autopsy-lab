@@ -284,6 +284,18 @@ describe('parseStdfBytes & gzip helpers (Requirements 1.3, 1.5-1.10, 2.1-2.5)', 
       error: expect.objectContaining({ code: 'UNSUPPORTED_CPU_TYPE_VAX', byteOffset: 4 }),
     });
 
+    // 5b. Unknown non-VAX CPU_TYPE values (3..255)
+    for (const badCpu of [3, 255]) {
+      const unknownCpuRes = parseStdfBytes(
+        new Uint8Array([0x02, 0x00, 0x00, 0x0a, badCpu, 0x04]),
+        { mode: 'full' },
+      );
+      expect(unknownCpuRes).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: 'MISSING_FAR_HEADER', byteOffset: 4 }),
+      });
+    }
+
     // 6. STDF V3 instead of V4
     const v3Res = parseStdfBytes(new Uint8Array([0x02, 0x00, 0x00, 0x0a, 0x02, 0x03]), {
       mode: 'full',
@@ -826,5 +838,75 @@ describe('parseStdfBytes & gzip helpers (Requirements 1.3, 1.5-1.10, 2.1-2.5)', 
     if (badRes.kind === 'error') {
       expect(badRes.error.code).toBe('GZIP_DECOMPRESS_FAILED');
     }
+  });
+
+  it('rejects non-finite PTR/MPR results in writeStdfBytes and warns on non-finite TSR statistics in parseStdfBytes', () => {
+    expect(() =>
+      writeStdfBytes({
+        endianness: 'little',
+        wafers: [
+          {
+            wir: { waferId: 'W01' },
+            parts: [{ hardBin: 1, ptrs: [{ testNum: 1, result: Number.NaN }] }],
+          },
+        ],
+      }),
+    ).toThrow(RangeError);
+
+    expect(() =>
+      writeStdfBytes({
+        endianness: 'little',
+        wafers: [
+          {
+            wir: { waferId: 'W01' },
+            parts: [
+              { hardBin: 1, mprs: [{ testNum: 2, rtnRslt: [1.0, Number.POSITIVE_INFINITY] }] },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(RangeError);
+
+    // Build a TSR payload with non-finite TEST_MIN (NaN) and verify NON_FINITE_MEASUREMENT warning
+    const tsrBuilder = new BinaryRecordBuilder('little');
+    const hdr = tsrBuilder.beginRecord(
+      STDF_RECORD_CODES.TSR.recTyp,
+      STDF_RECORD_CODES.TSR.recSub,
+    );
+    tsrBuilder.writeU1(255); // HEAD_NUM
+    tsrBuilder.writeU1(0); // SITE_NUM
+    tsrBuilder.writeC1('P'); // TEST_TYP
+    tsrBuilder.writeU4(101); // TEST_NUM
+    tsrBuilder.writeU4(1); // EXEC_CNT
+    tsrBuilder.writeU4(0); // FAIL_CNT
+    tsrBuilder.writeU4(0); // ALRM_CNT
+    tsrBuilder.writeCn('VDD'); // TEST_NAM
+    tsrBuilder.writeCn(''); // SEQ_NAME
+    tsrBuilder.writeCn(''); // TEST_LBL
+    tsrBuilder.writeB1(0); // OPT_FLAG
+    tsrBuilder.writeR4(0.01); // TEST_TIM (finite)
+    tsrBuilder.writeR4(Number.NaN); // TEST_MIN (non-finite)
+    tsrBuilder.endRecord(hdr);
+    const tsrRaw = tsrBuilder.toUint8Array();
+
+    const base = writeStdfBytes(makeMinimalLotSpec('little'));
+    const combined = new Uint8Array(base.byteLength + tsrRaw.byteLength);
+    combined.set(base, 0);
+    combined.set(tsrRaw, base.byteLength);
+
+    const parsed = parseStdfBytes(combined, { mode: 'full' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.tsrs).toHaveLength(1);
+    expect(parsed.value.tsrs[0]?.testTim).toBe(Math.fround(0.01));
+    expect(parsed.value.tsrs[0]?.testMin).toBeUndefined();
+    expect(parsed.value.warnings).toEqual([
+      expect.objectContaining({
+        code: 'NON_FINITE_MEASUREMENT',
+        byteOffset: base.byteLength,
+        recTyp: STDF_RECORD_CODES.TSR.recTyp,
+        recSub: STDF_RECORD_CODES.TSR.recSub,
+      }),
+    ]);
   });
 });

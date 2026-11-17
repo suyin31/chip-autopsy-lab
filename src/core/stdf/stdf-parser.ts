@@ -435,7 +435,11 @@ function decodeWcr(cursor: BinaryCursor): ParsedWcrRecord {
   };
 }
 
-function decodeTsr(cursor: BinaryCursor): ParsedTsrRecord {
+function decodeTsr(
+  cursor: BinaryCursor,
+  warnings: ParseWarning[],
+  byteOffset: number,
+): ParsedTsrRecord {
   const headNum = cursor.readU1();
   const siteNum = cursor.readU1();
   const testTyp = cursor.readC1();
@@ -453,6 +457,32 @@ function decodeTsr(cursor: BinaryCursor): ParsedTsrRecord {
   const tstSums = cursor.readOptR4();
   const tstSqrs = cursor.readOptR4();
 
+  const checkFiniteStat = (
+    val: number | undefined,
+    fieldName: string,
+  ): number | undefined => {
+    if (val === undefined) {
+      return undefined;
+    }
+    if (!Number.isFinite(val)) {
+      warnings.push({
+        code: 'NON_FINITE_MEASUREMENT',
+        byteOffset,
+        recTyp: STDF_RECORD_CODES.TSR.recTyp,
+        recSub: STDF_RECORD_CODES.TSR.recSub,
+        detail: `Non-finite TSR ${fieldName} on TEST_NUM ${testNum}; omitted.`,
+      });
+      return undefined;
+    }
+    return val;
+  };
+
+  const validTim = checkFiniteStat(testTim, 'TEST_TIM');
+  const validMin = checkFiniteStat(testMin, 'TEST_MIN');
+  const validMax = checkFiniteStat(testMax, 'TEST_MAX');
+  const validSums = checkFiniteStat(tstSums, 'TST_SUMS');
+  const validSqrs = checkFiniteStat(tstSqrs, 'TST_SQRS');
+
   return {
     headNum,
     siteNum,
@@ -465,11 +495,11 @@ function decodeTsr(cursor: BinaryCursor): ParsedTsrRecord {
     seqName,
     testLbl,
     ...(optFlag !== undefined ? { optFlag } : {}),
-    ...(testTim !== undefined && Number.isFinite(testTim) ? { testTim } : {}),
-    ...(testMin !== undefined && Number.isFinite(testMin) ? { testMin } : {}),
-    ...(testMax !== undefined && Number.isFinite(testMax) ? { testMax } : {}),
-    ...(tstSums !== undefined && Number.isFinite(tstSums) ? { tstSums } : {}),
-    ...(tstSqrs !== undefined && Number.isFinite(tstSqrs) ? { tstSqrs } : {}),
+    ...(validTim !== undefined ? { testTim: validTim } : {}),
+    ...(validMin !== undefined ? { testMin: validMin } : {}),
+    ...(validMax !== undefined ? { testMax: validMax } : {}),
+    ...(validSums !== undefined ? { tstSums: validSums } : {}),
+    ...(validSqrs !== undefined ? { tstSqrs: validSqrs } : {}),
   };
 }
 
@@ -950,6 +980,7 @@ export function parseStdfBytes(
     };
   }
 
+  // Unknown CPU_TYPE values (3..255) map to MISSING_FAR_HEADER per design.md ParseFatalCode
   if (cpuType !== STDF_CPU_TYPE.BIG_ENDIAN && cpuType !== STDF_CPU_TYPE.LITTLE_ENDIAN) {
     return {
       ok: false,
@@ -1291,7 +1322,7 @@ export function parseStdfBytes(
         }
         case REC_KEY_TSR: {
           cursor.setWindow(recordStart, recordEnd);
-          tsrs.push(decodeTsr(cursor));
+          tsrs.push(decodeTsr(cursor, warnings, offset));
           recordsDecoded += 1;
           break;
         }

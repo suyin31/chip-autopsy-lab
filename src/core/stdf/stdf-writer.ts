@@ -212,6 +212,11 @@ function writePtrRecord(
   firstPtrMap: Map<number, PtrDefaultContext>,
   autoCompact: boolean,
 ): void {
+  if (!Number.isFinite(spec.result)) {
+    throw new RangeError(
+      `STDF writer expected finite PTR RESULT for TEST_NUM ${spec.testNum}, got ${spec.result}.`,
+    );
+  }
   const hdr = builder.beginRecord(
     STDF_RECORD_CODES.PTR.recTyp,
     STDF_RECORD_CODES.PTR.recSub,
@@ -340,6 +345,14 @@ function writeMprRecord(
     STDF_RECORD_CODES.MPR.recSub,
   );
   const rsltCnt = spec.rtnRslt.length;
+  for (let i = 0; i < rsltCnt; i += 1) {
+    const val = spec.rtnRslt[i]!;
+    if (!Number.isFinite(val)) {
+      throw new RangeError(
+        `STDF writer expected finite MPR RTN_RSLT[${i}] for TEST_NUM ${spec.testNum}, got ${val}.`,
+      );
+    }
+  }
   const rtnIcnt = Math.max(spec.rtnIndx?.length ?? 0, spec.rtnStat?.length ?? 0);
 
   builder.writeU4(spec.testNum);

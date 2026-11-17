@@ -1,0 +1,22 @@
+Task 2 is complete and all verification checks are green.
+
+### What Was Done
+
+1. **Property 2 Safety & Truncation Recovery Suite (`M2` / Task 2.5)**
+   - Created [stdf-parser-safety.prop.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/stdf/stdf-parser-safety.prop.test.ts) (`~500 ms` runtime) covering:
+     - `fast-check` fuzz over arbitrary `Uint8Array` buffers and non-zero `byteOffset` `subarray` views across `'full'` and `'bins-only'` modes (plus `onProgress` callbacks).
+     - Corrupted initial `FAR` headers, fuzzed `REC_LEN` / `(REC_TYP, REC_SUB)` frames across all 16 decoded and unknown record types, and mid-stream malformed records whose `REC_LEN` fits the buffer (verifying `MALFORMED_RECORD_FIELD` warnings and recovery of surrounding `PRR`s).
+     - Exhaustive every-offset (`k = 0..N`) truncation on big- and little-endian fixtures plus randomized offset `k` truncation over `arbStdfWriteLotSpec`, asserting exact recovery of all complete prefix records and `m >= 1` `PRR` executions alongside `TRUNCATED_TAIL_RECORD` warnings citing the exact truncation offset.
+
+2. **Minor Review Fixes from [review-2.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/review-2.md)**
+   - **`m2`**: Documented unknown `FAR.CPU_TYPE` (`3..255`) mapping to `MISSING_FAR_HEADER` in [types.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/stdf/types.ts#L76-L84) and [stdf-parser.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/stdf/stdf-parser.ts#L983-L993), and added `CPU_TYPE = 3` / `255` tests in [stdf-parser.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/stdf/stdf-parser.test.ts#L287-L297).
+   - **`m3`**: Added finite `RangeError` guards for `PTR.result` and `MPR.rtnRslt` in [stdf-writer.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/stdf/stdf-writer.ts#L207-L220) with unit coverage in [stdf-parser.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/stdf/stdf-parser.test.ts#L843-L869).
+   - **`m6`**: Added `arbMprSpec` and `arbFtrSpec` in [arbitraries.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/__test-utils__/arbitraries.ts#L235-L295) and verified `MPR`/`FTR` round-trip symmetry in [stdf-roundtrip.prop.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/stdf/stdf-roundtrip.prop.test.ts).
+   - **`m7`**: Emitted `NON_FINITE_MEASUREMENT` warnings when omitting non-finite `TSR` statistical `R*4` fields in [stdf-parser.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/stdf/stdf-parser.ts#L438-L504) with unit coverage in [stdf-parser.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/stdf/stdf-parser.test.ts#L871-L910).
+   - **`m11`**: Added `readC1()` boundary and non-printable (`0x00`, `0x01`, `0x1f`, `0x7f`, `0x80`, `0xff`) coverage in [binary-cursor.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/stdf/binary-cursor.test.ts#L215-L225).
+
+3. **Tracking & Verification**
+   - `npx tsc --noEmit`: 0 errors
+   - `npx eslint .`: 0 errors, 0 warnings
+   - `npx vitest run`: **8/8** test files, **43/43** tests passed (`~4.4 s` total)
+   - Updated [tasks.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/specs/chip-autopsy-lab/tasks.md#L12-L28) (`2` and `2.1`–`2.5` marked `[x]`) and appended 4 summary lines to [progress.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/progress.md#L2-L5).

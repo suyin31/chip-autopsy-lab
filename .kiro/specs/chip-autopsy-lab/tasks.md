@@ -9,21 +9,21 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
   - Record the `dev`, `build`, `lint`, `typecheck`, `test`, and `test:e2e` scripts in `.kiro/steering/tech.md`.
   - _Requirements: 16.2, 17.1, 17.2, 17.3, 17.7_
 
-- [ ] 2. Implement the STDF V4 binary reader and writer
-  - [ ] 2.1 Build `types.ts` record schemas and the bounds-checked `binary-cursor.ts`
+- [x] 2. Implement the STDF V4 binary reader and writer
+  - [x] 2.1 Build `types.ts` record schemas and the bounds-checked `binary-cursor.ts`
     - Shared field schemas for reader and writer; `U*n`, `I*n`, `R*n`, `C*n`, `B*n`, `D*n`, `kxTYPE` reads with `offset + byteCount <= recordEnd` checks; big- and little-endian from `FAR.CPU_TYPE`.
     - _Requirements: 1.5, 2.1_
-  - [ ] 2.2 Build `stdf-parser.ts`
+  - [x] 2.2 Build `stdf-parser.ts`
     - FAR validation, decode of the 16 used record types, skip by `REC_LEN` for others, missing optional trailing fields, `PTR` defaults keyed by `TEST_NUM` with `OPT_FLAG` bits 0/4/5 (inherit) and 6/7 (no limit), multi-site `PIR`/`PRR` open-part map.
     - Keep `RESULT`, `LO_LIMIT`, and `HI_LIMIT` in base units; store `RES_SCAL`/`LLM_SCAL`/`HLM_SCAL` as display exponents only.
     - _Requirements: 1.5, 1.6, 1.7, 1.8, 1.9, 2.2, 2.3_
-  - [ ] 2.3 Build `stdf-writer.ts` and golden fixtures in `tests/fixtures/`
+  - [x] 2.3 Build `stdf-writer.ts` and golden fixtures in `tests/fixtures/`
     - Deterministic serializer from `StdfWriteLotSpec`; big-endian, little-endian, truncated, and malformed fixtures.
     - _Requirements: 1.5, 3.1_
-  - [ ]* 2.4 Property test: STDF V4 write-to-parse round-trip
+  - [x]* 2.4 Property test: STDF V4 write-to-parse round-trip
     - **Property 1** in `src/core/stdf/stdf-roundtrip.prop.test.ts`
     - _Requirements: 1.3, 1.5, 1.6, 1.7, 1.8, 1.9, 3.1_
-  - [ ]* 2.5 Property test: parser bounds safety and truncated-stream recovery
+  - [x]* 2.5 Property test: parser bounds safety and truncated-stream recovery
     - **Property 2** in `src/core/stdf/stdf-parser-safety.prop.test.ts`
     - _Requirements: 2.1, 2.2, 2.3_
 

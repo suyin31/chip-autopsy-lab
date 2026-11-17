@@ -1,1 +1,5 @@
 - Task 1 (2026-11-18 02:27 SGT): scaffold + design tokens. Verified by assistant after sandbox restart: typecheck 0 errors, lint clean, vitest 14/14 pass.
+- Task 2 (2026-11-18 03:20 SGT): STDF V4 binary reader, writer, gzip stream guard, golden fixtures, and fast-check properties complete.
+  - Built `src/core/stdf/{types,binary-cursor,gzip,stdf-parser,stdf-writer}.ts`, `tests/fixtures/*.stdf`, `stdf-roundtrip.prop.test.ts` (Property 1), and `stdf-parser-safety.prop.test.ts` (Property 2: arbitrary `Uint8Array` fuzz, corrupted headers/frames, and exhaustive + random truncation offset `k` prefix recovery).
+  - Addressed `logs/review-2.md` findings: M2 (Property 2 safety/truncation suite), m2 (`CPU_TYPE` 3..255 rejection docs + tests), m3 (`writeStdfBytes` finite PTR/MPR result guard), m6 (`arbMprSpec`/`arbFtrSpec` in round-trip property tests), m7 (`NON_FINITE_MEASUREMENT` warning on TSR stats), and m11 (`readC1` control/DEL/high-byte tests).
+  - Verification green: `tsc --noEmit` 0 errors, `eslint .` 0 warnings/errors, `vitest run` 43/43 tests across 8 files (~4.5 s).

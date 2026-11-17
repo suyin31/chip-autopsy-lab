@@ -10,6 +10,7 @@ import { parseStdfBytes } from './stdf-parser';
 import { writeStdfBytes } from './stdf-writer';
 import {
   type BinPassFailFlag,
+  type BitArrayData,
   type ParsedLotBuildInput,
   type ParsedPartExecution,
   type ParsedWcrRecord,
@@ -19,7 +20,9 @@ import {
   type PtrDefaultContext,
   STDF_MISSING_COORD,
   STDF_MISSING_U2,
+  type StdfWriteFtrSpec,
   type StdfWriteLotSpec,
+  type StdfWriteMprSpec,
   type StdfWritePartSpec,
   type StdfWriteWcrSpec,
 } from './types';
@@ -39,6 +42,32 @@ interface NormalizedPtr {
   readonly units: string;
 }
 
+interface NormalizedMpr {
+  readonly testNum: number;
+  readonly testFlg: number;
+  readonly rtnStat: readonly number[];
+  readonly rtnRslt: readonly number[];
+  readonly rtnIndx: readonly number[];
+  readonly testTxt: string;
+  readonly resScal: number;
+  readonly llmScal: number;
+  readonly hlmScal: number;
+  readonly loLimit: number | null;
+  readonly hiLimit: number | null;
+  readonly units: string;
+}
+
+interface NormalizedFtr {
+  readonly testNum: number;
+  readonly testFlg: number;
+  readonly cyclCnt?: number;
+  readonly numFail?: number;
+  readonly xfailAd?: number;
+  readonly yfailAd?: number;
+  readonly failPin?: BitArrayData;
+  readonly testTxt: string;
+}
+
 interface NormalizedResolvedDie {
   readonly key: string;
   readonly xCoord: number;
@@ -51,6 +80,8 @@ interface NormalizedResolvedDie {
   readonly softBin: number;
   readonly retestCount: number;
   readonly ptrs: readonly NormalizedPtr[];
+  readonly mprs: readonly NormalizedMpr[];
+  readonly ftrs: readonly NormalizedFtr[];
 }
 
 interface NormalizedWafer {
@@ -137,6 +168,181 @@ function normalizeSpecToExpectedLot(spec: StdfWriteLotSpec): NormalizedLot {
 
   const defaultWcr = normalizeWcrFromSpec(spec.wcr);
   const ptrDefaults = new Map<number, PtrDefaultContext>();
+  const mprDefaults = new Map<number, PtrDefaultContext>();
+
+  const normalizeSpecMpr = (m: StdfWriteMprSpec): NormalizedMpr => {
+    const rtnIcnt = Math.max(m.rtnIndx?.length ?? 0, m.rtnStat?.length ?? 0);
+    const rtnStat = Array.from({ length: rtnIcnt }, (_, i) =>
+      m.rtnStat !== undefined && i < m.rtnStat.length ? m.rtnStat[i]! & 0x0f : 0,
+    );
+    const rtnRslt = Array.from({ length: m.rtnRslt.length }, (_, i) =>
+      Math.fround(m.rtnRslt[i]!),
+    );
+    const rtnIndx =
+      !m.omitOptionalAfterResults && rtnIcnt > 0
+        ? Array.from({ length: rtnIcnt }, (_, i) =>
+            m.rtnIndx !== undefined && i < m.rtnIndx.length ? m.rtnIndx[i]! & 0xffff : 0,
+          )
+        : [];
+
+    const prior = mprDefaults.get(m.testNum);
+    if (!prior) {
+      if (m.omitOptionalAfterResults) {
+        const created: PtrDefaultContext = {
+          testNum: m.testNum,
+          testTxt: '',
+          units: '',
+          resScal: 0,
+          llmScal: 0,
+          hlmScal: 0,
+          loLimit: null,
+          hiLimit: null,
+        };
+        mprDefaults.set(m.testNum, created);
+        return {
+          testNum: m.testNum,
+          testFlg: m.testFlg ?? 0,
+          rtnStat,
+          rtnRslt,
+          rtnIndx,
+          testTxt: '',
+          resScal: 0,
+          llmScal: 0,
+          hlmScal: 0,
+          loLimit: null,
+          hiLimit: null,
+          units: '',
+        };
+      }
+
+      let optFlag = m.optFlag ?? 0;
+      if (m.optFlag === undefined) {
+        if (m.loLimit === undefined || m.loLimit === null) {
+          optFlag |= PTR_OPT_FLAG.NO_LO_LIMIT;
+        }
+        if (m.hiLimit === undefined || m.hiLimit === null) {
+          optFlag |= PTR_OPT_FLAG.NO_HI_LIMIT;
+        }
+      }
+      const noLo =
+        (optFlag & (PTR_OPT_FLAG.NO_LO_LIMIT | PTR_OPT_FLAG.LO_LIMIT_INVALID)) !== 0;
+      const noHi =
+        (optFlag & (PTR_OPT_FLAG.NO_HI_LIMIT | PTR_OPT_FLAG.HI_LIMIT_INVALID)) !== 0;
+      const resScal =
+        (optFlag & PTR_OPT_FLAG.RES_SCAL_INVALID) === 0 ? (m.resScal ?? 0) : 0;
+      const created: PtrDefaultContext = {
+        testNum: m.testNum,
+        testTxt: m.testTxt ?? '',
+        units: m.units ?? '',
+        resScal,
+        llmScal: noLo ? 0 : (m.llmScal ?? 0),
+        hlmScal: noHi ? 0 : (m.hlmScal ?? 0),
+        loLimit: noLo ? null : Math.fround(m.loLimit ?? 0),
+        hiLimit: noHi ? null : Math.fround(m.hiLimit ?? 0),
+      };
+      mprDefaults.set(m.testNum, created);
+      return {
+        testNum: m.testNum,
+        testFlg: m.testFlg ?? 0,
+        rtnStat,
+        rtnRslt,
+        rtnIndx,
+        testTxt: created.testTxt,
+        resScal: created.resScal,
+        llmScal: created.llmScal,
+        hlmScal: created.hlmScal,
+        loLimit: created.loLimit,
+        hiLimit: created.hiLimit,
+        units: created.units,
+      };
+    }
+
+    if (m.omitOptionalAfterResults) {
+      return {
+        testNum: m.testNum,
+        testFlg: m.testFlg ?? 0,
+        rtnStat,
+        rtnRslt,
+        rtnIndx,
+        testTxt: prior.testTxt,
+        resScal: prior.resScal,
+        llmScal: prior.llmScal,
+        hlmScal: prior.hlmScal,
+        loLimit: prior.loLimit,
+        hiLimit: prior.hiLimit,
+        units: prior.units,
+      };
+    }
+
+    let optFlag = m.optFlag ?? 0;
+    if (m.optFlag === undefined) {
+      if (m.loLimit === undefined || m.loLimit === null) {
+        optFlag |= PTR_OPT_FLAG.NO_LO_LIMIT;
+      }
+      if (m.hiLimit === undefined || m.hiLimit === null) {
+        optFlag |= PTR_OPT_FLAG.NO_HI_LIMIT;
+      }
+    }
+    const resScal =
+      (optFlag & PTR_OPT_FLAG.RES_SCAL_INVALID) !== 0
+        ? prior.resScal
+        : (m.resScal ?? 0);
+    const loLimit =
+      (optFlag & PTR_OPT_FLAG.NO_LO_LIMIT) !== 0
+        ? null
+        : (optFlag & PTR_OPT_FLAG.LO_LIMIT_INVALID) !== 0
+          ? prior.loLimit
+          : Math.fround(m.loLimit ?? 0);
+    const llmScal =
+      (optFlag & (PTR_OPT_FLAG.NO_LO_LIMIT | PTR_OPT_FLAG.LO_LIMIT_INVALID)) !== 0
+        ? prior.llmScal
+        : (m.llmScal ?? 0);
+    const hiLimit =
+      (optFlag & PTR_OPT_FLAG.NO_HI_LIMIT) !== 0
+        ? null
+        : (optFlag & PTR_OPT_FLAG.HI_LIMIT_INVALID) !== 0
+          ? prior.hiLimit
+          : Math.fround(m.hiLimit ?? 0);
+    const hlmScal =
+      (optFlag & (PTR_OPT_FLAG.NO_HI_LIMIT | PTR_OPT_FLAG.HI_LIMIT_INVALID)) !== 0
+        ? prior.hlmScal
+        : (m.hlmScal ?? 0);
+
+    return {
+      testNum: m.testNum,
+      testFlg: m.testFlg ?? 0,
+      rtnStat,
+      rtnRslt,
+      rtnIndx,
+      testTxt: m.testTxt && m.testTxt.length > 0 ? m.testTxt : prior.testTxt,
+      resScal,
+      llmScal,
+      hlmScal,
+      loLimit,
+      hiLimit,
+      units: m.units && m.units.length > 0 ? m.units : prior.units,
+    };
+  };
+
+  const normalizeSpecFtr = (f: StdfWriteFtrSpec): NormalizedFtr => {
+    if (f.omitOptionalAfterTestFlg) {
+      return {
+        testNum: f.testNum,
+        testFlg: f.testFlg ?? 0,
+        testTxt: '',
+      };
+    }
+    return {
+      testNum: f.testNum,
+      testFlg: f.testFlg ?? 0,
+      ...(f.cyclCnt !== undefined ? { cyclCnt: f.cyclCnt } : {}),
+      ...(f.numFail !== undefined ? { numFail: f.numFail } : {}),
+      xfailAd: f.xfailAd ?? 0,
+      yfailAd: f.yfailAd ?? 0,
+      failPin: f.failPin ?? { bitCount: 0, bytes: new Uint8Array(0) },
+      testTxt: f.testTxt ?? '',
+    };
+  };
 
   const normalizeSpecPartPtrs = (part: StdfWritePartSpec): NormalizedPtr[] => {
     const out: NormalizedPtr[] = [];
@@ -259,11 +465,16 @@ function normalizeSpecToExpectedLot(spec: StdfWriteLotSpec): NormalizedLot {
     const chronologicalParts: Array<{
       readonly spec: StdfWritePartSpec;
       readonly ptrs: readonly NormalizedPtr[];
+      readonly mprs: readonly NormalizedMpr[];
+      readonly ftrs: readonly NormalizedFtr[];
     }> = [];
 
     for (const td of wf.touchdowns ?? []) {
-      // In writeTouchdown, PTRs are emitted step-by-step across sites before PRRs close
+      // In writeTouchdown, PTRs, MPRs, and FTRs are emitted step-by-step across sites before PRRs close
       const perSitePtrs: NormalizedPtr[][] = td.map(() => []);
+      const perSiteMprs: NormalizedMpr[][] = td.map(() => []);
+      const perSiteFtrs: NormalizedFtr[][] = td.map(() => []);
+
       const maxSteps = td.reduce((m, part) => Math.max(m, part.ptrs?.length ?? 0), 0);
       for (let step = 0; step < maxSteps; step += 1) {
         for (let s = 0; s < td.length; s += 1) {
@@ -277,13 +488,44 @@ function normalizeSpecToExpectedLot(spec: StdfWriteLotSpec): NormalizedLot {
           }
         }
       }
+
+      const maxMprSteps = td.reduce((m, part) => Math.max(m, part.mprs?.length ?? 0), 0);
+      for (let step = 0; step < maxMprSteps; step += 1) {
+        for (let s = 0; s < td.length; s += 1) {
+          const singleMpr = td[s]!.mprs?.[step];
+          if (singleMpr !== undefined) {
+            perSiteMprs[s]!.push(normalizeSpecMpr(singleMpr));
+          }
+        }
+      }
+
+      const maxFtrSteps = td.reduce((m, part) => Math.max(m, part.ftrs?.length ?? 0), 0);
+      for (let step = 0; step < maxFtrSteps; step += 1) {
+        for (let s = 0; s < td.length; s += 1) {
+          const singleFtr = td[s]!.ftrs?.[step];
+          if (singleFtr !== undefined) {
+            perSiteFtrs[s]!.push(normalizeSpecFtr(singleFtr));
+          }
+        }
+      }
+
       for (let s = 0; s < td.length; s += 1) {
-        chronologicalParts.push({ spec: td[s]!, ptrs: perSitePtrs[s]! });
+        chronologicalParts.push({
+          spec: td[s]!,
+          ptrs: perSitePtrs[s]!,
+          mprs: perSiteMprs[s]!,
+          ftrs: perSiteFtrs[s]!,
+        });
       }
     }
 
     for (const p of wf.parts ?? []) {
-      chronologicalParts.push({ spec: p, ptrs: normalizeSpecPartPtrs(p) });
+      chronologicalParts.push({
+        spec: p,
+        ptrs: normalizeSpecPartPtrs(p),
+        mprs: (p.mprs ?? []).map(normalizeSpecMpr),
+        ftrs: (p.ftrs ?? []).map(normalizeSpecFtr),
+      });
     }
 
     const dieMap = new Map<string, NormalizedResolvedDie>();
@@ -318,6 +560,8 @@ function normalizeSpecToExpectedLot(spec: StdfWriteLotSpec): NormalizedLot {
           softBin,
           retestCount: 0,
           ptrs: entry.ptrs,
+          mprs: entry.mprs,
+          ftrs: entry.ftrs,
         });
       } else {
         dieMap.set(key, {
@@ -332,6 +576,8 @@ function normalizeSpecToExpectedLot(spec: StdfWriteLotSpec): NormalizedLot {
           softBin,
           retestCount: prev.retestCount + 1,
           ptrs: entry.ptrs,
+          mprs: entry.mprs,
+          ftrs: entry.ftrs,
         });
       }
     }
@@ -377,6 +623,34 @@ function normalizeParsedToLot(parsed: ParsedLotBuildInput): NormalizedLot {
       units: p.units,
     }));
 
+  const normalizePartMprs = (part: ParsedPartExecution): NormalizedMpr[] =>
+    part.mprs.map((m) => ({
+      testNum: m.testNum,
+      testFlg: m.testFlg,
+      rtnStat: Array.from(m.rtnStat),
+      rtnRslt: Array.from(m.rtnRslt),
+      rtnIndx: Array.from(m.rtnIndx),
+      testTxt: m.testTxt,
+      resScal: m.resScal,
+      llmScal: m.llmScal,
+      hlmScal: m.hlmScal,
+      loLimit: m.loLimit,
+      hiLimit: m.hiLimit,
+      units: m.units,
+    }));
+
+  const normalizePartFtrs = (part: ParsedPartExecution): NormalizedFtr[] =>
+    part.ftrs.map((f) => ({
+      testNum: f.testNum,
+      testFlg: f.testFlg,
+      ...(f.cyclCnt !== undefined ? { cyclCnt: f.cyclCnt } : {}),
+      ...(f.numFail !== undefined ? { numFail: f.numFail } : {}),
+      ...(f.xfailAd !== undefined ? { xfailAd: f.xfailAd } : {}),
+      ...(f.yfailAd !== undefined ? { yfailAd: f.yfailAd } : {}),
+      ...(f.failPin !== undefined ? { failPin: f.failPin } : {}),
+      testTxt: f.testTxt,
+    }));
+
   const wafers: NormalizedWafer[] = parsed.wafers.map((wf) => {
     const dieMap = new Map<string, NormalizedResolvedDie>();
     let missingSeq = 0;
@@ -387,6 +661,8 @@ function normalizeParsedToLot(parsed: ParsedLotBuildInput): NormalizedLot {
         p.xCoord !== STDF_MISSING_COORD && p.yCoord !== STDF_MISSING_COORD;
       const key = hasCoords ? `${p.xCoord},${p.yCoord}` : `part-${missingSeq++}`;
       const ptrs = normalizePartPtrs(p);
+      const mprs = normalizePartMprs(p);
+      const ftrs = normalizePartFtrs(p);
       const prev = dieMap.get(key);
       if (!prev) {
         dieMap.set(key, {
@@ -401,6 +677,8 @@ function normalizeParsedToLot(parsed: ParsedLotBuildInput): NormalizedLot {
           softBin: p.softBin,
           retestCount: 0,
           ptrs,
+          mprs,
+          ftrs,
         });
       } else {
         dieMap.set(key, {
@@ -415,6 +693,8 @@ function normalizeParsedToLot(parsed: ParsedLotBuildInput): NormalizedLot {
           softBin: p.softBin,
           retestCount: prev.retestCount + 1,
           ptrs,
+          mprs,
+          ftrs,
         });
       }
     }
@@ -468,7 +748,7 @@ describe('Property 1: STDF V4 Write-to-Parse Round-Trip Equivalence (fast-check)
         const actual = normalizeParsedToLot(parsed.value);
         expect(actual).toEqual(expected);
 
-        // Bins-only mode preserves identical metadata, wafers, and die bins while skipping PTRs
+        // Bins-only mode preserves identical metadata, wafers, and die bins while skipping PTR/MPR/FTRs
         const binsOnly = parseStdfBytes(bytesA, { mode: 'bins-only' });
         expect(binsOnly.ok).toBe(true);
         if (!binsOnly.ok) return;
@@ -477,7 +757,7 @@ describe('Property 1: STDF V4 Write-to-Parse Round-Trip Equivalence (fast-check)
           ...expected,
           wafers: expected.wafers.map((w) => ({
             ...w,
-            dies: w.dies.map((d) => ({ ...d, ptrs: [] })),
+            dies: w.dies.map((d) => ({ ...d, ptrs: [], mprs: [], ftrs: [] })),
           })),
         };
         expect(actualBinsOnly).toEqual(strippedExpected);

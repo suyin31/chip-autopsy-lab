@@ -1,0 +1,4 @@
+Finish task 2 of .kiro/specs/chip-autopsy-lab/tasks.md. Read logs/review-2.md (an independent code review). Do:
+1) Create src/core/stdf/stdf-parser-safety.prop.test.ts (task 2.5, Property 2 in design.md/requirements.md): fast-check fuzz over arbitrary Uint8Array, corrupted headers, and valid writer output truncated at every/random offset k. Assert the parser never throws, terminates, and that a truncated valid stream recovers all records fully contained in the prefix. Keep runtime under ~10 s.
+2) Fix the MINOR items m2, m3, m6, m7, m11 from logs/review-2.md, if each is small and safe.
+Do not rewrite working code. Run `npx tsc --noEmit`, `npx eslint .`, `npx vitest run` until all green. If and only if all green, mark task 2 and sub-tasks 2.1-2.5 as [x] in tasks.md, and append 3-6 lines to logs/progress.md (Task 2 done: what was built, test counts, review fixes). No web search. Finish within 14 minutes.

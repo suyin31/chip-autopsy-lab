@@ -212,6 +212,18 @@ describe('BinaryCursor & BinaryRecordBuilder (Requirements 1.5, 1.7, 2.1, 2.4)',
       '<script>alert(1)</script>',
     );
 
+    // C*1 printable boundary bytes (0x20, 0x7E) vs non-printable control/DEL/high bytes
+    const c1Bytes = new Uint8Array([0x20, 0x7e, 0x00, 0x01, 0x1f, 0x7f, 0x80, 0xff]);
+    const c1Cursor = new BinaryCursor(c1Bytes, 'little');
+    expect(c1Cursor.readC1()).toBe(' ');
+    expect(c1Cursor.readC1()).toBe('~');
+    expect(c1Cursor.readC1()).toBe(' ');
+    expect(c1Cursor.readC1()).toBe(' ');
+    expect(c1Cursor.readC1()).toBe(' ');
+    expect(c1Cursor.readC1()).toBe(' ');
+    expect(c1Cursor.readC1()).toBe(' ');
+    expect(c1Cursor.readC1()).toBe(' ');
+
     const builder = new BinaryRecordBuilder('little');
     const longText = 'µ'.repeat(100) + 'Ω'.repeat(40);
     builder.writeCn(longText);

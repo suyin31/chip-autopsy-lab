@@ -1,13 +1,16 @@
 import fc from 'fast-check';
 import {
   type BinPassFailFlag,
+  type BitArrayData,
   type CpuEndianness,
   PRR_PART_FLG,
   PTR_OPT_FLAG,
   PTR_TEST_FLG,
   STDF_MISSING_COORD,
+  type StdfWriteFtrSpec,
   type StdfWriteHbrSpec,
   type StdfWriteLotSpec,
+  type StdfWriteMprSpec,
   type StdfWritePartSpec,
   type StdfWritePtrSpec,
   type StdfWriteRawRecordSpec,
@@ -211,6 +214,80 @@ function buildPtrSpecArbitrary(
     });
 }
 
+const arbBitArrayData: fc.Arbitrary<BitArrayData> = fc
+  .integer({ min: 0, max: 20 })
+  .chain((bitCount) => {
+    const byteCount = (bitCount + 7) >>> 3;
+    return fc
+      .uint8Array({ minLength: byteCount, maxLength: byteCount })
+      .map((rawBytes): BitArrayData => {
+        const bytes = rawBytes.slice();
+        if (byteCount > 0) {
+          const remBits = bitCount & 7;
+          if (remBits !== 0) {
+            bytes[byteCount - 1] = bytes[byteCount - 1]! & ((1 << remBits) - 1);
+          }
+        }
+        return { bitCount, bytes };
+      });
+  });
+
+export const arbMprSpec: fc.Arbitrary<StdfWriteMprSpec> = fc
+  .record({
+    testNum: fc.integer({ min: 10_000, max: 10_003 }),
+    failed: fc.boolean(),
+    rtnRslt: fc.array(arbFiniteR4, { minLength: 1, maxLength: 3 }),
+    testTxt: arbNonEmptySafeAscii(10),
+    resScal: fc.integer({ min: -6, max: 6 }),
+    loLimit: fc.option(arbFiniteR4, { nil: null }),
+    hiLimit: fc.option(arbFiniteR4, { nil: null }),
+    units: fc.constantFrom('V', 'A', 'Ohm', ''),
+    omitOptionalAfterResults: fc.boolean(),
+  })
+  .chain((raw) => {
+    const pinCnt = raw.rtnRslt.length;
+    return fc
+      .record({
+        rtnIndx: fc.array(fc.integer({ min: 1, max: 64 }), {
+          minLength: pinCnt,
+          maxLength: pinCnt,
+        }),
+        rtnStat: fc.array(fc.integer({ min: 0, max: 15 }), {
+          minLength: pinCnt,
+          maxLength: pinCnt,
+        }),
+      })
+      .map(
+        ({ rtnIndx, rtnStat }): StdfWriteMprSpec => ({
+          testNum: raw.testNum,
+          testFlg: raw.failed ? PTR_TEST_FLG.FAILED : 0,
+          rtnStat,
+          rtnRslt: raw.rtnRslt,
+          rtnIndx,
+          testTxt: raw.testTxt,
+          resScal: raw.resScal,
+          llmScal: raw.loLimit !== null ? raw.resScal : 0,
+          hlmScal: raw.hiLimit !== null ? raw.resScal : 0,
+          loLimit: raw.loLimit,
+          hiLimit: raw.hiLimit,
+          units: raw.units,
+          omitOptionalAfterResults: raw.omitOptionalAfterResults,
+        }),
+      );
+  });
+
+export const arbFtrSpec: fc.Arbitrary<StdfWriteFtrSpec> = fc.record({
+  testNum: fc.integer({ min: 20_000, max: 20_005 }),
+  testFlg: fc.constantFrom(0, PTR_TEST_FLG.FAILED),
+  cyclCnt: fc.option(fc.integer({ min: 0, max: 100_000 }), { nil: undefined }),
+  numFail: fc.option(fc.integer({ min: 0, max: 64 }), { nil: undefined }),
+  xfailAd: fc.option(fc.integer({ min: -512, max: 512 }), { nil: undefined }),
+  yfailAd: fc.option(fc.integer({ min: -512, max: 512 }), { nil: undefined }),
+  failPin: fc.option(arbBitArrayData, { nil: undefined }),
+  testTxt: arbSafeAscii(0, 10),
+  omitOptionalAfterTestFlg: fc.boolean(),
+});
+
 function buildPartArbitrary(
   headNum: number,
   siteNum: number,
@@ -239,6 +316,8 @@ function buildPartArbitrary(
       ),
       partId: arbSafeAscii(0, 8),
       ptrs: fc.tuple(...ptrArbs),
+      mprs: fc.array(arbMprSpec, { minLength: 0, maxLength: 1 }),
+      ftrs: fc.array(arbFtrSpec, { minLength: 0, maxLength: 1 }),
     })
     .map((raw): StdfWritePartSpec => {
       const partFlg =
@@ -261,6 +340,8 @@ function buildPartArbitrary(
           hardBin,
           omitOptionalAfterHardBin: true,
           ptrs: raw.ptrs,
+          mprs: raw.mprs,
+          ftrs: raw.ftrs,
         };
       }
       if (raw.omitMode === 'after-coords') {
@@ -274,6 +355,8 @@ function buildPartArbitrary(
           yCoord,
           omitOptionalAfterCoords: true,
           ptrs: raw.ptrs,
+          mprs: raw.mprs,
+          ftrs: raw.ftrs,
         };
       }
       return {
@@ -286,6 +369,8 @@ function buildPartArbitrary(
         yCoord,
         partId: raw.partId,
         ptrs: raw.ptrs,
+        mprs: raw.mprs,
+        ftrs: raw.ftrs,
       };
     });
 }
