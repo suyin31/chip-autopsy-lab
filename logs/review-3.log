@@ -1,0 +1,40 @@
+I'll start by reading all the specification files and source code in parallel to maximize efficiency.
+Now let me read the remaining parts of design.md and the actual source code files:
+Good. Now let me read all the source files and test files in parallel:
+Now let me also read the requirements section 7 more carefully and check the stdf/types.ts for PRR_PART_FLG and check if the z-test math is correct:
+Now let me look at the PRR_PART_FLG definition and the ParsedPartExecution interface closely:
+Now let me run the tests to see if they all pass:
+Let me continue reading the arbitraries to understand the test generators better, then also check for edge cases:
+All tests pass. I've now reviewed all the code thoroughly. Let me also verify one more thing about the z-test implementation — specifically checking for the small-n and zero-variance edge cases:
+Good. Now let me check the design.md section on the z-test to see if the implementation matches the spec precisely — specifically whether the z-test is correctly a **two-proportion** z-test comparing candidate site yield vs. pooled yield of **other** sites, not the overall pooled rate:
+Now I have a comprehensive understanding. Let me verify one important detail — Req 7.4 says the z-test is a "two-proportion z >= 3.0", comparing one site vs. the "pooled Final Yield of the other Test Sites". The implementation at yield-summary.ts:243 uses overall pooled pass rate (including the candidate site) as the pooled proportion under H₀ for computing SE. Let me verify this is correct statistical methodology:
+
+The two-proportion z-test for comparing proportions p₁ and p₂ uses the pooled proportion p̂ = (x₁+x₂)/(n₁+n₂) for the standard error under H₀. This is standard — the implementation correctly uses the **overall** pooled rate (which includes the candidate site) for the SE calculation, while the **numerator** is `otherSitesFinalYield - siteFinalYield`. This is the standard Pearson chi-squared/z-test formulation.
+
+Now let me create the logs directory and write the review:
+The review is written to [logs/review-3.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/review-3.md). Here's the summary:
+
+## Review Results: Task 3
+
+**All 15 tests pass across 4 files** (lot-builder.test.ts, retest-resolver.prop.test.ts, yield-summary.test.ts, yield-summary.prop.test.ts).
+
+| Severity | Count | Key Items |
+|---|---|---|
+| **BLOCKER** | 0 | — |
+| **MAJOR** | 0 | Two initially flagged items (z-test pooled proportion, site partition semantics) cleared on inspection as correct |
+| **MINOR** | 8 | Mostly cosmetic: `tasks.md` checkboxes unchecked, ring BFS test in wrong describe block, tight arbitrary generator, etc. |
+
+### Key Findings
+
+1. **Retest resolution** (first PRR → `firstPass`, last PRR → `finalPass`/bins/PTR/site) — ✅ correct per Req 7.1
+2. **PART_FLG bits 3/4 + HBIN fallback** — ✅ exactly matches Req 7.2
+3. **Ring index BFS** — ✅ verified against Bellman shortest-distance identity
+4. **Missing coordinates** — ✅ distinct `part-<seq>` IDs, excluded from spatial grid, retained in yield totals
+5. **Site anomaly z-test** — ✅ correct two-proportion z-test, handles zero-variance (`pooledPassRate ∈ {0,1}`) and `se == 0` cases, strictly `> 5.0 pp` threshold
+6. **Yield partition additivity** — ✅ verified per-wafer and per-site sums equal lot totals within 1e-12
+7. **Tests are substantive** — oracle-based independent derivation, Bellman identity, algebraic partition invariant — not mirrors of the implementation
+
+### One Action Item
+- **Update `tasks.md`**: Mark sub-tasks 3.1–3.4 as `[x]` complete.
+
+**Verdict: PASS**
