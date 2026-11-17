@@ -42,7 +42,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - _Requirements: 7.1, 7.2, 7.3_
 
 - [ ] 4. Generate the demo lots and run them through the Web Worker
-  - [ ] 4.1 Implement `src/core/demo/prng.ts` and `demo-generator.ts`
+  - [x] 4.1 Implement `src/core/demo/prng.ts` and `demo-generator.ts`
     - Seeded Mulberry32 generator; 25-wafer x 633-die presets `edge-ring-etch`, `handling-scratch`, and `site2-probe-contact`, written through `stdf-writer.ts`.
     - _Requirements: 3.1_
   - [ ] 4.2 Implement `src/workers/autopsy.worker.ts` and `worker-client.ts`

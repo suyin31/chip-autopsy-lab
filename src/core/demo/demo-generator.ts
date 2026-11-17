@@ -1,0 +1,1122 @@
+/**
+ * Deterministic synthetic STDF V4 demo lot generator (`src/core/demo/demo-generator.ts`).
+ *
+ * Generates three storied 25-wafer x 633-die semiconductor sort lots (`15,825` dies/lot)
+ * serialized strictly through `writeStdfBytes` (`src/core/stdf/stdf-writer.ts`):
+ * - `edge-ring-etch`: RIE plasma focus-ring erosion -> outer 3-ring `IDDQ_LEAK` (`SBIN 7`, `Edge-Ring`)
+ * - `handling-scratch`: Robotic transfer-blade chord across `W05–W22` -> `VCCA_SHORT` (`SBIN 9`, `Scratch`)
+ * - `site2-probe-contact`: Oxidized `HEAD 1 / SITE 2` probe needles on `2x2` touchdowns -> `VDD_CONT_R`
+ *   first-pass drop + overdrive retest recovery (`SBIN 5`, spatial `Random` + `Test Site 1:2` anomaly)
+ *
+ * Pure deterministic TypeScript with zero React, Next.js, or DOM imports.
+ * Validates: Requirements 3.1, 3.3, 7.1, 7.4, 9.1, 17.7
+ */
+
+import { computeWaferEdgeRingIndices } from '../model/lot-builder';
+import type { DieId } from '../model/types';
+import { writeStdfBytes } from '../stdf/stdf-writer';
+import {
+  PRR_PART_FLG,
+  PTR_TEST_FLG,
+  type StdfWriteHbrSpec,
+  type StdfWriteLotSpec,
+  type StdfWritePartSpec,
+  type StdfWritePcrSpec,
+  type StdfWritePtrSpec,
+  type StdfWriteSbrSpec,
+  type StdfWriteTouchdownSpec,
+  type StdfWriteTsrSpec,
+  type StdfWriteWaferSpec,
+} from '../stdf/types';
+import { createPrng, mixSeed, normalizeSeed, type SeededPrng } from './prng';
+
+export type DemoPresetId =
+  | 'edge-ring-etch'
+  | 'handling-scratch'
+  | 'site2-probe-contact';
+
+export type DemoSpatialPatternTruth = 'Edge-Ring' | 'Scratch' | 'Random' | 'None';
+
+export interface DemoPresetMeta {
+  readonly id: DemoPresetId;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly defaultSeed: number;
+  readonly waferCount: number;
+  readonly expectedVerdictKind: 'Edge-Ring' | 'Scratch' | 'Site-Anomaly';
+}
+
+export interface DemoLotGroundTruth {
+  readonly presetId: DemoPresetId;
+  readonly seed: number;
+  readonly lotId: string;
+  readonly waferCount: number;
+  readonly diesPerWafer: number;
+  readonly totalDies: number;
+  /** Expected WM-811K class on the 25-wafer stacked failure heatmap. */
+  readonly expectedStackedPattern: 'Edge-Ring' | 'Scratch' | 'Random';
+  /** Expected WM-811K class per wafer (`0 .. waferCount - 1`). */
+  readonly expectedWaferPatterns: readonly DemoSpatialPatternTruth[];
+  /** Wafer indices (`0 .. waferCount - 1`) carrying the injected failure mechanism. */
+  readonly injectedWaferIndices: readonly number[];
+  /** Injected faulty Test Site (`1:2` for `site2-probe-contact`, `null` when sites are balanced). */
+  readonly injectedAnomalousSite: {
+    readonly headNum: number;
+    readonly siteNum: number;
+  } | null;
+  /** Primary parametric `TEST_NUM` shifted by the injected failure mode. */
+  readonly primaryInjectedTestNum: number;
+  /** All parametric `TEST_NUM`s shifted by the injected failure mode. */
+  readonly injectedTestNums: readonly number[];
+  /** Dominant failing SBIN and HBIN codes produced by the injected mechanism. */
+  readonly dominantFailSbin: number;
+  readonly dominantFailHbin: number;
+  /** Canonical `DieId`s (`<waferId>:<x>,<y>`) failing in final state from the injected mechanism. */
+  readonly injectedFinalFailDieIds: readonly DieId[];
+  /** Canonical `DieId`s failing on chronologically first PRR from the injected mechanism. */
+  readonly injectedFirstPassFailDieIds: readonly DieId[];
+  /** Canonical `DieId`s that executed a retest (`2nd PRR`) touchdown. */
+  readonly retestedDieIds: readonly DieId[];
+  /** Canonical `DieId`s that failed first pass and recovered to pass on retest. */
+  readonly recoveredRetestDieIds: readonly DieId[];
+}
+
+export interface GeneratedDemoLot {
+  readonly preset: DemoPresetMeta;
+  readonly seed: number;
+  readonly stdfBytes: Uint8Array;
+  readonly lotSpec: StdfWriteLotSpec;
+  readonly groundTruth: DemoLotGroundTruth;
+}
+
+export const DEMO_WAFER_COUNT = 25 as const;
+export const DEMO_WAFER_RADIUS = 14.2 as const;
+export const DEMO_DIES_PER_WAFER = 633 as const;
+export const DEMO_HEAD_NUM = 1 as const;
+export const DEMO_SITE_NUMS = [1, 2, 3, 4] as const;
+
+const BASE_SETUP_TIMESTAMP = 1_731_800_000;
+
+export const DEMO_TEST_NUMS = {
+  VDD_CONT_R: 101,
+  IDDQ_LEAK: 204,
+  VCCA_SHORT: 302,
+  VTH_CORE: 410,
+} as const;
+
+interface DemoParametricSpec {
+  readonly testNum: number;
+  readonly testTxt: string;
+  readonly units: string;
+  readonly resScal: number;
+  readonly llmScal: number;
+  readonly hlmScal: number;
+  readonly loLimit: number;
+  readonly hiLimit: number;
+}
+
+export const DEMO_PARAMETRIC_SPECS: readonly DemoParametricSpec[] = [
+  {
+    testNum: DEMO_TEST_NUMS.VDD_CONT_R,
+    testTxt: 'VDD_CONT_R',
+    units: 'Ohm',
+    resScal: 0,
+    llmScal: 0,
+    hlmScal: 0,
+    loLimit: 0.1,
+    hiLimit: 2.5,
+  },
+  {
+    testNum: DEMO_TEST_NUMS.IDDQ_LEAK,
+    testTxt: 'IDDQ_LEAK',
+    units: 'A',
+    resScal: 6,
+    llmScal: 6,
+    hlmScal: 6,
+    loLimit: 0.2e-6,
+    hiLimit: 15.0e-6,
+  },
+  {
+    testNum: DEMO_TEST_NUMS.VCCA_SHORT,
+    testTxt: 'VCCA_SHORT',
+    units: 'A',
+    resScal: 3,
+    llmScal: 3,
+    hlmScal: 3,
+    loLimit: 4.0e-3,
+    hiLimit: 25.0e-3,
+  },
+  {
+    testNum: DEMO_TEST_NUMS.VTH_CORE,
+    testTxt: 'VTH_CORE',
+    units: 'V',
+    resScal: 3,
+    llmScal: 3,
+    hlmScal: 3,
+    loLimit: 0.31,
+    hiLimit: 0.45,
+  },
+] as const;
+
+const HBIN_CATALOG: ReadonlyArray<{
+  readonly code: number;
+  readonly pf: 'P' | 'F';
+  readonly name: string;
+}> = [
+  { code: 1, pf: 'P', name: 'PASS_BIN' },
+  { code: 2, pf: 'F', name: 'CONT_BIN' },
+  { code: 3, pf: 'F', name: 'SHORT_BIN' },
+  { code: 4, pf: 'F', name: 'LEAK_BIN' },
+  { code: 5, pf: 'F', name: 'PARAM_BIN' },
+];
+
+const SBIN_CATALOG: ReadonlyArray<{
+  readonly code: number;
+  readonly pf: 'P' | 'F';
+  readonly name: string;
+}> = [
+  { code: 1, pf: 'P', name: 'GOOD_DIE' },
+  { code: 5, pf: 'F', name: 'CONT_OPEN' },
+  { code: 7, pf: 'F', name: 'IDDQ_EDGE_LEAK' },
+  { code: 9, pf: 'F', name: 'VDD_METAL_SHORT' },
+  { code: 11, pf: 'F', name: 'VTH_DRIFT' },
+];
+
+const DEMO_PRESETS: readonly DemoPresetMeta[] = [
+  {
+    id: 'edge-ring-etch',
+    title: 'Edge-Ring Plasma Etch Lot',
+    subtitle: '25 wafers · RIE focus-ring erosion spiking peripheral IDDQ leakage (SBIN 7)',
+    defaultSeed: 0x20261201,
+    waferCount: DEMO_WAFER_COUNT,
+    expectedVerdictKind: 'Edge-Ring',
+  },
+  {
+    id: 'handling-scratch',
+    title: 'Robotic Handling Scratch Lot',
+    subtitle: '25 wafers · Transfer-blade metal short chord across W05–W22 (SBIN 9)',
+    defaultSeed: 0x20261202,
+    waferCount: DEMO_WAFER_COUNT,
+    expectedVerdictKind: 'Scratch',
+  },
+  {
+    id: 'site2-probe-contact',
+    title: 'Site 1:2 Probe Contact Lot',
+    subtitle: '25 wafers · Oxidized Site 2 needles causing contact opens & retest recovery (SBIN 5)',
+    defaultSeed: 0x20261203,
+    waferCount: DEMO_WAFER_COUNT,
+    expectedVerdictKind: 'Site-Anomaly',
+  },
+] as const;
+
+const PRESET_LOT_CONFIG: Readonly<
+  Record<
+    DemoPresetId,
+    {
+      readonly lotId: string;
+      readonly partTyp: string;
+      readonly jobNam: string;
+      readonly salt: number;
+    }
+  >
+> = {
+  'edge-ring-etch': {
+    lotId: 'CAL-ER-2401',
+    partTyp: 'CAL-MCU-28NM',
+    jobNam: 'WSORT_ETCH_MON_V4',
+    salt: 0x101,
+  },
+  'handling-scratch': {
+    lotId: 'CAL-SC-2402',
+    partTyp: 'CAL-MCU-28NM',
+    jobNam: 'WSORT_PASSIV_MON_V4',
+    salt: 0x202,
+  },
+  'site2-probe-contact': {
+    lotId: 'CAL-S2-2403',
+    partTyp: 'CAL-MCU-28NM',
+    jobNam: 'WSORT_QUAD_SITE_V4',
+    salt: 0x303,
+  },
+};
+
+interface StaticGridDie {
+  readonly gridIndex: number;
+  readonly x: number;
+  readonly y: number;
+  readonly siteNum: 1 | 2 | 3 | 4;
+  readonly ringIndex: number;
+  readonly onScratchChord: boolean;
+}
+
+interface StaticWaferLayout {
+  readonly dies: readonly StaticGridDie[];
+  /** Serpentine `2x2` prober touchdown groups of `gridIndex`es. */
+  readonly touchdownGroups: ReadonlyArray<readonly number[]>;
+}
+
+let cachedLayout: StaticWaferLayout | null = null;
+
+/**
+ * Builds and caches the 633-die circular wafer layout (`x^2 + y^2 <= 14.2^2`),
+ * 4-neighbour edge-ring indices, scratch chord membership (`0.55x - y + 1.5 = 0`),
+ * and serpentine `2x2` quad-site prober touchdown stepping order:
+ * - Site 1: `(even X, even Y)`
+ * - Site 2: `(odd X, even Y)`
+ * - Site 3: `(even X, odd Y)`
+ * - Site 4: `(odd X, odd Y)`
+ */
+function getStaticWaferLayout(): StaticWaferLayout {
+  if (cachedLayout !== null) {
+    return cachedLayout;
+  }
+
+  const radiusSq = DEMO_WAFER_RADIUS * DEMO_WAFER_RADIUS;
+  const rawCoords: Array<{ readonly x: number; readonly y: number }> = [];
+  const coordLookup = new Map<string, number>();
+
+  // Step 2x2 touchdown blocks in serpentine prober row order (bottom-to-top Y, alternating X)
+  const touchdownGroups: number[][] = [];
+  const siteOffsets: ReadonlyArray<{
+    readonly dx: 0 | 1;
+    readonly dy: 0 | 1;
+    readonly siteNum: 1 | 2 | 3 | 4;
+  }> = [
+    { dx: 0, dy: 0, siteNum: 1 },
+    { dx: 1, dy: 0, siteNum: 2 },
+    { dx: 0, dy: 1, siteNum: 3 },
+    { dx: 1, dy: 1, siteNum: 4 },
+  ];
+
+  const siteNumsForIndex: Array<1 | 2 | 3 | 4> = [];
+
+  let rowIdx = 0;
+  for (let by = -7; by <= 7; by += 1) {
+    const leftToRight = (rowIdx & 1) === 0;
+    rowIdx += 1;
+    for (let step = 0; step < 15; step += 1) {
+      const bx = leftToRight ? -7 + step : 7 - step;
+      const group: number[] = [];
+      for (const off of siteOffsets) {
+        const x = 2 * bx + off.dx;
+        const y = 2 * by + off.dy;
+        if (x * x + y * y <= radiusSq) {
+          const idx = rawCoords.length;
+          rawCoords.push({ x, y });
+          siteNumsForIndex.push(off.siteNum);
+          coordLookup.set(`${x},${y}`, idx);
+          group.push(idx);
+        }
+      }
+      if (group.length > 0) {
+        touchdownGroups.push(group);
+      }
+    }
+  }
+
+  const ringIndices = computeWaferEdgeRingIndices(rawCoords);
+  const dies: StaticGridDie[] = new Array<StaticGridDie>(rawCoords.length);
+
+  for (let i = 0; i < rawCoords.length; i += 1) {
+    const { x, y } = rawCoords[i]!;
+    // Chord: 0.55x - y + 1.5 = 0 within x in [-11, 10], residual <= 1.05 (~1.84 perpendicular pitch)
+    const chordResidual = Math.abs(0.55 * x - y + 1.5);
+    const onScratchChord = x >= -11 && x <= 10 && chordResidual <= 1.05;
+    dies[i] = {
+      gridIndex: i,
+      x,
+      y,
+      siteNum: siteNumsForIndex[i]!,
+      ringIndex: ringIndices[i]!,
+      onScratchChord,
+    };
+  }
+
+  cachedLayout = { dies, touchdownGroups };
+  return cachedLayout;
+}
+
+type FailureMode =
+  | 'PASS'
+  | 'CONT_OPEN' // SBIN 5, HBIN 2, TEST 101
+  | 'IDDQ_EDGE_LEAK' // SBIN 7, HBIN 4, TEST 204
+  | 'VDD_METAL_SHORT' // SBIN 9, HBIN 3, TEST 302
+  | 'VTH_DRIFT'; // SBIN 11, HBIN 5, TEST 410
+
+interface ExecutionOutcome {
+  readonly mode: FailureMode;
+  readonly hardBin: number;
+  readonly softBin: number;
+}
+
+const PASS_OUTCOME: ExecutionOutcome = { mode: 'PASS', hardBin: 1, softBin: 1 };
+const CONT_FAIL_OUTCOME: ExecutionOutcome = { mode: 'CONT_OPEN', hardBin: 2, softBin: 5 };
+const LEAK_FAIL_OUTCOME: ExecutionOutcome = {
+  mode: 'IDDQ_EDGE_LEAK',
+  hardBin: 4,
+  softBin: 7,
+};
+const SHORT_FAIL_OUTCOME: ExecutionOutcome = {
+  mode: 'VDD_METAL_SHORT',
+  hardBin: 3,
+  softBin: 9,
+};
+const VTH_FAIL_OUTCOME: ExecutionOutcome = { mode: 'VTH_DRIFT', hardBin: 5, softBin: 11 };
+
+function clamp(val: number, lo: number, hi: number): number {
+  if (val < lo) return lo;
+  if (val > hi) return hi;
+  return val;
+}
+
+function drawBaselineFailureOutcome(
+  rng: SeededPrng,
+  presetId: DemoPresetId,
+): ExecutionOutcome {
+  const u = rng.next();
+  if (presetId === 'edge-ring-etch') {
+    // Secondary minor loss in SBIN 11: VTH_DRIFT plus minor CONT/SHORT point defects
+    if (u < 0.66) return VTH_FAIL_OUTCOME;
+    if (u < 0.84) return CONT_FAIL_OUTCOME;
+    return SHORT_FAIL_OUTCOME;
+  }
+  if (presetId === 'handling-scratch') {
+    if (u < 0.52) return LEAK_FAIL_OUTCOME;
+    if (u < 0.88) return VTH_FAIL_OUTCOME;
+    return CONT_FAIL_OUTCOME;
+  }
+  // site2-probe-contact baseline silicon point defects across all 4 sites
+  if (u < 0.56) return LEAK_FAIL_OUTCOME;
+  return VTH_FAIL_OUTCOME;
+}
+
+interface TsrStatAccumulator {
+  execCnt: number;
+  failCnt: number;
+  min: number;
+  max: number;
+  sum: number;
+  sumSq: number;
+}
+
+function createTsrAccumulators(): TsrStatAccumulator[] {
+  return DEMO_PARAMETRIC_SPECS.map(() => ({
+    execCnt: 0,
+    failCnt: 0,
+    min: Number.POSITIVE_INFINITY,
+    max: Number.NEGATIVE_INFINITY,
+    sum: 0,
+    sumSq: 0,
+  }));
+}
+
+function recordTsrSample(
+  acc: TsrStatAccumulator,
+  rawResult: number,
+  failed: boolean,
+): void {
+  const r4 = Math.fround(rawResult);
+  acc.execCnt += 1;
+  if (failed) {
+    acc.failCnt += 1;
+  }
+  if (r4 < acc.min) acc.min = r4;
+  if (r4 > acc.max) acc.max = r4;
+  acc.sum += r4;
+  acc.sumSq += r4 * r4;
+}
+
+function buildPartPtrs(
+  rng: SeededPrng,
+  presetId: DemoPresetId,
+  die: StaticGridDie,
+  outcome: ExecutionOutcome,
+  emitFullDefaults: boolean,
+  tsrAcc: readonly TsrStatAccumulator[],
+): readonly StdfWritePtrSpec[] {
+  // 1. TEST 101: VDD_CONT_R (0.10 .. 2.50 Ohm)
+  const contFailed = outcome.mode === 'CONT_OPEN';
+  let contVal: number;
+  if (contFailed) {
+    contVal = clamp(2.68 + Math.abs(rng.nextNormal(1.75, 1.15)), 2.65, 9.2);
+  } else if (presetId === 'site2-probe-contact' && die.siteNum === 2) {
+    // Elevated contact resistance tail on Site 2 even on passing/recovered touchdowns
+    contVal = clamp(rng.nextNormal(1.52, 0.36), 0.3, 2.42);
+  } else {
+    contVal = clamp(rng.nextNormal(0.72, 0.14), 0.18, 2.32);
+  }
+
+  // 2. TEST 204: IDDQ_LEAK (0.20 uA .. 15.0 uA in base Amps)
+  const leakFailed = outcome.mode === 'IDDQ_EDGE_LEAK';
+  let leakVal: number;
+  if (leakFailed) {
+    const edgeBoost =
+      presetId === 'edge-ring-etch' && die.ringIndex <= 3
+        ? (4 - die.ringIndex) * 4.2e-6
+        : 0;
+    leakVal = clamp(
+      16.2e-6 + Math.abs(rng.nextNormal(9.5e-6, 5.5e-6)) + edgeBoost,
+      16.0e-6,
+      72.0e-6,
+    );
+  } else if (presetId === 'edge-ring-etch' && die.ringIndex <= 3) {
+    const edgeShift = (4 - die.ringIndex) * 1.15e-6;
+    leakVal = clamp(rng.nextNormal(8.1e-6 + edgeShift, 1.35e-6), 1.8e-6, 14.4e-6);
+  } else {
+    leakVal = clamp(rng.nextNormal(4.1e-6, 0.8e-6), 0.45e-6, 13.5e-6);
+  }
+
+  // 3. TEST 302: VCCA_SHORT (4.0 mA .. 25.0 mA in base Amps)
+  const shortFailed = outcome.mode === 'VDD_METAL_SHORT';
+  const shortVal = shortFailed
+    ? clamp(28.0e-3 + Math.abs(rng.nextNormal(24.0e-3, 11.0e-3)), 27.0e-3, 92.0e-3)
+    : clamp(rng.nextNormal(12.4e-3, 1.35e-3), 5.5e-3, 23.4e-3);
+
+  // 4. TEST 410: VTH_CORE (0.310 V .. 0.450 V)
+  const vthFailed = outcome.mode === 'VTH_DRIFT';
+  let vthVal: number;
+  if (vthFailed) {
+    vthVal = rng.nextBool(0.5)
+      ? clamp(0.462 + Math.abs(rng.nextNormal(0.022, 0.014)), 0.458, 0.54)
+      : clamp(0.298 - Math.abs(rng.nextNormal(0.022, 0.014)), 0.23, 0.302);
+  } else {
+    vthVal = clamp(rng.nextNormal(0.38, 0.011), 0.32, 0.44);
+  }
+
+  const values = [contVal, leakVal, shortVal, vthVal] as const;
+  const failedFlags = [contFailed, leakFailed, shortFailed, vthFailed] as const;
+
+  const ptrs: StdfWritePtrSpec[] = new Array<StdfWritePtrSpec>(4);
+  for (let t = 0; t < 4; t += 1) {
+    const result = values[t]!;
+    const failed = failedFlags[t]!;
+    recordTsrSample(tsrAcc[t]!, result, failed);
+    const spec = DEMO_PARAMETRIC_SPECS[t]!;
+
+    if (emitFullDefaults) {
+      ptrs[t] = {
+        testNum: spec.testNum,
+        testFlg: failed ? PTR_TEST_FLG.FAILED : 0,
+        result,
+        testTxt: spec.testTxt,
+        resScal: spec.resScal,
+        llmScal: spec.llmScal,
+        hlmScal: spec.hlmScal,
+        loLimit: spec.loLimit,
+        hiLimit: spec.hiLimit,
+        units: spec.units,
+      };
+    } else {
+      ptrs[t] = {
+        testNum: spec.testNum,
+        testFlg: failed ? PTR_TEST_FLG.FAILED : 0,
+        result,
+        omitOptionalAfterResult: true,
+      };
+    }
+  }
+
+  return ptrs;
+}
+
+interface DiePlan {
+  readonly die: StaticGridDie;
+  readonly firstOutcome: ExecutionOutcome;
+  readonly retestOutcome: ExecutionOutcome | null;
+  readonly injectedFirstPassFail: boolean;
+  readonly injectedFinalFail: boolean;
+}
+
+function planWaferDieOutcomes(
+  rng: SeededPrng,
+  presetId: DemoPresetId,
+  waferIndex: number,
+  dies: readonly StaticGridDie[],
+): readonly DiePlan[] {
+  const plans: DiePlan[] = new Array<DiePlan>(dies.length);
+
+  for (let i = 0; i < dies.length; i += 1) {
+    const die = dies[i]!;
+
+    if (presetId === 'edge-ring-etch') {
+      const injectedProb =
+        die.ringIndex === 1
+          ? 0.63
+          : die.ringIndex === 2
+            ? 0.46
+            : die.ringIndex === 3
+              ? 0.23
+              : 0;
+      const isInjected = injectedProb > 0 && rng.nextBool(injectedProb);
+      if (isInjected) {
+        // ~6% of hard over-etch leakage fails are re-probed and remain failing
+        const retest = rng.nextBool(0.06) ? LEAK_FAIL_OUTCOME : null;
+        plans[i] = {
+          die,
+          firstOutcome: LEAK_FAIL_OUTCOME,
+          retestOutcome: retest,
+          injectedFirstPassFail: true,
+          injectedFinalFail: true,
+        };
+        continue;
+      }
+
+      if (rng.nextBool(0.018)) {
+        const baseOut = drawBaselineFailureOutcome(rng, presetId);
+        const retest = rng.nextBool(0.06) ? baseOut : null;
+        plans[i] = {
+          die,
+          firstOutcome: baseOut,
+          retestOutcome: retest,
+          injectedFirstPassFail: false,
+          injectedFinalFail: false,
+        };
+        continue;
+      }
+
+      // Transient first-pass contact/settling blip recovering on retest
+      if (rng.nextBool(0.015)) {
+        plans[i] = {
+          die,
+          firstOutcome: CONT_FAIL_OUTCOME,
+          retestOutcome: PASS_OUTCOME,
+          injectedFirstPassFail: false,
+          injectedFinalFail: false,
+        };
+        continue;
+      }
+
+      plans[i] = {
+        die,
+        firstOutcome: PASS_OUTCOME,
+        retestOutcome: null,
+        injectedFirstPassFail: false,
+        injectedFinalFail: false,
+      };
+      continue;
+    }
+
+    if (presetId === 'handling-scratch') {
+      const waferHasScratch = waferIndex >= 4 && waferIndex <= 21; // W05..W22
+      const isInjected = waferHasScratch && die.onScratchChord && rng.nextBool(0.84);
+      if (isInjected) {
+        const retest = rng.nextBool(0.06) ? SHORT_FAIL_OUTCOME : null;
+        plans[i] = {
+          die,
+          firstOutcome: SHORT_FAIL_OUTCOME,
+          retestOutcome: retest,
+          injectedFirstPassFail: true,
+          injectedFinalFail: true,
+        };
+        continue;
+      }
+
+      // Low 1.2% baseline so clean wafers W01-W04 and W23-W25 (~98.8% yield) stay below MIN_FAIL_FRACTION
+      if (rng.nextBool(0.012)) {
+        const baseOut = drawBaselineFailureOutcome(rng, presetId);
+        const retest = rng.nextBool(0.05) ? baseOut : null;
+        plans[i] = {
+          die,
+          firstOutcome: baseOut,
+          retestOutcome: retest,
+          injectedFirstPassFail: false,
+          injectedFinalFail: false,
+        };
+        continue;
+      }
+
+      if (rng.nextBool(0.01)) {
+        plans[i] = {
+          die,
+          firstOutcome: CONT_FAIL_OUTCOME,
+          retestOutcome: PASS_OUTCOME,
+          injectedFirstPassFail: false,
+          injectedFinalFail: false,
+        };
+        continue;
+      }
+
+      plans[i] = {
+        die,
+        firstOutcome: PASS_OUTCOME,
+        retestOutcome: null,
+        injectedFirstPassFail: false,
+        injectedFinalFail: false,
+      };
+      continue;
+    }
+
+    // Preset: 'site2-probe-contact'
+    // Baseline silicon point-defect rate ~2.8% across all 4 sites (~97.2% yield on Sites 1, 3, 4)
+    if (rng.nextBool(0.028)) {
+      const baseOut = drawBaselineFailureOutcome(rng, presetId);
+      const retest = rng.nextBool(0.08)
+        ? rng.nextBool(0.15)
+          ? PASS_OUTCOME
+          : baseOut
+        : null;
+      plans[i] = {
+        die,
+        firstOutcome: baseOut,
+        retestOutcome: retest,
+        injectedFirstPassFail: false,
+        injectedFinalFail: false,
+      };
+      continue;
+    }
+
+    // Oxidized/bent probe needles on HEAD 1 / SITE 2 ((odd X, even Y) in 2x2 touchdowns)
+    if (die.siteNum === 2 && rng.nextBool(0.385)) {
+      // Prober auto-retest overdrive scrub on ~50% of Site-2 contact opens, recovering ~40% of re-probes (~20% overall)
+      const doRetest = rng.nextBool(0.5);
+      const recovers = doRetest && rng.nextBool(0.4);
+      plans[i] = {
+        die,
+        firstOutcome: CONT_FAIL_OUTCOME,
+        retestOutcome: doRetest ? (recovers ? PASS_OUTCOME : CONT_FAIL_OUTCOME) : null,
+        injectedFirstPassFail: true,
+        injectedFinalFail: !recovers,
+      };
+      continue;
+    }
+
+    plans[i] = {
+      die,
+      firstOutcome: PASS_OUTCOME,
+      retestOutcome: null,
+      injectedFirstPassFail: false,
+      injectedFinalFail: false,
+    };
+  }
+
+  return plans;
+}
+
+/**
+ * Lists metadata for all three built-in deterministic STDF V4 demo lots.
+ */
+export function listDemoPresets(): readonly DemoPresetMeta[] {
+  return DEMO_PRESETS;
+}
+
+/**
+ * Looks up metadata for a built-in demo preset by ID.
+ */
+export function getDemoPresetMeta(presetId: DemoPresetId): DemoPresetMeta {
+  const found = DEMO_PRESETS.find((p) => p.id === presetId);
+  if (found === undefined) {
+    throw new RangeError(`Unknown demo preset ID: "${String(presetId)}".`);
+  }
+  return found;
+}
+
+/**
+ * Deterministically generates a complete 25-wafer x 633-die STDF V4 demo lot,
+ * its `StdfWriteLotSpec`, and its exact ground-truth failure manifest.
+ */
+export function generateDemoLot(
+  presetId: DemoPresetId,
+  seed?: number,
+): GeneratedDemoLot {
+  const preset = getDemoPresetMeta(presetId);
+  const config = PRESET_LOT_CONFIG[presetId];
+  const resolvedSeed = normalizeSeed(seed ?? preset.defaultSeed);
+  const rootRng = createPrng(mixSeed(resolvedSeed, config.salt));
+  const layout = getStaticWaferLayout();
+
+  const tsrAcc = createTsrAccumulators();
+  const hbinCounts = new Map<number, number>();
+  const sbinCounts = new Map<number, number>();
+  for (const h of HBIN_CATALOG) hbinCounts.set(h.code, 0);
+  for (const s of SBIN_CATALOG) sbinCounts.set(s.code, 0);
+
+  const sitePartCnt = [0, 0, 0, 0];
+  const siteRtstCnt = [0, 0, 0, 0];
+  const siteGoodCnt = [0, 0, 0, 0];
+
+  const injectedFinalFailDieIds: DieId[] = [];
+  const injectedFirstPassFailDieIds: DieId[] = [];
+  const retestedDieIds: DieId[] = [];
+  const recoveredRetestDieIds: DieId[] = [];
+  const expectedWaferPatterns: DemoSpatialPatternTruth[] = [];
+  const injectedWaferIndices: number[] = [];
+
+  const wafers: StdfWriteWaferSpec[] = new Array<StdfWriteWaferSpec>(DEMO_WAFER_COUNT);
+  let emittedFirstPtrDefaults = false;
+
+  for (let wIdx = 0; wIdx < DEMO_WAFER_COUNT; wIdx += 1) {
+    const waferId = `W${String(wIdx + 1).padStart(2, '0')}`;
+    const waferRng = rootRng.fork(wIdx + 1);
+    const plans = planWaferDieOutcomes(waferRng, presetId, wIdx, layout.dies);
+
+    if (presetId === 'edge-ring-etch') {
+      expectedWaferPatterns.push('Edge-Ring');
+      injectedWaferIndices.push(wIdx);
+    } else if (presetId === 'handling-scratch') {
+      const hasScratch = wIdx >= 4 && wIdx <= 21;
+      expectedWaferPatterns.push(hasScratch ? 'Scratch' : 'None');
+      if (hasScratch) {
+        injectedWaferIndices.push(wIdx);
+      }
+    } else {
+      expectedWaferPatterns.push('Random');
+      injectedWaferIndices.push(wIdx);
+    }
+
+    const touchdowns: StdfWriteTouchdownSpec[] = [];
+    const retestQueue: DiePlan[] = [];
+    let waferPrrCount = 0;
+    let waferRetestCount = 0;
+    let waferGoodCount = 0;
+
+    // 1. Primary 2x2 serpentine multi-site wafer probe pass
+    for (let g = 0; g < layout.touchdownGroups.length; g += 1) {
+      const group = layout.touchdownGroups[g]!;
+      const tdParts: StdfWritePartSpec[] = new Array<StdfWritePartSpec>(group.length);
+
+      for (let m = 0; m < group.length; m += 1) {
+        const plan = plans[group[m]!]!;
+        const { die, firstOutcome } = plan;
+        const firstPassed = firstOutcome.mode === 'PASS';
+        const ptrs = buildPartPtrs(
+          waferRng,
+          presetId,
+          die,
+          firstOutcome,
+          !emittedFirstPtrDefaults,
+          tsrAcc,
+        );
+        emittedFirstPtrDefaults = true;
+
+        tdParts[m] = {
+          headNum: DEMO_HEAD_NUM,
+          siteNum: die.siteNum,
+          partFlg: firstPassed ? 0 : PRR_PART_FLG.FAILED,
+          hardBin: firstOutcome.hardBin,
+          softBin: firstOutcome.softBin,
+          xCoord: die.x,
+          yCoord: die.y,
+          omitOptionalAfterCoords: true,
+          ptrs,
+        };
+
+        waferPrrCount += 1;
+        sitePartCnt[die.siteNum - 1]! += 1;
+
+        const dieId: DieId = `${waferId}:${die.x},${die.y}`;
+        if (plan.injectedFirstPassFail) {
+          injectedFirstPassFailDieIds.push(dieId);
+        }
+        if (plan.injectedFinalFail) {
+          injectedFinalFailDieIds.push(dieId);
+        }
+
+        if (plan.retestOutcome !== null) {
+          retestQueue.push(plan);
+          retestedDieIds.push(dieId);
+          if (plan.retestOutcome.mode === 'PASS') {
+            recoveredRetestDieIds.push(dieId);
+          }
+        } else {
+          // Final state resolved on first pass
+          hbinCounts.set(
+            firstOutcome.hardBin,
+            (hbinCounts.get(firstOutcome.hardBin) ?? 0) + 1,
+          );
+          sbinCounts.set(
+            firstOutcome.softBin,
+            (sbinCounts.get(firstOutcome.softBin) ?? 0) + 1,
+          );
+          if (firstPassed) {
+            waferGoodCount += 1;
+            siteGoodCnt[die.siteNum - 1]! += 1;
+          }
+        }
+      }
+
+      touchdowns.push(tdParts);
+    }
+
+    // 2. End-of-wafer retest pass (grouped into conflict-free multi-site touchdowns when sites differ)
+    let rCursor = 0;
+    while (rCursor < retestQueue.length) {
+      const batch: StdfWritePartSpec[] = [];
+      const usedSites = new Set<number>();
+
+      while (rCursor < retestQueue.length && batch.length < 4) {
+        const candidate = retestQueue[rCursor]!;
+        if (usedSites.has(candidate.die.siteNum)) {
+          break;
+        }
+        usedSites.add(candidate.die.siteNum);
+        rCursor += 1;
+
+        const retestOutcome = candidate.retestOutcome!;
+        const retestPassed = retestOutcome.mode === 'PASS';
+        const ptrs = buildPartPtrs(
+          waferRng,
+          presetId,
+          candidate.die,
+          retestOutcome,
+          false,
+          tsrAcc,
+        );
+
+        batch.push({
+          headNum: DEMO_HEAD_NUM,
+          siteNum: candidate.die.siteNum,
+          partFlg: retestPassed
+            ? PRR_PART_FLG.SUPERSEDES_COORD
+            : PRR_PART_FLG.FAILED | PRR_PART_FLG.SUPERSEDES_COORD,
+          hardBin: retestOutcome.hardBin,
+          softBin: retestOutcome.softBin,
+          xCoord: candidate.die.x,
+          yCoord: candidate.die.y,
+          omitOptionalAfterCoords: true,
+          ptrs,
+        });
+
+        waferPrrCount += 1;
+        waferRetestCount += 1;
+        sitePartCnt[candidate.die.siteNum - 1]! += 1;
+        siteRtstCnt[candidate.die.siteNum - 1]! += 1;
+
+        hbinCounts.set(
+          retestOutcome.hardBin,
+          (hbinCounts.get(retestOutcome.hardBin) ?? 0) + 1,
+        );
+        sbinCounts.set(
+          retestOutcome.softBin,
+          (sbinCounts.get(retestOutcome.softBin) ?? 0) + 1,
+        );
+        if (retestPassed) {
+          waferGoodCount += 1;
+          siteGoodCnt[candidate.die.siteNum - 1]! += 1;
+        }
+      }
+
+      touchdowns.push(batch);
+    }
+
+    const waferStartT = BASE_SETUP_TIMESTAMP + 60 + wIdx * 180;
+    wafers[wIdx] = {
+      wir: {
+        headNum: DEMO_HEAD_NUM,
+        siteGrp: 1,
+        startT: waferStartT,
+        waferId,
+      },
+      touchdowns,
+      wrr: {
+        headNum: DEMO_HEAD_NUM,
+        siteGrp: 1,
+        finishT: waferStartT + 150,
+        partCnt: waferPrrCount,
+        rtstCnt: waferRetestCount,
+        abrtCnt: 0,
+        goodCnt: waferGoodCount,
+        waferId,
+        fabwfId: `FAB-${config.lotId}-${waferId}`,
+      },
+    };
+  }
+
+  const hbrs: StdfWriteHbrSpec[] = HBIN_CATALOG.map((h) => ({
+    headNum: 255,
+    siteNum: 0,
+    hbinNum: h.code,
+    hbinCnt: hbinCounts.get(h.code) ?? 0,
+    hbinPf: h.pf,
+    hbinNam: h.name,
+  }));
+
+  const sbrs: StdfWriteSbrSpec[] = SBIN_CATALOG.map((s) => ({
+    headNum: 255,
+    siteNum: 0,
+    sbinNum: s.code,
+    sbinCnt: sbinCounts.get(s.code) ?? 0,
+    sbinPf: s.pf,
+    sbinNam: s.name,
+  }));
+
+  const tsrs: StdfWriteTsrSpec[] = DEMO_PARAMETRIC_SPECS.map((spec, idx) => {
+    const acc = tsrAcc[idx]!;
+    return {
+      headNum: 255,
+      siteNum: 0,
+      testTyp: 'P',
+      testNum: spec.testNum,
+      execCnt: acc.execCnt,
+      failCnt: acc.failCnt,
+      alrmCnt: 0,
+      testNam: spec.testTxt,
+      seqName: 'MAIN_SORT_FLOW',
+      testLbl: spec.testTxt,
+      optFlag: 0,
+      testTim: 0.012,
+      testMin: acc.execCnt > 0 ? acc.min : 0,
+      testMax: acc.execCnt > 0 ? acc.max : 0,
+      tstSums: acc.sum,
+      tstSqrs: acc.sumSq,
+    };
+  });
+
+  const totalPartCnt = sitePartCnt.reduce((a, b) => a + b, 0);
+  const totalRtstCnt = siteRtstCnt.reduce((a, b) => a + b, 0);
+  const totalGoodCnt = siteGoodCnt.reduce((a, b) => a + b, 0);
+
+  const pcrs: StdfWritePcrSpec[] = [
+    ...DEMO_SITE_NUMS.map((siteNum, idx) => ({
+      headNum: DEMO_HEAD_NUM,
+      siteNum,
+      partCnt: sitePartCnt[idx]!,
+      rtstCnt: siteRtstCnt[idx]!,
+      abrtCnt: 0,
+      goodCnt: siteGoodCnt[idx]!,
+    })),
+    {
+      headNum: 255,
+      siteNum: 0,
+      partCnt: totalPartCnt,
+      rtstCnt: totalRtstCnt,
+      abrtCnt: 0,
+      goodCnt: totalGoodCnt,
+    },
+  ];
+
+  const lotSpec: StdfWriteLotSpec = {
+    endianness: 'little',
+    compactRepeatedPtrs: true,
+    mir: {
+      setupT: BASE_SETUP_TIMESTAMP,
+      startT: BASE_SETUP_TIMESTAMP + 30,
+      statNum: 1,
+      modeCod: 'P',
+      rtstCod: 'Y',
+      lotId: config.lotId,
+      partTyp: config.partTyp,
+      nodeNam: 'ATE-SORT-04',
+      tstrTyp: 'CAL-V93K-SIM',
+      jobNam: config.jobNam,
+      jobRev: '4.1',
+      sblotId: 'SB01',
+      operNam: 'AUTOPSY_SIM',
+    },
+    sdrs: [
+      {
+        headNum: DEMO_HEAD_NUM,
+        siteGrp: 1,
+        siteNums: DEMO_SITE_NUMS,
+        handTyp: 'PROBER_200MM',
+        handId: 'PRB-TEL-04',
+        cardTyp: 'CANTILEVER_4S',
+        cardId: 'PC-QUAD-2X2',
+      },
+    ],
+    hbrs,
+    sbrs,
+    wcr: {
+      wafrSiz: 200,
+      dieHt: 5.8,
+      dieWid: 5.8,
+      wfUnits: 3,
+      wfFlat: 'D',
+      centerX: 0,
+      centerY: 0,
+      posX: 'R',
+      posY: 'U',
+    },
+    wafers,
+    tsrs,
+    pcrs,
+    mrr: {
+      finishT: BASE_SETUP_TIMESTAMP + 60 + DEMO_WAFER_COUNT * 180,
+      dispCod: '0',
+      usrDesc: `SYNTHETIC_${presetId.toUpperCase().replace(/-/g, '_')}`,
+    },
+  };
+
+  const stdfBytes = writeStdfBytes(lotSpec);
+
+  const groundTruth: DemoLotGroundTruth =
+    presetId === 'edge-ring-etch'
+      ? {
+          presetId,
+          seed: resolvedSeed,
+          lotId: config.lotId,
+          waferCount: DEMO_WAFER_COUNT,
+          diesPerWafer: DEMO_DIES_PER_WAFER,
+          totalDies: DEMO_WAFER_COUNT * DEMO_DIES_PER_WAFER,
+          expectedStackedPattern: 'Edge-Ring',
+          expectedWaferPatterns,
+          injectedWaferIndices,
+          injectedAnomalousSite: null,
+          primaryInjectedTestNum: DEMO_TEST_NUMS.IDDQ_LEAK,
+          injectedTestNums: [DEMO_TEST_NUMS.IDDQ_LEAK],
+          dominantFailSbin: 7,
+          dominantFailHbin: 4,
+          injectedFinalFailDieIds,
+          injectedFirstPassFailDieIds,
+          retestedDieIds,
+          recoveredRetestDieIds,
+        }
+      : presetId === 'handling-scratch'
+        ? {
+            presetId,
+            seed: resolvedSeed,
+            lotId: config.lotId,
+            waferCount: DEMO_WAFER_COUNT,
+            diesPerWafer: DEMO_DIES_PER_WAFER,
+            totalDies: DEMO_WAFER_COUNT * DEMO_DIES_PER_WAFER,
+            expectedStackedPattern: 'Scratch',
+            expectedWaferPatterns,
+            injectedWaferIndices,
+            injectedAnomalousSite: null,
+            primaryInjectedTestNum: DEMO_TEST_NUMS.VCCA_SHORT,
+            injectedTestNums: [DEMO_TEST_NUMS.VCCA_SHORT],
+            dominantFailSbin: 9,
+            dominantFailHbin: 3,
+            injectedFinalFailDieIds,
+            injectedFirstPassFailDieIds,
+            retestedDieIds,
+            recoveredRetestDieIds,
+          }
+        : {
+            presetId,
+            seed: resolvedSeed,
+            lotId: config.lotId,
+            waferCount: DEMO_WAFER_COUNT,
+            diesPerWafer: DEMO_DIES_PER_WAFER,
+            totalDies: DEMO_WAFER_COUNT * DEMO_DIES_PER_WAFER,
+            expectedStackedPattern: 'Random',
+            expectedWaferPatterns,
+            injectedWaferIndices,
+            injectedAnomalousSite: { headNum: DEMO_HEAD_NUM, siteNum: 2 },
+            primaryInjectedTestNum: DEMO_TEST_NUMS.VDD_CONT_R,
+            injectedTestNums: [DEMO_TEST_NUMS.VDD_CONT_R],
+            dominantFailSbin: 5,
+            dominantFailHbin: 2,
+            injectedFinalFailDieIds,
+            injectedFirstPassFailDieIds,
+            retestedDieIds,
+            recoveredRetestDieIds,
+          };
+
+  return {
+    preset,
+    seed: resolvedSeed,
+    stdfBytes,
+    lotSpec,
+    groundTruth,
+  };
+}
+
+/**
+ * Generates deterministic STDF V4 binary bytes for one of the three built-in demo lots.
+ */
+export function generateDemoStdfBytes(
+  presetId: DemoPresetId,
+  seed?: number,
+): Uint8Array {
+  return generateDemoLot(presetId, seed).stdfBytes;
+}
