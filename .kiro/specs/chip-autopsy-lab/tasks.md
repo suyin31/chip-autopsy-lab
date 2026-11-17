@@ -2,7 +2,7 @@
 
 Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker parse -> Pass/Fail wafer map -> verdict card whose claims highlight dies. Later tasks widen each layer. Sub-tasks marked `*` are optional `fast-check` property tests; each names its correctness property from `design.md`.
 
-- [ ] 1. Scaffold the Next.js app, tooling, and design tokens
+- [x] 1. Scaffold the Next.js app, tooling, and design tokens
   - Create the Next.js App Router project with TypeScript `strict`, Tailwind CSS v4, Vitest, `fast-check`, and Playwright.
   - Add `src/ui/tokens/` and the `@theme` CSS variables for `bg`, `panel`, `hairline`, `raised`, `overlay`, text tiers, `accent`, `failure`, and pass die `#53655D`; self-host Inter and Geist Mono with `next/font`.
   - Add a lint rule that blocks React, Next.js, and DOM imports inside `src/core/`.

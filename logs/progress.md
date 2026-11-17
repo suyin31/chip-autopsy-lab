@@ -1,0 +1,1 @@
+- Task 1 (2026-11-18 02:27 SGT): scaffold + design tokens. Verified by assistant after sandbox restart: typecheck 0 errors, lint clean, vitest 14/14 pass.
