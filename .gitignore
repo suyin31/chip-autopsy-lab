@@ -9,11 +9,14 @@
 
 # Dependencies and build outputs
 node_modules/
+.next/
+out/
 dist/
 dist-ssr/
 build/
 coverage/
 .vite/
+next-env.d.ts
 *.tsbuildinfo
 
 # Package manager debug logs (explicit names only; never ignore *.log)

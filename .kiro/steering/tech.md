@@ -60,4 +60,9 @@ Stack locked in phase 2 from the research in `docs/oss-references.md`. The spec 
 - **Demo time-to-report**: built-in demo lot renders the first Autopsy Report within 3 s.
 
 ## Commands
-Defined when the Next.js app is scaffolded; record the `dev`, `build`, `lint`, `typecheck`, `test`, and `test:e2e` scripts here.
+- `pnpm dev` — Start the Next.js App Router development server.
+- `pnpm build` — Build the production Next.js bundle and self-hosted font assets.
+- `pnpm lint` — Run ESLint across the repository (including the `src/core/` React/Next.js/DOM import & global isolation gate and `NEXT_PUBLIC_LLM_*` secret guard).
+- `pnpm typecheck` — Generate Next.js route types (`next typegen`) and run `tsc --noEmit` in `strict` mode.
+- `pnpm test` — Run unit (`*.test.ts`) and `fast-check` property-based (`*.prop.test.ts`) suites in Vitest.
+- `pnpm test:e2e` — Run Playwright end-to-end browser verification specs in `e2e/`.
