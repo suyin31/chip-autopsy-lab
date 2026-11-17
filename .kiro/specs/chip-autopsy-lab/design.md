@@ -21,7 +21,7 @@ Chip Autopsy Lab is a local-first, browser-based semiconductor failure analysis 
 |---|---|---|
 | **Final Pass-Die Colour & Contrast** | **`#53655D`** (`LCH(41.2, 8.3, 165.4)`) | Preserves the exact chroma (`8.3`) and muted grey-green hue (`165.4°`) of the steering starting point `#3A4A43` (`2.11:1` on `#0A0A0B`), lifted along `L*` (`29.9 -> 41.2`) to achieve **`3.19:1`** WCAG 2.2 luminance contrast on `#0A0A0B` (`bg`), **`3.04:1`** on `#111113` (`panel`), and **`4.53:1`** against `#7CF2C1` (`accent` outlines). Because `#FF7A1A` on `#0A0A0B` has contrast `7.59:1 < 9.0` ($3 \times 3$), CIE luminance algebra ($\text{CR}(P, \text{bg}) \cdot \text{CR}(\text{fail}, P) = 7.59$) forbids any intermediate flat sRGB fill from simultaneously exceeding `3:1` against both `#0A0A0B` and `#FF7A1A` (`#FF7A1A` vs `#53655D` is `2.38:1`). To guarantee WCAG 2.2 SC 1.4.1 and 1.4.11 non-color differentiation, every die renders inside a `1 px` `#0A0A0B` street border (`7.59:1` fail-to-street, `3.19:1` pass-to-street) and failing dies add a crisp `#0A0A0B` inner center micro-dot when zoomed (`diePitchPx >= 7`). |
 | **Secondary Fail-Bin LCH Palette** | Equal-lightness `L* = 66.0` (`~7.6:1` on `#0A0A0B`): `#00ACEA`, `#AE90F3`, `#FD7584`, `#B99F35`, `#00B0C8`, `#E87AC7`, `#61A1FF` | Rank-1 dominant yield-loss failing bin always takes `#FF7A1A` (`L* = 66.0, C* = 82.6, H = 56.1°`). Ranks 2+ cycle deterministically through equal-lightness LCH hues (`250°, 305°, 18°, 92°, 218°, 338°, 278°`), excluding `[125°, 200°]` (preserving `#7CF2C1` at `163.2°`) and `[40°, 72°]` (preserving `#FF7A1A` at `56.1°`). |
-| **Verdict Precedence Rule** | Deterministic 5-tier hierarchy (Section 3.5) | Resolves conflicts between multi-wafer spatial signatures, test-site hardware anomalies, and single-wafer excursions: (0) Zero-failure lot -> `No failure pattern detected`; (1) Test-site anomaly (`z >= 3.0`, `> 5.0 pp` drop) wins when spatial pattern is `Random`/`None` OR when the anomalous site accounts for `>= 50%` of excess Lot failures; (2) Structured primary WM-811K spatial class (`Center`, `Donut`, `Edge-Loc`, `Edge-Ring`, `Loc`, `Near-full`, `Scratch`); (3) Diluted single-wafer structured excursion (`confidence >= 0.70`, `>= 25%` of Lot fails); (4) `Random defect failure`; (5) `Baseline low-density loss` (`None` with `>= 1` fail). |
+| **Verdict Precedence Rule** | Deterministic 6-tier hierarchy (Section 3.5) | Resolves conflicts between multi-wafer spatial signatures, test-site hardware anomalies, and single-wafer excursions: (0) Zero-failure lot -> `No failure pattern detected`; (1) Test-site anomaly (`z >= 3.0`, `> 5.0 pp` drop) wins when spatial pattern is `Random`/`None` OR when the anomalous site accounts for `>= 50%` of excess Lot failures; (2) Structured primary WM-811K spatial class (`Center`, `Donut`, `Edge-Loc`, `Edge-Ring`, `Loc`, `Near-full`, `Scratch`); (3) Diluted single-wafer structured excursion (`confidence >= 0.70`, `>= 25%` of Lot fails); (4) `Random defect failure`; (5) `Baseline low-density loss` (`None` with `>= 1` fail). |
 | **9-Class WM-811K Classifier & Thresholds** | $D_4$-invariant radial, angular-resultant, clustering, and bridged-PCA feature scorer (Section 3.4) | Locks `MIN_FAIL_FRACTION = 0.015` (`1.5%`), `MIN_FAIL_COUNT = 5`, `MIN_CLASS_CONFIDENCE = 0.45`, and `STACK_CELL_MIN_FAIL_RATE = 0.20` (with `failCount >= min(2, waferCount)`). All spatial features are exact invariants of the dihedral group $D_4$ ($90^\circ/180^\circ/270^\circ$ rotations and X/Y reflections), guaranteeing `0.00` rotation/mirror drift (strictly within Property 8's `±0.05` budget). |
 | **LLM Narrator Scope (Owner Override)** | **Core MVP** (`Requirements 10.6, 10.7, 16.3`; `Properties 11, 14`) | Promoted from Stretch to Core MVP. Deterministic template Autopsy Report renders immediately upon parse completion (`0 ms` network wait); when `LLM_API_KEY` is configured on `POST /api/autopsy/narrate`, stripped aggregate `EngineFact`s are narrated asynchronously and swapped in only if every claim passes `factId`, Die ID, and numeric rounding validation; any failure or missing key retains the deterministic template seamlessly. (`Cmd-K` LLM translation `12.3` and URL state `Req 13` remain Stretch.) |
 | **Synthetic Demo Generator** | 3 seeded storied STDF V4 lots (`25` wafers x `633` dies each) | Exercises all three primary diagnostic paths offline in `< 3 s`: (1) `edge-ring-etch` (plasma etch non-uniformity -> `Edge-Ring`), (2) `handling-scratch` (robotic transfer blade contact -> `Scratch`), and (3) `site2-probe-contact` (quad-site `HEAD 1 / SITE 2` oxidized probe needles -> spatial `Random` overridden by `Test Site 1:2 concentration anomaly`). |
@@ -186,7 +186,7 @@ sequenceDiagram
     UI->>UI: Render Cause-of-Death Headline & Linked Charts Immediately (<= 3 s demo budget)
     par Progressive Core LLM Narration (Non-Blocking)
         UI->>UI: sanitizeOutboundNarratePayload(facts) (strip dieIds)
-        UI->>API: POST { lotSummary, verdict, outboundFacts } (4 s timeout)
+        UI->>API: POST { mode, lotId, verdict, confidence, outboundFacts } (4 s timeout)
         alt LLM_API_KEY configured & upstream succeeds
             API-->>UI: { claims: [{ id, text, citedFactIds }] }
             UI->>UI: validateLlmNarration(candidate, facts, lot)
@@ -274,13 +274,17 @@ export interface PtrDefaultContext {
   readonly testNum: number;
   readonly testTxt: string;
   readonly units: string;
-  readonly resScal: number; // I*1 power-of-10 display exponent only
+  readonly resScal: number; // I*1 power-of-10 scaling exponent
   readonly llmScal: number; // I*1
   readonly hlmScal: number; // I*1
-  readonly loLimit: number | null; // Base units; null when OPT_FLAG bit 4 or bit 6 is set
-  readonly hiLimit: number | null; // Base units; null when OPT_FLAG bit 5 or bit 7 is set
+  readonly loLimit: number | null; // Stored value (see SCAL note below); null when OPT_FLAG bit 6 is set
+  readonly hiLimit: number | null; // Stored value (see SCAL note below); null when OPT_FLAG bit 7 is set
 }
+```
 
+> **`RES_SCAL` / `LLM_SCAL` / `HLM_SCAL` Conversion Rule**: In STDF V4, `RESULT`, `LO_LIMIT`, and `HI_LIMIT` are stored in **scaled** units: `base_value = stored_value × 10^SCAL`. Many modern ATE writers store values with `SCAL = 0` (already base), but the parser must always apply the exponent. Internally `PtrDefaultContext` and `ParametricTestColumn` store **base-unit values** after applying `× 10^SCAL` during decode, so all analytics, Cp/Cpk, and display formatting operate on consistent base units.
+
+```typescript
 export interface ParseProgress {
   readonly bytesProcessed: number;
   readonly totalBytes: number | null;
@@ -321,7 +325,7 @@ export function writeStdfBytes(spec: StdfWriteLotSpec): Uint8Array;
 
 **Key STDF V4 Decoding Rules Enforced in `stdf-parser.ts`:**
 - **Bounds-first cursor**: `BinaryCursor` validates `offset + byteCount <= recordEnd <= buffer.byteLength` before every primitive or variable-length (`C*n`, `B*n`, `D*n`, `kxTYPE`) read. If a record stops cleanly at `recordEnd` before optional trailing specification fields, remaining fields resolve to `undefined` without warning (Req 1.7). If a variable-length prefix overflows `recordEnd`, the parser emits `MALFORMED_RECORD_FIELD` and advances to `recordEnd` (Req 2.3).
-- **`PTR` Inheritance & `OPT_FLAG`**: The first `PTR` observed for each `TEST_NUM` populates `Map<number, PtrDefaultContext>`. Subsequent `PTR` records for that `TEST_NUM` inherit `UNITS`, `RES_SCAL`, `LLM_SCAL`, `HLM_SCAL`, `LO_LIMIT`, and `HI_LIMIT` whenever omitted at `recordEnd` or flagged as default via `OPT_FLAG`. Bits `4` (`0x10`) and `6` (`0x40`) force `loLimit = null`; bits `5` (`0x20`) and `7` (`0x80`) force `hiLimit = null`. `RESULT`, `LO_LIMIT`, and `HI_LIMIT` remain strictly in base units (Req 1.8).
+- **`PTR` Inheritance & `OPT_FLAG`**: The first `PTR` observed for each `TEST_NUM` populates `Map<number, PtrDefaultContext>`. Subsequent `PTR` records for that `TEST_NUM` inherit `UNITS`, `RES_SCAL`, `LLM_SCAL`, `HLM_SCAL`, `LO_LIMIT`, and `HI_LIMIT` whenever omitted at `recordEnd` or when `OPT_FLAG` bit 0 (`0x01`, `RES_SCAL` invalid) or bits 4/5 (`0x10`/`0x20`, `LO_LIMIT`/`HI_LIMIT` invalid) indicate the value should be inherited from the first PTR's defaults. Bit `6` (`0x40`) forces `loLimit = null` (no low limit for this test); bit `7` (`0x80`) forces `hiLimit = null` (no high limit for this test). `RESULT`, `LO_LIMIT`, and `HI_LIMIT` remain strictly in base units after applying `× 10^SCAL` conversion during decode (Req 1.8).
 - **Multi-site open-part state machine**: `PIR` opens a part context in `openParts: Map<number, OpenPartMeasurements>` keyed by `siteKey = ((headNum & 0xff) << 8) | (siteNum & 0xff)`. Interleaved `PTR`, `MPR`, and `FTR` records attach to `openParts.get(siteKey)`. `PRR` closes `siteKey` and emits a chronological `RawPartExecution` (Req 1.9).
 
 ---
@@ -601,7 +605,7 @@ Let $W \subset \mathbb{Z}^2$ be the tested coordinate set ($N = |W|$) and $F \su
 1. **Grid Center & Normalized Radius**:
    $$c_x = \frac{\min_W x + \max_W x}{2}, \quad c_y = \frac{\min_W y + \max_W y}{2}, \quad R_{\max} = \max\!\left(1, \max_{(x,y)\in W}\sqrt{(x - c_x)^2 + (y - c_y)^2}\right)$$
    $$\rho(x, y) = \frac{\sqrt{(x - c_x)^2 + (y - c_y)^2}}{R_{\max}} \in [0, 1]$$
-2. **Noise Gate (`None`)**: If $N = 0$ or $|F| = 0$, return `('None', 1.00)`. If $f_{\text{global}} = |F|/N < 0.015$ or $|F| < 5$, return `('None', round(0.85 + 0.13 * (1 - f_global / 0.015), 2))`.
+2. **Noise Gate (`None`)**: If $N = 0$ or $|F| = 0$, return `('None', 1.00)`. If $|F| < 5$ (`MIN_FAIL_COUNT`), return `('None', 0.98)`. If $f_{\text{global}} = |F|/N < 0.015$ (`MIN_FAIL_FRACTION`), return `('None', round(0.85 + 0.13 * (1 - f_global / 0.015), 2))`.
 3. **Zone Densities & Shares**:
    - $Z_{\text{inner}} = \{p \in W : \rho(p) \le 0.38\}$, $Z_{\text{mid}} = \{p \in W : 0.38 < \rho(p) \le 0.75\}$, $Z_{\text{outer}} = \{p \in W : \rho(p) > 0.75\}$
    - $Z_{\text{edge3}} = \{p \in W : \text{ring}(p) \le 3\}$, $Z_{\text{inter}} = \{p \in W : \text{ring}(p) > 3\}$
@@ -611,17 +615,17 @@ Let $W \subset \mathbb{Z}^2$ be the tested coordinate set ($N = |W|$) and $F \su
    where $F^* = \{p \in F : \|p - c\| > 10^{-6}\}$. Because $\|Q \bar{u}\|_2 = \|\bar{u}\|_2$ for every orthogonal matrix $Q \in O(2)$, $M_{\text{ang}}$ and $M_{\text{ang,edge}}$ have zero sector-boundary quantization artifacts and are exact $D_4$ invariants.
 5. **Bridged Connected Components & PCA Linearity**:
    - Form graph $G_{\text{bridge}}$ over $F$ connecting $p, q \in F$ when $0 < \|p - q\|_2 \le 2.25$ (bridging single-die dropouts in mechanical scratches).
-   - For each component $C$ with $|C| \ge 4$, compute the $2 \times 2$ covariance eigenvalues $\lambda_1 \ge \lambda_2 \ge 0$:
+   - For each component $C$ with $|C| \ge 4$, compute the edge fraction $\text{edgeFrac}_k(C) = |\{p \in C : \text{ring}(p) \le k\}| / |C|$ and the $2 \times 2$ covariance eigenvalues $\lambda_1 \ge \lambda_2 \ge 0$:
      $$L_{\text{maj}}(C) = \max(1, \sqrt{12\lambda_1}), \quad W_{\text{min}}(C) = \max(1, \sqrt{12\lambda_2}), \quad E(C) = 1 - \sqrt{\frac{\lambda_2 + 0.05}{\lambda_1 + 0.05}}, \quad A(C) = \frac{L_{\text{maj}}(C)}{W_{\text{min}}(C)}$$
 6. **Piecewise-Linear Ramp** $\text{ramp}(x, a, b) = \text{clamp}_{[0,1]}((x - a)/(b - a))$ scores all 8 non-`None` classes in $[0, 1]$:
    - **`Near-full`**: $\text{ramp}(f_{\text{global}}, 0.62, 0.82) \cdot \text{ramp}(\min(d_{\text{inner}}, d_{\text{mid}}, d_{\text{outer}}), 0.45, 0.70)$
-   - **`Edge-Ring`**: $\text{ramp}(d_{\text{edge3}}, 0.30, 0.65) \cdot \text{ramp}\!\left(\frac{d_{\text{edge3}}}{\max(d_{\text{inter}}, 0.02)}, 2.5, 6.0\right) \cdot \text{ramp}(s_{\text{edge3}}, 0.55, 0.80) \cdot \text{ramp}(0.50 - M_{\text{ang,edge}}, 0.0, 0.30) \cdot (1 - \text{ramp}(f_{\text{global}}, 0.65, 0.80))$
+   - **`Edge-Ring`**: $\text{ramp}(d_{\text{edge3}}, 0.20, 0.50) \cdot \text{ramp}\!\left(\frac{d_{\text{edge3}}}{\max(d_{\text{inter}}, 0.02)}, 2.5, 6.0\right) \cdot \text{ramp}(s_{\text{edge3}}, 0.55, 0.80) \cdot \text{ramp}(0.50 - M_{\text{ang,edge}}, 0.0, 0.30) \cdot (1 - \text{ramp}(f_{\text{global}}, 0.65, 0.80))$
    - **`Edge-Loc`**: Let $s_{\text{ec}} = \max_{C : \text{edgeFrac}_3(C) \ge 0.55} (|C|/|F|)$. Score $= \text{ramp}(s_{\text{edge3}}, 0.50, 0.80) \cdot \text{ramp}(M_{\text{ang,edge}}, 0.48, 0.78) \cdot \text{ramp}(s_{\text{ec}}, 0.35, 0.70) \cdot \text{ramp}\!\left(\frac{d_{\text{edge3}}}{\max(d_{\text{inter}}, 0.02)}, 2.0, 5.0\right) \cdot (1 - 0.6 S_{\text{scratch,raw}}) \cdot (1 - \text{ramp}(f_{\text{global}}, 0.65, 0.80))$
    - **`Center`**: $\text{ramp}(d_{\text{inner}}, 0.30, 0.65) \cdot \text{ramp}\!\left(\frac{d_{\text{inner}}}{\max((d_{\text{mid}} + d_{\text{outer}})/2, 0.02)}, 2.5, 6.0\right) \cdot \text{ramp}(s_{\text{inner}}, 0.45, 0.75) \cdot (1 - \text{ramp}(f_{\text{global}}, 0.65, 0.80))$
    - **`Donut`**: $\text{ramp}(d_{\text{mid}}, 0.25, 0.55) \cdot \text{ramp}\!\left(\frac{d_{\text{mid}}}{\max(d_{\text{inner}}, 0.03)}, 2.0, 4.5\right) \cdot \text{ramp}\!\left(\frac{d_{\text{mid}}}{\max(d_{\text{edge3}}, 0.03)}, 2.0, 4.5\right) \cdot \text{ramp}(s_{\text{mid}}, 0.55, 0.80) \cdot \text{ramp}(0.45 - M_{\text{ang}}, 0.0, 0.25) \cdot (1 - \text{ramp}(f_{\text{global}}, 0.65, 0.80))$
    - **`Scratch`**: $S_{\text{scratch,raw}} = \max_{|C| \ge 6} \left[\text{ramp}(E(C), 0.72, 0.92) \cdot \text{ramp}(A(C), 3.2, 6.0) \cdot \text{ramp}\!\left(\frac{L_{\text{maj}}(C)}{2 R_{\max}}, 0.25, 0.55\right) \cdot \text{ramp}(3.6 - W_{\text{min}}(C), 0.0, 1.8) \cdot \text{ramp}\!\left(\frac{|C|}{|F|}, 0.25, 0.60\right) \cdot (1 - 0.75 \cdot \text{ramp}(\text{edgeFrac}_2(C), 0.75, 0.95))\right]$; Score $= 0.96 \cdot S_{\text{scratch,raw}} \cdot (1 - \text{ramp}(f_{\text{global}}, 0.60, 0.75))$
    - **`Loc`**: $\max_{|C| \ge 4} \left[\text{ramp}\!\left(\frac{|C|}{|F|}, 0.40, 0.72\right) \cdot \text{ramp}(f_{\text{clust8}}, 0.55, 0.82) \cdot \text{ramp}(\rho(\bar{c}_C), 0.22, 0.45) \cdot \text{ramp}(0.55 - \text{edgeFrac}_2(C), 0.0, 0.30)\right] \cdot (1 - 0.85 S_{\text{scratch,raw}}) \cdot (1 - \text{ramp}(f_{\text{global}}, 0.55, 0.70))$
-   - **`Random`**: With radial disparity $r_{\text{zone}} = \frac{\max(d_{\text{inner}}, d_{\text{mid}}, d_{\text{edge3}})}{\max(\min(d_{\text{inner}}, d_{\text{mid}}, d_{\text{edge3}}), 0.015)}$ and excess 8-neighbour clustering $\Delta c_8 = \max(0, f_{\text{clust8}} - (1 - (1 - f_{\text{global}})^8))$:
+   - **`Random`**: With radial disparity $r_{\text{zone}} = \frac{\max(d_{\text{inner}}, d_{\text{mid}}, d_{\text{edge3}})}{\max(\min(d_{\text{inner}}, d_{\text{mid}}, d_{\text{edge3}}), 0.015)}$, excess 8-neighbour clustering $\Delta c_8 = \max(0, f_{\text{clust8}} - (1 - (1 - f_{\text{global}})^8))$, and $S_{\text{max,struct}} = \max(S_{\text{Center}}, S_{\text{Donut}}, S_{\text{Edge-Ring}}, S_{\text{Edge-Loc}}, S_{\text{Loc}}, S_{\text{Near-full}}, S_{\text{Scratch}})$:
      $$\text{Score} = \text{ramp}(f_{\text{global}}, 0.02, 0.08) \cdot (1 - \text{ramp}(f_{\text{global}}, 0.55, 0.72)) \cdot \text{ramp}(2.4 - r_{\text{zone}}, 0.0, 1.1) \cdot \text{ramp}(0.35 - M_{\text{ang}}, 0.0, 0.20) \cdot \text{ramp}(0.22 - \Delta c_8, 0.0, 0.16) \cdot (1 - 0.8 S_{\text{max,struct}})$$
 7. **Decision & Confidence Mapping**:
    Let $s_{(1)} \ge s_{(2)}$ be the top two raw scores. If $s_{(1)} < 0.45$ (`MIN_CLASS_CONFIDENCE`), return `('None', round(1.0 - s_{(1)}, 2))`. Otherwise select the top class (breaking exact ties in fixed priority order `Near-full > Scratch > Edge-Ring > Donut > Center > Edge-Loc > Loc > Random`) with confidence:
@@ -667,6 +671,7 @@ export interface EngineFact {
 export interface OutboundEngineFact {
   readonly factId: string;
   readonly kind: FactKind;
+  readonly summary: string;
   readonly dieCount: number;
   readonly metrics: readonly FormattedFactMetric[];
   readonly binRef?: { readonly mode: BinMode; readonly code: number; readonly name: string };
@@ -674,6 +679,14 @@ export interface OutboundEngineFact {
   readonly siteRef?: { readonly headNum: number; readonly siteNum: number };
   readonly waferRef?: { readonly waferIndex: number; readonly waferId: string };
   readonly hypotheses?: readonly string[];
+}
+
+export interface NarrateRequestPayload {
+  readonly mode: 'narrate';
+  readonly lotId: string;
+  readonly verdict: string;
+  readonly confidence: number;
+  readonly outboundFacts: readonly OutboundEngineFact[];
 }
 
 export interface ReportClaim {
@@ -742,7 +755,7 @@ Given a parsed `LotModel` with `lot.dies.count >= 1`, primary spatial pattern $P
 6. **Tier 5 — Sub-Threshold Baseline Loss**:
    - Fallback when `totalFailDies >= 1` and $P_{\text{primary}}.\text{pattern} === \text{'None'}$.
    - Verdict label: `"Baseline low-density loss"`, confidence: $P_{\text{primary}}.\text{confidence}$.
-   - Cites `fact:lot-yield:fails` and `fact:bin:<dominant>`.
+   - Cites `fact:lot-yield` and `fact:bin:<dominant>`.
 
 For Tiers 1–5, the dominant bin clause uses `SBIN <code>` whenever any failing die carries a defined `SBIN` (`!== 65535`), else `HBIN <code>`, picking maximum final-state fail count (ties broken by lowest numeric code):
 ```text
