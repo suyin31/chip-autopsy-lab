@@ -8,4 +8,6 @@
 
 export const CHIP_AUTOPSY_CORE_STDF_VERSION = 4 as const;
 
+export * from './analytics';
+export * from './model';
 export * from './stdf';

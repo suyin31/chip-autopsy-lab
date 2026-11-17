@@ -1,12 +1,24 @@
 import fc from 'fast-check';
+import { buildLotModel } from '../model/lot-builder';
+import type { LotModel } from '../model/types';
 import {
   type BinPassFailFlag,
   type BitArrayData,
   type CpuEndianness,
+  type ParsedHbrRecord,
+  type ParsedLotBuildInput,
+  type ParsedPartExecution,
+  type ParsedPtrExecution,
+  type ParsedSbrRecord,
+  type ParsedWaferChunk,
   PRR_PART_FLG,
   PTR_OPT_FLAG,
   PTR_TEST_FLG,
+  type PtrDefaultContext,
   STDF_MISSING_COORD,
+  STDF_MISSING_U1,
+  STDF_MISSING_U2,
+  STDF_V4_VERSION,
   type StdfWriteFtrSpec,
   type StdfWriteHbrSpec,
   type StdfWriteLotSpec,
@@ -577,3 +589,386 @@ export const arbStdfWriteLotSpec: fc.Arbitrary<StdfWriteLotSpec> = fc
         );
     },
   );
+
+const PART_FLG_CANDIDATES: readonly number[] = [
+  0,
+  PRR_PART_FLG.SUPERSEDES_COORD,
+  PRR_PART_FLG.FAILED,
+  PRR_PART_FLG.FAILED | PRR_PART_FLG.SUPERSEDES_PART_ID,
+  PRR_PART_FLG.PF_INVALID,
+  PRR_PART_FLG.PF_INVALID | PRR_PART_FLG.FAILED,
+];
+
+/**
+ * Generates chronological multi-wafer PRR streams with repeated valid `(x, y)` coordinates,
+ * missing-coordinate sentinels (`-32768`), all `PART_FLG` bit 3/4 combinations, `HBR.HBIN_PF`
+ * `'P'` / `'F'` / `' '` / undeclared bins, multi-site switching across retests, and partial
+ * `PTR` execution subsets per touchdown (Property 3 & Property 4).
+ */
+export const arbChronologicalPrrStream: fc.Arbitrary<ParsedLotBuildInput> = fc
+  .record({
+    parseMode: fc.constantFrom<'full' | 'bins-only'>('full', 'bins-only'),
+    endianness: arbEndianness,
+    lotId: arbSafeAscii(0, 12),
+    partTyp: arbSafeAscii(0, 12),
+    jobNam: arbSafeAscii(0, 12),
+    sdrSiteNums: fc.uniqueArray(fc.integer({ min: 1, max: 6 }), {
+      minLength: 1,
+      maxLength: 5,
+    }),
+    extraPrrSiteNum: fc.integer({ min: 1, max: 8 }),
+    declaredHbinCodes: fc.uniqueArray(fc.integer({ min: 1, max: 20 }), {
+      minLength: 3,
+      maxLength: 5,
+    }),
+    undeclaredHbinCode: fc.integer({ min: 21, max: 40 }),
+    sbinCodes: fc.uniqueArray(fc.integer({ min: 1, max: 32 }), {
+      minLength: 2,
+      maxLength: 5,
+    }),
+    catalog: arbTestCatalog,
+    waferCount: fc.integer({ min: 1, max: 3 }),
+    coordPool: fc.uniqueArray(
+      fc.record({
+        x: fc.integer({ min: -8, max: 8 }),
+        y: fc.integer({ min: -8, max: 8 }),
+      }),
+      {
+        minLength: 3,
+        maxLength: 8,
+        selector: (c) => `${c.x},${c.y}`,
+      },
+    ),
+  })
+  .chain((cfg) => {
+    const allHbinPool = [...cfg.declaredHbinCodes, cfg.undeclaredHbinCode];
+    const allSitePool = Array.from(new Set([...cfg.sdrSiteNums, cfg.extraPrrSiteNum]));
+
+    const hbrArbs = cfg.declaredHbinCodes.map((hbinNum, idx) =>
+      fc
+        .record({
+          hbinPf:
+            idx === 0
+              ? fc.constant<BinPassFailFlag>('P')
+              : idx === 1
+                ? fc.constant<BinPassFailFlag>('F')
+                : arbBinPf,
+          hbinNam: arbSafeAscii(0, 10),
+        })
+        .map(
+          ({ hbinPf, hbinNam }): ParsedHbrRecord => ({
+            headNum: 255,
+            siteNum: 0,
+            hbinNum,
+            hbinCnt: 1,
+            hbinPf,
+            hbinNam,
+          }),
+        ),
+    );
+
+    const sbrArbs = cfg.sbinCodes.map((sbinNum, idx) =>
+      fc
+        .record({
+          sbinPf: idx === 0 ? fc.constant<BinPassFailFlag>('P') : arbBinPf,
+          sbinNam: arbSafeAscii(0, 10),
+        })
+        .map(
+          ({ sbinPf, sbinNam }): ParsedSbrRecord => ({
+            headNum: 255,
+            siteNum: 0,
+            sbinNum,
+            sbinCnt: 1,
+            sbinPf,
+            sbinNam,
+          }),
+        ),
+    );
+
+    const rawPartArb = fc.record({
+      headNum: fc.constantFrom(1, 2),
+      sitePoolIdx: fc.integer({ min: 0, max: allSitePool.length - 1 }),
+      partFlg: fc.constantFrom(...PART_FLG_CANDIDATES),
+      hbinPoolIdx: fc.integer({ min: 0, max: allHbinPool.length - 1 }),
+      sbinChoice: fc.integer({ min: -1, max: cfg.sbinCodes.length - 1 }),
+      coordMode: fc.constantFrom<'valid' | 'valid' | 'valid' | 'missing-both' | 'missing-x' | 'missing-y'>(
+        'valid',
+        'valid',
+        'valid',
+        'missing-both',
+        'missing-x',
+        'missing-y',
+      ),
+      coordIdx: fc.integer({ min: 0, max: cfg.coordPool.length - 1 }),
+      fallbackCoord: fc.integer({ min: -8, max: 8 }),
+      ptrChoices: fc.tuple(
+        ...cfg.catalog.map(() =>
+          fc.record({
+            executed: fc.boolean(),
+            invalidResult: fc.boolean(),
+            value: arbFiniteR4,
+          }),
+        ),
+      ),
+    });
+
+    const waferArbs = Array.from({ length: cfg.waferCount }, (_, wIdx) =>
+      fc.record({
+        wirWaferId: fc.oneof(arbSafeAscii(0, 6), fc.constant('DUP_WF')),
+        wrrWaferId: arbSafeAscii(0, 6),
+        posX: fc.constantFrom<WaferAxisPosX>('L', 'R', ' '),
+        posY: fc.constantFrom<WaferAxisPosY>('U', 'D', ' '),
+        wfFlat: fc.constantFrom<WaferFlatOrientation>('U', 'D', 'L', 'R', ' '),
+        rawParts: fc.array(rawPartArb, {
+          minLength: wIdx === 0 ? 1 : 0,
+          maxLength: 24,
+        }),
+      }),
+    );
+
+    return fc
+      .record({
+        hbrs: fc.tuple(...hbrArbs),
+        sbrs: fc.tuple(...sbrArbs),
+        wafers: fc.tuple(...waferArbs),
+      })
+      .map(({ hbrs, sbrs, wafers }): ParsedLotBuildInput => {
+        const ptrDefaults = new Map<number, PtrDefaultContext>();
+        if (cfg.parseMode === 'full') {
+          for (const tpl of cfg.catalog) {
+            ptrDefaults.set(tpl.testNum, {
+              testNum: tpl.testNum,
+              testTxt: tpl.testTxt,
+              units: tpl.units,
+              resScal: tpl.resScal,
+              llmScal: tpl.llmScal,
+              hlmScal: tpl.hlmScal,
+              loLimit: tpl.loLimit,
+              hiLimit: tpl.hiLimit,
+            });
+          }
+        }
+
+        let prrCounter = 0;
+        let syntheticOffset = 128;
+
+        const parsedWafers: ParsedWaferChunk[] = wafers.map((wf, wIdx) => {
+          const parts: ParsedPartExecution[] = wf.rawParts.map((rp) => {
+            const siteNum = allSitePool[rp.sitePoolIdx]!;
+            const hardBin = allHbinPool[rp.hbinPoolIdx]!;
+            const softBin =
+              rp.sbinChoice >= 0 ? cfg.sbinCodes[rp.sbinChoice]! : STDF_MISSING_U2;
+            const validCoord = cfg.coordPool[rp.coordIdx]!;
+
+            let xCoord: number;
+            let yCoord: number;
+            switch (rp.coordMode) {
+              case 'valid':
+                xCoord = validCoord.x;
+                yCoord = validCoord.y;
+                break;
+              case 'missing-both':
+                xCoord = STDF_MISSING_COORD;
+                yCoord = STDF_MISSING_COORD;
+                break;
+              case 'missing-x':
+                xCoord = STDF_MISSING_COORD;
+                yCoord = rp.fallbackCoord;
+                break;
+              case 'missing-y':
+                xCoord = rp.fallbackCoord;
+                yCoord = STDF_MISSING_COORD;
+                break;
+            }
+
+            const ptrs: ParsedPtrExecution[] = [];
+            if (cfg.parseMode === 'full') {
+              for (let t = 0; t < cfg.catalog.length; t += 1) {
+                const choice = rp.ptrChoices[t]!;
+                if (!choice.executed) {
+                  continue;
+                }
+                const tpl = cfg.catalog[t]!;
+                ptrs.push({
+                  testNum: tpl.testNum,
+                  headNum: rp.headNum,
+                  siteNum,
+                  testFlg: choice.invalidResult ? PTR_TEST_FLG.RESULT_INVALID : 0,
+                  parmFlg: 0,
+                  result: choice.invalidResult ? Number.NaN : choice.value,
+                  testTxt: tpl.testTxt,
+                  alarmId: '',
+                  optFlag: 0,
+                  resScal: tpl.resScal,
+                  llmScal: tpl.llmScal,
+                  hlmScal: tpl.hlmScal,
+                  loLimit: tpl.loLimit,
+                  hiLimit: tpl.hiLimit,
+                  units: tpl.units,
+                });
+              }
+            }
+
+            const prrIndex = prrCounter;
+            prrCounter += 1;
+            const byteOffset = syntheticOffset;
+            syntheticOffset += 32;
+
+            return {
+              prrIndex,
+              byteOffset,
+              headNum: rp.headNum,
+              siteNum,
+              partFlg: rp.partFlg,
+              numTest: ptrs.length,
+              hardBin,
+              softBin,
+              xCoord,
+              yCoord,
+              testT: 10,
+              partId: `${prrIndex}`,
+              partTxt: '',
+              ptrs,
+              mprs: [],
+              ftrs: [],
+            };
+          });
+
+          return {
+            waferIndex: wIdx,
+            implicit: false,
+            wir: {
+              headNum: 1,
+              siteGrp: STDF_MISSING_U1,
+              startT: 1_700_000_000 + wIdx * 100,
+              waferId: wf.wirWaferId,
+            },
+            wrr: {
+              headNum: 1,
+              siteGrp: STDF_MISSING_U1,
+              finishT: 1_700_000_050 + wIdx * 100,
+              partCnt: parts.length,
+              waferId: wf.wrrWaferId,
+              fabwfId: '',
+              frameId: '',
+              maskId: '',
+              usrDesc: '',
+              excDesc: '',
+            },
+            wcr: {
+              wfFlat: wf.wfFlat,
+              posX: wf.posX,
+              posY: wf.posY,
+            },
+            parts,
+          };
+        });
+
+        return {
+          parseMode: cfg.parseMode,
+          endianness: cfg.endianness,
+          stdfVersion: STDF_V4_VERSION,
+          mir: {
+            setupT: 1_700_000_000,
+            startT: 1_700_000_001,
+            statNum: 1,
+            modeCod: 'P',
+            rtstCod: ' ',
+            protCod: ' ',
+            burnTim: STDF_MISSING_U2,
+            cmodCod: ' ',
+            lotId: cfg.lotId,
+            partTyp: cfg.partTyp,
+            nodeNam: 'NODE-1',
+            tstrTyp: 'ATE',
+            jobNam: cfg.jobNam,
+            jobRev: '1',
+            sblotId: '',
+            operNam: '',
+            execTyp: '',
+            execVer: '',
+            testCod: '',
+            tstTemp: '',
+            userTxt: '',
+            auxFile: '',
+            pkgTyp: '',
+            famlyId: '',
+            dateCod: '',
+            facilId: '',
+            floorId: '',
+            procId: '',
+            operFrq: '',
+            specNam: '',
+            specVer: '',
+            flowId: '',
+            setupId: '',
+            dsgnRev: '',
+            engId: '',
+            romCod: '',
+            serlNum: '',
+            suprNam: '',
+          },
+          mrr: {
+            finishT: 1_700_001_000,
+            dispCod: '0',
+            usrDesc: '',
+            excDesc: '',
+          },
+          pcrs: [],
+          hbrs,
+          sbrs,
+          sdrs: [
+            {
+              headNum: 1,
+              siteGrp: 1,
+              siteNums: cfg.sdrSiteNums,
+              handTyp: '',
+              handId: '',
+              cardTyp: '',
+              cardId: 'CARD-1',
+              loadTyp: '',
+              loadId: '',
+              dibTyp: '',
+              dibId: '',
+              cablTyp: '',
+              cablId: '',
+              contTyp: '',
+              contId: '',
+              lasrTyp: '',
+              lasrId: '',
+              extrTyp: '',
+              extrId: '',
+            },
+          ],
+          tsrs: [],
+          defaultWaferConfig: null,
+          ptrDefaults,
+          wafers: parsedWafers,
+          recordsDecoded: 10 + prrCounter,
+          validPrrCount: prrCounter,
+          skippedRecordCount: 0,
+          warnings: [],
+        };
+      });
+  });
+
+/**
+ * Shared composable `LotModel` arbitrary built from `arbChronologicalPrrStream`.
+ */
+export const arbLotModel: fc.Arbitrary<LotModel> =
+  arbChronologicalPrrStream.map(buildLotModel);
+
+/**
+ * Generates arbitrary `Uint8Array` die selection masks (`0` or `1`) of length `dieCount`,
+ * explicitly weighting empty (`all-0`), full (`all-1`), and random subsets.
+ */
+export function arbDieMask(dieCount: number): fc.Arbitrary<Uint8Array> {
+  return fc.oneof(
+    fc.constant(new Uint8Array(dieCount)), // empty selection (all 0s)
+    fc.constant(new Uint8Array(dieCount).fill(1)), // full selection (all 1s)
+    fc
+      .array(fc.boolean(), { minLength: dieCount, maxLength: dieCount })
+      .map((flags) => Uint8Array.from(flags, (b) => (b ? 1 : 0))),
+  );
+}
+
