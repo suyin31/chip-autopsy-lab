@@ -1,30 +1,21 @@
 /**
- * Property 9 (Determinism & Parse/Yield Ground-Truth Half — Sub-Task 4.1 / 4.4):
- * Synthetic Demo Lot Determinism and Ground-Truth Recovery (`fast-check`).
+ * Property 9: Synthetic Demo Lot Determinism and Ground-Truth Pattern Recovery (`fast-check`).
  *
- * Verifies now (Task 4.1):
+ * Verifies (Sub-Tasks 4.1 & 4.4):
  * 1. Repeated calls to `generateDemoStdfBytes(presetId, seed)` with the same 32-bit
  *    seed yield byte-for-byte identical STDF V4 `Uint8Array` buffers.
  * 2. Parsing through `parseStdfBytes` and `buildLotModel` succeeds with zero warnings,
  *    recovering all 25 wafers x 633 circular-grid dies (`15,825` dies), 4 concurrent
  *    `2x2` prober Test Sites, HBIN/SBR definitions, 4 parametric `PTR` columns with
  *    base-unit limits, and multi-PRR retest executions.
- * 3. Every preset's embedded `DemoLotGroundTruth` (`injectedFinalFailDieIds`,
- *    `injectedFirstPassFailDieIds`, `retestedDieIds`, `recoveredRetestDieIds`,
- *    `dominantFailSbin`, `dominantFailHbin`, `primaryInjectedTestNum`, and
- *    `injectedAnomalousSite`) matches the resolved `LotModel` and is directly visible
- *    in `computeYieldSummary` and `detectSiteAnomalies` (including the `Test Site 1:2`
- *    first-pass yield drop, retest recovery, and z-test anomaly with `confidence >= 0.75`
- *    on `site2-probe-contact`).
+ * 3. Every preset's embedded `DemoLotGroundTruth` matches the resolved `LotModel` and
+ *    is recovered by `computeYieldSummary`, `detectSiteAnomalies`, `classifyStackedPattern`,
+ *    and `classifyWaferPattern`:
+ *    - `'Edge-Ring'` on `edge-ring-etch` stacked map and all 25 wafers (`confidence >= 0.75` on default seed)
+ *    - `'Scratch'` on `handling-scratch` stacked map and affected wafers `W05–W22` (`confidence >= 0.75` on default seed), `'None'` on clean wafers `W01–W04, W23–W25`
+ *    - `'Random'` spatially on `site2-probe-contact` alongside the `Head 1 / Site 2` (`1:2`) concentration anomaly (`confidence >= 0.75` on default seed)
  *
- * TODO(Task 4.4 / after Task 6 implements `src/core/patterns/wm811k-classifier.ts`):
- * Complete the spatial-classifier half of Property 9 by asserting that
- * `classifyStackedPattern` and `classifyWaferPattern` recover:
- * - `'Edge-Ring'` on `edge-ring-etch` (`confidence >= 0.75` on default seed)
- * - `'Scratch'` on `handling-scratch` stacked map and `W05–W22` (`confidence >= 0.75` on default seed)
- * - `'Random'` spatially on `site2-probe-contact` alongside the `Test Site 1:2` anomaly
- *
- * Validates: Requirements 3.1, 3.3, 7.4
+ * Validates: Requirements 3.1, 3.3, 7.4, 9.1
  */
 
 import fc from 'fast-check';
@@ -35,6 +26,11 @@ import {
 } from '../analytics/yield-summary';
 import { buildLotModel } from '../model/lot-builder';
 import type { LotModel } from '../model/types';
+import { getSiteConcentrationHypotheses } from '../patterns/root-causes';
+import {
+  classifyStackedPattern,
+  classifyWaferPattern,
+} from '../patterns/wm811k-classifier';
 import { parseStdfBytes } from '../stdf/stdf-parser';
 
 type ParsedStdfStream = Extract<
@@ -225,6 +221,35 @@ function assertGroundTruthAndYieldSignature(
   );
 
   const anomalies = detectSiteAnomalies(lot);
+  const stackedClass = classifyStackedPattern(lot);
+
+  expect(stackedClass.pattern).toBe(truth.expectedStackedPattern);
+  expect(stackedClass.signatureDieIndices.length).toBeGreaterThan(0);
+  expect(stackedClass.signatureDieIds).toHaveLength(
+    stackedClass.signatureDieIndices.length,
+  );
+  expect(stackedClass.candidateHypotheses.length).toBeGreaterThan(0);
+  if (isDefaultSeed) {
+    expect(stackedClass.confidence).toBeGreaterThanOrEqual(0.75);
+  }
+
+  for (let w = 0; w < DEMO_WAFER_COUNT; w += 1) {
+    const waferClass = classifyWaferPattern(lot, w);
+    expect(waferClass.pattern).toBe(truth.expectedWaferPatterns[w]);
+    if (waferClass.pattern !== 'None') {
+      expect(waferClass.signatureDieIndices.length).toBeGreaterThan(0);
+      expect(waferClass.signatureDieIds).toHaveLength(
+        waferClass.signatureDieIndices.length,
+      );
+      expect(waferClass.candidateHypotheses.length).toBeGreaterThan(0);
+      if (isDefaultSeed) {
+        expect(waferClass.confidence).toBeGreaterThanOrEqual(0.75);
+      }
+    } else {
+      expect(waferClass.signatureDieIds).toEqual([]);
+      expect(waferClass.candidateHypotheses).toEqual([]);
+    }
+  }
 
   if (truth.presetId === 'edge-ring-etch') {
     const edgeMask = new Uint8Array(lot.dies.count);
@@ -278,13 +303,16 @@ function assertGroundTruthAndYieldSignature(
     expect(topAnomaly.yieldDeltaPp).toBeLessThan(-5.0);
     expect(topAnomaly.twoProportionZ).toBeGreaterThanOrEqual(3.0);
     expect(topAnomaly.excessFailShare).toBeGreaterThanOrEqual(0.5);
+    const siteHypotheses = getSiteConcentrationHypotheses(topAnomaly.site);
+    expect(siteHypotheses.length).toBeGreaterThan(0);
+    expect(siteHypotheses[0]!.summary).toContain('Head 1 Site 2');
     if (isDefaultSeed) {
       expect(topAnomaly.confidence).toBeGreaterThanOrEqual(0.75);
     }
   }
 }
 
-describe('Property 9 (Determinism & Parse/Yield Half): Demo Generator (fast-check)', () => {
+describe('Property 9: Demo Generator Determinism & Ground-Truth Recovery (fast-check)', () => {
   it('enforces Mulberry32 PRNG determinism across arbitrary 32-bit seeds', () => {
     fc.assert(
       fc.property(fc.integer(), (seed) => {

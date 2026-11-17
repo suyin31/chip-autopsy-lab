@@ -1,0 +1,3 @@
+Running the full Vitest unit and `fast-check` property test suite now (`tsc --noEmit` and `eslint .` passed cleanly); waiting for test completion.
+Waiting for the extended `fast-check` stress run on Property 8 and Property 9 to finish.
+error: interrupted

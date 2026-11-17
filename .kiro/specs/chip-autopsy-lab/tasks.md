@@ -41,7 +41,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - **Property 4** in `src/core/analytics/yield-summary.prop.test.ts`
     - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 4. Generate the demo lots and run them through the Web Worker
+- [x] 4. Generate the demo lots and run them through the Web Worker
   - [x] 4.1 Implement `src/core/demo/prng.ts` and `demo-generator.ts`
     - Seeded Mulberry32 generator; 25-wafer x 633-die presets `edge-ring-etch`, `handling-scratch`, and `site2-probe-contact`, written through `stdf-writer.ts`.
     - _Requirements: 3.1_
@@ -50,7 +50,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - _Requirements: 1.4, 1.10, 3.3, 15.2_
   - [x] 4.3 Add the first-run empty state with the `"Load demo lot"` control
     - _Requirements: 3.2, 17.6_
-  - [ ]* 4.4 Property test: demo lot determinism and ground-truth recovery
+  - [x]* 4.4 Property test: demo lot determinism and ground-truth recovery
     - **Property 9** in `src/core/demo/demo-generator.prop.test.ts`; covers all three presets (finish after task 6 adds the classifier).
     - _Requirements: 3.1, 3.3, 7.4, 9.1_
 
@@ -62,14 +62,14 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - DPR-scaled base layer in Pass/Fail mode (`#FF7A1A` fail, `#53655D` pass, `1 px` street, fail micro-dot); overlay layer draws `#7CF2C1` outline/glow without repainting the base; wafer selector.
     - _Requirements: 4.1, 4.3, 4.4, 14.2, 15.4_
 
-- [ ] 6. Implement the WM-811K spatial classifier and root-cause hypotheses
-  - [ ] 6.1 Implement `src/core/patterns/wm811k-classifier.ts`
+- [x] 6. Implement the WM-811K spatial classifier and root-cause hypotheses
+  - [x] 6.1 Implement `src/core/patterns/wm811k-classifier.ts`
     - D4-invariant features, noise gate, nine class scores, `MIN_FAIL_FRACTION`, `MIN_CLASS_CONFIDENCE`, and stacked classification with `STACK_CELL_MIN_FAIL_RATE`.
     - _Requirements: 9.1, 9.2, 9.4_
-  - [ ] 6.2 Implement `src/core/patterns/root-causes.ts`
+  - [x] 6.2 Implement `src/core/patterns/root-causes.ts`
     - Hedged hypotheses per class and for test-site concentration.
     - _Requirements: 9.3_
-  - [ ]* 6.3 Property test: classifier determinism and rotation/mirror robustness
+  - [x]* 6.3 Property test: classifier determinism and rotation/mirror robustness
     - **Property 8** in `src/core/patterns/wm811k-classifier.prop.test.ts`
     - _Requirements: 9.1, 9.2, 9.4_
 
