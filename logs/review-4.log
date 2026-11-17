@@ -6,3 +6,25 @@ Let me read the remaining files I need to check:
 Now let me read the design language steering and run the tests to verify they pass:
 Now I have a thorough understanding of all the code. Let me also quickly run the existing tests to verify they pass and check for any important details I might have missed:
 All 27 tests pass. I now have enough information to write a comprehensive, authoritative review. Let me create the review document:
+Review written to [logs/review-4.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/review-4.md). Here's the summary:
+
+## Task 4 Review — NEEDS-FIX
+
+**0 BLOCKER · 5 MAJOR · 10 MINOR**
+
+### MAJORs requiring fixes before Task 5:
+
+| ID | File | Issue |
+|---|---|---|
+| **J-1** | `FullWindowDropZone.tsx:112` | `useEffect` deps include `isDraggingOver`, causing event-listener churn on every drag event — use a ref instead |
+| **J-2** | `autopsy.worker.ts:228` | Large-file prompt retains full decompressed `Uint8Array` in worker memory *and* `File` on client — potential OOM on 400 MB files |
+| **J-3** | `demo-generator.ts:822–895` | HBR/SBR counts include retested execution counts (double-counting), not final-state unique die counts — inflates bin tallies vs. real ATE data |
+| **J-4** | `EmptyStateCard.tsx:181` | File `<input>` has no `id` and no `<label htmlFor>` linkage — screen readers cannot associate the "Choose STDF file" button with the file picker |
+| **J-5** | `IngestProgressPanel.tsx:44` | Indeterminate progress bar has no `aria-valuetext` or live-region announcements — screen readers get no status updates during gzip decompression |
+
+### Key strengths noted:
+- Demo lot realism is excellent: proper quad-site serpentine stepping, interleaved multi-site records, PTR inheritance, credible failure physics
+- Property tests are meaningful (not tautological) — ground-truth verification across arbitrary seeds is solid
+- Worker architecture is clean with good Node testability via DI
+- Design tokens fully verified against steering with WCAG contrast property tests
+- Copy tone is clinical and restrained
