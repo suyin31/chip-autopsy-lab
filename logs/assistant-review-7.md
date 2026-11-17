@@ -1,0 +1,9 @@
+# Assistant visual review — Task 7 (shot-7a, Edge-Ring preset, 1440x900)
+
+1. Numbers don't reconcile on one screen: headline "2,552 cited dies", claim 1 "2,516 failing dies", claim 2 "2,483", tile "Failing Dies 2,721". An engineer will stop trusting it. Each count must say exactly what it counts (e.g. "2,516 of 2,721 final fails lie in the 3-die edge band"), and the headline cited-dies chip must equal the union it highlights. Use the same denominator wording everywhere.
+2. Claim 1 says "0.0% interior" and "100.0% of active fails at the periphery", but the wafer map visibly has interior fails (W01 has several). Either the metric is over recurring stacked cells (then say "recurring stack cells") or it is wrong. Never print an absolute 0.0% / 100.0% that the map contradicts.
+3. Remove "(confidence 0.98)" from the headline sentence; it is already in the chip. Show confidence as a word + number ("High · 0.98") and cap displayed confidence so a heuristic classifier never shows >0.95 (hedge).
+4. Layout: at >=1280 px the verdict and the wafer map should sit side by side (verdict left ~44%, wafer right) so the "conclusion bound to dies" moment is visible above the fold without scrolling. Below 1280 keep stacked. The Lot header (lot id, preset select, Load/Choose) should sit above both as a slim bar, not inside the second card.
+5. Tiny hollow circles before each claim and before site rows read as stray artifacts. Replace with a clear selection affordance (left accent bar on hover/pressed) or remove.
+6. Headline duplicates the lot title's yield ("Yield 82.8%" twice). Keep yield in the lot bar and tiles; headline = cause of death + where (e.g. "Cause of death: Edge-Ring failure. 92% of final fails sit in the outer 3-die band, mostly SBIN 7 IDDQ_EDGE_LEAK.").
+7. "Select headline or claim to highlight cited dies" helper text: shorten to "Click a finding to light its dies".

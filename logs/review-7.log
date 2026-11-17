@@ -1,0 +1,31 @@
+I'll launch parallel research subagents to cover all the files efficiently, then synthesize the review.
+Let me continue reading the design document section 3.5 and then launch parallel research on the source files.
+Now let me read all the source files in parallel:
+Now let me read the remaining portion of engine-facts.ts and the rest of the property test:
+Let me check a few more things and then run the tests:
+Excellent — I now have all the data I need. Let me look at the failing test counterexample more closely and check one more thing about the inline call pattern:
+Now let me look more closely at the Tier 3 guarding for the design specification and verify one more detail about whether Tier 3 requires the stacked pattern to be `Random`/`None`:
+I see the issue — Tier 3 doesn't check whether the stacked map is `Random`/`None` before activating. The design spec says:
+
+> **Tier 3**: Triggered when `wafers.length >= 2` and $W_{\text{exc}}$ exists **while the stacked map classified as `Random` or `None`**.
+
+But the code at line 262 only checks `lot.wafers.length >= 2` and `excursions.length > 0` — it doesn't guard on `primarySpatial.pattern === 'Random' || primarySpatial.pattern === 'None'`. This is a correctness bug that could cause a Tier 3 to override a valid Tier 2 structured spatial pattern when there happens to also be a qualifying single-wafer excursion. Let me also check the failed property test and the selection store for aria-live:
+Now I have everything. Let me write the comprehensive review document.
+The review is complete and written to [logs/review-7.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/review-7.md).
+
+## Summary
+
+**NEEDS-FIX** — 2 blockers, 3 majors, 5 minors.
+
+### Blockers
+| ID | Issue | File:Line |
+|---|---|---|
+| **B-1** | **Tier 3 missing `Random`/`None` guard** — `design.md` §3.5 says Tier 3 fires only when stacked map is `Random`/`None`, but [`verdict-precedence.ts:262`](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/core/report/verdict-precedence.ts#L261-L295) omits that check, allowing a valid Tier 2 structured spatial to be overridden by a single-wafer excursion. | `verdict-precedence.ts:262` |
+| **B-2** | **Property 10 fast-check test red** — the broad `arbLotModel` property test fails at run 75 on an edge case with extreme parametric limits where metric-grounding tolerance breaks. | `autopsy-report.prop.test.ts:506` |
+
+### Majors
+| ID | Issue | File:Line |
+|---|---|---|
+| **M-1** | `resolveSingleWaferBadgeLabel` called inline per body claim on every render — not memoized | `AutopsyReportCard.tsx:461` |
+| **M-2** | No `aria-live` region for verdict announcement (Req 14.4) | `AutopsyReportCard.tsx` |
+| **M-3** | Body claim button lacks `data-testid` (headline has one, body doesn't) | `ClaimInlineButton.tsx:138` |
