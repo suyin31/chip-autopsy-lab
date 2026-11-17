@@ -1,0 +1,32 @@
+I'll start by reading all the context files in parallel, then review the source code.
+Now let me read the steering files and all the source files in parallel:
+Now let me read the remaining portion of wafer-geometry.ts (lines 800-821) and check if there are any existing test files and the design.md continuation:
+Now I have all the data I need. Let me also check the `globals.css` for design token adherence and the `BaseCanvas` CSS sizing:
+Now I have a comprehensive picture. Let me write the review artifact.
+Review complete. The findings are written to [logs/review-5.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/review-5.md).
+
+## Summary
+
+**0 BLOCKERS · 6 MAJORS · 10 MINORS → NEEDS-FIX**
+
+### Key findings:
+
+**Performance / Re-render issues (Majors):**
+- **B-1:** `OverlayCanvas` creates 5 separate Zustand subscriptions; consolidate with `useShallow` to cut subscription bookkeeping 5→1
+- **B-4:** `toggleHiddenBin` creates a new `Set` every time, defeating `React.memo` shallow comparison on `BaseCanvas` — causes unnecessary base repaints
+- **E-1:** `getContext('2d')` called on every effect run; should be cached in a ref
+
+**DPR / Canvas sizing (Major):**
+- **C-1:** Neither canvas sets explicit CSS `width`/`height` via `style` — `h-full w-full` can produce sub-pixel mismatches with the DPR-scaled backing store, causing blur
+
+**Visual / UX issues (Majors):**
+- **I-1:** `~6.5%` padding + circular wafer in a square canvas leaves large empty dark bands above/below the wafer — reduce padding to `~3%`
+- **I-2:** 25 inline radiogroup pills wrap to 3 lines and are visually cluttered — recommend a **paginated horizontal strip** (show ~8–10 pills with scroll/arrows + "W12 · 12 of 25" counter), matching Apple Health's day selector pattern
+
+**Correctness positives ✅:**
+- Derived masks are correct — brush/bin/site/DSL intersection logic, claim dedup with bounds check, overlay union all verified
+- Base canvas correctly isolated from hover/selection props
+- WCR `POS_X`/`POS_Y` directions and `WF_FLAT` notch orientation follow SEMI conventions
+- Arrow-key die stepping maps visual direction correctly for all 4 orientation combos
+- Design tokens (`#53655D`, `#FF7A1A`, `#7CF2C1`, `#0A0A0B` streets, micro-dots at ≥7px) all match design.md resolved decisions
+- ARIA: `radiogroup` with roving tabIndex, `sr-only` summary, `aria-hidden` canvases — all correct
