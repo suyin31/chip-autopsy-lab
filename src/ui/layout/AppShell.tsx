@@ -111,7 +111,7 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
       if (response.kind === 'ok') {
         setWorkspace({ status: 'ready', payload: response });
         setLiveAnnouncement(
-          `Loaded lot ${response.lot.lotId}: ${formatGroupedInt(response.lot.dies.count)} dies across ${formatGroupedInt(response.lot.wafers.length)} wafers, final yield ${formatYieldPct(response.yieldSummary.overall.finalYield)}.`,
+          `${response.report.causeOfDeathHeadline.text} Loaded lot ${response.lot.lotId}: ${formatGroupedInt(response.lot.dies.count)} dies across ${formatGroupedInt(response.lot.wafers.length)} wafers, final yield ${formatYieldPct(response.yieldSummary.overall.finalYield)}.`,
         );
         return;
       }

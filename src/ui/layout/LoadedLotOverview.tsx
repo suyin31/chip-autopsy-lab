@@ -18,6 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/ui/primitives';
+import { AutopsyReportCard } from '@/ui/report';
 import { useSelectionStore } from '@/ui/state';
 import { WaferMapCanvas } from '@/ui/wafer-map';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
@@ -32,12 +33,12 @@ export interface LoadedLotOverviewProps {
 }
 
 /**
- * Loaded-lot diagnostic workspace centering the two-layer `WaferMapCanvas` hero
- * above lot KPIs and the interactive Test Site yield table (ahead of Tasks 6–7
- * adding the WM-811K classifier and `AutopsyReportCard`).
+ * Loaded-lot diagnostic workspace leading with the verdict-first `AutopsyReportCard`
+ * at the top of the workspace above the two-layer `WaferMapCanvas` hero, lot KPIs,
+ * and interactive Test Site yield breakdown table.
  *
- * All STDF strings (`lotId`, `partTyp`, `jobNam`, warning details) render
- * strictly via React plain-text nodes (Requirement 2.4).
+ * All STDF strings (`lotId`, `partTyp`, `jobNam`, warning details, report claims)
+ * render strictly via React plain-text nodes (Requirement 2.4).
  */
 export function LoadedLotOverview({
   data,
@@ -48,7 +49,7 @@ export function LoadedLotOverview({
   onSelectFile,
 }: LoadedLotOverviewProps): React.JSX.Element {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const { lot, yieldSummary, siteAnomalies } = data;
+  const { lot, yieldSummary, siteAnomalies, facts, verdict, report } = data;
   const overall = yieldSummary.overall;
   const primaryAnomaly = siteAnomalies[0];
 
@@ -84,12 +85,19 @@ export function LoadedLotOverview({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card aria-label="Autopsy Report Lot Summary">
+      <AutopsyReportCard
+        lot={lot}
+        report={report}
+        verdict={verdict}
+        facts={facts}
+      />
+
+      <Card aria-label="Lot Telemetry and Wafer Map">
         <CardHeader className="border-b border-hairline pb-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-[12px] tracking-wider text-text-tertiary uppercase">
-                Autopsy Report · Lot Telemetry
+                Lot Telemetry · Wafer Map
               </span>
               <Badge variant="accent">
                 {data.source.kind === 'demo'

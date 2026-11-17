@@ -73,14 +73,14 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - **Property 8** in `src/core/patterns/wm811k-classifier.prop.test.ts`
     - _Requirements: 9.1, 9.2, 9.4_
 
-- [ ] 7. Build engine facts, the verdict, the template report, and the Autopsy Report card
-  - [ ] 7.1 Implement `engine-facts.ts`, `verdict-precedence.ts` (6 tiers), and `template-report.ts`
+- [x] 7. Build engine facts, the verdict, the template report, and the Autopsy Report card
+  - [x] 7.1 Implement `engine-facts.ts`, `verdict-precedence.ts` (6 tiers), and `template-report.ts`
     - Every claim cites fact IDs that resolve to non-empty die sets; cause-of-death line and number formats follow the design.
     - _Requirements: 10.1, 10.2, 10.3, 10.5, 17.4_
-  - [ ] 7.2 Implement `AutopsyReportCard` in `src/ui/report/`
+  - [x] 7.2 Implement `AutopsyReportCard` in `src/ui/report/`
     - Verdict first at the top of the workspace; clicking the headline or a claim writes its die set to the selection store and lights those dies on the overlay canvas.
     - _Requirements: 10.1, 10.4, 2.4_
-  - [ ]* 7.3 Property test: verdict structure and claim-to-die referential integrity
+  - [x]* 7.3 Property test: verdict structure and claim-to-die referential integrity
     - **Property 10** in `src/core/report/autopsy-report.prop.test.ts`
     - _Requirements: 10.1, 10.2, 10.3, 10.5_
 

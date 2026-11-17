@@ -70,7 +70,7 @@ export function ClaimInlineButton({
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
           isActive
             ? 'border-accent bg-accent/8'
-            : 'border-hairline bg-raised hover:border-white/16',
+            : 'border-hairline bg-raised hover:border-accent/40',
         )}
       >
         <span className="heading-display block text-[24px] leading-snug sm:text-[28px]">

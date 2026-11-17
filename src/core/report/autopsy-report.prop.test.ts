@@ -43,6 +43,7 @@ import {
   buildEngineFacts,
   type EngineFact,
   formatScaledParametricValue,
+  sanitizeReportProseText,
 } from './engine-facts';
 import {
   type AutopsyReport,
@@ -230,15 +231,42 @@ function buildSyntheticScenarioLot(
   });
 }
 
-function maskIdentifiersAndExtractNumbers(text: string): readonly number[] {
-  const masked = text
+function maskIdentifiersAndExtractNumbers(
+  text: string,
+  citedFacts: readonly EngineFact[] = [],
+): readonly number[] {
+  let preMasked = text;
+  for (const fact of citedFacts) {
+    if (fact.testRef) {
+      const label =
+        fact.testRef.testName.length > 0
+          ? `Test ${fact.testRef.testNum} (${fact.testRef.testName})`
+          : `Test ${fact.testRef.testNum}`;
+      preMasked = preMasked.split(label).join('TEST_ID');
+    }
+    if (fact.binRef) {
+      const label =
+        fact.binRef.name.length > 0
+          ? `${fact.binRef.mode} ${fact.binRef.code} (${fact.binRef.name})`
+          : `${fact.binRef.mode} ${fact.binRef.code}`;
+      preMasked = preMasked.split(label).join('BIN_ID');
+    }
+    if (fact.waferRef) {
+      const cleanWf =
+        sanitizeReportProseText(fact.waferRef.waferId) ||
+        `W${String(fact.waferRef.waferIndex + 1).padStart(2, '0')}`;
+      preMasked = preMasked.split(`Wafer ${cleanWf}`).join('WAFER_ID');
+    }
+  }
+
+  const masked = preMasked
     .replace(/\b(?:SBIN|HBIN)\s+\d+(?:\s*\([^)]*\))?/g, 'BIN_ID')
     .replace(/\bTest\s+\d+(?:\s*\([^)]*\))?/g, 'TEST_ID')
     .replace(/\bHead\s+\d+\s+Site\s+\d+\s*\(\d+:\d+\)/g, 'SITE_ID')
     .replace(/\bSite\s+\d+:\d+/g, 'SITE_ID')
     .replace(/\bWafer\s+\S+/g, 'WAFER_ID');
 
-  const matches = masked.match(/-?\d[\d,]*(?:\.\d+)?/g);
+  const matches = masked.match(/-?\d[\d,]*(?:\.\d+)?(?:[eE][+-]?\d+)?/g);
   if (!matches) {
     return [];
   }
@@ -385,9 +413,12 @@ function assertProperty10ReportInvariants(
     const expectedSiteKeys = new Set<string>();
     const availableMetrics = [];
 
+    const citedFactObjects: EngineFact[] = [];
+
     for (const factId of claim.citedFactIds) {
       const fact = factsById.get(factId);
       expect(fact).toBeDefined();
+      citedFactObjects.push(fact!);
       for (let i = 0; i < fact!.dieIndices.length; i += 1) {
         expectedDieSet.add(fact!.dieIndices[i]!);
       }
@@ -446,7 +477,10 @@ function assertProperty10ReportInvariants(
         claim.text.includes('Candidate mechanism:'));
 
     if (!isQualitativeHypothesisClaim) {
-      const numbersInProse = maskIdentifiersAndExtractNumbers(claim.text);
+      const numbersInProse = maskIdentifiersAndExtractNumbers(
+        claim.text,
+        citedFactObjects,
+      );
       for (const num of numbersInProse) {
         const matchesMetric = availableMetrics.some(
           (m) => Math.abs(num - m.numericValue) <= m.tolerance + 1e-9,

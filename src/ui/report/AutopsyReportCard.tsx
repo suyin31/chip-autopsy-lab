@@ -120,22 +120,24 @@ export function resolveClaimWaferTarget(
       activeWaferIndex >= 0 && activeWaferIndex < waferCount
         ? activeWaferIndex
         : 0;
-    if (coordCountByWafer[safeActive] === 0) {
-      let bestWafer = 0;
-      let bestCount = 0;
-      for (let w = 0; w < waferCount; w += 1) {
-        const cnt = coordCountByWafer[w]!;
-        if (cnt > bestCount) {
-          bestCount = cnt;
-          bestWafer = w;
-        }
+    let bestWafer = 0;
+    let bestCount = 0;
+    for (let w = 0; w < waferCount; w += 1) {
+      const cnt = coordCountByWafer[w]!;
+      if (cnt > bestCount) {
+        bestCount = cnt;
+        bestWafer = w;
       }
-      if (bestCount > 0) {
-        return {
-          targetWaferIndex: bestWafer,
-          isSingleWaferClaim: false,
-        };
-      }
+    }
+    const activeCount = coordCountByWafer[safeActive]!;
+    if (
+      bestCount > 0 &&
+      (activeCount === 0 || (bestCount >= 4 && activeCount * 4 < bestCount))
+    ) {
+      return {
+        targetWaferIndex: bestWafer,
+        isSingleWaferClaim: false,
+      };
     }
   }
 

@@ -204,14 +204,27 @@ export function formatPp1(pp: number): string {
   return `${pp.toFixed(1)} pp`;
 }
 
+const EXPONENTIAL_FORMAT_THRESHOLD = 1e15;
+
+function compute2DpTolerance(numericValue: number): number {
+  const abs = Math.abs(numericValue);
+  if (!Number.isFinite(abs) || abs < EXPONENTIAL_FORMAT_THRESHOLD) {
+    return 0.005;
+  }
+  return abs * 0.01;
+}
+
 /**
- * Formats a capability, confidence, or z-statistic score to 2 decimal places (`0.91 -> "0.91"`).
+ * Formats a capability, confidence, or z-statistic score to 2 decimal places (`0.91 -> "0.91"`),
+ * switching to 2-decimal exponential notation for extreme magnitudes (`|value| >= 1e15`).
  */
 export function formatFixed2(value: number): string {
   if (!Number.isFinite(value)) {
     return '0.00';
   }
-  return value.toFixed(2);
+  return Math.abs(value) >= EXPONENTIAL_FORMAT_THRESHOLD
+    ? value.toExponential(2)
+    : value.toFixed(2);
 }
 
 /**
@@ -246,7 +259,9 @@ export function formatScaledParametricValue(
   const unitLabel = `${prefix}${cleanUnits}`;
   const scaled = baseValue * Math.pow(10, effectiveExp);
   const formattedNum =
-    Math.abs(scaled) >= 1e15 ? scaled.toExponential(2) : scaled.toFixed(2);
+    Math.abs(scaled) >= EXPONENTIAL_FORMAT_THRESHOLD
+      ? scaled.toExponential(2)
+      : scaled.toFixed(2);
 
   return {
     scaledNumericValue: scaled,
@@ -289,7 +304,7 @@ export function score2Metric(key: string, value: number): FormattedFactMetric {
     key,
     numericValue: value,
     displayValue: formatFixed2(value),
-    tolerance: 0.005,
+    tolerance: compute2DpTolerance(value),
   };
 }
 
@@ -604,14 +619,18 @@ function evaluateParametricColumn(
 
   if (sigma !== null && sigma > 0) {
     if (validTwoSided && loLimit !== null && hiLimit !== null) {
-      cp = (hiLimit - loLimit) / (6 * sigma);
+      const rawCp = (hiLimit - loLimit) / (6 * sigma);
       const cpu = (hiLimit - mean) / (3 * sigma);
       const cpl = (mean - loLimit) / (3 * sigma);
-      cpk = Math.min(cpu, cpl);
+      const rawCpk = Math.min(cpu, cpl);
+      cp = Number.isFinite(rawCp) ? rawCp : null;
+      cpk = Number.isFinite(rawCpk) ? rawCpk : null;
     } else if (validHiOnly && hiLimit !== null) {
-      cpk = (hiLimit - mean) / (3 * sigma);
+      const rawCpk = (hiLimit - mean) / (3 * sigma);
+      cpk = Number.isFinite(rawCpk) ? rawCpk : null;
     } else if (validLoOnly && loLimit !== null) {
-      cpk = (mean - loLimit) / (3 * sigma);
+      const rawCpk = (mean - loLimit) / (3 * sigma);
+      cpk = Number.isFinite(rawCpk) ? rawCpk : null;
     }
   }
 
@@ -685,7 +704,7 @@ function buildParametricCapabilityFacts(lot: LotModel): readonly EngineFact[] {
         key: 'mean',
         numericValue: meanFormatted.scaledNumericValue,
         displayValue: meanFormatted.displayValue,
-        tolerance: 0.005,
+        tolerance: compute2DpTolerance(meanFormatted.scaledNumericValue),
       },
     ];
 
@@ -705,7 +724,7 @@ function buildParametricCapabilityFacts(lot: LotModel): readonly EngineFact[] {
           key: 'loLimit',
           numericValue: loFmt.scaledNumericValue,
           displayValue: loFmt.displayValue,
-          tolerance: 0.005,
+          tolerance: compute2DpTolerance(loFmt.scaledNumericValue),
         });
         limitClause = `LO ${loFmt.displayValue}`;
       }
@@ -719,7 +738,7 @@ function buildParametricCapabilityFacts(lot: LotModel): readonly EngineFact[] {
           key: 'hiLimit',
           numericValue: hiFmt.scaledNumericValue,
           displayValue: hiFmt.displayValue,
-          tolerance: 0.005,
+          tolerance: compute2DpTolerance(hiFmt.scaledNumericValue),
         });
         limitClause =
           limitClause.length > 0
