@@ -1,0 +1,16 @@
+export {
+  type BinSelectionFilter,
+  type CapabilityPredicateClause,
+  type ClaimHighlightState,
+  type ComparisonOp,
+  createSelectionStore,
+  type DerivedSelectionMasks,
+  deriveSelectionMasks,
+  type DiePredicateClause,
+  type FilterDslAst,
+  type SelectionMaskInputs,
+  type SelectionStoreState,
+  type SpatialBrushRect,
+  useSelectionStore,
+  type WaferColorMode,
+} from './selection-store';

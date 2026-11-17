@@ -1,0 +1,2 @@
+Verification and production build (`tsc --noEmit`, `eslint .`, `vitest run`, `next build`) are running in the background; I will finalize `logs/progress.md` and report back as soon as it finishes.
+error: interrupted

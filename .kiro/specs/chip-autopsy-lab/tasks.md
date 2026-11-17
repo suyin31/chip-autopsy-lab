@@ -54,11 +54,11 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - **Property 9** in `src/core/demo/demo-generator.prop.test.ts`; covers all three presets (finish after task 6 adds the classifier).
     - _Requirements: 3.1, 3.3, 7.4, 9.1_
 
-- [ ] 5. Render the two-layer wafer map and central selection store
-  - [ ] 5.1 Implement `src/ui/state/selection-store.ts`
+- [x] 5. Render the two-layer wafer map and central selection store
+  - [x] 5.1 Implement `src/ui/state/selection-store.ts`
     - Single Zustand store holding brush, bin, site, filter, and claim-highlight state, with derived `Uint8Array` die masks.
     - _Requirements: 10.4, 11.1, 11.4_
-  - [ ] 5.2 Implement the base and overlay canvases in `src/ui/wafer-map/`
+  - [x] 5.2 Implement the base and overlay canvases in `src/ui/wafer-map/`
     - DPR-scaled base layer in Pass/Fail mode (`#FF7A1A` fail, `#53655D` pass, `1 px` street, fail micro-dot); overlay layer draws `#7CF2C1` outline/glow without repainting the base; wafer selector.
     - _Requirements: 4.1, 4.3, 4.4, 14.2, 15.4_
 

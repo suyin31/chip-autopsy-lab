@@ -17,6 +17,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/ui/primitives';
+import { useSelectionStore } from '@/ui/state';
+import { WaferMapCanvas } from '@/ui/wafer-map';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
 
 export interface LoadedLotOverviewProps {
@@ -29,9 +31,9 @@ export interface LoadedLotOverviewProps {
 }
 
 /**
- * Clinical lot telemetry summary rendered once `autopsy.worker.ts` resolves
- * a `LotModel` and `YieldSummary` (ahead of Tasks 5–7 adding the Canvas2D
- * wafer map and `AutopsyReportCard`).
+ * Loaded-lot diagnostic workspace centering the two-layer `WaferMapCanvas` hero
+ * above lot KPIs and the interactive Test Site yield table (ahead of Tasks 6–7
+ * adding the WM-811K classifier and `AutopsyReportCard`).
  *
  * All STDF strings (`lotId`, `partTyp`, `jobNam`, warning details) render
  * strictly via React plain-text nodes (Requirement 2.4).
@@ -47,6 +49,16 @@ export function LoadedLotOverview({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { lot, yieldSummary, siteAnomalies } = data;
   const overall = yieldSummary.overall;
+  const primaryAnomaly = siteAnomalies[0];
+
+  const storeLot = useSelectionStore((s) => s.lot);
+  const rawSiteFilter = useSelectionStore((s) => s.siteFilter);
+  const toggleSiteFilter = useSelectionStore((s) => s.toggleSiteFilter);
+  const activeSiteFilter = storeLot === lot ? rawSiteFilter : null;
+
+  React.useEffect(() => {
+    useSelectionStore.getState().setLot(lot);
+  }, [lot]);
 
   const anomalyBySiteIndex = React.useMemo(() => {
     const map = new Map<number, (typeof siteAnomalies)[number]>();
@@ -165,7 +177,13 @@ export function LoadedLotOverview({
         </CardHeader>
 
         <CardContent className="pt-6">
-          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {/* Hero Wafer Map Centerpiece */}
+          <div className="border-b border-hairline pb-8">
+            <WaferMapCanvas lot={lot} byWaferYield={yieldSummary.byWafer} />
+          </div>
+
+          {/* Lot KPI strip */}
+          <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <div className="rounded-control border border-hairline bg-raised p-3.5">
               <dt className="text-[12px] text-text-tertiary">Final Yield</dt>
               <dd className="mt-1 font-mono text-[20px] text-text-primary tabular-nums">
@@ -213,17 +231,21 @@ export function LoadedLotOverview({
             </div>
           </dl>
 
-          {/* Test Site breakdown table */}
+          {/* Interactive Test Site breakdown table */}
           {lot.sites.length > 0 ? (
-            <div className="mt-6">
-              <div className="flex items-center justify-between gap-2 pb-2">
-                <h3 className="text-[16px] text-text-primary">
-                  Test Site Yield Breakdown
-                </h3>
-                {siteAnomalies.length > 0 ? (
+            <div className="mt-8">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5">
+                <div className="flex flex-wrap items-baseline gap-2.5">
+                  <h3 className="text-[16px] text-text-primary">
+                    Test Site Yield Breakdown
+                  </h3>
+                  <span className="text-[12px] text-text-tertiary">
+                    Select a site row to highlight its dies on the wafer map
+                  </span>
+                </div>
+                {primaryAnomaly ? (
                   <Badge variant="failure">
-                    Site {siteAnomalies[0]?.site.label} concentration anomaly (
-                    confidence {formatScore2(siteAnomalies[0]?.confidence ?? null)})
+                    {`Head ${primaryAnomaly.site.headNum} · Site ${primaryAnomaly.site.siteNum} — site concentration anomaly · confidence ${formatScore2(primaryAnomaly.confidence)}`}
                   </Badge>
                 ) : null}
               </div>
@@ -257,13 +279,41 @@ export function LoadedLotOverview({
                         return null;
                       }
                       const anomaly = anomalyBySiteIndex.get(site.siteIndex);
+                      const isSiteSelected =
+                        activeSiteFilter === site.siteIndex;
                       return (
                         <tr
                           key={site.label}
-                          className="border-b border-hairline last:border-b-0"
+                          onClick={() => toggleSiteFilter(site.siteIndex)}
+                          className={`cursor-pointer border-b border-hairline transition-colors duration-150 last:border-b-0 ${
+                            isSiteSelected ? 'bg-accent/8' : 'hover:bg-raised'
+                          }`}
                         >
-                          <td className="px-3.5 py-2 font-mono text-text-primary">
-                            Head {site.headNum} · Site {site.siteNum}
+                          <td className="px-3.5 py-2">
+                            <button
+                              type="button"
+                              aria-pressed={isSiteSelected}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSiteFilter(site.siteIndex);
+                              }}
+                              className="inline-flex cursor-pointer items-center gap-2 rounded-xs py-0.5 text-left font-mono text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                            >
+                              <span
+                                aria-hidden="true"
+                                className={`h-2 w-2 rounded-xs border ${
+                                  isSiteSelected
+                                    ? 'border-accent bg-accent'
+                                    : 'border-hairline bg-transparent'
+                                }`}
+                              />
+                              <span>
+                                Head {site.headNum} · Site {site.siteNum}
+                              </span>
+                              {isSiteSelected ? (
+                                <Badge variant="accent">Highlighted</Badge>
+                              ) : null}
+                            </button>
                           </td>
                           <td className="px-3.5 py-2 text-right font-mono text-text-secondary tabular-nums">
                             {formatGroupedInt(metrics.testedDies)}

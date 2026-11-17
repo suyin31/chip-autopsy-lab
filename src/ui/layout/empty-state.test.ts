@@ -266,6 +266,12 @@ describe('first-run empty state, drop zone, progress panel, and loaded overview 
       }),
     );
     expect(site2Html).toContain('Head 1 · Site 2');
+    expect(site2Html).toContain(
+      'Head 1 · Site 2 — site concentration anomaly · confidence 0.96',
+    );
+    expect(site2Html).not.toContain('( confidence');
+    expect(site2Html).toContain('data-testid="wafer-base-canvas"');
+    expect(site2Html).toContain('data-testid="wafer-overlay-canvas"');
     expect(site2Html).toContain('text-failure');
     expect(site2Html).toContain('pp yield drop');
     expect(site2Html.match(/Nominal/g)).toHaveLength(3);
