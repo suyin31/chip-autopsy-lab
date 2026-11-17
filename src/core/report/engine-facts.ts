@@ -30,6 +30,7 @@ import {
   type Wm811kClass,
 } from '../patterns/root-causes';
 import {
+  CLASSIFIER_THRESHOLDS,
   classifyStackedPattern,
   classifyWaferPattern,
   type PatternClassification,
@@ -114,10 +115,26 @@ export interface QualifyingWaferExcursion {
   readonly signatureDieIndices: Uint32Array;
 }
 
+export interface SpatialDieBreakdown {
+  readonly spatialDieIndices: Uint32Array;
+  readonly sigCount: number;
+  readonly sigWaferCount: number;
+  readonly edgeBandTestedDies: number;
+  readonly edgeBandFailDies: number;
+  readonly interiorTestedDies: number;
+  readonly interiorFailDies: number;
+}
+
 export const WAFER_EXCURSION_THRESHOLDS = {
   MIN_CONFIDENCE: 0.7,
   MIN_LOT_FAIL_SHARE: 0.25,
 } as const;
+
+/**
+ * Heuristic feature scores are hedged in displayed UI/report labels so an
+ * uncalibrated classifier never presents > 0.95 certainty.
+ */
+export const DISPLAYED_CONFIDENCE_CAP = 0.95;
 
 export const STRUCTURED_SPATIAL_CLASSES: ReadonlySet<Wm811kClass> = new Set<ScoredWm811kClass>([
   'Center',
@@ -195,6 +212,50 @@ export function formatRatioPct1(ratio: number): string {
 }
 
 /**
+ * Formats a count share (`numerator / denominator`) as a 1-decimal percentage while
+ * clamping strictly partial shares (`0 < numerator < denominator`) to `[0.1%, 99.9%]`
+ * so non-zero minority counts never display as `"0.0%"` and incomplete shares never
+ * display as `"100.0%"`.
+ */
+export function formatBoundedSharePct1(
+  numerator: number,
+  denominator: number,
+): {
+  readonly numericPct: number;
+  readonly displayValue: string;
+  readonly tolerance: number;
+} {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0 || numerator <= 0) {
+    return { numericPct: 0, displayValue: '0.0%', tolerance: 0.05 };
+  }
+  if (numerator >= denominator) {
+    return { numericPct: 100, displayValue: '100.0%', tolerance: 0.05 };
+  }
+  const rawPct = (numerator / denominator) * 100;
+  const rounded = Number(rawPct.toFixed(1));
+  const clamped = Math.min(99.9, Math.max(0.1, rounded));
+  return {
+    numericPct: rawPct,
+    displayValue: `${clamped.toFixed(1)}%`,
+    tolerance: Math.max(0.05, Math.abs(clamped - rawPct) + 1e-6),
+  };
+}
+
+export function boundedPctMetric(
+  key: string,
+  numerator: number,
+  denominator: number,
+): FormattedFactMetric {
+  const fmt = formatBoundedSharePct1(numerator, denominator);
+  return {
+    key,
+    numericValue: fmt.numericPct,
+    displayValue: fmt.displayValue,
+    tolerance: fmt.tolerance,
+  };
+}
+
+/**
  * Formats a percentage-point delta to 1 decimal place (`37.42 -> "37.4 pp"`).
  */
 export function formatPp1(pp: number): string {
@@ -204,19 +265,24 @@ export function formatPp1(pp: number): string {
   return `${pp.toFixed(1)} pp`;
 }
 
-const EXPONENTIAL_FORMAT_THRESHOLD = 1e15;
+/**
+ * Switches extreme capability or scaled-limit magnitudes (`|value| >= 1e6`) to
+ * 2-decimal exponential notation so display strings stay compact and avoid IEEE-754
+ * binary64 ULP drift on `toFixed(2)` strings above `2^45`.
+ */
+const EXPONENTIAL_FORMAT_THRESHOLD = 1e6;
 
 function compute2DpTolerance(numericValue: number): number {
   const abs = Math.abs(numericValue);
   if (!Number.isFinite(abs) || abs < EXPONENTIAL_FORMAT_THRESHOLD) {
-    return 0.005;
+    return 0.005 + (Number.isFinite(abs) ? abs * Number.EPSILON : 0);
   }
   return abs * 0.01;
 }
 
 /**
  * Formats a capability, confidence, or z-statistic score to 2 decimal places (`0.91 -> "0.91"`),
- * switching to 2-decimal exponential notation for extreme magnitudes (`|value| >= 1e15`).
+ * switching to 2-decimal exponential notation for extreme magnitudes (`|value| >= 1e6`).
  */
 export function formatFixed2(value: number): string {
   if (!Number.isFinite(value)) {
@@ -225,6 +291,46 @@ export function formatFixed2(value: number): string {
   return Math.abs(value) >= EXPONENTIAL_FORMAT_THRESHOLD
     ? value.toExponential(2)
     : value.toFixed(2);
+}
+
+/**
+ * Caps a heuristic confidence score in `[0, 0.95]` rounded to 2 decimal places so
+ * displayed report confidence never overclaims certainty (`> 0.95`).
+ */
+export function capDisplayedConfidence(confidence: number): number {
+  if (!Number.isFinite(confidence)) {
+    return 0;
+  }
+  const clamped = Math.min(DISPLAYED_CONFIDENCE_CAP, Math.max(0, confidence));
+  return Math.round(clamped * 100) / 100;
+}
+
+/**
+ * Formats a hedged qualitative + numeric confidence badge label (`"High · 0.95"`,
+ * `"Moderate · 0.72"`, `"Low · 0.50"`), strictly capped at `0.95`.
+ */
+export function formatConfidenceBadgeLabel(confidence: number): string {
+  const capped = capDisplayedConfidence(confidence);
+  const tierWord =
+    capped >= 0.8 ? 'High' : capped >= 0.65 ? 'Moderate' : 'Low';
+  return `${tierWord} · ${formatFixed2(capped)}`;
+}
+
+/**
+ * Formats a bin code and optional sanitized bin name (`"SBIN 7 (IDDQ_EDGE_LEAK)"` or `"SBIN 7"`).
+ */
+export function formatBinRefLabel(bin: {
+  readonly mode: BinMode;
+  readonly code: number;
+  readonly name: string;
+}): string {
+  return bin.name.length > 0
+    ? `${bin.mode} ${bin.code} (${bin.name})`
+    : `${bin.mode} ${bin.code}`;
+}
+
+export function formatFinalFailNoun(count: number): string {
+  return count === 1 ? 'final fail' : 'final fails';
 }
 
 /**
@@ -402,6 +508,68 @@ export function collectAllFinalFailDieIndices(
     }
   }
   return out;
+}
+
+/**
+ * Computes exact per-die spatial zone counts (`outer 3-die band` vs. `wafer interior`)
+ * and signature wafer span so both `buildEngineFacts` and `selectPrimaryVerdict` emit
+ * identical, reconciled per-die numbers that never contradict single-wafer maps.
+ */
+export function computeSpatialDieBreakdown(
+  lot: LotModel,
+  primarySpatial: PatternClassification,
+): SpatialDieBreakdown {
+  const totalDies = lot.dies.count;
+  const normalizedSig = normalizeDieIndices(
+    primarySpatial.signatureDieIndices,
+    totalDies,
+  );
+  const spatialDieIndices =
+    normalizedSig.length > 0 ? normalizedSig : collectAllFinalFailDieIndices(lot);
+
+  const waferSeen = new Uint8Array(Math.max(1, lot.wafers.length));
+  let sigWaferCount = 0;
+  for (let i = 0; i < spatialDieIndices.length; i += 1) {
+    const w = lot.dies.waferIndex[spatialDieIndices[i]!]!;
+    if (w < waferSeen.length && waferSeen[w] === 0) {
+      waferSeen[w] = 1;
+      sigWaferCount += 1;
+    }
+  }
+
+  let edgeBandTestedDies = 0;
+  let edgeBandFailDies = 0;
+  let interiorTestedDies = 0;
+  let interiorFailDies = 0;
+  const edgeBandMaxRing = CLASSIFIER_THRESHOLDS.EDGE_RING_BAND;
+
+  for (let i = 0; i < totalDies; i += 1) {
+    if (lot.dies.hasValidCoords[i] === 0) {
+      continue;
+    }
+    const ring = lot.dies.ringIndex[i]!;
+    if (ring >= 1 && ring <= edgeBandMaxRing) {
+      edgeBandTestedDies += 1;
+      if (lot.dies.finalPass[i] === 0) {
+        edgeBandFailDies += 1;
+      }
+    } else if (ring > edgeBandMaxRing) {
+      interiorTestedDies += 1;
+      if (lot.dies.finalPass[i] === 0) {
+        interiorFailDies += 1;
+      }
+    }
+  }
+
+  return {
+    spatialDieIndices,
+    sigCount: spatialDieIndices.length,
+    sigWaferCount,
+    edgeBandTestedDies,
+    edgeBandFailDies,
+    interiorTestedDies,
+    interiorFailDies,
+  };
 }
 
 /**
@@ -760,10 +928,13 @@ function buildParametricCapabilityFacts(lot: LotModel): readonly EngineFact[] {
         : `Test ${col.testNum}`;
     const cpkClause = cpk !== null ? `, Cpk ${formatFixed2(cpk)}` : '';
     const limText = limitClause.length > 0 ? `, ${limitClause}` : '';
+    const measuredNoun = sampleSize === 1 ? 'measured die' : 'measured dies';
+    const outOfSpecNoun =
+      outOfSpecDieIndices.length === 1 ? 'out-of-spec die' : 'out-of-spec dies';
     const summary =
       outOfSpecDieIndices.length > 0
-        ? `${nameLabel} recorded ${formatGroupedInt(outOfSpecDieIndices.length)} out-of-spec dies across ${formatGroupedInt(sampleSize)} measurements (mean ${meanFormatted.displayValue}${limText}${cpkClause}).`
-        : `${nameLabel} exhibits reduced parametric margin across ${formatGroupedInt(sampleSize)} measurements (mean ${meanFormatted.displayValue}${limText}${cpkClause}).`;
+        ? `${nameLabel} recorded ${formatGroupedInt(outOfSpecDieIndices.length)} ${outOfSpecNoun} across ${formatGroupedInt(sampleSize)} ${measuredNoun} (mean ${meanFormatted.displayValue}${limText}${cpkClause}).`
+        : `${nameLabel} exhibits reduced parametric margin across ${formatGroupedInt(sampleSize)} ${measuredNoun} with 0 out-of-spec dies (mean ${meanFormatted.displayValue}${limText}${cpkClause}).`;
 
     facts.push({
       factId: `fact:test:${col.testNum}`,
@@ -843,6 +1014,8 @@ export function buildEngineFacts(
   const totalFailDies = overall.finalFailDies;
   const finalYield = overall.finalYield ?? 0;
   const firstPassYield = overall.firstPassYield ?? 0;
+  const failDenomNoun = formatFinalFailNoun(totalFailDies);
+  const testedDenomNoun = testedDies === 1 ? 'tested die' : 'tested dies';
 
   const allFailDieIndices =
     totalFailDies > 0 ? collectAllFinalFailDieIndices(lot) : new Uint32Array(0);
@@ -850,16 +1023,15 @@ export function buildEngineFacts(
   const facts: EngineFact[] = [];
 
   // 1. Lot-level yield fact (`fact:lot-yield`)
-  // Bound to all tested dies when totalFailDies === 0 (Tier 0, design.md 3.5),
-  // and to all final-failing dies when totalFailDies >= 1 so clicking lot-loss or
-  // Tier 5 baseline-loss claims highlights failing dies rather than passing dies.
   const lotYieldDieIndices =
     totalFailDies === 0 ? collectAllTestedDieIndices(totalDies) : allFailDieIndices;
 
+  const lotFailShare = formatBoundedSharePct1(totalFailDies, testedDies);
   const lotYieldMetrics: FormattedFactMetric[] = [
     intMetric('testedDies', testedDies),
     intMetric('finalPassDies', overall.finalPassDies),
     intMetric('finalFailDies', totalFailDies),
+    boundedPctMetric('finalFailSharePct', totalFailDies, testedDies),
     pctMetricFromRatio('finalYieldPct', finalYield),
     pctMetricFromRatio('firstPassYieldPct', firstPassYield),
     intMetric('waferCount', lot.wafers.length),
@@ -867,16 +1039,18 @@ export function buildEngineFacts(
   ];
 
   if (totalFailDies === 0) {
-    lotYieldMetrics.push(score2Metric('confidence', 1.0));
+    lotYieldMetrics.push(score2Metric('confidence', capDisplayedConfidence(1.0)));
   } else if (primarySpatial.pattern === 'None') {
-    lotYieldMetrics.push(score2Metric('confidence', primarySpatial.confidence));
+    lotYieldMetrics.push(
+      score2Metric('confidence', capDisplayedConfidence(primarySpatial.confidence)),
+    );
   }
 
   const waferNoun = lot.wafers.length === 1 ? 'wafer' : 'wafers';
   const lotYieldSummaryText =
     totalFailDies === 0
-      ? `All ${formatGroupedInt(testedDies)} tested dies across ${formatGroupedInt(lot.wafers.length)} ${waferNoun} passed final sort (${formatRatioPct1(finalYield)} final yield, ${formatRatioPct1(firstPassYield)} first-pass yield).`
-      : `Lot recorded ${formatRatioPct1(finalYield)} final yield (${formatGroupedInt(overall.finalPassDies)} passing, ${formatGroupedInt(totalFailDies)} failing across ${formatGroupedInt(testedDies)} tested dies on ${formatGroupedInt(lot.wafers.length)} ${waferNoun}).`;
+      ? `All ${formatGroupedInt(testedDies)} ${testedDenomNoun} across ${formatGroupedInt(lot.wafers.length)} ${waferNoun} passed final sort (0 final fails, ${formatRatioPct1(firstPassYield)} first-pass yield).`
+      : `${formatGroupedInt(totalFailDies)} of ${formatGroupedInt(testedDies)} ${testedDenomNoun} (${lotFailShare.displayValue}) are ${failDenomNoun} across ${formatGroupedInt(lot.wafers.length)} ${waferNoun} (${formatGroupedInt(overall.finalPassDies)} passing dies, ${formatRatioPct1(finalYield)} final yield).`;
 
   facts.push({
     factId: 'fact:lot-yield',
@@ -892,12 +1066,16 @@ export function buildEngineFacts(
 
   // 2. Primary WM-811K spatial pattern fact (`fact:spatial:primary`) when pattern !== 'None'
   if (primarySpatial.pattern !== 'None') {
-    const normalizedSig = normalizeDieIndices(
-      primarySpatial.signatureDieIndices,
-      totalDies,
-    );
-    const spatialDieIndices =
-      normalizedSig.length > 0 ? normalizedSig : allFailDieIndices;
+    const spatialBreakdown = computeSpatialDieBreakdown(lot, primarySpatial);
+    const {
+      spatialDieIndices,
+      sigCount,
+      sigWaferCount,
+      edgeBandTestedDies,
+      edgeBandFailDies,
+      interiorTestedDies,
+      interiorFailDies,
+    } = spatialBreakdown;
 
     if (spatialDieIndices.length > 0) {
       let matchingWaferCount = 0;
@@ -908,38 +1086,93 @@ export function buildEngineFacts(
       }
 
       const f = primarySpatial.features;
+      const sigShare = formatBoundedSharePct1(sigCount, totalFailDies);
+      const edgeBandDieRate = formatBoundedSharePct1(
+        edgeBandFailDies,
+        edgeBandTestedDies,
+      );
+      const interiorDieRate = formatBoundedSharePct1(
+        interiorFailDies,
+        interiorTestedDies,
+      );
+      const headlineEdgeNumerator =
+        edgeBandFailDies > 0 ? edgeBandFailDies : sigCount;
+      const lotDieFailRate = formatBoundedSharePct1(totalFailDies, testedDies);
+      const edgeBandRings = CLASSIFIER_THRESHOLDS.EDGE_RING_BAND;
+
       const spatialMetrics: FormattedFactMetric[] = [
-        score2Metric('confidence', primarySpatial.confidence),
-        intMetric('signatureDieCount', spatialDieIndices.length),
-        intMetric('activeFailCellCount', f.activeFailCellCount),
-        intMetric('testedCellCount', f.testedCellCount),
-        pctMetricFromRatio('globalFailPct', f.globalFailFraction),
-        pctMetricFromRatio('edgeRing3DensityPct', f.edgeRing3Density),
-        pctMetricFromRatio('interiorDensityPct', f.interiorDensity),
-        pctMetricFromRatio('edgeFailSharePct', f.edgeFailShare),
-        pctMetricFromRatio('innerZoneDensityPct', f.innerZoneDensity),
-        pctMetricFromRatio('midZoneDensityPct', f.midZoneDensity),
-        pctMetricFromRatio('outerZoneDensityPct', f.outerZoneDensity),
-        pctMetricFromRatio('clusteredFailPct', f.clusteredFailFraction),
-        score2Metric('maxScratchElongation', f.maxScratchElongation),
-        score2Metric('maxScratchAspectRatio', f.maxScratchAspectRatio),
+        score2Metric('confidence', capDisplayedConfidence(primarySpatial.confidence)),
+        intMetric('signatureDieCount', sigCount),
+        intMetric('totalFailDies', totalFailDies),
+        intMetric('testedDies', testedDies),
+        boundedPctMetric('signatureShareOfFailsPct', sigCount, totalFailDies),
+        boundedPctMetric(
+          'headlineEdgeBandFailSharePct',
+          headlineEdgeNumerator,
+          totalFailDies,
+        ),
+        intMetric('edgeBandWidthDies', edgeBandRings),
+        intMetric('edgeBandFailDies', edgeBandFailDies),
+        intMetric('interiorFailDies', interiorFailDies),
+        boundedPctMetric(
+          'edgeBandDieFailRatePct',
+          edgeBandFailDies,
+          edgeBandTestedDies,
+        ),
+        boundedPctMetric(
+          'interiorDieFailRatePct',
+          interiorFailDies,
+          interiorTestedDies,
+        ),
+        boundedPctMetric('lotDieFailRatePct', totalFailDies, testedDies),
+        intMetric('signatureWaferCount', sigWaferCount),
         intMetric('matchingWaferCount', matchingWaferCount),
         intMetric('waferCount', lot.wafers.length),
+        intMetric('activeFailCellCount', f.activeFailCellCount),
+        intMetric('testedCellCount', f.testedCellCount),
+        score2Metric('maxScratchElongation', f.maxScratchElongation),
+        score2Metric('maxScratchAspectRatio', f.maxScratchAspectRatio),
       ];
 
-      const scopeLabel =
+      const multiWaferSpan =
         lot.wafers.length >= 2
-          ? `across ${formatGroupedInt(matchingWaferCount)} of ${formatGroupedInt(lot.wafers.length)} wafers`
-          : 'on the wafer map';
+          ? ` across ${formatGroupedInt(sigWaferCount)} of ${formatGroupedInt(lot.wafers.length)} wafers`
+          : ' on the wafer map';
 
-      const spatialSummary =
-        primarySpatial.pattern === 'Edge-Ring'
-          ? `Edge-Ring spatial signature spans ${formatGroupedInt(spatialDieIndices.length)} failing dies ${scopeLabel} (${formatRatioPct1(f.edgeRing3Density)} peripheral ring fail density vs. ${formatRatioPct1(f.interiorDensity)} interior, ${formatRatioPct1(f.edgeFailShare)} of active fails at the periphery).`
-          : primarySpatial.pattern === 'Scratch'
-            ? `Scratch spatial signature spans ${formatGroupedInt(spatialDieIndices.length)} failing dies ${scopeLabel}, forming a linear defect track (elongation ${formatFixed2(f.maxScratchElongation)}, aspect ratio ${formatFixed2(f.maxScratchAspectRatio)}).`
-            : primarySpatial.pattern === 'Random'
-              ? `Spatially Random failure distribution spans ${formatGroupedInt(spatialDieIndices.length)} failing dies (${formatRatioPct1(f.globalFailFraction)} active fail rate, ${formatRatioPct1(f.clusteredFailFraction)} adjacent-die clustering) without radial or linear concentration.`
-              : `${primarySpatial.pattern} spatial signature spans ${formatGroupedInt(spatialDieIndices.length)} failing dies ${scopeLabel} (confidence ${formatFixed2(primarySpatial.confidence)}, ${formatRatioPct1(f.globalFailFraction)} active fail rate).`;
+      let spatialSummary: string;
+      if (primarySpatial.pattern === 'Edge-Ring') {
+        const interiorClause =
+          interiorFailDies > 0 && interiorTestedDies > 0
+            ? ` vs. ${interiorDieRate.displayValue} in the wafer interior (${formatGroupedInt(interiorFailDies)} interior ${formatFinalFailNoun(interiorFailDies)})`
+            : ` with 0 interior final fails`;
+        if (sigCount === edgeBandFailDies || edgeBandFailDies === 0) {
+          spatialSummary = `${formatGroupedInt(sigCount)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} (${sigShare.displayValue}) lie in the ${edgeBandRings}-die edge band${multiWaferSpan}: ${edgeBandDieRate.displayValue} edge-band die fail rate${interiorClause}.`;
+        } else {
+          spatialSummary = `${formatGroupedInt(sigCount)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} (${sigShare.displayValue}) recur in stacked ${edgeBandRings}-die edge-band cells${multiWaferSpan} (${formatGroupedInt(edgeBandFailDies)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} lie in the edge band overall; ${edgeBandDieRate.displayValue} edge-band die fail rate${interiorClause}).`;
+        }
+      } else if (primarySpatial.pattern === 'Scratch') {
+        const trackNoun =
+          lot.wafers.length >= 2
+            ? 'recurring stacked scratch cells'
+            : 'a linear defect track';
+        spatialSummary = `${formatGroupedInt(sigCount)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} (${sigShare.displayValue}) lie along ${trackNoun}${multiWaferSpan} (PCA elongation ${formatFixed2(f.maxScratchElongation)}, aspect ratio ${formatFixed2(f.maxScratchAspectRatio)}).`;
+      } else if (primarySpatial.pattern === 'Random') {
+        if (lot.wafers.length >= 2 && sigCount < totalFailDies) {
+          spatialSummary = `${formatGroupedInt(sigCount)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} (${sigShare.displayValue}) fall in recurring stack cells${multiWaferSpan} (${lotDieFailRate.displayValue} lot-wide die fail rate across ${formatGroupedInt(testedDies)} ${testedDenomNoun}) without radial or linear clustering.`;
+        } else {
+          const randScope =
+            lot.wafers.length >= 2
+              ? `across ${formatGroupedInt(lot.wafers.length)} wafers`
+              : 'across the wafer';
+          spatialSummary = `${formatGroupedInt(sigCount)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} (${lotDieFailRate.displayValue} of ${formatGroupedInt(testedDies)} ${testedDenomNoun}) scatter ${randScope} without radial or linear clustering.`;
+        }
+      } else {
+        const structScope =
+          lot.wafers.length >= 2
+            ? `in recurring stack cells${multiWaferSpan}`
+            : 'on the wafer map';
+        spatialSummary = `${primarySpatial.pattern} signature accounts for ${formatGroupedInt(sigCount)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} (${sigShare.displayValue}) ${structScope} (${lotDieFailRate.displayValue} of ${formatGroupedInt(testedDies)} ${testedDenomNoun}).`;
+      }
 
       facts.push({
         factId: 'fact:spatial:primary',
@@ -958,26 +1191,22 @@ export function buildEngineFacts(
   const maxBinsToEmit = Math.min(rankedBins.length, 1 + MAX_SECONDARY_BIN_FACTS);
   for (let r = 0; r < maxBinsToEmit; r += 1) {
     const entry = rankedBins[r]!;
-    const shareOfTested = testedDies > 0 ? entry.count / testedDies : 0;
-    const shareOfFailures = totalFailDies > 0 ? entry.count / totalFailDies : 0;
+    const shareOfTested = formatBoundedSharePct1(entry.count, testedDies);
+    const shareOfFailures = formatBoundedSharePct1(entry.count, totalFailDies);
     const isDominant = r === 0;
-    const binLabel =
-      entry.name.length > 0
-        ? `${entry.mode} ${entry.code} (${entry.name})`
-        : `${entry.mode} ${entry.code}`;
+    const binLabel = formatBinRefLabel(entry);
 
     const binMetrics: FormattedFactMetric[] = [
       intMetric('dieCount', entry.count),
       intMetric('totalFailDies', totalFailDies),
       intMetric('testedDies', testedDies),
       pctMetricFromRatio('lotFinalYieldPct', finalYield),
-      pctMetricFromRatio('shareOfTestedPct', shareOfTested),
-      pctMetricFromRatio('shareOfFailuresPct', shareOfFailures),
+      boundedPctMetric('shareOfTestedPct', entry.count, testedDies),
+      boundedPctMetric('shareOfFailuresPct', entry.count, totalFailDies),
     ];
 
-    const summary = isDominant
-      ? `Dominant failure bin ${binLabel} accounts for ${formatGroupedInt(entry.count)} failing dies (${formatRatioPct1(shareOfTested)} of tested dies, ${formatRatioPct1(shareOfFailures)} of total failures).`
-      : `Secondary failure bin ${binLabel} accounts for ${formatGroupedInt(entry.count)} failing dies (${formatRatioPct1(shareOfTested)} of tested dies, ${formatRatioPct1(shareOfFailures)} of total failures).`;
+    const rolePrefix = isDominant ? 'Dominant bin' : 'Secondary bin';
+    const summary = `${rolePrefix} ${binLabel} accounts for ${formatGroupedInt(entry.count)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} (${shareOfFailures.displayValue}; ${shareOfTested.displayValue} of ${formatGroupedInt(testedDies)} ${testedDenomNoun}).`;
 
     facts.push({
       factId: entry.factId,
@@ -1008,14 +1237,20 @@ export function buildEngineFacts(
     const siteFpYield = anomaly.siteMetrics.firstPassYield ?? 0;
     const otherFpYield = anomaly.otherSitesFirstPassYield;
     const dropPp = Math.abs(anomaly.yieldDeltaPp);
+    const siteFpFails = siteDieIndices.length;
+    const totalFpFails = Math.max(siteFpFails, overall.firstPassFailDies);
+    const siteFpShare = formatBoundedSharePct1(siteFpFails, totalFpFails);
+    const fpFailNoun = totalFpFails === 1 ? 'first-pass fail' : 'first-pass fails';
 
     const siteMetrics: FormattedFactMetric[] = [
-      score2Metric('confidence', anomaly.confidence),
+      score2Metric('confidence', capDisplayedConfidence(anomaly.confidence)),
       pctMetricFromRatio('firstPassYieldPct', siteFpYield),
       pctMetricFromRatio('otherSitesFirstPassYieldPct', otherFpYield),
       ppMetric('yieldDropPp', dropPp),
       score2Metric('twoProportionZ', anomaly.twoProportionZ),
-      intMetric('firstPassFailDies', anomaly.siteMetrics.firstPassFailDies),
+      intMetric('firstPassFailDies', siteFpFails),
+      intMetric('lotFirstPassFailDies', totalFpFails),
+      boundedPctMetric('siteFirstPassFailSharePct', siteFpFails, totalFpFails),
       intMetric('firstPassTestedDies', anomaly.siteMetrics.firstPassTestedDies),
       intMetric('excessFailCount', anomaly.excessFailCount),
       pctMetricFromRatio('excessFailSharePct', anomaly.excessFailShare),
@@ -1027,7 +1262,7 @@ export function buildEngineFacts(
       );
     }
 
-    const summary = `Site ${headNum}:${siteNum} recorded ${formatRatioPct1(siteFpYield)} first-pass yield vs. ${formatRatioPct1(otherFpYield)} across other sites (${formatPp1(dropPp)} drop, z = ${formatFixed2(anomaly.twoProportionZ)}), contributing ${formatGroupedInt(anomaly.excessFailCount)} excess first-pass failures (${formatRatioPct1(anomaly.excessFailShare)} of lot first-pass loss).`;
+    const summary = `Site ${headNum}:${siteNum} recorded ${formatGroupedInt(siteFpFails)} of ${formatGroupedInt(totalFpFails)} ${fpFailNoun} (${siteFpShare.displayValue}): ${formatRatioPct1(siteFpYield)} first-pass yield vs. ${formatRatioPct1(otherFpYield)} across other sites (${formatPp1(dropPp)} drop, z = ${formatFixed2(anomaly.twoProportionZ)}).`;
 
     facts.push({
       factId: `fact:site:${headNum}-${siteNum}`,
@@ -1053,18 +1288,30 @@ export function buildEngineFacts(
     const cleanWaferId =
       sanitizeReportProseText(exc.wafer.waferId) ||
       `W${String(exc.wafer.waferIndex + 1).padStart(2, '0')}`;
+    const sigLen = exc.signatureDieIndices.length;
+    const sigLotShare = formatBoundedSharePct1(sigLen, totalFailDies);
+    const wfLotShare = formatBoundedSharePct1(exc.waferFailCount, totalFailDies);
 
     const excMetrics: FormattedFactMetric[] = [
-      score2Metric('confidence', exc.classification.confidence),
-      intMetric('signatureDieCount', exc.signatureDieIndices.length),
+      score2Metric(
+        'confidence',
+        capDisplayedConfidence(exc.classification.confidence),
+      ),
+      intMetric('signatureDieCount', sigLen),
       intMetric('waferFailDies', exc.waferFailCount),
       intMetric('waferTestedDies', exc.waferTestedCount),
       intMetric('totalFailDies', totalFailDies),
       pctMetricFromRatio('waferFinalYieldPct', exc.waferFinalYield),
-      pctMetricFromRatio('lotFailSharePct', exc.lotFailShare),
+      boundedPctMetric('signatureFailSharePct', sigLen, totalFailDies),
+      boundedPctMetric('lotFailSharePct', exc.waferFailCount, totalFailDies),
     ];
 
-    const summary = `Wafer ${cleanWaferId} exhibits a ${exc.classification.pattern} excursion (confidence ${formatFixed2(exc.classification.confidence)}, ${formatRatioPct1(exc.waferFinalYield)} wafer yield), accounting for ${formatRatioPct1(exc.lotFailShare)} of lot failures (${formatGroupedInt(exc.waferFailCount)} of ${formatGroupedInt(totalFailDies)} failing dies).`;
+    const wfTestedNoun =
+      exc.waferTestedCount === 1 ? 'tested wafer die' : 'tested wafer dies';
+    const summary =
+      sigLen === exc.waferFailCount
+        ? `Wafer ${cleanWaferId} ${exc.classification.pattern} excursion accounts for ${formatGroupedInt(exc.waferFailCount)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} (${wfLotShare.displayValue}; ${formatRatioPct1(exc.waferFinalYield)} wafer yield across ${formatGroupedInt(exc.waferTestedCount)} ${wfTestedNoun}).`
+        : `Wafer ${cleanWaferId} ${exc.classification.pattern} signature spans ${formatGroupedInt(sigLen)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} (${sigLotShare.displayValue}; ${formatGroupedInt(exc.waferFailCount)} of ${formatGroupedInt(totalFailDies)} ${failDenomNoun} sit on Wafer ${cleanWaferId}, ${formatRatioPct1(exc.waferFinalYield)} wafer yield).`;
 
     facts.push({
       factId: `fact:wafer-excursion:${exc.wafer.waferIndex}`,
@@ -1103,9 +1350,14 @@ export function buildEngineFacts(
     if (retestedList.length > 0) {
       const retestDieIndices = Uint32Array.from(retestedList);
       const gainPp = Math.max(0, (finalYield - firstPassYield) * 100);
+      const retestTouchdownNoun =
+        overall.retestExecutions === 1 ? 'retest touchdown' : 'retest touchdowns';
+      const recovFailNoun =
+        recoveredCount === 1 ? 'first-pass fail' : 'first-pass fails';
 
       const retestMetrics: FormattedFactMetric[] = [
         intMetric('retestedDies', retestDieIndices.length),
+        intMetric('testedDies', testedDies),
         intMetric('retestExecutions', overall.retestExecutions),
         intMetric('recoveredDies', recoveredCount),
         pctMetricFromRatio('firstPassYieldPct', firstPassYield),
@@ -1115,8 +1367,8 @@ export function buildEngineFacts(
 
       const summary =
         recoveredCount > 0
-          ? `Retest execution across ${formatGroupedInt(retestDieIndices.length)} dies (${formatGroupedInt(overall.retestExecutions)} retest touchdowns) recovered ${formatGroupedInt(recoveredCount)} first-pass failures, lifting lot yield from ${formatRatioPct1(firstPassYield)} to ${formatRatioPct1(finalYield)} (+${formatPp1(gainPp)}).`
-          : `Retest execution re-probed ${formatGroupedInt(retestDieIndices.length)} dies (${formatGroupedInt(overall.retestExecutions)} retest touchdowns) with ${formatGroupedInt(recoveredCount)} recoveries (${formatRatioPct1(finalYield)} final yield).`;
+          ? `Retest re-probed ${formatGroupedInt(retestDieIndices.length)} of ${formatGroupedInt(testedDies)} ${testedDenomNoun} (${formatGroupedInt(overall.retestExecutions)} ${retestTouchdownNoun}), recovering ${formatGroupedInt(recoveredCount)} ${recovFailNoun} and lifting yield from ${formatRatioPct1(firstPassYield)} to ${formatRatioPct1(finalYield)} (+${formatPp1(gainPp)}).`
+          : `Retest re-probed ${formatGroupedInt(retestDieIndices.length)} of ${formatGroupedInt(testedDies)} ${testedDenomNoun} (${formatGroupedInt(overall.retestExecutions)} ${retestTouchdownNoun}) with 0 recoveries.`;
 
       facts.push({
         factId: 'fact:retest-recovery',

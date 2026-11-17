@@ -55,6 +55,8 @@ import { selectPrimaryVerdict, type VerdictTier } from './verdict-precedence';
 
 const PROP_NUM_RUNS = Number(process.env.FC_NUM_RUNS ?? 200);
 const TIER_PROP_NUM_RUNS = Number(process.env.FC_TIER_NUM_RUNS ?? 90);
+const PROP_SEED =
+  process.env.FC_SEED !== undefined ? Number(process.env.FC_SEED) : undefined;
 
 const HEADLINE_ZERO_FAIL_REGEX =
   /^Cause of death: No failure pattern detected \(confidence 1\.00\)\. Yield 100\.0%\.$/;
@@ -514,7 +516,10 @@ describe('Property 10: Autopsy Report Verdict Structure & Claim-to-Die Referenti
 
         assertProperty10ReportInvariants(lot, runA.facts, runA.report);
       }),
-      { numRuns: PROP_NUM_RUNS },
+      {
+        numRuns: PROP_NUM_RUNS,
+        ...(PROP_SEED !== undefined ? { seed: PROP_SEED } : {}),
+      },
     );
   });
 
