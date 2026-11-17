@@ -12,4 +12,5 @@ export * from './analytics';
 export * from './demo';
 export * from './model';
 export * from './patterns';
+export * from './report';
 export * from './stdf';
