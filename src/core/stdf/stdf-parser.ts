@@ -370,8 +370,8 @@ function decodeWir(cursor: BinaryCursor): ParsedWirRecord {
 function decodeWrr(cursor: BinaryCursor): ParsedWrrRecord {
   const headNum = cursor.readU1();
   const siteGrp = cursor.readOptU1() ?? STDF_MISSING_U1;
-  const finishT = cursor.readU4();
-  const partCnt = cursor.readU4();
+  const finishT = cursor.readOptU4() ?? 0;
+  const partCnt = cursor.readOptU4() ?? 0;
   const rtstCnt = normalizeOptionalCount(cursor.readOptU4());
   const abrtCnt = normalizeOptionalCount(cursor.readOptU4());
   const goodCnt = normalizeOptionalCount(cursor.readOptU4());
@@ -919,6 +919,17 @@ export function parseStdfBytes(
       error: {
         code: 'MISSING_FAR_HEADER',
         message: `Expected initial FAR (0, 10) record at byte 0, found (${initialTyp}, ${initialSub}).`,
+        byteOffset: 0,
+      },
+    };
+  }
+
+  if (rawOrDecompressed[0] === 0 && rawOrDecompressed[1] === 0) {
+    return {
+      ok: false,
+      error: {
+        code: 'MISSING_FAR_HEADER',
+        message: 'Malformed FAR REC_LEN (0) at byte 0.',
         byteOffset: 0,
       },
     };

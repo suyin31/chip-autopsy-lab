@@ -168,10 +168,14 @@ export class BinaryCursor {
   }
 
   private ensureAvailable(byteCount: number, fieldType: string): void {
-    if (byteCount < 0 || this.currentOffset + byteCount > this.recordEndOffset) {
+    if (
+      !Number.isInteger(byteCount) ||
+      byteCount < 0 ||
+      this.currentOffset + byteCount > this.recordEndOffset
+    ) {
       throw new RecordBoundsError(
         this.currentOffset,
-        byteCount,
+        Number.isFinite(byteCount) ? Math.max(0, Math.trunc(byteCount)) : 0,
         this.recordEndOffset - this.currentOffset,
         fieldType,
       );
@@ -429,10 +433,14 @@ export class BinaryCursor {
   }
 
   readKxCn(count: number): string[] {
-    if (count < 0 || this.currentOffset + count > this.recordEndOffset) {
+    if (
+      !Number.isInteger(count) ||
+      count < 0 ||
+      this.currentOffset + count > this.recordEndOffset
+    ) {
       throw new RecordBoundsError(
         this.currentOffset,
-        Math.max(0, count),
+        Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
         this.recordEndOffset - this.currentOffset,
         'kxC*n',
       );

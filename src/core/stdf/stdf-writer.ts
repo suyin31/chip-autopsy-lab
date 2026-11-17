@@ -235,8 +235,14 @@ function writePtrRecord(
     (spec.resScal === undefined || spec.resScal === prior.resScal) &&
     (spec.llmScal === undefined || spec.llmScal === prior.llmScal) &&
     (spec.hlmScal === undefined || spec.hlmScal === prior.hlmScal) &&
-    (spec.loLimit === undefined || spec.loLimit === prior.loLimit) &&
-    (spec.hiLimit === undefined || spec.hiLimit === prior.hiLimit);
+    (spec.loLimit === undefined ||
+      (spec.loLimit === null
+        ? prior.loLimit === null
+        : prior.loLimit === Math.fround(spec.loLimit))) &&
+    (spec.hiLimit === undefined ||
+      (spec.hiLimit === null
+        ? prior.hiLimit === null
+        : prior.hiLimit === Math.fround(spec.hiLimit)));
 
   if (prior !== undefined && (spec.omitOptionalAfterResult || canAutoCompact)) {
     builder.endRecord(hdr);
@@ -312,6 +318,17 @@ function writePtrRecord(
   builder.endRecord(hdr);
 }
 
+function normalizeArrayLength(
+  source: ArrayLike<number> | undefined,
+  length: number,
+): number[] {
+  const out = new Array<number>(length);
+  for (let i = 0; i < length; i += 1) {
+    out[i] = source !== undefined && i < source.length ? source[i]! : 0;
+  }
+  return out;
+}
+
 function writeMprRecord(
   builder: BinaryRecordBuilder,
   headNum: number,
@@ -323,7 +340,7 @@ function writeMprRecord(
     STDF_RECORD_CODES.MPR.recSub,
   );
   const rsltCnt = spec.rtnRslt.length;
-  const rtnIcnt = spec.rtnIndx?.length ?? spec.rtnStat?.length ?? 0;
+  const rtnIcnt = Math.max(spec.rtnIndx?.length ?? 0, spec.rtnStat?.length ?? 0);
 
   builder.writeU4(spec.testNum);
   builder.writeU1(headNum);
@@ -333,8 +350,7 @@ function writeMprRecord(
   builder.writeU2(rtnIcnt);
   builder.writeU2(rsltCnt);
   if (rtnIcnt > 0) {
-    const stat = spec.rtnStat ?? new Uint8Array(rtnIcnt);
-    builder.writeKxN1(stat);
+    builder.writeKxN1(normalizeArrayLength(spec.rtnStat, rtnIcnt));
   }
   if (rsltCnt > 0) {
     builder.writeKxR4(spec.rtnRslt);
@@ -361,7 +377,7 @@ function writeMprRecord(
     builder.writeR4(spec.startIn ?? 0);
     builder.writeR4(spec.incrIn ?? 0);
     if (rtnIcnt > 0) {
-      builder.writeKxU2(spec.rtnIndx ?? new Uint16Array(rtnIcnt));
+      builder.writeKxU2(normalizeArrayLength(spec.rtnIndx, rtnIcnt));
     }
     builder.writeCn(spec.units ?? '');
     builder.writeCn(spec.unitsIn ?? '');
@@ -386,8 +402,8 @@ function writeFtrRecord(
   builder.writeB1(spec.testFlg ?? 0);
 
   if (!spec.omitOptionalAfterTestFlg) {
-    const rtnIcnt = spec.rtnIndx?.length ?? spec.rtnStat?.length ?? 0;
-    const pgmIcnt = spec.pgmIndx?.length ?? spec.pgmStat?.length ?? 0;
+    const rtnIcnt = Math.max(spec.rtnIndx?.length ?? 0, spec.rtnStat?.length ?? 0);
+    const pgmIcnt = Math.max(spec.pgmIndx?.length ?? 0, spec.pgmStat?.length ?? 0);
     builder.writeB1(spec.optFlag ?? 0);
     builder.writeU4(spec.cyclCnt ?? STDF_MISSING_U4);
     builder.writeU4(spec.relVadr ?? STDF_MISSING_U4);
@@ -399,12 +415,12 @@ function writeFtrRecord(
     builder.writeU2(rtnIcnt);
     builder.writeU2(pgmIcnt);
     if (rtnIcnt > 0) {
-      builder.writeKxU2(spec.rtnIndx ?? new Uint16Array(rtnIcnt));
-      builder.writeKxN1(spec.rtnStat ?? new Uint8Array(rtnIcnt));
+      builder.writeKxU2(normalizeArrayLength(spec.rtnIndx, rtnIcnt));
+      builder.writeKxN1(normalizeArrayLength(spec.rtnStat, rtnIcnt));
     }
     if (pgmIcnt > 0) {
-      builder.writeKxU2(spec.pgmIndx ?? new Uint16Array(pgmIcnt));
-      builder.writeKxN1(spec.pgmStat ?? new Uint8Array(pgmIcnt));
+      builder.writeKxU2(normalizeArrayLength(spec.pgmIndx, pgmIcnt));
+      builder.writeKxN1(normalizeArrayLength(spec.pgmStat, pgmIcnt));
     }
     builder.writeDn(spec.failPin ?? { bitCount: 0, bytes: new Uint8Array(0) });
     builder.writeCn(''); // VECT_NAM
