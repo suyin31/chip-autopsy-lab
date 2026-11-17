@@ -73,6 +73,8 @@ export interface ClaimHighlightState {
     readonly headNum: number;
     readonly siteNum: number;
   }>;
+  /** Optional wafer index selected atomically when activating a wafer-specific claim. */
+  readonly targetWaferIndex?: number;
 }
 
 export interface SelectionMaskInputs {
@@ -684,11 +686,25 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
         claimHighlight?.citedTestNums && claimHighlight.citedTestNums.length > 0
           ? claimHighlight.citedTestNums[0]
           : current.activeTestNum;
+      const nextWaferIndex =
+        claimHighlight?.targetWaferIndex !== undefined
+          ? clampWaferIndex(current.lot, claimHighlight.targetWaferIndex)
+          : current.activeWaferIndex;
+      const waferChanged = nextWaferIndex !== current.activeWaferIndex;
       const patch = recomputeWith(current.lot, { claimHighlight });
       if (patch) {
-        set({ activeTestNum: nextTestNum, ...patch });
-      } else if (nextTestNum !== current.activeTestNum) {
-        set({ activeTestNum: nextTestNum });
+        set({
+          activeTestNum: nextTestNum,
+          activeWaferIndex: nextWaferIndex,
+          ...(waferChanged ? { hoveredDieIndex: null } : {}),
+          ...patch,
+        });
+      } else if (nextTestNum !== current.activeTestNum || waferChanged) {
+        set({
+          activeTestNum: nextTestNum,
+          activeWaferIndex: nextWaferIndex,
+          ...(waferChanged ? { hoveredDieIndex: null } : {}),
+        });
       }
     },
 
@@ -707,11 +723,25 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
         highlight.citedTestNums && highlight.citedTestNums.length > 0
           ? highlight.citedTestNums[0]
           : prev.activeTestNum;
+      const nextWaferIndex =
+        highlight.targetWaferIndex !== undefined
+          ? clampWaferIndex(prev.lot, highlight.targetWaferIndex)
+          : prev.activeWaferIndex;
+      const waferChanged = nextWaferIndex !== prev.activeWaferIndex;
       const patch = recomputeWith(prev.lot, { claimHighlight: highlight });
       if (patch) {
-        set({ activeTestNum: nextTestNum, ...patch });
-      } else if (nextTestNum !== prev.activeTestNum) {
-        set({ activeTestNum: nextTestNum });
+        set({
+          activeTestNum: nextTestNum,
+          activeWaferIndex: nextWaferIndex,
+          ...(waferChanged ? { hoveredDieIndex: null } : {}),
+          ...patch,
+        });
+      } else if (nextTestNum !== prev.activeTestNum || waferChanged) {
+        set({
+          activeTestNum: nextTestNum,
+          activeWaferIndex: nextWaferIndex,
+          ...(waferChanged ? { hoveredDieIndex: null } : {}),
+        });
       }
     },
 

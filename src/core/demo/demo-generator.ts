@@ -240,12 +240,24 @@ const PRESET_LOT_CONFIG: Readonly<
   },
 };
 
+type QuadrantIndex = 0 | 1 | 2 | 3;
+type RadialBandIndex = 0 | 1 | 2; // 0 = inner (rho <= 0.38), 1 = mid-interior, 2 = edge3 (ringIndex <= 3)
+
+type QuadrantBuckets = readonly [
+  readonly number[],
+  readonly number[],
+  readonly number[],
+  readonly number[],
+];
+
 interface StaticGridDie {
   readonly gridIndex: number;
   readonly x: number;
   readonly y: number;
   readonly siteNum: 1 | 2 | 3 | 4;
   readonly ringIndex: number;
+  readonly quadrant: QuadrantIndex;
+  readonly radialBand: RadialBandIndex;
 }
 
 export interface SeededScratchChordGeometry {
@@ -265,14 +277,47 @@ interface StaticWaferLayout {
   readonly dies: readonly StaticGridDie[];
   /** Serpentine `2x2` prober touchdown groups of `gridIndex`es. */
   readonly touchdownGroups: ReadonlyArray<readonly number[]>;
+  /** Outer rings `1, 2, 3` bucketed by quadrant for angularly uniform plasma-etch sampling. */
+  readonly edgeRingByQuadrant: readonly [
+    QuadrantBuckets,
+    QuadrantBuckets,
+    QuadrantBuckets,
+  ];
+  /** Interior (`ringIndex > 3`) dies bucketed by quadrant. */
+  readonly interiorByQuadrant: QuadrantBuckets;
+  /** All 633 dies bucketed by quadrant. */
+  readonly allByQuadrant: QuadrantBuckets;
+  /** `Site 2` dies (`158` total) partitioned by radial band (`inner`, `midInter`, `edge3`) and quadrant. */
+  readonly site2ByBandAndQuadrant: readonly [
+    QuadrantBuckets,
+    QuadrantBuckets,
+    QuadrantBuckets,
+  ];
+  /** Non-`Site 2` dies partitioned by radial band (`inner`, `midInter`, `edge3`) and quadrant. */
+  readonly nonSite2ByBandAndQuadrant: readonly [
+    QuadrantBuckets,
+    QuadrantBuckets,
+    QuadrantBuckets,
+  ];
 }
 
 let cachedLayout: StaticWaferLayout | null = null;
 
+function createMutableQuadrantBuckets(): [number[], number[], number[], number[]] {
+  return [[], [], [], []];
+}
+
+function resolveQuadrant(x: number, y: number): QuadrantIndex {
+  if (x >= 0) {
+    return y >= 0 ? 0 : 3;
+  }
+  return y >= 0 ? 1 : 2;
+}
+
 /**
  * Builds and caches the 633-die circular wafer layout (`x^2 + y^2 <= 14.2^2`),
- * 4-neighbour edge-ring indices, and serpentine `2x2` quad-site prober touchdown
- * stepping order:
+ * 4-neighbour edge-ring indices, radial-band x quadrant strata, and serpentine
+ * `2x2` quad-site prober touchdown stepping order:
  * - Site 1: `(even X, even Y)`
  * - Site 2: `(odd X, even Y)`
  * - Site 3: `(even X, odd Y)`
@@ -302,6 +347,7 @@ function getStaticWaferLayout(): StaticWaferLayout {
   const siteNumsForIndex: Array<1 | 2 | 3 | 4> = [];
 
   let rowIdx = 0;
+  let maxDist = 1;
   for (let by = -7; by <= 7; by += 1) {
     const leftToRight = (rowIdx & 1) === 0;
     rowIdx += 1;
@@ -311,11 +357,16 @@ function getStaticWaferLayout(): StaticWaferLayout {
       for (const off of siteOffsets) {
         const x = 2 * bx + off.dx;
         const y = 2 * by + off.dy;
-        if (x * x + y * y <= radiusSq) {
+        const distSq = x * x + y * y;
+        if (distSq <= radiusSq) {
           const idx = rawCoords.length;
           rawCoords.push({ x, y });
           siteNumsForIndex.push(off.siteNum);
           group.push(idx);
+          const dist = Math.sqrt(distSq);
+          if (dist > maxDist) {
+            maxDist = dist;
+          }
         }
       }
       if (group.length > 0) {
@@ -327,19 +378,155 @@ function getStaticWaferLayout(): StaticWaferLayout {
   const ringIndices = computeWaferEdgeRingIndices(rawCoords);
   const dies: StaticGridDie[] = new Array<StaticGridDie>(rawCoords.length);
 
+  const edgeRingByQuadrant = [
+    createMutableQuadrantBuckets(),
+    createMutableQuadrantBuckets(),
+    createMutableQuadrantBuckets(),
+  ] as const;
+  const interiorByQuadrant = createMutableQuadrantBuckets();
+  const allByQuadrant = createMutableQuadrantBuckets();
+  const site2ByBandAndQuadrant = [
+    createMutableQuadrantBuckets(),
+    createMutableQuadrantBuckets(),
+    createMutableQuadrantBuckets(),
+  ] as const;
+  const nonSite2ByBandAndQuadrant = [
+    createMutableQuadrantBuckets(),
+    createMutableQuadrantBuckets(),
+    createMutableQuadrantBuckets(),
+  ] as const;
+
   for (let i = 0; i < rawCoords.length; i += 1) {
     const { x, y } = rawCoords[i]!;
+    const siteNum = siteNumsForIndex[i]!;
+    const ringIndex = ringIndices[i]!;
+    const quadrant = resolveQuadrant(x, y);
+    const rho = Math.hypot(x, y) / maxDist;
+    const radialBand: RadialBandIndex =
+      ringIndex <= 3 ? 2 : rho <= 0.38 ? 0 : 1;
+
     dies[i] = {
       gridIndex: i,
       x,
       y,
-      siteNum: siteNumsForIndex[i]!,
-      ringIndex: ringIndices[i]!,
+      siteNum,
+      ringIndex,
+      quadrant,
+      radialBand,
     };
+
+    allByQuadrant[quadrant].push(i);
+    if (ringIndex >= 1 && ringIndex <= 3) {
+      edgeRingByQuadrant[ringIndex - 1]![quadrant].push(i);
+    } else {
+      interiorByQuadrant[quadrant].push(i);
+    }
+
+    if (siteNum === 2) {
+      site2ByBandAndQuadrant[radialBand][quadrant].push(i);
+    } else {
+      nonSite2ByBandAndQuadrant[radialBand][quadrant].push(i);
+    }
   }
 
-  cachedLayout = { dies, touchdownGroups };
+  cachedLayout = {
+    dies,
+    touchdownGroups,
+    edgeRingByQuadrant,
+    interiorByQuadrant,
+    allByQuadrant,
+    site2ByBandAndQuadrant,
+    nonSite2ByBandAndQuadrant,
+  };
   return cachedLayout;
+}
+
+/**
+ * Shuffles each quadrant bucket independently with `rng` and interleaves them
+ * round-robin from a seeded starting quadrant and coprime step (`1` or `3`) so
+ * any slice `[a, b)` has identical per-die marginal probability while remaining
+ * balanced within `±1` die across all 4 quadrants.
+ */
+function interleaveShuffledQuadrants(
+  rng: SeededPrng,
+  buckets: QuadrantBuckets,
+  excludeMask?: Uint8Array | null,
+): number[] {
+  const shuffledQuads: [number[], number[], number[], number[]] = [
+    [],
+    [],
+    [],
+    [],
+  ];
+  let total = 0;
+  for (let q = 0; q < 4; q += 1) {
+    const src = buckets[q]!;
+    const copy: number[] = [];
+    for (let i = 0; i < src.length; i += 1) {
+      const idx = src[i]!;
+      if (!excludeMask || excludeMask[idx] === 0) {
+        copy.push(idx);
+      }
+    }
+    rng.shuffle(copy);
+    shuffledQuads[q] = copy;
+    total += copy.length;
+  }
+
+  const startQ = rng.nextInt(0, 3);
+  const stepQ = rng.nextBool(0.5) ? 1 : 3;
+  const out: number[] = new Array<number>(total);
+  let writePos = 0;
+  let round = 0;
+  while (writePos < total) {
+    for (let k = 0; k < 4; k += 1) {
+      const q = (startQ + k * stepQ) & 3;
+      const arr = shuffledQuads[q]!;
+      if (round < arr.length) {
+        out[writePos] = arr[round]!;
+        writePos += 1;
+      }
+    }
+    round += 1;
+  }
+  return out;
+}
+
+/**
+ * Selects `dropoutCount` non-adjacent interior indices in `1 .. length - 2`
+ * (`gap >= 2` between consecutive dropouts) so intermittent 1-die scratch dropouts
+ * are always bridged by `BRIDGE_RADIUS_EUCLIDEAN = 2.25` without splitting the chord.
+ */
+function pickNonAdjacentInteriorIndices(
+  rng: SeededPrng,
+  length: number,
+  dropoutCount: number,
+): ReadonlySet<number> {
+  const chosen = new Set<number>();
+  if (dropoutCount <= 0 || length < 4) {
+    return chosen;
+  }
+  const interiorLen = length - 2; // indices 1 .. length - 2
+  const maxValid = Math.floor((interiorLen + 1) / 2);
+  const k = Math.min(dropoutCount, maxValid);
+  if (k <= 0) {
+    return chosen;
+  }
+
+  // Stars-and-bars slack distribution: place k items in 1..length-2 with >= 1 unchosen element between items
+  const totalSlack = interiorLen - (2 * k - 1);
+  const gaps = new Array<number>(k + 1).fill(0);
+  for (let s = 0; s < totalSlack; s += 1) {
+    const bucket = rng.nextInt(0, k);
+    gaps[bucket]! += 1;
+  }
+
+  let cursor = 1 + gaps[0]!;
+  for (let i = 0; i < k; i += 1) {
+    chosen.add(cursor);
+    cursor += 2 + gaps[i + 1]!;
+  }
+  return chosen;
 }
 
 const SCRATCH_CHORD_SALT = 0x5c7a7c4;
@@ -371,10 +558,16 @@ export function computeSeededScratchChordGeometry(
   };
 }
 
-function buildSeededScratchChordMask(
+interface SeededScratchChordPlan {
+  readonly mask: Uint8Array;
+  /** Grid indices on the scratch chord sorted monotonically along the chord tangent. */
+  readonly orderedGridIndices: readonly number[];
+}
+
+function buildSeededScratchChordPlan(
   seed: number,
   dies: readonly StaticGridDie[],
-): Uint8Array {
+): SeededScratchChordPlan {
   const geom = computeSeededScratchChordGeometry(seed);
   const tx = Math.cos(geom.angleRad);
   const ty = Math.sin(geom.angleRad);
@@ -382,15 +575,27 @@ function buildSeededScratchChordMask(
   const ny = tx;
 
   const mask = new Uint8Array(dies.length);
+  const scored: Array<{
+    readonly idx: number;
+    readonly proj: number;
+    readonly perp: number;
+  }> = [];
+
   for (let i = 0; i < dies.length; i += 1) {
     const { x, y } = dies[i]!;
-    const along = Math.abs(x * tx + y * ty);
-    const perp = Math.abs(x * nx + y * ny - geom.lateralOffset);
-    if (along <= geom.halfLength && perp <= geom.halfWidth) {
+    const rawProj = x * tx + y * ty;
+    const rawPerp = x * nx + y * ny - geom.lateralOffset;
+    if (Math.abs(rawProj) <= geom.halfLength && Math.abs(rawPerp) <= geom.halfWidth) {
       mask[i] = 1;
+      scored.push({ idx: i, proj: rawProj, perp: rawPerp });
     }
   }
-  return mask;
+
+  scored.sort((a, b) => a.proj - b.proj || a.perp - b.perp || a.idx - b.idx);
+  return {
+    mask,
+    orderedGridIndices: scored.map((s) => s.idx),
+  };
 }
 
 type FailureMode =
@@ -588,165 +793,235 @@ function planWaferDieOutcomes(
   rng: SeededPrng,
   presetId: DemoPresetId,
   waferIndex: number,
-  dies: readonly StaticGridDie[],
-  scratchChordMask: Uint8Array | null,
+  layout: StaticWaferLayout,
+  scratchChord: SeededScratchChordPlan | null,
 ): readonly DiePlan[] {
-  const plans: DiePlan[] = new Array<DiePlan>(dies.length);
+  const { dies } = layout;
+  const dieCount = dies.length;
+  const plans: DiePlan[] = new Array<DiePlan>(dieCount);
+  const assigned = new Uint8Array(dieCount);
 
-  for (let i = 0; i < dies.length; i += 1) {
-    const die = dies[i]!;
-
-    if (presetId === 'edge-ring-etch') {
-      const injectedProb =
-        die.ringIndex === 1
-          ? 0.63
-          : die.ringIndex === 2
-            ? 0.46
-            : die.ringIndex === 3
-              ? 0.23
-              : 0;
-      const isInjected = injectedProb > 0 && rng.nextBool(injectedProb);
-      if (isInjected) {
-        // ~6% of hard over-etch leakage fails are re-probed and remain failing
-        const retest = rng.nextBool(0.06) ? LEAK_FAIL_OUTCOME : null;
-        plans[i] = {
-          die,
-          firstOutcome: LEAK_FAIL_OUTCOME,
-          retestOutcome: retest,
-          injectedFirstPassFail: true,
-          injectedFinalFail: true,
-        };
-        continue;
-      }
-
-      if (rng.nextBool(0.018)) {
-        const baseOut = drawBaselineFailureOutcome(rng, presetId);
-        const retest = rng.nextBool(0.06) ? baseOut : null;
-        plans[i] = {
-          die,
-          firstOutcome: baseOut,
-          retestOutcome: retest,
-          injectedFirstPassFail: false,
-          injectedFinalFail: false,
-        };
-        continue;
-      }
-
-      // Transient first-pass contact/settling blip recovering on retest
-      if (rng.nextBool(0.015)) {
-        plans[i] = {
-          die,
-          firstOutcome: CONT_FAIL_OUTCOME,
-          retestOutcome: PASS_OUTCOME,
-          injectedFirstPassFail: false,
-          injectedFinalFail: false,
-        };
-        continue;
-      }
-
-      plans[i] = {
-        die,
-        firstOutcome: PASS_OUTCOME,
-        retestOutcome: null,
-        injectedFirstPassFail: false,
-        injectedFinalFail: false,
-      };
-      continue;
-    }
-
-    if (presetId === 'handling-scratch') {
-      const waferHasScratch = waferIndex >= 4 && waferIndex <= 21; // W05..W22
-      const onScratchChord =
-        scratchChordMask !== null && scratchChordMask[i] !== 0;
-      const isInjected = waferHasScratch && onScratchChord && rng.nextBool(0.85);
-      if (isInjected) {
-        const retest = rng.nextBool(0.06) ? SHORT_FAIL_OUTCOME : null;
-        plans[i] = {
-          die,
-          firstOutcome: SHORT_FAIL_OUTCOME,
-          retestOutcome: retest,
-          injectedFirstPassFail: true,
-          injectedFinalFail: true,
-        };
-        continue;
-      }
-
-      // Low 1.2% baseline so clean wafers W01-W04 and W23-W25 (~98.8% yield) stay below MIN_FAIL_FRACTION
-      if (rng.nextBool(0.012)) {
-        const baseOut = drawBaselineFailureOutcome(rng, presetId);
-        const retest = rng.nextBool(0.05) ? baseOut : null;
-        plans[i] = {
-          die,
-          firstOutcome: baseOut,
-          retestOutcome: retest,
-          injectedFirstPassFail: false,
-          injectedFinalFail: false,
-        };
-        continue;
-      }
-
-      if (rng.nextBool(0.01)) {
-        plans[i] = {
-          die,
-          firstOutcome: CONT_FAIL_OUTCOME,
-          retestOutcome: PASS_OUTCOME,
-          injectedFirstPassFail: false,
-          injectedFinalFail: false,
-        };
-        continue;
-      }
-
-      plans[i] = {
-        die,
-        firstOutcome: PASS_OUTCOME,
-        retestOutcome: null,
-        injectedFirstPassFail: false,
-        injectedFinalFail: false,
-      };
-      continue;
-    }
-
-    // Preset: 'site2-probe-contact'
-    // Baseline silicon point-defect rate ~2.8% across all 4 sites (~97.2% yield on Sites 1, 3, 4)
-    if (rng.nextBool(0.028)) {
-      const baseOut = drawBaselineFailureOutcome(rng, presetId);
-      const retest = rng.nextBool(0.08)
-        ? rng.nextBool(0.15)
-          ? PASS_OUTCOME
-          : baseOut
-        : null;
-      plans[i] = {
-        die,
-        firstOutcome: baseOut,
-        retestOutcome: retest,
-        injectedFirstPassFail: false,
-        injectedFinalFail: false,
-      };
-      continue;
-    }
-
-    // Oxidized/bent probe needles on HEAD 1 / SITE 2 ((odd X, even Y) in 2x2 touchdowns)
-    if (die.siteNum === 2 && rng.nextBool(0.385)) {
-      // Prober auto-retest overdrive scrub on ~50% of Site-2 contact opens, recovering ~40% of re-probes (~20% overall)
-      const doRetest = rng.nextBool(0.5);
-      const recovers = doRetest && rng.nextBool(0.4);
-      plans[i] = {
-        die,
-        firstOutcome: CONT_FAIL_OUTCOME,
-        retestOutcome: doRetest ? (recovers ? PASS_OUTCOME : CONT_FAIL_OUTCOME) : null,
-        injectedFirstPassFail: true,
-        injectedFinalFail: !recovers,
-      };
-      continue;
-    }
-
+  for (let i = 0; i < dieCount; i += 1) {
     plans[i] = {
-      die,
+      die: dies[i]!,
       firstOutcome: PASS_OUTCOME,
       retestOutcome: null,
       injectedFirstPassFail: false,
       injectedFinalFail: false,
     };
+  }
+
+  if (presetId === 'edge-ring-etch') {
+    const ringTargetRates = [
+      rng.nextRange(0.6, 0.66), // ring 1 (~63%)
+      rng.nextRange(0.43, 0.49), // ring 2 (~46%)
+      rng.nextRange(0.2, 0.26), // ring 3 (~23%)
+    ] as const;
+
+    for (let r = 0; r < 3; r += 1) {
+      const ordered = interleaveShuffledQuadrants(
+        rng,
+        layout.edgeRingByQuadrant[r]!,
+      );
+      const failCount = Math.round(ordered.length * ringTargetRates[r]!);
+      const retestCount = Math.max(1, Math.round(failCount * 0.06));
+      for (let k = 0; k < failCount; k += 1) {
+        const idx = ordered[k]!;
+        assigned[idx] = 1;
+        plans[idx] = {
+          die: dies[idx]!,
+          firstOutcome: LEAK_FAIL_OUTCOME,
+          retestOutcome: k < retestCount ? LEAK_FAIL_OUTCOME : null,
+          injectedFirstPassFail: true,
+          injectedFinalFail: true,
+        };
+      }
+    }
+
+    // Stratified ~1.8% baseline point defects + ~1.5% transient contact blips across remaining dies
+    const remaining = interleaveShuffledQuadrants(
+      rng,
+      layout.allByQuadrant,
+      assigned,
+    );
+    const baseFailCount = Math.min(remaining.length, rng.nextInt(8, 11));
+    const transientCount = Math.min(
+      remaining.length - baseFailCount,
+      rng.nextInt(7, 10),
+    );
+    for (let k = 0; k < baseFailCount; k += 1) {
+      const idx = remaining[k]!;
+      const baseOut = drawBaselineFailureOutcome(rng, presetId);
+      plans[idx] = {
+        die: dies[idx]!,
+        firstOutcome: baseOut,
+        retestOutcome: k === 0 ? baseOut : null,
+        injectedFirstPassFail: false,
+        injectedFinalFail: false,
+      };
+    }
+    for (let k = 0; k < transientCount; k += 1) {
+      const idx = remaining[baseFailCount + k]!;
+      plans[idx] = {
+        die: dies[idx]!,
+        firstOutcome: CONT_FAIL_OUTCOME,
+        retestOutcome: PASS_OUTCOME,
+        injectedFirstPassFail: false,
+        injectedFinalFail: false,
+      };
+    }
+    return plans;
+  }
+
+  if (presetId === 'handling-scratch') {
+    const waferHasScratch = waferIndex >= 4 && waferIndex <= 21; // W05..W22
+    if (waferHasScratch && scratchChord !== null) {
+      const chordIndices = scratchChord.orderedGridIndices;
+      const chordLen = chordIndices.length;
+      const dropoutCount = Math.max(
+        1,
+        Math.round(chordLen * rng.nextRange(0.12, 0.18)),
+      );
+      const dropouts = pickNonAdjacentInteriorIndices(
+        rng,
+        chordLen,
+        dropoutCount,
+      );
+
+      let injectedCount = 0;
+      for (let c = 0; c < chordLen; c += 1) {
+        const idx = chordIndices[c]!;
+        if (dropouts.has(c)) {
+          continue;
+        }
+        assigned[idx] = 1;
+        injectedCount += 1;
+        const doRetest = injectedCount % 16 === 1;
+        plans[idx] = {
+          die: dies[idx]!,
+          firstOutcome: SHORT_FAIL_OUTCOME,
+          retestOutcome: doRetest ? SHORT_FAIL_OUTCOME : null,
+          injectedFirstPassFail: true,
+          injectedFinalFail: true,
+        };
+      }
+    }
+
+    // Keep baseline final fails strictly in [5, 8] (< 9.495 = 0.015 * 633) so clean wafers
+    // W01-W04 and W23-W25 (~98.9% yield) deterministically stay below MIN_FAIL_FRACTION -> 'None'
+    const remaining = interleaveShuffledQuadrants(
+      rng,
+      layout.allByQuadrant,
+      waferHasScratch && scratchChord !== null ? scratchChord.mask : assigned,
+    );
+    const baseFailCount = Math.min(remaining.length, rng.nextInt(5, 8));
+    const transientCount = Math.min(
+      remaining.length - baseFailCount,
+      rng.nextInt(5, 7),
+    );
+    for (let k = 0; k < baseFailCount; k += 1) {
+      const idx = remaining[k]!;
+      const baseOut = drawBaselineFailureOutcome(rng, presetId);
+      plans[idx] = {
+        die: dies[idx]!,
+        firstOutcome: baseOut,
+        retestOutcome: k === 0 && rng.nextBool(0.4) ? baseOut : null,
+        injectedFirstPassFail: false,
+        injectedFinalFail: false,
+      };
+    }
+    for (let k = 0; k < transientCount; k += 1) {
+      const idx = remaining[baseFailCount + k]!;
+      plans[idx] = {
+        die: dies[idx]!,
+        firstOutcome: CONT_FAIL_OUTCOME,
+        retestOutcome: PASS_OUTCOME,
+        injectedFirstPassFail: false,
+        injectedFinalFail: false,
+      };
+    }
+    return plans;
+  }
+
+  // Preset: 'site2-probe-contact'
+  // Stratified across radial bands (`inner`, `midInter`, `edge3`) x quadrants (`Q0..Q3`)
+  // so small-stratum variance (`Z_inner` has only 22 Site-2 dies) never produces radial holes
+  // (`r_zone >= 3.8`) or periphery-vs-interior skew (`z_edge >= 3.8`) on any 32-bit seed.
+  for (let band = 0 as RadialBandIndex; band < 3; band = (band + 1) as RadialBandIndex) {
+    // 1. Oxidized/bent probe needles on HEAD 1 / SITE 2 (~38.5% first-pass fail, ~50% retest, ~40% of retests recover)
+    const site2Ordered = interleaveShuffledQuadrants(
+      rng,
+      layout.site2ByBandAndQuadrant[band]!,
+    );
+    const s2Len = site2Ordered.length;
+    const firstFailFrac = rng.nextRange(0.36, 0.41);
+    const kFirstFail = Math.max(2, Math.round(s2Len * firstFailFrac));
+    const kRetest = Math.max(
+      1,
+      Math.min(kFirstFail, Math.round(kFirstFail * rng.nextRange(0.46, 0.54))),
+    );
+    const kRecovered = Math.max(
+      1,
+      Math.min(kRetest, Math.round(kRetest * rng.nextRange(0.36, 0.44))),
+    );
+    const kFinalFail = kFirstFail - kRecovered;
+    const kPersistentRetest = kRetest - kRecovered;
+
+    for (let k = 0; k < kFirstFail; k += 1) {
+      const idx = site2Ordered[k]!;
+      assigned[idx] = 1;
+      if (k < kFinalFail) {
+        const persistentRetest = k < kPersistentRetest;
+        plans[idx] = {
+          die: dies[idx]!,
+          firstOutcome: CONT_FAIL_OUTCOME,
+          retestOutcome: persistentRetest ? CONT_FAIL_OUTCOME : null,
+          injectedFirstPassFail: true,
+          injectedFinalFail: true,
+        };
+      } else {
+        plans[idx] = {
+          die: dies[idx]!,
+          firstOutcome: CONT_FAIL_OUTCOME,
+          retestOutcome: PASS_OUTCOME,
+          injectedFirstPassFail: true,
+          injectedFinalFail: false,
+        };
+      }
+    }
+
+    // 2. Baseline silicon point-defect rate ~2.8% across non-injected dies in this radial band
+    const nonSite2Ordered = interleaveShuffledQuadrants(
+      rng,
+      layout.nonSite2ByBandAndQuadrant[band]!,
+    );
+    const remSite2 = site2Ordered.slice(kFirstFail);
+    const pool = [...nonSite2Ordered, ...remSite2];
+    rng.shuffle(pool);
+
+    const bandTotal = s2Len + nonSite2Ordered.length;
+    const baseFailCount = Math.min(
+      pool.length,
+      Math.max(1, Math.round(bandTotal * rng.nextRange(0.024, 0.032))),
+    );
+    for (let k = 0; k < baseFailCount; k += 1) {
+      const idx = pool[k]!;
+      assigned[idx] = 1;
+      const baseOut = drawBaselineFailureOutcome(rng, presetId);
+      const retest =
+        k === 0 && band === 1
+          ? rng.nextBool(0.15)
+            ? PASS_OUTCOME
+            : baseOut
+          : null;
+      plans[idx] = {
+        die: dies[idx]!,
+        firstOutcome: baseOut,
+        retestOutcome: retest,
+        injectedFirstPassFail: false,
+        injectedFinalFail: false,
+      };
+    }
   }
 
   return plans;
@@ -783,9 +1058,9 @@ export function generateDemoLot(
   const resolvedSeed = normalizeSeed(seed ?? preset.defaultSeed);
   const rootRng = createPrng(mixSeed(resolvedSeed, config.salt));
   const layout = getStaticWaferLayout();
-  const scratchChordMask =
+  const scratchChord =
     presetId === 'handling-scratch'
-      ? buildSeededScratchChordMask(resolvedSeed, layout.dies)
+      ? buildSeededScratchChordPlan(resolvedSeed, layout.dies)
       : null;
 
   const tsrAcc = createTsrAccumulators();
@@ -815,8 +1090,8 @@ export function generateDemoLot(
       waferRng,
       presetId,
       wIdx,
-      layout.dies,
-      scratchChordMask,
+      layout,
+      scratchChord,
     );
 
     if (presetId === 'edge-ring-etch') {

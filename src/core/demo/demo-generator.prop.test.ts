@@ -406,4 +406,15 @@ describe('Property 9: Demo Generator Determinism & Ground-Truth Recovery (fast-c
       assertGroundTruthAndYieldSignature(raw, lot, generated.groundTruth, false);
     }
   });
+
+  it('recovers Random spatial class and Site 1:2 anomaly on regression seed 2147483620 and signed 32-bit boundary seeds', () => {
+    for (const seed of [2147483620, 541743237, 2147483647, -2147483648, -3]) {
+      const generated = generateDemoLot('site2-probe-contact', seed);
+      const bytesRepeat = generateDemoStdfBytes('site2-probe-contact', seed);
+      expect(areBytesIdentical(generated.stdfBytes, bytesRepeat)).toBe(true);
+
+      const { raw, lot } = parseAndBuildLot(generated.stdfBytes);
+      assertGroundTruthAndYieldSignature(raw, lot, generated.groundTruth, false);
+    }
+  });
 });

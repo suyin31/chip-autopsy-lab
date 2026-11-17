@@ -29,6 +29,17 @@ import {
 } from '@/core/demo';
 import { buildLotModel, type LotModel } from '@/core/model';
 import {
+  classifyStackedPattern,
+  classifyWaferPattern,
+  type PatternClassification,
+} from '@/core/patterns';
+import {
+  type AutopsyReport,
+  type AutopsyVerdictDecision,
+  type EngineFact,
+  generateOfflineAutopsyReport,
+} from '@/core/report';
+import {
   DEFAULT_MAX_UNCOMPRESSED_BYTES,
   decompressGzipStreamWithCeiling,
   hasGzipMagicBytes,
@@ -75,6 +86,9 @@ export interface AutopsyWorkerLoadedPayload {
   readonly lot: LotModel;
   readonly yieldSummary: YieldSummary;
   readonly siteAnomalies: readonly SiteAnomalyFactInput[];
+  readonly facts: readonly EngineFact[];
+  readonly verdict: AutopsyVerdictDecision;
+  readonly report: AutopsyReport;
 }
 
 export type AutopsyWorkerResponse =
@@ -363,6 +377,21 @@ async function runIngestPipeline(
   const lot = buildLotModel(parsed.value);
   const yieldSummary = computeYieldSummary(lot);
   const siteAnomalies = detectSiteAnomalies(lot);
+  const waferCount = lot.wafers.length;
+  const perWaferPatterns: PatternClassification[] = new Array<PatternClassification>(
+    waferCount,
+  );
+  for (let w = 0; w < waferCount; w += 1) {
+    perWaferPatterns[w] = classifyWaferPattern(lot, w);
+  }
+  const primarySpatial =
+    waferCount === 1 ? perWaferPatterns[0]! : classifyStackedPattern(lot);
+  const { facts, verdict, report } = generateOfflineAutopsyReport(lot, {
+    yieldSummary,
+    siteAnomalies,
+    primarySpatial,
+    perWaferPatterns,
+  });
   const elapsedMs = Math.max(0, nowMs() - startTime);
 
   if (pendingProgressCalls.length > 0) {
@@ -382,6 +411,9 @@ async function runIngestPipeline(
       lot,
       yieldSummary,
       siteAnomalies,
+      facts,
+      verdict,
+      report,
     },
   };
 }
