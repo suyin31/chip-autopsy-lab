@@ -36,7 +36,7 @@ export interface BinDefinition {
 }
 
 export interface TestSiteMeta {
-  /** Dense `0 .. S - 1` index stored in `ColumnarDies.siteIndex`. */
+  /** Dense `0 .. S - 1` index stored in `ColumnarDies.firstSiteIndex` and `ColumnarDies.siteIndex`. */
   readonly siteIndex: number;
   readonly headNum: number;
   readonly siteNum: number;
@@ -95,7 +95,7 @@ export interface ParametricTestColumn {
 }
 
 /**
- * Flat columnar die attributes (22 bytes/die across TypedArrays).
+ * Flat columnar die attributes (23 bytes/die across TypedArrays).
  */
 export interface ColumnarDies {
   readonly count: number;
@@ -104,6 +104,8 @@ export interface ColumnarDies {
   readonly y: Int16Array;
   /** `1` when `x !== -32768 && y !== -32768`, else `0`. */
   readonly hasValidCoords: Uint8Array;
+  /** Dense index into `LotModel.sites` from the die's chronologically first `PRR`. */
+  readonly firstSiteIndex: Uint8Array;
   /** Dense index into `LotModel.sites` from the die's chronologically last `PRR`. */
   readonly siteIndex: Uint8Array;
   /** `1` = passed chronologically first `PRR`, `0` = failed. */

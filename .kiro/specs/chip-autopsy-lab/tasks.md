@@ -27,17 +27,17 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - **Property 2** in `src/core/stdf/stdf-parser-safety.prop.test.ts`
     - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 3. Build the columnar lot model, retest resolution, and yield summary
-  - [ ] 3.1 Implement `src/core/model/lot-builder.ts`
+- [x] 3. Build the columnar lot model, retest resolution, and yield summary
+  - [x] 3.1 Implement `src/core/model/lot-builder.ts`
     - Columnar `LotModel`/`WaferModel` with stable `DieId`s, first-`PRR` vs last-`PRR` retest resolution, `PART_FLG` bits 3/4 with HBIN fallback, ring index, missing-coordinate handling.
     - _Requirements: 7.1, 7.2_
-  - [ ] 3.2 Implement `src/core/analytics/yield-summary.ts`
+  - [x] 3.2 Implement `src/core/analytics/yield-summary.ts`
     - Tested, pass, fail, and retest counts; first-pass and final yield by lot, wafer, and test site; site anomaly z-test.
     - _Requirements: 7.3, 7.4_
-  - [ ]* 3.3 Property test: retest resolution determinism
+  - [x]* 3.3 Property test: retest resolution determinism
     - **Property 3** in `src/core/model/retest-resolver.prop.test.ts`
     - _Requirements: 7.1, 7.2_
-  - [ ]* 3.4 Property test: yield bounds and partition additivity
+  - [x]* 3.4 Property test: yield bounds and partition additivity
     - **Property 4** in `src/core/analytics/yield-summary.prop.test.ts`
     - _Requirements: 7.1, 7.2, 7.3_
 

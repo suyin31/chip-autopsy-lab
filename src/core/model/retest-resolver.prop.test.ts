@@ -142,6 +142,10 @@ describe('Property 3: Retest Resolution Determinism — First-Pass vs. Final Sta
             expect(lotA.dies.retestCount[globalDieIdx]).toBe(executions.length - 1);
             expect(lotA.dies.firstPrrOrder[globalDieIdx]).toBe(firstExec.prrIndex);
 
+            const resolvedFirstSite = lotA.sites[lotA.dies.firstSiteIndex[globalDieIdx]!]!;
+            expect(resolvedFirstSite.headNum).toBe(firstExec.headNum);
+            expect(resolvedFirstSite.siteNum).toBe(firstExec.siteNum);
+
             const resolvedSite = lotA.sites[lotA.dies.siteIndex[globalDieIdx]!]!;
             expect(resolvedSite.headNum).toBe(lastExec.headNum);
             expect(resolvedSite.siteNum).toBe(lastExec.siteNum);

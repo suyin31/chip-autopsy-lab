@@ -392,7 +392,8 @@ export interface ColumnarDies {
   readonly x: Int16Array;
   readonly y: Int16Array;
   readonly hasValidCoords: Uint8Array; // 1 when x !== -32768 && y !== -32768, else 0
-  readonly siteIndex: Uint8Array;      // Dense index into LotModel.sites
+  readonly firstSiteIndex: Uint8Array; // Dense index into LotModel.sites from chronologically first PRR
+  readonly siteIndex: Uint8Array;      // Dense index into LotModel.sites from chronologically last PRR
   readonly firstPass: Uint8Array;      // 1 = passed chronologically first PRR, 0 = failed
   readonly finalPass: Uint8Array;      // 1 = passed chronologically last PRR, 0 = failed
   readonly hbin: Uint16Array;          // Final PRR HARD_BIN
@@ -437,7 +438,7 @@ export function buildLotModel(input: ParsedLotBuildInput): LotModel;
 **Retest & Pass/Fail Resolution Rules (`lot-builder.ts`):**
 - Within each Wafer, coordinate-bearing `PRR` records (`x !== -32768 && y !== -32768`) are grouped by `(x, y)` in chronological stream order; coordinate-missing `PRR` records remain distinct sequential parts (`<waferId>:part-<seq>`).
 - Pass/fail per `PRR` follows Req 7.2: if `(partFlg & 0x10) === 0`, `passed = (partFlg & 0x08) === 0`. If `(partFlg & 0x10) !== 0` (pass/fail invalid bit set), look up `hbins.get(hardBin)?.passFail`: `'P' -> true`, `'F' -> false`, otherwise `false` plus a `MISSING_HBIN_PF_FLAG` parse warning.
-- For a Die with $k \ge 1$ `PRR` executions $e_1, \dots, e_k$: `firstPass = Number(e_1.passed)`, `finalPass = Number(e_k.passed)`, `hbin = e_k.hardBin`, `sbin = e_k.softBin`, `siteIndex = e_k.siteIndex`, `retestCount = k - 1`, and active `PTR` values come from $e_k$ (Req 7.1).
+- For a Die with $k \ge 1$ `PRR` executions $e_1, \dots, e_k$: `firstPass = Number(e_1.passed)`, `firstSiteIndex = e_1.siteIndex`, `finalPass = Number(e_k.passed)`, `hbin = e_k.hardBin`, `sbin = e_k.softBin`, `siteIndex = e_k.siteIndex`, `retestCount = k - 1`, and active `PTR` values come from $e_k$ (Req 7.1).
 
 ---
 
@@ -445,23 +446,25 @@ export function buildLotModel(input: ParsedLotBuildInput): LotModel;
 
 ```typescript
 export interface YieldMetrics {
-  readonly testedDies: number;
+  readonly testedDies: number;          // Final-PRR scope count (equals firstPassTestedDies for overall & byWafer)
+  readonly firstPassTestedDies: number; // First-PRR scope count (by firstSiteIndex for bySite)
   readonly firstPassDies: number;
+  readonly firstPassFailDies: number;
   readonly finalPassDies: number;
   readonly finalFailDies: number;
   readonly retestExecutions: number;
-  readonly firstPassYield: number | null; // [0, 1], null when testedDies === 0
-  readonly finalYield: number | null;     // [0, 1], null when testedDies === 0
+  readonly firstPassYield: number | null; // firstPassDies / firstPassTestedDies in [0, 1], null when firstPassTestedDies === 0
+  readonly finalYield: number | null;     // finalPassDies / testedDies in [0, 1], null when testedDies === 0
 }
 
 export interface SiteAnomalyFactInput {
   readonly site: TestSiteMeta;
   readonly siteMetrics: YieldMetrics;
-  readonly otherSitesFinalYield: number;
-  readonly yieldDeltaPp: number;   // Negative, < -5.0 percentage points
-  readonly twoProportionZ: number; // >= 3.0
+  readonly otherSitesFirstPassYield: number;
+  readonly yieldDeltaPp: number;   // Negative, < -5.0 percentage points (first-pass yield vs pooled other sites)
+  readonly twoProportionZ: number; // >= 3.0 (pooled two-proportion z-test on first-pass results)
   readonly excessFailCount: number;
-  readonly excessFailShare: number; // excessFailCount / totalLotFailingDies in [0, 1]
+  readonly excessFailShare: number; // excessFailCount / totalLotFirstPassFailingDies in [0, 1]
   readonly confidence: number;      // Deterministic heuristic in [0.65, 0.99]
   readonly failingDieIndices: Uint32Array;
 }
@@ -508,7 +511,10 @@ export function computeYieldSummary(lot: LotModel, selectionMask?: Uint8Array): 
   readonly bySite: readonly YieldMetrics[];
 };
 
-export function detectSiteAnomalies(lot: LotModel): readonly SiteAnomalyFactInput[];
+export function detectSiteAnomalies(
+  lot: LotModel,
+  selectionMask?: Uint8Array,
+): readonly SiteAnomalyFactInput[];
 
 export function computeBinPareto(
   lot: LotModel,
@@ -528,6 +534,13 @@ export function computeParametricCapability(
 
 export function formatScaledMeasurement(baseValue: number, units: string, scalExp: number): string;
 ```
+
+**Per-Site Yield Partitioning & Site-Anomaly Semantics (`yield-summary.ts`):**
+- **Overall & Per-Wafer (`overall`, `byWafer`)**: Every resolved Die stays on a single Wafer across retests, so `firstPassTestedDies === testedDies`.
+- **Per-Site Dual Partitioning (`bySite`)**:
+  - **Per-site First-Pass Yield** (`firstPassTestedDies`, `firstPassDies`, `firstPassFailDies`, `firstPassYield`) is partitioned by `ColumnarDies.firstSiteIndex` (the Test Site of each Die's chronologically **first** `PRR`). On multi-site ATE handlers/probers, a degraded socket, probe needle, or tester channel must be judged strictly by the dies *it* tested first; if a die fails first pass on Site 1 and recovers on retest at Site 2, Site 1's first-pass yield counts it as a fail rather than blaming Site 2.
+  - **Per-site Final Yield** (`testedDies`, `finalPassDies`, `finalFailDies`, `retestExecutions`, `finalYield`) stays partitioned by `ColumnarDies.siteIndex` (the Test Site of each Die's chronologically **last** `PRR`), reflecting final binout disposition by closing site.
+- **Site-Concentration Anomaly Z-Test (`detectSiteAnomalies`)**: Evaluates the pooled two-proportion z-test (`>= 2` sites with `firstPassTestedDies >= 30`, `yieldDeltaPp < -5.0`, `twoProportionZ >= 3.0`) on **first-pass** results partitioned by `firstSiteIndex` (`failingDieIndices` = dies with `firstSiteIndex === s && firstPass === 0`), preventing cross-site or same-site retest recovery from masking faulty probe/socket hardware.
 
 ---
 
@@ -943,9 +956,9 @@ erDiagram
 ### Memory Budget & Worker Transfer Layout
 
 For `250,000` resolved dies (`25` wafers x `10,000` dies) and `40` `PTR` parametric tests:
-- `ColumnarDies` (`22 bytes/die` across `Int16Array`/`Uint16Array`/`Uint8Array`/`Uint32Array`): **`5.5 MB`**.
+- `ColumnarDies` (`23 bytes/die` across `Int16Array`/`Uint16Array`/`Uint8Array`/`Uint32Array`): **`5.75 MB`**.
 - `ParametricTestColumn` (`40 x 250,000 x 4 bytes` `Float32Array`): **`40.0 MB`**.
-- Total analytical footprint: **`~45.5 MB`**, transferred zero-copy from the Web Worker to the main thread via `Comlink.transfer(transferables)` in `< 2 ms`.
+- Total analytical footprint: **`~45.8 MB`**, transferred zero-copy from the Web Worker to the main thread via `Comlink.transfer(transferables)` in `< 2 ms`.
 
 ---
 
@@ -986,8 +999,8 @@ For `250,000` resolved dies (`25` wafers x `10,000` dies) and `40` `PTR` paramet
 |---|---|---|---|---|---|
 | **1** | STDF V4 Write-to-Parse Round-Trip Equivalence | Core | `src/core/stdf/stdf-roundtrip.prop.test.ts` | `arbStdfWriteLotSpec` (`CPU_TYPE` in `{1,2}`, multi-wafer, interleaved multi-site `PIR`/`PTR`/`PRR`, `PTR` defaults, omitted trailing fields, optional gzip) -> `writeStdfBytes` -> `parseStdfBytes` -> `buildLotModel` deep equivalence | `1.3, 1.5, 1.6, 1.7, 1.8, 1.9, 3.1` |
 | **2** | Parser Bounds Safety and Truncated-Stream Recovery | Core | `src/core/stdf/stdf-parser-safety.prop.test.ts` | `fc.uint8Array()` fuzz + corrupted `REC_LEN` headers + valid multi-`PRR` stream sliced at arbitrary cut offset $k$ -> zero uncaught throws, exact recovery of all $m \ge 1$ complete prefix `PRR`s + `TRUNCATED_TAIL_RECORD` warning | `2.1, 2.2, 2.3` |
-| **3** | Retest Resolution Determinism (First-Pass vs. Final State) | Core | `src/core/model/retest-resolver.prop.test.ts` | `arbChronologicalPrrStream` with repeated `(x, y)` coordinates and `PART_FLG` bit 3/4 combinations -> unique Die per `(x, y)`, `firstPass === prrs[0]`, `finalPass/hbin/sbin/ptr === prrs[last]`, `retestCount === k - 1` | `7.1, 7.2` |
-| **4** | Yield Bounds and Partition Additivity | Core | `src/core/analytics/yield-summary.prop.test.ts` | `arbLotModel` + empty selection -> yields in `[0, 1]` (`null` on empty), `pass + fail === tested`, Wafer and final-Site partition counts sum to `|D|` and weighted partition yields equal Lot yield within `1e-12` | `7.1, 7.2, 7.3` |
+| **3** | Retest Resolution Determinism (First-Pass vs. Final State) | Core | `src/core/model/retest-resolver.prop.test.ts` | `arbChronologicalPrrStream` with repeated `(x, y)` coordinates and `PART_FLG` bit 3/4 combinations -> unique Die per `(x, y)`, `firstPass/firstSiteIndex === prrs[0]`, `finalPass/hbin/sbin/siteIndex/ptr === prrs[last]`, `retestCount === k - 1` | `7.1, 7.2` |
+| **4** | Yield Bounds and Partition Additivity | Core | `src/core/analytics/yield-summary.prop.test.ts` | `arbLotModel` + empty selection -> yields in `[0, 1]` (`null` on empty), `pass + fail === tested`, Wafer, first-Site (first-pass), and final-Site (final) partition counts sum to `|D|` and weighted partition yields equal Lot yield within `1e-12` | `7.1, 7.2, 7.3` |
 | **5** | Bin Pareto Count Conservation and Monotonic Ordering | Core | `src/core/analytics/bin-pareto.prop.test.ts` | `arbLotModel` x `fc.constantFrom('SBIN', 'HBIN')` x `arbDieMask` -> `passingCount + sum(entries.count) === selectedCount`, `c_1 >= c_2 >= ... > 0`, `cumulativeFailShare` monotonic to `1.0` | `6.1, 6.2, 6.5` |
 | **6** | Stacked Multi-Wafer Heatmap Failure Conservation | Core | `src/core/analytics/stacked-heatmap.prop.test.ts` | `arbMultiWaferLot` ($W \ge 2$) -> `0 <= failCount(x,y) <= testedWaferCount(x,y) <= W`, exact match to per-wafer final fail state at `(x, y)`, and `sum(failCount) === totalCoordinateBearingFinalFails` | `5.2, 5.4` |
 | **7** | Parametric Capability (`Cp` / `Cpk`) Invariants and Affine Scale Equivariance | Core | `src/core/analytics/parametric-stats.prop.test.ts` | `arbFiniteFloatArray(n >= 2, sigma > 0)` + `lo < hi` + positive affine `x' = a*x + b` ($a > 0$) -> `cp > 0`, `cpk <= cp`, `|cpk - cp| < 1e-9` when centered, and `|cp' - cp| < 1e-9`, `|cpk' - cpk| < 1e-9` | `8.3, 8.4` |
@@ -1014,11 +1027,11 @@ For `250,000` resolved dies (`25` wafers x `10,000` dies) and `40` `PTR` paramet
 **Validates: Requirements 2.1, 2.2, 2.3**
 
 ### Property 3: Retest Resolution Determinism (First-Pass vs. Final State)
-*For any* chronological sequence of `PRR` records within a Wafer containing one or more repeated valid `(X_COORD, Y_COORD)` coordinates (`!== -32768`), `buildLotModel` SHALL resolve each distinct `(X_COORD, Y_COORD)` to exactly one canonical Die whose `firstPass` equals its chronologically first `PRR` pass/fail state (honoring `PART_FLG` bit 4 `HBR.HBIN_PF` fallback), whose `finalPass`, `hbin`, `sbin`, `siteIndex`, and active `PTR` values equal its chronologically last `PRR`, and whose `retestCount` equals `count(PRRs at coordinate) - 1`.
+*For any* chronological sequence of `PRR` records within a Wafer containing one or more repeated valid `(X_COORD, Y_COORD)` coordinates (`!== -32768`), `buildLotModel` SHALL resolve each distinct `(X_COORD, Y_COORD)` to exactly one canonical Die whose `firstPass` and `firstSiteIndex` equal its chronologically first `PRR` pass/fail state (honoring `PART_FLG` bit 4 `HBR.HBIN_PF` fallback) and test site, whose `finalPass`, `hbin`, `sbin`, `siteIndex`, and active `PTR` values equal its chronologically last `PRR`, and whose `retestCount` equals `count(PRRs at coordinate) - 1`.
 **Validates: Requirements 7.1, 7.2**
 
 ### Property 4: Yield Bounds and Partition Additivity
-*For any* non-empty Die selection $D$, both `firstPassYield` and `finalYield` SHALL equal `passingDies / testedDies` in $[0, 1]$ with `passingDies + failingDies === testedDies`; *for any* disjoint partition of $D$ by Wafer or by final Test Site, the sum of partition `testedDies` SHALL equal $|D|$ and the `testedDies`-weighted average of partition yields SHALL equal the overall yield of $D$ within $10^{-12}$; and *for* an empty Die selection ($|D| = 0$), both yields SHALL equal `null` (never `NaN` or $\pm\infty$).
+*For any* non-empty Die selection $D$, both `firstPassYield` (`firstPassDies / firstPassTestedDies`) and `finalYield` (`finalPassDies / testedDies`) SHALL lie in $[0, 1]$ with `passingDies + failingDies === partitionTestedDies`; *for any* disjoint partition of $D$ by Wafer, by first Test Site (`firstSiteIndex`, for first-pass counts and `firstPassYield`), or by final Test Site (`siteIndex`, for final counts and `finalYield`), the sum of partition tested counts SHALL equal $|D|$ and the partition-count-weighted average of partition yields SHALL equal the corresponding overall yield of $D$ within $10^{-12}$; and *for* an empty Die selection or empty site partition ($n = 0$), the corresponding yield SHALL equal `null` (never `NaN` or $\pm\infty$).
 **Validates: Requirements 7.1, 7.2, 7.3**
 
 ### Property 5: Bin Pareto Count Conservation and Monotonic Ordering

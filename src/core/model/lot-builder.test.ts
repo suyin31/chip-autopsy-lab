@@ -273,6 +273,7 @@ describe('buildLotModel (Requirements 4.2, 7.1, 7.2)', () => {
     expect(lot.dies.retestCount[0]).toBe(1);
     expect(lot.dies.ringIndex[0]).toBe(1);
     expect(lot.dies.firstPrrOrder[0]).toBe(0);
+    expect(lot.sites[lot.dies.firstSiteIndex[0]!]?.label).toBe('1:1');
     expect(lot.sites[lot.dies.siteIndex[0]!]?.label).toBe('1:2');
 
     // Spatial index contains only (2, 3), not missing-coordinate parts

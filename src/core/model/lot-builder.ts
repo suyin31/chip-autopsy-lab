@@ -48,6 +48,7 @@ interface ResolvedDieDraft {
   readonly hasValidCoords: boolean;
   readonly firstPrrOrder: number;
   readonly firstPass: boolean;
+  readonly firstSiteKey: SiteKey;
   siteKey: SiteKey;
   finalPass: boolean;
   hbin: number;
@@ -513,7 +514,8 @@ function buildParametricColumns(
 /**
  * Resolves `ParsedLotBuildInput` into a flat columnar `LotModel`:
  * - Resolves repeated `(X_COORD, Y_COORD)` touchdowns within each wafer (first PRR ->
- *   `firstPass`, last PRR -> `finalPass`/`hbin`/`sbin`/`siteIndex`/active `PTR`s, `retestCount = k - 1`)
+ *   `firstPass`/`firstSiteIndex`, last PRR -> `finalPass`/`hbin`/`sbin`/`siteIndex`/active `PTR`s,
+ *   `retestCount = k - 1`)
  * - Preserves missing-coordinate parts (`-32768`) as distinct `<waferId>:part-<seq>` dies
  *   excluded from spatial grids (`hasValidCoords = 0`, `ringIndex = 0`)
  * - Applies `PART_FLG` bit 4 `HBR.HBIN_PF` fallback with `MISSING_HBIN_PF_FLAG` warnings
@@ -591,6 +593,7 @@ export function buildLotModel(input: ParsedLotBuildInput): LotModel {
           hasValidCoords: true,
           firstPrrOrder: part.prrIndex >>> 0,
           firstPass: passed,
+          firstSiteKey: siteKey,
           siteKey,
           finalPass: passed,
           hbin: part.hardBin & MAX_UINT16,
@@ -610,6 +613,7 @@ export function buildLotModel(input: ParsedLotBuildInput): LotModel {
           hasValidCoords: false,
           firstPrrOrder: part.prrIndex >>> 0,
           firstPass: passed,
+          firstSiteKey: siteKey,
           siteKey,
           finalPass: passed,
           hbin: part.hardBin & MAX_UINT16,
@@ -681,6 +685,7 @@ export function buildLotModel(input: ParsedLotBuildInput): LotModel {
   const colX = new Int16Array(count);
   const colY = new Int16Array(count);
   const colHasValidCoords = new Uint8Array(count);
+  const colFirstSiteIndex = new Uint8Array(count);
   const colSiteIndex = new Uint8Array(count);
   const colFirstPass = new Uint8Array(count);
   const colFinalPass = new Uint8Array(count);
@@ -699,6 +704,7 @@ export function buildLotModel(input: ParsedLotBuildInput): LotModel {
     colX[i] = d.x;
     colY[i] = d.y;
     colHasValidCoords[i] = d.hasValidCoords ? 1 : 0;
+    colFirstSiteIndex[i] = siteIndexByKey.get(d.firstSiteKey) ?? 0;
     colSiteIndex[i] = siteIndexByKey.get(d.siteKey) ?? 0;
     colFirstPass[i] = d.firstPass ? 1 : 0;
     colFinalPass[i] = d.finalPass ? 1 : 0;
@@ -718,6 +724,7 @@ export function buildLotModel(input: ParsedLotBuildInput): LotModel {
     x: colX,
     y: colY,
     hasValidCoords: colHasValidCoords,
+    firstSiteIndex: colFirstSiteIndex,
     siteIndex: colSiteIndex,
     firstPass: colFirstPass,
     finalPass: colFinalPass,

@@ -24,7 +24,7 @@ function buildLotFromSpec(spec: StdfWriteLotSpec) {
 }
 
 describe('computeYieldSummary (Requirement 7.3)', () => {
-  it('computes exact first-pass, final, and retest counts by lot, wafer, and final test site, including missing-coordinate dies', () => {
+  it('partitions per-site first-pass yield by firstSiteIndex and per-site final yield by final siteIndex, including missing-coordinate dies', () => {
     const lot = buildLotFromSpec({
       endianness: 'little',
       sdrs: [{ headNum: 1, siteGrp: 1, siteNums: [1, 2, 3] }], // Site 3 declared in SDR with 0 dies
@@ -110,11 +110,16 @@ describe('computeYieldSummary (Requirement 7.3)', () => {
 
     const summary = computeYieldSummary(lot);
 
-    // Overall: 4 resolved dies: W01:(0,0)[fp=0,fin=1,rt=1,s=2], W01:(1,0)[fp=1,fin=1,rt=0,s=1],
-    // W01:part-0[fp=0,fin=0,rt=0,s=2], W02:(0,0)[fp=1,fin=0,rt=2,s=1]
+    // Overall: 4 resolved dies:
+    // - W01:(0,0)[fp=0 on 1:1, fin=1 on 1:2, rt=1]
+    // - W01:(1,0)[fp=1 on 1:1, fin=1 on 1:1, rt=0]
+    // - W01:part-0[fp=0 on 1:2, fin=0 on 1:2, rt=0]
+    // - W02:(0,0)[fp=1 on 1:1, fin=0 on 1:1, rt=2]
     expect(summary.overall).toEqual({
       testedDies: 4,
+      firstPassTestedDies: 4,
       firstPassDies: 2,
+      firstPassFailDies: 2,
       finalPassDies: 2,
       finalFailDies: 2,
       retestExecutions: 3,
@@ -125,7 +130,9 @@ describe('computeYieldSummary (Requirement 7.3)', () => {
     expect(summary.byWafer).toEqual([
       {
         testedDies: 3,
+        firstPassTestedDies: 3,
         firstPassDies: 1,
+        firstPassFailDies: 2,
         finalPassDies: 2,
         finalFailDies: 1,
         retestExecutions: 1,
@@ -134,7 +141,9 @@ describe('computeYieldSummary (Requirement 7.3)', () => {
       },
       {
         testedDies: 1,
+        firstPassTestedDies: 1,
         firstPassDies: 1,
+        firstPassFailDies: 0,
         finalPassDies: 0,
         finalFailDies: 1,
         retestExecutions: 2,
@@ -143,20 +152,29 @@ describe('computeYieldSummary (Requirement 7.3)', () => {
       },
     ]);
 
-    // Sites: 1:1 (2 dies), 1:2 (2 dies), 1:3 (0 dies -> null yields)
+    // Sites:
+    // - 1:1 first-tested 3 dies (W01:0,0[fail], W01:1,0[pass], W02:0,0[pass] -> 2/3) and
+    //   final-tested 2 dies (W01:1,0[pass], W02:0,0[fail] -> 1/2)
+    // - 1:2 first-tested 1 die (W01:part-0[fail] -> 0/1) and
+    //   final-tested 2 dies (W01:0,0[pass], W01:part-0[fail] -> 1/2)
+    // - 1:3 tested 0 dies -> null yields
     expect(summary.bySite).toEqual([
       {
         testedDies: 2,
+        firstPassTestedDies: 3,
         firstPassDies: 2,
+        firstPassFailDies: 1,
         finalPassDies: 1,
         finalFailDies: 1,
         retestExecutions: 2,
-        firstPassYield: 1,
+        firstPassYield: 2 / 3,
         finalYield: 0.5,
       },
       {
         testedDies: 2,
+        firstPassTestedDies: 1,
         firstPassDies: 0,
+        firstPassFailDies: 1,
         finalPassDies: 1,
         finalFailDies: 1,
         retestExecutions: 1,
@@ -165,7 +183,9 @@ describe('computeYieldSummary (Requirement 7.3)', () => {
       },
       {
         testedDies: 0,
+        firstPassTestedDies: 0,
         firstPassDies: 0,
+        firstPassFailDies: 0,
         finalPassDies: 0,
         finalFailDies: 0,
         retestExecutions: 0,
@@ -178,6 +198,7 @@ describe('computeYieldSummary (Requirement 7.3)', () => {
     const emptyMask = new Uint8Array(lot.dies.count);
     const emptySummary = computeYieldSummary(lot, emptyMask);
     expect(emptySummary.overall.testedDies).toBe(0);
+    expect(emptySummary.overall.firstPassTestedDies).toBe(0);
     expect(emptySummary.overall.firstPassYield).toBeNull();
     expect(emptySummary.overall.finalYield).toBeNull();
 
@@ -186,11 +207,124 @@ describe('computeYieldSummary (Requirement 7.3)', () => {
     const partialSummary = computeYieldSummary(lot, partialMask);
     expect(partialSummary.overall).toEqual({
       testedDies: 2,
+      firstPassTestedDies: 2,
       firstPassDies: 1,
+      firstPassFailDies: 1,
       finalPassDies: 2,
       finalFailDies: 0,
       retestExecutions: 1,
       firstPassYield: 0.5,
+      finalYield: 1.0,
+    });
+  });
+
+  it('counts a die first failing on Site 1 then passing on retest at Site 2 as a Site 1 first-pass fail while keeping Site 2 final yield', () => {
+    const lot = buildLotFromSpec({
+      endianness: 'little',
+      sdrs: [{ headNum: 1, siteGrp: 1, siteNums: [1, 2] }],
+      hbrs: [
+        { hbinNum: 1, hbinCnt: 3, hbinPf: 'P', hbinNam: 'PASS' },
+        { hbinNum: 2, hbinCnt: 1, hbinPf: 'F', hbinNam: 'CONT_FAIL' },
+      ],
+      wafers: [
+        {
+          wir: { headNum: 1, waferId: 'W01' },
+          parts: [
+            // Die (0,0): fails first pass on Site 1, then passes retest on Site 2
+            {
+              headNum: 1,
+              siteNum: 1,
+              partFlg: PRR_PART_FLG.FAILED,
+              hardBin: 2,
+              xCoord: 0,
+              yCoord: 0,
+            },
+            {
+              headNum: 1,
+              siteNum: 2,
+              partFlg: 0,
+              hardBin: 1,
+              xCoord: 0,
+              yCoord: 0,
+            },
+            // Die (1,0): single pass on Site 1
+            {
+              headNum: 1,
+              siteNum: 1,
+              partFlg: 0,
+              hardBin: 1,
+              xCoord: 1,
+              yCoord: 0,
+            },
+            // Die (0,1): single pass on Site 2
+            {
+              headNum: 1,
+              siteNum: 2,
+              partFlg: 0,
+              hardBin: 1,
+              xCoord: 0,
+              yCoord: 1,
+            },
+          ],
+          wrr: { headNum: 1, partCnt: 4, waferId: 'W01' },
+        },
+      ],
+    });
+
+    const summary = computeYieldSummary(lot);
+
+    // Site 1 (index 0): first-tested (0,0)[fail] & (1,0)[pass] -> 50% first-pass yield;
+    // final-tested only (1,0)[pass] -> 100% final yield.
+    expect(summary.bySite[0]).toEqual({
+      testedDies: 1,
+      firstPassTestedDies: 2,
+      firstPassDies: 1,
+      firstPassFailDies: 1,
+      finalPassDies: 1,
+      finalFailDies: 0,
+      retestExecutions: 0,
+      firstPassYield: 0.5,
+      finalYield: 1.0,
+    });
+
+    // Site 2 (index 1): first-tested only (0,1)[pass] -> 100% first-pass yield (not blamed for Site 1's fail);
+    // final-tested (0,0)[pass] & (0,1)[pass] -> 100% final yield.
+    expect(summary.bySite[1]).toEqual({
+      testedDies: 2,
+      firstPassTestedDies: 1,
+      firstPassDies: 1,
+      firstPassFailDies: 0,
+      finalPassDies: 2,
+      finalFailDies: 0,
+      retestExecutions: 1,
+      firstPassYield: 1.0,
+      finalYield: 1.0,
+    });
+
+    // Scoped strictly to Die 0 ((0,0) alone): Site 1 firstPassYield = 0, finalYield = null;
+    // Site 2 firstPassYield = null, finalYield = 1.0.
+    const onlyRetestedDie = Uint8Array.from([1, 0, 0]);
+    const singleDieSummary = computeYieldSummary(lot, onlyRetestedDie);
+    expect(singleDieSummary.bySite[0]).toEqual({
+      testedDies: 0,
+      firstPassTestedDies: 1,
+      firstPassDies: 0,
+      firstPassFailDies: 1,
+      finalPassDies: 0,
+      finalFailDies: 0,
+      retestExecutions: 0,
+      firstPassYield: 0,
+      finalYield: null,
+    });
+    expect(singleDieSummary.bySite[1]).toEqual({
+      testedDies: 1,
+      firstPassTestedDies: 0,
+      firstPassDies: 0,
+      firstPassFailDies: 0,
+      finalPassDies: 1,
+      finalFailDies: 0,
+      retestExecutions: 1,
+      firstPassYield: null,
       finalYield: 1.0,
     });
   });
@@ -251,9 +385,9 @@ describe('detectSiteAnomalies (Requirement 7.4)', () => {
 
     const top = anomalies[0]!;
     expect(top.site.label).toBe('1:2');
-    expect(top.siteMetrics.testedDies).toBe(100);
-    expect(top.siteMetrics.finalFailDies).toBe(33);
-    expect(top.otherSitesFinalYield).toBeCloseTo(0.97, 6);
+    expect(top.siteMetrics.firstPassTestedDies).toBe(100);
+    expect(top.siteMetrics.firstPassFailDies).toBe(33);
+    expect(top.otherSitesFirstPassYield).toBeCloseTo(0.97, 6);
     expect(top.yieldDeltaPp).toBeCloseTo(-30.0, 6);
     expect(top.twoProportionZ).toBeGreaterThanOrEqual(
       SITE_ANOMALY_THRESHOLDS.MIN_TWO_PROPORTION_Z,
@@ -264,9 +398,67 @@ describe('detectSiteAnomalies (Requirement 7.4)', () => {
     expect(top.confidence).toBeLessThanOrEqual(0.99);
     expect(top.failingDieIndices).toHaveLength(33);
     for (const idx of top.failingDieIndices) {
-      expect(lot.dies.siteIndex[idx]).toBe(top.site.siteIndex);
-      expect(lot.dies.finalPass[idx]).toBe(0);
+      expect(lot.dies.firstSiteIndex[idx]).toBe(top.site.siteIndex);
+      expect(lot.dies.firstPass[idx]).toBe(0);
     }
+  });
+
+  it('flags a degraded Site 1 on first-pass results even when cross-site retesting at Site 2 recovers the failing dies', () => {
+    const parts: StdfWritePartSpec[] = [];
+    // Site 1 first-tests 100 dies: 40 fail first pass on Site 1 and are retested on Site 2 where 38 pass!
+    for (let i = 0; i < 100; i += 1) {
+      const failedFirst = i < 40;
+      parts.push({
+        headNum: 1,
+        siteNum: 1,
+        partFlg: failedFirst ? PRR_PART_FLG.FAILED : 0,
+        hardBin: failedFirst ? 2 : 1,
+        xCoord: i,
+        yCoord: 0,
+      });
+      if (failedFirst) {
+        const stillFails = i < 2;
+        parts.push({
+          headNum: 1,
+          siteNum: 2,
+          partFlg: stillFails ? PRR_PART_FLG.FAILED : 0,
+          hardBin: stillFails ? 2 : 1,
+          xCoord: i,
+          yCoord: 0,
+        });
+      }
+    }
+    // Site 2 first-tests 100 dies of its own with only 2 failures (98% first-pass yield)
+    for (let j = 0; j < 100; j += 1) {
+      const failed = j < 2;
+      parts.push({
+        headNum: 1,
+        siteNum: 2,
+        partFlg: failed ? PRR_PART_FLG.FAILED : 0,
+        hardBin: failed ? 2 : 1,
+        xCoord: j,
+        yCoord: 1,
+      });
+    }
+
+    const lot = buildLotFromSpec({
+      endianness: 'little',
+      sdrs: [{ headNum: 1, siteGrp: 1, siteNums: [1, 2] }],
+      wafers: [{ parts }],
+    });
+
+    const summary = computeYieldSummary(lot);
+    // Final yield on Site 1 is 60/60 = 100%, which would have hidden the bad Site 1 socket under final-site z-testing!
+    expect(summary.bySite[0]?.finalYield).toBe(1.0);
+    expect(summary.bySite[0]?.firstPassYield).toBeCloseTo(0.6, 6);
+    expect(summary.bySite[1]?.firstPassYield).toBeCloseTo(0.98, 6);
+
+    const anomalies = detectSiteAnomalies(lot);
+    expect(anomalies).toHaveLength(1);
+    expect(anomalies[0]?.site.label).toBe('1:1');
+    expect(anomalies[0]?.yieldDeltaPp).toBeCloseTo(-38.0, 6);
+    expect(anomalies[0]?.twoProportionZ).toBeGreaterThanOrEqual(3.0);
+    expect(anomalies[0]?.failingDieIndices).toHaveLength(40);
   });
 
   it('enforces all three Requirement 7.4 gates (>= 2 sites with n >= 30, > 5.0 pp drop, and z >= 3.0)', () => {
