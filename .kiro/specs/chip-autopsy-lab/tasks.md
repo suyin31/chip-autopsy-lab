@@ -45,10 +45,10 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
   - [x] 4.1 Implement `src/core/demo/prng.ts` and `demo-generator.ts`
     - Seeded Mulberry32 generator; 25-wafer x 633-die presets `edge-ring-etch`, `handling-scratch`, and `site2-probe-contact`, written through `stdf-writer.ts`.
     - _Requirements: 3.1_
-  - [ ] 4.2 Implement `src/workers/autopsy.worker.ts` and `worker-client.ts`
+  - [x] 4.2 Implement `src/workers/autopsy.worker.ts` and `worker-client.ts`
     - Comlink module worker, `Comlink.transfer` buffer hand-off, `Comlink.proxy` progress callbacks (bytes, records, dies); demo lots use the same parse path as files.
     - _Requirements: 1.4, 1.10, 3.3, 15.2_
-  - [ ] 4.3 Add the first-run empty state with the `"Load demo lot"` control
+  - [x] 4.3 Add the first-run empty state with the `"Load demo lot"` control
     - _Requirements: 3.2, 17.6_
   - [ ]* 4.4 Property test: demo lot determinism and ground-truth recovery
     - **Property 9** in `src/core/demo/demo-generator.prop.test.ts`; covers all three presets (finish after task 6 adds the classifier).

@@ -1,0 +1,24 @@
+root agent idle; waiting for 1 background task(s) to finish
+Running `npx next build` to verify the production Next.js + module Web Worker build; I will finalize `logs/progress.md` once it completes.
+Sub-tasks **4.2** and **4.3** are complete and verified green.
+
+### Summary of Changes
+
+- **4.2 — Comlink Module Web Worker & Client Bridge**
+  - [autopsy.worker.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/workers/autopsy.worker.ts): Implemented plain, Node-testable pipeline functions (`ingestStdfBuffer`, `ingestDemoPreset`, `collectWorkerResponseTransferables`, `createAutopsyWorkerApi`) exposed via `Comlink.expose` only in Dedicated Worker scope. Demo presets generated via `generateDemoStdfBytes` flow through the exact same `hasGzipMagicBytes` / `decompressGzipStreamWithCeiling` $\rightarrow$ `parseStdfBytes` $\rightarrow$ `buildLotModel` $\rightarrow$ `computeYieldSummary` / `detectSiteAnomalies` pipeline as uploaded files, returning zero-copy `Comlink.transfer` `TypedArray` buffers and `> 200 MB` `large-file-prompt` support.
+  - [worker-client.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/workers/worker-client.ts) & [index.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/workers/index.ts): Typed main-thread Comlink wrapper instantiating the module worker (`new URL('./autopsy.worker.ts', import.meta.url)`), transferring input buffers with `Comlink.transfer`, and streaming `(bytesProcessed, recordsDecoded, diesResolved)` callbacks with `Comlink.proxy`.
+  - [autopsy.worker.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/workers/autopsy.worker.test.ts): Unit-tested raw/gzip ingest, byte-for-byte demo/file pipeline equivalence, monotonic progress callbacks, `site2-probe-contact` anomaly recovery, Bins-Only resume, and `Comlink.transfer` + `Comlink.proxy` over `MessageChannel` in Vitest without a real `Worker`.
+
+- **4.3 — First-Run Empty State, `"Load demo lot"`, Drop Zone & Progress UI**
+  - [primitives/index.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/primitives/index.ts) & [format.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/format.ts): Added owned shadcn/ui-pattern `Button`, `Card`, `Badge`, and `Progress` primitives styled strictly with the locked dark clinical tokens (`#0A0A0B` `bg`, `#111113` `panel`, `#7CF2C1` `accent`, `1 px` `hairline`, zero shadows, weights `< 700`, `Geist Mono` `tabular-nums`).
+  - [AppShell.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/AppShell.tsx), [EmptyStateCard.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/EmptyStateCard.tsx), [FullWindowDropZone.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/FullWindowDropZone.tsx), [IngestProgressPanel.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/IngestProgressPanel.tsx), [LoadedLotOverview.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/LoadedLotOverview.tsx), & [page.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/app/page.tsx): Wired the first-run/parse-failed empty state, keyboard-accessible preset radio selector + `"Load demo lot"` CTA, viewport & inline `"Drop the body."` `.stdf`/`.std`/`.stdf.gz`/`.gz` drop zone + file picker, live worker progress readout, and loaded lot yield/site overview. Added SSR/formatting tests in [empty-state.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/empty-state.test.ts).
+
+- **Tracking Updates**
+  - Marked `4.2` and `4.3` `[x]` in [tasks.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/specs/chip-autopsy-lab/tasks.md#L48-L52) and appended progress notes to [progress.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/progress.md#L12-L14).
+
+### Verification
+
+- `npx tsc --noEmit`: 0 errors
+- `npx eslint .`: 0 errors, 0 warnings
+- `npx vitest run`: 16/16 test files passed (`78/78` tests)
+- `npx next build`: compiled and statically generated cleanly
