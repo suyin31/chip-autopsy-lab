@@ -1,0 +1,5 @@
+Fix pass 1/2 for task 7 (logic and wording). Read logs/review-7.md and logs/assistant-review-7.md, plus design.md Section 3.5.
+- B-1: add the Tier 3 Random/None guard exactly per design.
+- B-2: Property 10 fails intermittently. Reproduce with several seeds (run the property with numRuns 300 locally once), find the real root cause, fix the code (not the property). Add any counterexample as a regression unit test. Keep the default suite fast.
+- Assistant items 1, 2, 3, 6: make every count reconcile and say exactly what it counts (same denominator wording; headline cited-dies chip = union it highlights); never print absolute 0.0%/100.0% that the single-wafer map contradicts (if metric is over recurring stacked cells, say so); remove confidence from the headline sentence, show "High · 0.95"-style label and cap displayed confidence at 0.95; headline = cause of death + where + dominant bin, no duplicated yield.
+Do not change layout yet. Run `npx tsc --noEmit`, `npx eslint .`, `npx vitest run` until green. Append 1 line to logs/progress.md. No web search. Finish within 14 minutes; leave tree compiling.
