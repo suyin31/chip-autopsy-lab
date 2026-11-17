@@ -647,7 +647,7 @@ function analyzeFailGraphAndComponents(
     const basePca = computeMemberPcaMetrics(members, failX, failY);
     const centroidRho = Math.hypot(basePca.meanX - cx, basePca.meanY - cy) / rMax;
 
-    let scratchMembers = members;
+    let scratchMembers: Uint32Array = members;
     let majorLength = basePca.majorLength;
     let minorWidth = basePca.minorWidth;
     let elongation = basePca.elongation;
