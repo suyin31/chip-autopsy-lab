@@ -24,6 +24,7 @@ import {
   OVERLAY_HALO_STROKE,
   paintWaferBaseLayer,
   paintWaferOverlayLayer,
+  paintWaferThumbnail,
   resolveCanvasPixelSize,
   resolveDieFillColor,
   resolvePassFailDieColor,
@@ -448,7 +449,35 @@ describe('Wafer Map pure geometry, color mapping, and two-layer canvas isolation
     expect(overlayMock.strokeRects).toHaveLength(1);
   });
 
-  it('renders 25 keyboard-accessible wafer radio pills and stacked base/overlay canvases for a 25-wafer demo lot', async () => {
+  it('paints compact Pass/Fail wafer thumbnails using locked tokens and skipping missing-coord dies (review-5 I-2)', () => {
+    const lot = buildWaferTestLot();
+    const wafer = lot.wafers[0];
+    const thumbMock = createMockCanvas2DContext();
+
+    paintWaferThumbnail(thumbMock.ctx, {
+      wafer,
+      dies: lot.dies,
+      cssSize: 36,
+      dpr: 2,
+    });
+
+    expect(thumbMock.getDrawPassCount()).toBe(1);
+    const passFills = thumbMock.fillRects.filter(
+      (r) => r.fillStyle === COLOR_TOKENS.passDie,
+    );
+    const failFills = thumbMock.fillRects.filter(
+      (r) => r.fillStyle === COLOR_TOKENS.failure,
+    );
+    // 2 valid passing dies (#53655D) and 3 valid failing dies (#FF7A1A); missing-coord die 5 excluded
+    expect(passFills).toHaveLength(2);
+    expect(failFills).toHaveLength(3);
+
+    // Tightened hero wafer padding fills >= 94% of the square stage diameter (review-5 I-1)
+    const heroLayout = computeWaferRenderLayout(wafer, 520, 520, lot.dies);
+    expect((heroLayout.waferRadiusPx * 2) / 520).toBeGreaterThanOrEqual(0.94);
+  });
+
+  it('renders 25-wafer horizontal thumbnail lot strip with radiogroup semantics and explicit canvas CSS sizes (review-5 C-1, F-1, F-2, I-2)', async () => {
     const res = await ingestDemoPreset('edge-ring-etch');
     expect(res.kind).toBe('ok');
     if (res.kind !== 'ok') return;
@@ -462,8 +491,15 @@ describe('Wafer Map pure geometry, color mapping, and two-layer canvas isolation
 
     expect(html).toContain('data-testid="wafer-base-canvas"');
     expect(html).toContain('data-testid="wafer-overlay-canvas"');
+    expect(html).toContain('style="width:520px;height:520px"');
+    expect(html).toContain('aria-roledescription="interactive wafer map"');
+    expect(html).toContain('aria-live="polite"');
     expect(html).toContain('role="radiogroup"');
     expect(html.match(/role="radio"/g)).toHaveLength(25);
+    expect(html.match(/data-testid="wafer-lot-strip-thumb"/g)).toHaveLength(25);
+    expect(html).toContain('style="width:36px;height:36px"');
+    expect(html).toContain('style="width:40px;height:40px"');
+    expect(html).toContain('border-accent');
     expect(html).toContain('W01');
     expect(html).toContain('W25');
     expect(html).toContain('tabindex="0"');

@@ -118,7 +118,36 @@ const MID_RHO_MAX = 0.75;
 
 const EMPTY_UINT8 = new Uint8Array(0);
 const EMPTY_UINT32 = new Uint32Array(0);
-const EMPTY_HIDDEN_BINS: ReadonlySet<number> = new Set<number>();
+export const EMPTY_HIDDEN_BINS: ReadonlySet<number> = new Set<number>();
+
+const ZERO_MASK_BY_LOT = new WeakMap<LotModel, Uint8Array>();
+
+function getZeroMaskForLot(lot: LotModel): Uint8Array {
+  let mask = ZERO_MASK_BY_LOT.get(lot);
+  if (!mask || mask.length !== lot.dies.count) {
+    mask = new Uint8Array(lot.dies.count);
+    ZERO_MASK_BY_LOT.set(lot, mask);
+  }
+  return mask;
+}
+
+export function areHiddenBinSetsEqual(
+  a: ReadonlySet<number>,
+  b: ReadonlySet<number>,
+): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a.size !== b.size) {
+    return false;
+  }
+  for (const item of a) {
+    if (!b.has(item)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 interface WaferRadialBounds {
   readonly cx: number;
@@ -260,6 +289,8 @@ export function deriveSelectionMasks(
   let selectedDieCount = 0;
 
   if (!hasActiveFilter) {
+    // Missing-coordinate (-32768) dies remain 1 when no spatial filter is active
+    // so non-spatial Lot, Wafer, Site, and Bin totals retain them (Req 4.2).
     selectedDieMask.fill(1);
     selectedDieCount = dieCount;
   } else {
@@ -341,23 +372,28 @@ export function deriveSelectionMasks(
   }
 
   // 2. Evaluate claimHighlight -> claimHighlightMask + deduplicated highlightedDieIndices
-  const claimHighlightMask = new Uint8Array(dieCount);
+  let claimHighlightMask: Uint8Array;
   let highlightedDieIndices: Uint32Array = EMPTY_UINT32;
 
   if (claimHighlight !== null && claimHighlight.dieIndices.length > 0) {
+    const mutableClaimMask = new Uint8Array(dieCount);
     const rawIndices = claimHighlight.dieIndices;
     const dedup = new Uint32Array(rawIndices.length);
     let writePos = 0;
     for (let k = 0; k < rawIndices.length; k += 1) {
       const idx = rawIndices[k];
-      if (idx < dieCount && claimHighlightMask[idx] === 0) {
-        claimHighlightMask[idx] = 1;
+      if (idx < dieCount && mutableClaimMask[idx] === 0) {
+        mutableClaimMask[idx] = 1;
         dedup[writePos] = idx;
         writePos += 1;
       }
     }
+    claimHighlightMask =
+      writePos === 0 ? getZeroMaskForLot(lot) : mutableClaimMask;
     highlightedDieIndices =
       writePos === dedup.length ? dedup : dedup.slice(0, writePos);
+  } else {
+    claimHighlightMask = getZeroMaskForLot(lot);
   }
 
   // 3. Derive effective wafer overlay highlight mask (#7CF2C1 outline/glow)
@@ -365,7 +401,7 @@ export function deriveSelectionMasks(
   let overlayHighlightCount = 0;
 
   if (!hasActiveFilter && highlightedDieIndices.length === 0) {
-    overlayHighlightMask = new Uint8Array(dieCount);
+    overlayHighlightMask = getZeroMaskForLot(lot);
     overlayHighlightCount = 0;
   } else if (hasActiveFilter && highlightedDieIndices.length === 0) {
     overlayHighlightMask = new Uint8Array(selectedDieMask);
@@ -456,7 +492,7 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
   const recomputeWith = (
     lot: LotModel | null,
     overrides: Partial<SelectionMaskInputs>,
-  ): SelectionMaskInputs & DerivedSelectionMasks => {
+  ): (SelectionMaskInputs & DerivedSelectionMasks) | null => {
     const current = get();
     const nextInputs: SelectionMaskInputs = {
       brush: overrides.brush !== undefined ? overrides.brush : current.brush,
@@ -477,6 +513,16 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
           ? overrides.claimHighlight
           : current.claimHighlight,
     };
+    if (
+      lot === current.lot &&
+      nextInputs.brush === current.brush &&
+      nextInputs.binFilter === current.binFilter &&
+      nextInputs.siteFilter === current.siteFilter &&
+      nextInputs.dslFilter === current.dslFilter &&
+      nextInputs.claimHighlight === current.claimHighlight
+    ) {
+      return null;
+    }
     const masks = deriveSelectionMasks(lot, nextInputs);
     return { ...nextInputs, ...masks };
   };
@@ -543,13 +589,21 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
     },
 
     toggleHiddenBin: (binCode) => {
-      const next = new Set<number>(get().hiddenBins);
+      if (!Number.isInteger(binCode) || binCode < 0) {
+        return;
+      }
+      const prev = get().hiddenBins;
+      const next = new Set<number>(prev);
       if (next.has(binCode)) {
         next.delete(binCode);
       } else {
         next.add(binCode);
       }
-      set({ hiddenBins: next });
+      const resolved: ReadonlySet<number> =
+        next.size === 0 ? EMPTY_HIDDEN_BINS : next;
+      if (!areHiddenBinSetsEqual(prev, resolved)) {
+        set({ hiddenBins: resolved });
+      }
     },
 
     clearHiddenBins: () => {
@@ -573,11 +627,17 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
     },
 
     setBrush: (brush) => {
-      set(recomputeWith(get().lot, { brush }));
+      const patch = recomputeWith(get().lot, { brush });
+      if (patch) {
+        set(patch);
+      }
     },
 
     setBinFilter: (binFilter) => {
-      set(recomputeWith(get().lot, { binFilter }));
+      const patch = recomputeWith(get().lot, { binFilter });
+      if (patch) {
+        set(patch);
+      }
     },
 
     toggleBinFilter: (binFilter) => {
@@ -586,64 +646,86 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
         current !== null &&
         current.mode === binFilter.mode &&
         current.code === binFilter.code;
-      set(recomputeWith(get().lot, { binFilter: isSame ? null : binFilter }));
+      const patch = recomputeWith(get().lot, {
+        binFilter: isSame ? null : binFilter,
+      });
+      if (patch) {
+        set(patch);
+      }
     },
 
     setSiteFilter: (siteFilter) => {
-      set(recomputeWith(get().lot, { siteFilter }));
+      const patch = recomputeWith(get().lot, { siteFilter });
+      if (patch) {
+        set(patch);
+      }
     },
 
     toggleSiteFilter: (siteIndex) => {
       const current = get().siteFilter;
-      set(
-        recomputeWith(get().lot, {
-          siteFilter: current === siteIndex ? null : siteIndex,
-        }),
-      );
+      const patch = recomputeWith(get().lot, {
+        siteFilter: current === siteIndex ? null : siteIndex,
+      });
+      if (patch) {
+        set(patch);
+      }
     },
 
     setDslFilter: (dslFilter) => {
-      set(recomputeWith(get().lot, { dslFilter }));
+      const patch = recomputeWith(get().lot, { dslFilter });
+      if (patch) {
+        set(patch);
+      }
     },
 
     setClaimHighlight: (claimHighlight) => {
+      const current = get();
       const nextTestNum =
         claimHighlight?.citedTestNums && claimHighlight.citedTestNums.length > 0
           ? claimHighlight.citedTestNums[0]
-          : get().activeTestNum;
-      set({
-        activeTestNum: nextTestNum,
-        ...recomputeWith(get().lot, { claimHighlight }),
-      });
+          : current.activeTestNum;
+      const patch = recomputeWith(current.lot, { claimHighlight });
+      if (patch) {
+        set({ activeTestNum: nextTestNum, ...patch });
+      } else if (nextTestNum !== current.activeTestNum) {
+        set({ activeTestNum: nextTestNum });
+      }
     },
 
     toggleClaimHighlight: (highlight) => {
       const current = get().claimHighlight;
       const isSame = current !== null && current.claimId === highlight.claimId;
       if (isSame) {
-        set(recomputeWith(get().lot, { claimHighlight: null }));
+        const patch = recomputeWith(get().lot, { claimHighlight: null });
+        if (patch) {
+          set(patch);
+        }
         return;
       }
+      const prev = get();
       const nextTestNum =
         highlight.citedTestNums && highlight.citedTestNums.length > 0
           ? highlight.citedTestNums[0]
-          : get().activeTestNum;
-      set({
-        activeTestNum: nextTestNum,
-        ...recomputeWith(get().lot, { claimHighlight: highlight }),
-      });
+          : prev.activeTestNum;
+      const patch = recomputeWith(prev.lot, { claimHighlight: highlight });
+      if (patch) {
+        set({ activeTestNum: nextTestNum, ...patch });
+      } else if (nextTestNum !== prev.activeTestNum) {
+        set({ activeTestNum: nextTestNum });
+      }
     },
 
     clearFilters: () => {
-      set(
-        recomputeWith(get().lot, {
-          brush: null,
-          binFilter: null,
-          siteFilter: null,
-          dslFilter: null,
-          claimHighlight: null,
-        }),
-      );
+      const patch = recomputeWith(get().lot, {
+        brush: null,
+        binFilter: null,
+        siteFilter: null,
+        dslFilter: null,
+        claimHighlight: null,
+      });
+      if (patch) {
+        set(patch);
+      }
     },
 
     reset: () => {

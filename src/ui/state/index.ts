@@ -1,4 +1,5 @@
 export {
+  areHiddenBinSetsEqual,
   type BinSelectionFilter,
   type CapabilityPredicateClause,
   type ClaimHighlightState,
@@ -7,6 +8,7 @@ export {
   type DerivedSelectionMasks,
   deriveSelectionMasks,
   type DiePredicateClause,
+  EMPTY_HIDDEN_BINS,
   type FilterDslAst,
   type SelectionMaskInputs,
   type SelectionStoreState,

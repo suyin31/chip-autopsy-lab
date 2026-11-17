@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import type { DemoPresetId, DemoPresetMeta } from '@/core/demo';
 import {
   formatByteSize,
@@ -51,9 +52,12 @@ export function LoadedLotOverview({
   const overall = yieldSummary.overall;
   const primaryAnomaly = siteAnomalies[0];
 
-  const storeLot = useSelectionStore((s) => s.lot);
-  const rawSiteFilter = useSelectionStore((s) => s.siteFilter);
-  const toggleSiteFilter = useSelectionStore((s) => s.toggleSiteFilter);
+  const { storeLot, rawSiteFilter } = useSelectionStore(
+    useShallow((s) => ({
+      storeLot: s.lot,
+      rawSiteFilter: s.siteFilter,
+    })),
+  );
   const activeSiteFilter = storeLot === lot ? rawSiteFilter : null;
 
   React.useEffect(() => {
@@ -176,14 +180,14 @@ export function LoadedLotOverview({
           </div>
         </CardHeader>
 
-        <CardContent className="pt-6">
+        <CardContent className="pt-4">
           {/* Hero Wafer Map Centerpiece */}
-          <div className="border-b border-hairline pb-8">
+          <div className="border-b border-hairline pb-5">
             <WaferMapCanvas lot={lot} byWaferYield={yieldSummary.byWafer} />
           </div>
 
           {/* Lot KPI strip */}
-          <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <div className="rounded-control border border-hairline bg-raised p-3.5">
               <dt className="text-[12px] text-text-tertiary">Final Yield</dt>
               <dd className="mt-1 font-mono text-[20px] text-text-primary tabular-nums">
@@ -284,7 +288,11 @@ export function LoadedLotOverview({
                       return (
                         <tr
                           key={site.label}
-                          onClick={() => toggleSiteFilter(site.siteIndex)}
+                          onClick={() =>
+                            useSelectionStore
+                              .getState()
+                              .toggleSiteFilter(site.siteIndex)
+                          }
                           className={`cursor-pointer border-b border-hairline transition-colors duration-150 last:border-b-0 ${
                             isSiteSelected ? 'bg-accent/8' : 'hover:bg-raised'
                           }`}
@@ -295,7 +303,9 @@ export function LoadedLotOverview({
                               aria-pressed={isSiteSelected}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleSiteFilter(site.siteIndex);
+                                useSelectionStore
+                                  .getState()
+                                  .toggleSiteFilter(site.siteIndex);
                               }}
                               className="inline-flex cursor-pointer items-center gap-2 rounded-xs py-0.5 text-left font-mono text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                             >

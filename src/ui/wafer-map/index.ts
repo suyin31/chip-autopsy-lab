@@ -1,7 +1,12 @@
 export { BaseCanvas, type BaseCanvasProps } from './BaseCanvas';
 export { OverlayCanvas, type OverlayCanvasProps } from './OverlayCanvas';
 export { WaferMapCanvas, type WaferMapCanvasProps } from './WaferMapCanvas';
-export { WaferSelector, type WaferSelectorProps } from './WaferSelector';
+export {
+  WAFER_THUMB_BUTTON_PX,
+  WAFER_THUMB_CANVAS_PX,
+  WaferSelector,
+  type WaferSelectorProps,
+} from './WaferSelector';
 export {
   buildFailBinRankMap,
   type Canvas2DContextLike,
@@ -19,8 +24,10 @@ export {
   OVERLAY_HOVER_STROKE,
   type PaintWaferBaseParams,
   type PaintWaferOverlayParams,
+  type PaintWaferThumbnailParams,
   paintWaferBaseLayer,
   paintWaferOverlayLayer,
+  paintWaferThumbnail,
   type ParametricRange,
   projectBrushToCanvasRect,
   resolveCanvasPixelSize,

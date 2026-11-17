@@ -6,8 +6,10 @@ import {
 } from '@/core/model';
 import { parseStdfBytes, type StdfWriteLotSpec, writeStdfBytes } from '@/core/stdf';
 import {
+  areHiddenBinSetsEqual,
   createSelectionStore,
   deriveSelectionMasks,
+  EMPTY_HIDDEN_BINS,
   type FilterDslAst,
 } from './selection-store';
 
@@ -363,7 +365,42 @@ describe('SelectionStore and Uint8Array mask derivation (Sub-task 5.1)', () => {
 
     store.getState().toggleHiddenBin(7);
     expect(store.getState().hiddenBins.has(7)).toBe(true);
+    expect(
+      areHiddenBinSetsEqual(store.getState().hiddenBins, new Set([7])),
+    ).toBe(true);
     store.getState().toggleHiddenBin(7);
     expect(store.getState().hiddenBins.has(7)).toBe(false);
+    expect(store.getState().hiddenBins).toBe(EMPTY_HIDDEN_BINS);
+  });
+
+  it('reuses cached zero masks on idle path and short-circuits unchanged filter updates (review-5 A-1, A-2, B-4)', () => {
+    const cleanInputs = {
+      brush: null,
+      binFilter: null,
+      siteFilter: null,
+      dslFilter: null,
+      claimHighlight: null,
+    } as const;
+    const m1 = deriveSelectionMasks(lot, cleanInputs);
+    const m2 = deriveSelectionMasks(lot, cleanInputs);
+    expect(m1.overlayHighlightMask).toBe(m2.overlayHighlightMask);
+    expect(m1.claimHighlightMask).toBe(m2.claimHighlightMask);
+
+    const store = createSelectionStore();
+    store.getState().setLot(lot);
+
+    let notifications = 0;
+    const unsub = store.subscribe(() => {
+      notifications += 1;
+    });
+
+    // No-op mutations when already null/clear must not notify subscribers
+    store.getState().setBinFilter(null);
+    store.getState().setSiteFilter(null);
+    store.getState().setBrush(null);
+    store.getState().clearFilters();
+    expect(notifications).toBe(0);
+
+    unsub();
   });
 });

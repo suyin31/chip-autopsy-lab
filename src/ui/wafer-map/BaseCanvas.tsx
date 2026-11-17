@@ -2,12 +2,13 @@
 
 import * as React from 'react';
 import type { LotModel } from '@/core/model';
-import type { WaferColorMode } from '@/ui/state';
+import { areHiddenBinSetsEqual, type WaferColorMode } from '@/ui/state';
 import {
   computeWaferRenderLayout,
   paintWaferBaseLayer,
   resolveCanvasPixelSize,
   type ViewportTransform,
+  type WaferRenderLayout,
 } from './wafer-geometry';
 
 export interface BaseCanvasProps {
@@ -19,6 +20,28 @@ export interface BaseCanvasProps {
   readonly cssWidth: number;
   readonly cssHeight: number;
   readonly transform: ViewportTransform;
+  readonly dpr?: number;
+  readonly layout?: WaferRenderLayout | null;
+}
+
+function areBaseCanvasPropsEqual(
+  prev: BaseCanvasProps,
+  next: BaseCanvasProps,
+): boolean {
+  return (
+    prev.lot === next.lot &&
+    prev.waferIndex === next.waferIndex &&
+    prev.colorMode === next.colorMode &&
+    prev.activeTestNum === next.activeTestNum &&
+    prev.cssWidth === next.cssWidth &&
+    prev.cssHeight === next.cssHeight &&
+    prev.dpr === next.dpr &&
+    prev.layout === next.layout &&
+    prev.transform.scale === next.transform.scale &&
+    prev.transform.panX === next.transform.panX &&
+    prev.transform.panY === next.transform.panY &&
+    areHiddenBinSetsEqual(prev.hiddenBins, next.hiddenBins)
+  );
 }
 
 /**
@@ -26,9 +49,9 @@ export interface BaseCanvasProps {
  * `#0A0A0B` streets, Pass/Fail or bin fills (`#53655D` pass, `#FF7A1A` fail),
  * and failing-die center micro-dots.
  *
- * Strictly isolated via `React.memo` from hover, brush, site, bin-filter, and
- * claim-highlight state so interactive selection never repaints the base layer
- * (Requirements 4.3, 15.4).
+ * Strictly isolated via `React.memo` with structural `hiddenBins` equality from
+ * hover, brush, site, bin-filter, and claim-highlight state so interactive
+ * selection never repaints the base layer (Requirements 4.3, 15.4).
  */
 export const BaseCanvas = React.memo(function BaseCanvas({
   lot,
@@ -39,22 +62,35 @@ export const BaseCanvas = React.memo(function BaseCanvas({
   cssWidth,
   cssHeight,
   transform,
+  dpr,
+  layout,
 }: BaseCanvasProps): React.JSX.Element {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
+
+  const safeCssWidth = Math.max(1, Math.round(cssWidth));
+  const safeCssHeight = Math.max(1, Math.round(cssHeight));
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
     }
-    const ctx = canvas.getContext('2d');
+    if (!ctxRef.current || ctxRef.current.canvas !== canvas) {
+      ctxRef.current = canvas.getContext('2d');
+    }
+    const ctx = ctxRef.current;
     if (!ctx) {
       return;
     }
 
-    const dpr =
-      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-    const dims = resolveCanvasPixelSize(cssWidth, cssHeight, dpr);
+    const resolvedDpr =
+      dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+    const dims = resolveCanvasPixelSize(
+      safeCssWidth,
+      safeCssHeight,
+      resolvedDpr,
+    );
     if (canvas.width !== dims.pixelWidth) {
       canvas.width = dims.pixelWidth;
     }
@@ -69,18 +105,23 @@ export const BaseCanvas = React.memo(function BaseCanvas({
       return;
     }
 
-    const layout = computeWaferRenderLayout(
-      wafer,
-      dims.cssWidth,
-      dims.cssHeight,
-      lot.dies,
-      transform,
-    );
+    const resolvedLayout =
+      layout &&
+      layout.cssWidth === dims.cssWidth &&
+      layout.cssHeight === dims.cssHeight
+        ? layout
+        : computeWaferRenderLayout(
+            wafer,
+            dims.cssWidth,
+            dims.cssHeight,
+            lot.dies,
+            transform,
+          );
 
     paintWaferBaseLayer(ctx, {
       lot,
       waferIndex,
-      layout,
+      layout: resolvedLayout,
       dpr: dims.dpr,
       colorMode,
       activeTestNum,
@@ -92,9 +133,11 @@ export const BaseCanvas = React.memo(function BaseCanvas({
     colorMode,
     activeTestNum,
     hiddenBins,
-    cssWidth,
-    cssHeight,
+    safeCssWidth,
+    safeCssHeight,
     transform,
+    dpr,
+    layout,
   ]);
 
   return (
@@ -102,7 +145,8 @@ export const BaseCanvas = React.memo(function BaseCanvas({
       ref={canvasRef}
       data-testid="wafer-base-canvas"
       aria-hidden="true"
-      className="block h-full w-full select-none"
+      style={{ width: `${safeCssWidth}px`, height: `${safeCssHeight}px` }}
+      className="block select-none"
     />
   );
-});
+}, areBaseCanvasPropsEqual);

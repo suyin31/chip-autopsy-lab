@@ -43,7 +43,7 @@ export const WAFER_STREET_WIDTH_PX = 1 as const;
 export const FAIL_MICRO_DOT_MIN_PITCH_PX = 7 as const;
 
 /** Extra radial margin (in die pitches) between outermost die corner and wafer bevel rim. */
-const WAFER_RIM_CLEARANCE_UNITS = 0.72;
+const WAFER_RIM_CLEARANCE_UNITS = 0.55;
 
 /** Subtle formalin-green outer halo stroke paired with crisp `#7CF2C1` inner outline. */
 export const OVERLAY_HALO_STROKE = 'rgba(124, 242, 193, 0.26)' as const;
@@ -181,7 +181,7 @@ export function computeWaferRenderLayout(
   const safeW = Number.isFinite(cssWidth) && cssWidth > 0 ? cssWidth : 1;
   const safeH = Number.isFinite(cssHeight) && cssHeight > 0 ? cssHeight : 1;
   const minDim = Math.min(safeW, safeH);
-  const paddingCss = Math.max(16, Math.round(minDim * 0.065));
+  const paddingCss = Math.max(6, Math.round(minDim * 0.02));
   const baseRadiusPx = Math.max(12, minDim / 2 - paddingCss);
 
   const clampedScale =
@@ -817,5 +817,107 @@ export function paintWaferOverlayLayer(
       hRect.width + 1,
       hRect.height + 1,
     );
+  }
+}
+
+export interface PaintWaferThumbnailParams {
+  readonly wafer: WaferSummaryMeta;
+  readonly dies: ColumnarDies;
+  readonly cssSize: number;
+  readonly dpr: number;
+}
+
+/**
+ * Draws a compact Pass/Fail wafer thumbnail (`~36-44 px` CSS) for the horizontal
+ * lot strip using locked colour tokens (`#53655D` pass, `#FF7A1A` fail, `#0A0A0B`
+ * substrate) and `WCR` orientation. Failing dies paint in a dedicated second pass
+ * so repeating spatial signatures (edge rings, scratches, site checkerboards) remain
+ * immediately scannable across 25+ wafers.
+ */
+export function paintWaferThumbnail(
+  ctx: Canvas2DContextLike,
+  params: PaintWaferThumbnailParams,
+): void {
+  const { wafer, dies, cssSize, dpr } = params;
+  const safeSize = Number.isFinite(cssSize) && cssSize > 0 ? cssSize : 1;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, safeSize, safeSize);
+
+  const center = safeSize / 2;
+  const radiusPx = Math.max(4, center - 1.25);
+
+  let notchAngleRad = Math.PI / 2;
+  if (wafer.geometry.wfFlat === 'U') {
+    notchAngleRad = -Math.PI / 2;
+  } else if (wafer.geometry.wfFlat === 'L') {
+    notchAngleRad = Math.PI;
+  } else if (wafer.geometry.wfFlat === 'R') {
+    notchAngleRad = 0;
+  }
+  const depthPx = Math.max(1.8, Math.min(3.2, radiusPx * 0.11));
+  const halfAngleRad = 0.12;
+  const apexRadius = Math.max(0, radiusPx - depthPx);
+
+  ctx.beginPath();
+  ctx.arc(
+    center,
+    center,
+    radiusPx,
+    notchAngleRad + halfAngleRad,
+    notchAngleRad - halfAngleRad + Math.PI * 2,
+    false,
+  );
+  ctx.lineTo(
+    center + Math.cos(notchAngleRad) * apexRadius,
+    center + Math.sin(notchAngleRad) * apexRadius,
+  );
+  ctx.closePath();
+
+  ctx.fillStyle = COLOR_TOKENS.waferStreet;
+  ctx.fill();
+  ctx.lineWidth = 1;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = WAFER_OUTLINE_STROKE;
+  ctx.stroke();
+
+  const waferRadiusUnits = computeWaferRadiusUnits(wafer, dies);
+  const diePitchPx = radiusPx / waferRadiusUnits;
+  const gridCenterX = (wafer.minX + wafer.maxX) / 2;
+  const gridCenterY = (wafer.minY + wafer.maxY) / 2;
+  const dirX: 1 | -1 = wafer.geometry.posX === 'L' ? -1 : 1;
+  const dirY: 1 | -1 = wafer.geometry.posY === 'D' ? 1 : -1;
+
+  const xArr = dies.x;
+  const yArr = dies.y;
+  const validArr = dies.hasValidCoords;
+  const passArr = dies.finalPass;
+  const start = wafer.dieStartIndex;
+  const end = wafer.dieEndIndex;
+
+  // Pass 1: Passing dies (#53655D)
+  const passSize = Math.max(0.95, diePitchPx * 0.94);
+  const passHalf = passSize / 2;
+  ctx.fillStyle = COLOR_TOKENS.passDie;
+  for (let i = start; i < end; i += 1) {
+    if (validArr[i] === 0 || passArr[i] === 0) {
+      continue;
+    }
+    const cx = center + (xArr[i] - gridCenterX) * dirX * diePitchPx;
+    const cy = center + (yArr[i] - gridCenterY) * dirY * diePitchPx;
+    ctx.fillRect(cx - passHalf, cy - passHalf, passSize, passSize);
+  }
+
+  // Pass 2: Failing dies (#FF7A1A) painted over pass cells for sub-2 px pattern legibility
+  const failSize = Math.max(1.15, diePitchPx * 1.04);
+  const failHalf = failSize / 2;
+  ctx.fillStyle = COLOR_TOKENS.failure;
+  for (let i = start; i < end; i += 1) {
+    if (validArr[i] === 0 || passArr[i] !== 0) {
+      continue;
+    }
+    const cx = center + (xArr[i] - gridCenterX) * dirX * diePitchPx;
+    const cy = center + (yArr[i] - gridCenterY) * dirY * diePitchPx;
+    ctx.fillRect(cx - failHalf, cy - failHalf, failSize, failSize);
   }
 }

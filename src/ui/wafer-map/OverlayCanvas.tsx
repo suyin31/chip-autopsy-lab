@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import type { LotModel } from '@/core/model';
 import { useSelectionStore } from '@/ui/state';
 import {
@@ -8,6 +9,7 @@ import {
   paintWaferOverlayLayer,
   resolveCanvasPixelSize,
   type ViewportTransform,
+  type WaferRenderLayout,
 } from './wafer-geometry';
 
 export interface OverlayCanvasProps {
@@ -16,6 +18,8 @@ export interface OverlayCanvasProps {
   readonly cssWidth: number;
   readonly cssHeight: number;
   readonly transform: ViewportTransform;
+  readonly dpr?: number;
+  readonly layout?: WaferRenderLayout | null;
 }
 
 const EMPTY_MASK = new Uint8Array(0);
@@ -23,9 +27,10 @@ const EMPTY_MASK = new Uint8Array(0);
 /**
  * DPR-scaled Canvas2D overlay layer stacked above `BaseCanvas` (`pointer-events: none`).
  *
- * Subscribes directly to `useSelectionStore` highlight, brush, and hover slices so
- * `#7CF2C1` outlines/glows and hover reticles repaint in `< 1 ms` without ever
- * re-rendering or repainting `BaseCanvas` (Requirements 4.3, 10.4, 15.4).
+ * Subscribes via a single `useShallow` selector to `useSelectionStore` highlight,
+ * brush, and hover slices so `#7CF2C1` outlines/glows and hover reticles repaint
+ * in `< 1 ms` without ever re-rendering or repainting `BaseCanvas`
+ * (Requirements 4.3, 10.4, 15.4).
  */
 export const OverlayCanvas = React.memo(function OverlayCanvas({
   lot,
@@ -33,14 +38,27 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
   cssWidth,
   cssHeight,
   transform,
+  dpr,
+  layout,
 }: OverlayCanvasProps): React.JSX.Element {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
 
-  const storeLot = useSelectionStore((s) => s.lot);
-  const rawOverlayMask = useSelectionStore((s) => s.overlayHighlightMask);
-  const rawOverlayCount = useSelectionStore((s) => s.overlayHighlightCount);
-  const rawHoveredDieIndex = useSelectionStore((s) => s.hoveredDieIndex);
-  const rawBrush = useSelectionStore((s) => s.brush);
+  const {
+    storeLot,
+    rawOverlayMask,
+    rawOverlayCount,
+    rawHoveredDieIndex,
+    rawBrush,
+  } = useSelectionStore(
+    useShallow((s) => ({
+      storeLot: s.lot,
+      rawOverlayMask: s.overlayHighlightMask,
+      rawOverlayCount: s.overlayHighlightCount,
+      rawHoveredDieIndex: s.hoveredDieIndex,
+      rawBrush: s.brush,
+    })),
+  );
 
   const isSynced = storeLot === lot;
   const overlayHighlightMask = isSynced ? rawOverlayMask : EMPTY_MASK;
@@ -48,19 +66,29 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
   const hoveredDieIndex = isSynced ? rawHoveredDieIndex : null;
   const brush = isSynced ? rawBrush : null;
 
+  const safeCssWidth = Math.max(1, Math.round(cssWidth));
+  const safeCssHeight = Math.max(1, Math.round(cssHeight));
+
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
     }
-    const ctx = canvas.getContext('2d');
+    if (!ctxRef.current || ctxRef.current.canvas !== canvas) {
+      ctxRef.current = canvas.getContext('2d');
+    }
+    const ctx = ctxRef.current;
     if (!ctx) {
       return;
     }
 
-    const dpr =
-      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-    const dims = resolveCanvasPixelSize(cssWidth, cssHeight, dpr);
+    const resolvedDpr =
+      dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+    const dims = resolveCanvasPixelSize(
+      safeCssWidth,
+      safeCssHeight,
+      resolvedDpr,
+    );
     if (canvas.width !== dims.pixelWidth) {
       canvas.width = dims.pixelWidth;
     }
@@ -75,18 +103,23 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
       return;
     }
 
-    const layout = computeWaferRenderLayout(
-      wafer,
-      dims.cssWidth,
-      dims.cssHeight,
-      lot.dies,
-      transform,
-    );
+    const resolvedLayout =
+      layout &&
+      layout.cssWidth === dims.cssWidth &&
+      layout.cssHeight === dims.cssHeight
+        ? layout
+        : computeWaferRenderLayout(
+            wafer,
+            dims.cssWidth,
+            dims.cssHeight,
+            lot.dies,
+            transform,
+          );
 
     paintWaferOverlayLayer(ctx, {
       lot,
       waferIndex,
-      layout,
+      layout: resolvedLayout,
       dpr: dims.dpr,
       overlayHighlightMask,
       overlayHighlightCount,
@@ -96,9 +129,11 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
   }, [
     lot,
     waferIndex,
-    cssWidth,
-    cssHeight,
+    safeCssWidth,
+    safeCssHeight,
     transform,
+    dpr,
+    layout,
     overlayHighlightMask,
     overlayHighlightCount,
     hoveredDieIndex,
@@ -110,7 +145,8 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
       ref={canvasRef}
       data-testid="wafer-overlay-canvas"
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 block h-full w-full select-none"
+      style={{ width: `${safeCssWidth}px`, height: `${safeCssHeight}px` }}
+      className="pointer-events-none absolute top-0 left-0 block select-none"
     />
   );
 });

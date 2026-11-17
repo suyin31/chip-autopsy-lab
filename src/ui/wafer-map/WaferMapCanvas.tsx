@@ -1,11 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import type { YieldMetrics } from '@/core/analytics';
 import { type LotModel, packWaferCoord } from '@/core/model';
 import { formatGroupedInt, formatYieldPct } from '@/ui/format';
 import { Badge } from '@/ui/primitives';
-import { useSelectionStore } from '@/ui/state';
+import { EMPTY_HIDDEN_BINS, useSelectionStore } from '@/ui/state';
 import { BaseCanvas } from './BaseCanvas';
 import { OverlayCanvas } from './OverlayCanvas';
 import { WaferSelector } from './WaferSelector';
@@ -20,7 +21,47 @@ export interface WaferMapCanvasProps {
   readonly byWaferYield: readonly YieldMetrics[];
 }
 
-const DEFAULT_STAGE_SIZE_PX = 500;
+const DEFAULT_STAGE_SIZE_PX = 520;
+const MIN_STAGE_SIZE_PX = 240;
+const MAX_STAGE_SIZE_PX = 560;
+
+interface StageDimensions {
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * Subscribes to `window.devicePixelRatio` changes (e.g. dragging the window between
+ * Retina and standard displays) while initializing at `1` for SSR hydration parity.
+ */
+function useDevicePixelRatio(): number {
+  const [dpr, setDpr] = React.useState<number>(1);
+
+  React.useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
+      return;
+    }
+    let cleanup: (() => void) | undefined;
+    const subscribeDpr = (): void => {
+      const current = window.devicePixelRatio || 1;
+      setDpr(current);
+      const mql = window.matchMedia(`(resolution: ${current}dppx)`);
+      const handleChange = (): void => {
+        cleanup?.();
+        subscribeDpr();
+      };
+      mql.addEventListener('change', handleChange);
+      cleanup = () => mql.removeEventListener('change', handleChange);
+    };
+    subscribeDpr();
+    return () => cleanup?.();
+  }, []);
+
+  return dpr;
+}
 
 interface WaferDieReadoutProps {
   readonly lot: LotModel;
@@ -35,8 +76,12 @@ const WaferDieReadout = React.memo(function WaferDieReadout({
   lot,
   waferIndex,
 }: WaferDieReadoutProps): React.JSX.Element {
-  const storeLot = useSelectionStore((s) => s.lot);
-  const hoveredDieIndex = useSelectionStore((s) => s.hoveredDieIndex);
+  const { storeLot, hoveredDieIndex } = useSelectionStore(
+    useShallow((s) => ({
+      storeLot: s.lot,
+      hoveredDieIndex: s.hoveredDieIndex,
+    })),
+  );
 
   const wafer = lot.wafers[waferIndex];
   const validHover =
@@ -52,14 +97,18 @@ const WaferDieReadout = React.memo(function WaferDieReadout({
     const flatCode = wafer?.geometry.wfFlat ?? 'D';
     const notchLabel =
       flatCode === 'U'
-        ? 'Notch Up'
+        ? 'Notch 12 o’clock'
         : flatCode === 'L'
-          ? 'Notch Left'
+          ? 'Notch 9 o’clock'
           : flatCode === 'R'
-            ? 'Notch Right'
-            : 'Notch Down';
+            ? 'Notch 3 o’clock'
+            : 'Notch 6 o’clock';
     return (
-      <p className="min-h-5 text-center font-mono text-[12px] text-text-tertiary tabular-nums">
+      <p
+        role="status"
+        aria-live="polite"
+        className="min-h-5 text-center font-mono text-[12px] text-text-tertiary tabular-nums"
+      >
         {notchLabel} · POS_X {wafer?.geometry.posX ?? 'R'} · POS_Y{' '}
         {wafer?.geometry.posY ?? 'U'} · Hover or arrow-step dies to inspect
         coordinates, site, and bin
@@ -77,7 +126,11 @@ const WaferDieReadout = React.memo(function WaferDieReadout({
   const site = sites[dies.siteIndex[validHover]];
 
   return (
-    <p className="min-h-5 text-center font-mono text-[12px] text-text-secondary tabular-nums">
+    <p
+      role="status"
+      aria-live="polite"
+      className="min-h-5 text-center font-mono text-[12px] text-text-secondary tabular-nums"
+    >
       <span className="text-text-primary">{dieIds[validHover]}</span>
       {' · '}
       <span>
@@ -120,15 +173,23 @@ const WaferHighlightBanner = React.memo(function WaferHighlightBanner({
   lot,
   waferIndex,
 }: WaferHighlightBannerProps): React.JSX.Element | null {
-  const storeLot = useSelectionStore((s) => s.lot);
-  const siteFilter = useSelectionStore((s) => s.siteFilter);
-  const binFilter = useSelectionStore((s) => s.binFilter);
-  const claimHighlight = useSelectionStore((s) => s.claimHighlight);
-  const overlayHighlightMask = useSelectionStore((s) => s.overlayHighlightMask);
-  const overlayHighlightCount = useSelectionStore(
-    (s) => s.overlayHighlightCount,
+  const {
+    storeLot,
+    siteFilter,
+    binFilter,
+    claimHighlight,
+    overlayHighlightMask,
+    overlayHighlightCount,
+  } = useSelectionStore(
+    useShallow((s) => ({
+      storeLot: s.lot,
+      siteFilter: s.siteFilter,
+      binFilter: s.binFilter,
+      claimHighlight: s.claimHighlight,
+      overlayHighlightMask: s.overlayHighlightMask,
+      overlayHighlightCount: s.overlayHighlightCount,
+    })),
   );
-  const clearFilters = useSelectionStore((s) => s.clearFilters);
 
   if (storeLot !== lot || overlayHighlightCount === 0) {
     return null;
@@ -151,7 +212,7 @@ const WaferHighlightBanner = React.memo(function WaferHighlightBanner({
   } else if (binFilter !== null) {
     scopeLabel = `${binFilter.mode} ${binFilter.code}`;
   } else if (claimHighlight !== null) {
-    scopeLabel = `Claim evidence`;
+    scopeLabel = 'Claim evidence';
   }
 
   return (
@@ -171,7 +232,7 @@ const WaferHighlightBanner = React.memo(function WaferHighlightBanner({
       </span>
       <button
         type="button"
-        onClick={clearFilters}
+        onClick={() => useSelectionStore.getState().clearFilters()}
         aria-label="Clear active wafer highlight"
         className="ml-1 cursor-pointer rounded-xs px-1.5 py-0.5 text-[12px] text-accent hover:bg-accent/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
@@ -182,9 +243,9 @@ const WaferHighlightBanner = React.memo(function WaferHighlightBanner({
 });
 
 /**
- * Hero two-layer Canvas2D wafer map stage with generous Apple-like whitespace,
+ * Hero two-layer Canvas2D wafer map stage with tightened vertical framing,
  * Pass/Fail non-color legend, O(1) hover readout, keyboard die stepping, and
- * 25-wafer keyboard-accessible selector.
+ * 25-wafer horizontal thumbnail lot strip.
  *
  * Validates: Requirements 4.1, 4.2, 4.3, 4.4, 14.2, 14.3, 14.4, 15.4
  */
@@ -193,16 +254,27 @@ export function WaferMapCanvas({
   byWaferYield,
 }: WaferMapCanvasProps): React.JSX.Element {
   const stageContainerRef = React.useRef<HTMLDivElement>(null);
-  const [stageSizePx, setStageSizePx] = React.useState<number>(
-    DEFAULT_STAGE_SIZE_PX,
-  );
+  const [stageDims, setStageDims] = React.useState<StageDimensions>({
+    width: DEFAULT_STAGE_SIZE_PX,
+    height: DEFAULT_STAGE_SIZE_PX,
+  });
+  const dpr = useDevicePixelRatio();
 
-  const storeLot = useSelectionStore((s) => s.lot);
-  const rawWaferIndex = useSelectionStore((s) => s.activeWaferIndex);
-  const rawColorMode = useSelectionStore((s) => s.colorMode);
-  const rawActiveTestNum = useSelectionStore((s) => s.activeTestNum);
-  const rawHiddenBins = useSelectionStore((s) => s.hiddenBins);
-  const setActiveWaferIndex = useSelectionStore((s) => s.setActiveWaferIndex);
+  const {
+    storeLot,
+    rawWaferIndex,
+    rawColorMode,
+    rawActiveTestNum,
+    rawHiddenBins,
+  } = useSelectionStore(
+    useShallow((s) => ({
+      storeLot: s.lot,
+      rawWaferIndex: s.activeWaferIndex,
+      rawColorMode: s.colorMode,
+      rawActiveTestNum: s.activeTestNum,
+      rawHiddenBins: s.hiddenBins,
+    })),
+  );
 
   const isSynced = storeLot === lot;
   const safeWaferIndex =
@@ -214,22 +286,35 @@ export function WaferMapCanvas({
         );
   const colorMode = isSynced ? rawColorMode : 'pass-fail';
   const activeTestNum = isSynced ? rawActiveTestNum : null;
-  const hiddenBins = isSynced ? rawHiddenBins : new Set<number>();
+  const hiddenBins = isSynced ? rawHiddenBins : EMPTY_HIDDEN_BINS;
+
+  const handleSelectWafer = React.useCallback((waferIndex: number): void => {
+    useSelectionStore.getState().setActiveWaferIndex(waferIndex);
+  }, []);
 
   React.useEffect(() => {
     const el = stageContainerRef.current;
     if (!el || typeof ResizeObserver === 'undefined') {
       return;
     }
-    const updateSize = (width: number): void => {
-      const next = Math.max(240, Math.min(600, Math.round(width)));
-      setStageSizePx((prev) => (prev !== next ? next : prev));
+    const clampDim = (raw: number): number =>
+      Math.max(MIN_STAGE_SIZE_PX, Math.min(MAX_STAGE_SIZE_PX, Math.round(raw)));
+
+    const updateDims = (rawWidth: number, rawHeight: number): void => {
+      const nextWidth = clampDim(rawWidth);
+      const nextHeight = clampDim(rawHeight > 0 ? rawHeight : rawWidth);
+      setStageDims((prev) =>
+        prev.width !== nextWidth || prev.height !== nextHeight
+          ? { width: nextWidth, height: nextHeight }
+          : prev,
+      );
     };
-    updateSize(el.getBoundingClientRect().width);
+    const rect = el.getBoundingClientRect();
+    updateDims(rect.width, rect.height);
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry) {
-        updateSize(entry.contentRect.width);
+        updateDims(entry.contentRect.width, entry.contentRect.height);
       }
     });
     observer.observe(el);
@@ -239,34 +324,23 @@ export function WaferMapCanvas({
   const wafer = lot.wafers[safeWaferIndex];
   const waferYield = byWaferYield[safeWaferIndex];
 
-  const layoutRef = React.useRef(
-    wafer
-      ? computeWaferRenderLayout(
-          wafer,
-          stageSizePx,
-          stageSizePx,
-          lot.dies,
-          DEFAULT_VIEWPORT_TRANSFORM,
-        )
-      : null,
+  const layout = React.useMemo(
+    () =>
+      wafer
+        ? computeWaferRenderLayout(
+            wafer,
+            stageDims.width,
+            stageDims.height,
+            lot.dies,
+            DEFAULT_VIEWPORT_TRANSFORM,
+          )
+        : null,
+    [wafer, stageDims.width, stageDims.height, lot.dies],
   );
-
-  React.useEffect(() => {
-    layoutRef.current = wafer
-      ? computeWaferRenderLayout(
-          wafer,
-          stageSizePx,
-          stageSizePx,
-          lot.dies,
-          DEFAULT_VIEWPORT_TRANSFORM,
-        )
-      : null;
-  }, [wafer, stageSizePx, lot.dies]);
 
   const handlePointerMove = React.useCallback(
     (event: React.PointerEvent<HTMLDivElement>): void => {
-      const currentLayout = layoutRef.current;
-      if (!currentLayout) {
+      if (!layout) {
         return;
       }
       const bounds = event.currentTarget.getBoundingClientRect();
@@ -275,12 +349,12 @@ export function WaferMapCanvas({
       const hitIndex = hitTestWaferDie(
         pointerX,
         pointerY,
-        currentLayout,
+        layout,
         lot.waferCoordIndex[safeWaferIndex],
       );
       useSelectionStore.getState().setHoveredDieIndex(hitIndex);
     },
-    [lot.waferCoordIndex, safeWaferIndex],
+    [layout, lot.waferCoordIndex, safeWaferIndex],
   );
 
   const handlePointerLeave = React.useCallback((): void => {
@@ -369,7 +443,7 @@ export function WaferMapCanvas({
   return (
     <section
       aria-label="Wafer Map Visual Centerpiece"
-      className="flex flex-col items-center gap-6 py-4 sm:py-6"
+      className="flex flex-col items-center gap-3"
     >
       {/* Top wafer metadata & Pass/Fail non-color legend */}
       <div className="flex w-full flex-wrap items-center justify-between gap-3">
@@ -410,17 +484,18 @@ export function WaferMapCanvas({
         </div>
       </div>
 
-      {/* Hero Wafer Stage — large, centered, generous dark whitespace */}
-      <div className="flex w-full justify-center py-2 sm:py-4">
+      {/* Hero Wafer Stage — tightened vertical framing so the wafer fills the hero area */}
+      <div className="flex w-full justify-center">
         <div
           ref={stageContainerRef}
           role="group"
+          aria-roledescription="interactive wafer map"
           tabIndex={0}
           aria-label={`Interactive wafer map for Wafer ${wafer?.waferId ?? 'W01'}, ${formatGroupedInt(waferYield?.testedDies ?? 0)} tested dies, ${formatGroupedInt(waferYield?.finalFailDies ?? 0)} failing dies`}
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
           onKeyDown={handleStageKeyDown}
-          className="relative aspect-square w-full max-w-[500px] rounded-panel focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          className="relative aspect-square w-full max-w-[520px] overflow-hidden rounded-panel focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
         >
           <BaseCanvas
             lot={lot}
@@ -428,16 +503,20 @@ export function WaferMapCanvas({
             colorMode={colorMode}
             activeTestNum={activeTestNum}
             hiddenBins={hiddenBins}
-            cssWidth={stageSizePx}
-            cssHeight={stageSizePx}
+            cssWidth={stageDims.width}
+            cssHeight={stageDims.height}
             transform={DEFAULT_VIEWPORT_TRANSFORM}
+            dpr={dpr}
+            layout={layout}
           />
           <OverlayCanvas
             lot={lot}
             waferIndex={safeWaferIndex}
-            cssWidth={stageSizePx}
-            cssHeight={stageSizePx}
+            cssWidth={stageDims.width}
+            cssHeight={stageDims.height}
             transform={DEFAULT_VIEWPORT_TRANSFORM}
+            dpr={dpr}
+            layout={layout}
           />
         </div>
       </div>
@@ -454,12 +533,14 @@ export function WaferMapCanvas({
       {/* Non-occluding hover/keyboard coordinate readout */}
       <WaferDieReadout lot={lot} waferIndex={safeWaferIndex} />
 
-      {/* 25-wafer keyboard-operable selector */}
+      {/* 25-wafer horizontal thumbnail lot strip */}
       <WaferSelector
         wafers={lot.wafers}
+        dies={lot.dies}
         byWaferYield={byWaferYield}
         activeWaferIndex={safeWaferIndex}
-        onSelectWafer={setActiveWaferIndex}
+        dpr={dpr}
+        onSelectWafer={handleSelectWafer}
       />
     </section>
   );
