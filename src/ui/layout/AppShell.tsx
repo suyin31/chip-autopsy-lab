@@ -303,7 +303,7 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
         {liveAnnouncement}
       </div>
 
-      <main className="mx-auto flex min-h-screen max-w-6xl flex-col justify-between px-6 py-8">
+      <main className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-6">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline pb-4">
           <div className="flex items-baseline gap-3">
             <h1 className="text-[20px] leading-tight text-text-primary">
@@ -318,7 +318,7 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
           </span>
         </header>
 
-        <section aria-label="Autopsy Report Workspace" className="my-auto py-8">
+        <section aria-label="Autopsy Report Workspace" className="flex-1 py-6">
           {workspace.status === 'empty' ? (
             <EmptyStateCard
               cause="first-run"
@@ -372,9 +372,8 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
                   {workspace.fileName
                     ? `${workspace.fileName} (${formatByteSize(workspace.bytesObserved)} observed). `
                     : `Observed ${formatByteSize(workspace.bytesObserved)}. `}
-                  Bins-Only Mode skips parametric PTR, MPR, and FTR records to
-                  bound browser memory while preserving full Wafer, Bin Pareto,
-                  Yield, Stacked Heatmap, and Pattern Classification analysis.
+                  Bins-Only Mode skips PTR, MPR, and FTR records to cap memory
+                  while preserving wafer, bin, yield, and pattern analysis.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center gap-3 pt-6">
@@ -399,7 +398,13 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
                 <Button
                   variant="ghost"
                   size="lg"
-                  onClick={() => setWorkspace({ status: 'empty' })}
+                  onClick={() => {
+                    activeRequestIdRef.current += 1;
+                    if (clientRef.current !== null) {
+                      void clientRef.current.cancelLargeFile();
+                    }
+                    setWorkspace({ status: 'empty' });
+                  }}
                 >
                   Cancel
                 </Button>
@@ -419,7 +424,7 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
           ) : null}
         </section>
 
-        <footer className="flex items-center justify-between border-t border-hairline pt-4 text-[12px] text-text-tertiary">
+        <footer className="mt-auto flex items-center justify-between border-t border-hairline pt-4 text-[12px] text-text-tertiary">
           <span>Zero server STDF uploads</span>
           <span className="font-mono tabular-nums">
             {ingestedBytes === 0

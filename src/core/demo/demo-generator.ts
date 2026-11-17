@@ -186,7 +186,7 @@ const DEMO_PRESETS: readonly DemoPresetMeta[] = [
   {
     id: 'edge-ring-etch',
     title: 'Edge-Ring Plasma Etch Lot',
-    subtitle: '25 wafers · RIE focus-ring erosion spiking peripheral IDDQ leakage (SBIN 7)',
+    subtitle: '25 wafers · RIE focus-ring erosion driving outer-ring IDDQ leakage (SBIN 7)',
     defaultSeed: 0x20261201,
     waferCount: DEMO_WAFER_COUNT,
     expectedVerdictKind: 'Edge-Ring',
@@ -194,15 +194,15 @@ const DEMO_PRESETS: readonly DemoPresetMeta[] = [
   {
     id: 'handling-scratch',
     title: 'Robotic Handling Scratch Lot',
-    subtitle: '25 wafers · Transfer-blade metal short chord across W05–W22 (SBIN 9)',
+    subtitle: '25 wafers · Transfer-blade metal short chord across W05-W22 (SBIN 9)',
     defaultSeed: 0x20261202,
     waferCount: DEMO_WAFER_COUNT,
     expectedVerdictKind: 'Scratch',
   },
   {
     id: 'site2-probe-contact',
-    title: 'Site 1:2 Probe Contact Lot',
-    subtitle: '25 wafers · Oxidized Site 2 needles causing contact opens & retest recovery (SBIN 5)',
+    title: 'Site 2 Probe Contact Lot',
+    subtitle: '25 wafers · Oxidized Site 2 needles causing contact opens and retest recovery (SBIN 5)',
     defaultSeed: 0x20261203,
     waferCount: DEMO_WAFER_COUNT,
     expectedVerdictKind: 'Site-Anomaly',
@@ -765,9 +765,34 @@ export function generateDemoLot(
 
     const touchdowns: StdfWriteTouchdownSpec[] = [];
     const retestQueue: DiePlan[] = [];
-    let waferPrrCount = 0;
+    let waferPartCount = 0;
     let waferRetestCount = 0;
     let waferGoodCount = 0;
+
+    // Tally unique-die final-state outcomes once per die (last PRR outcome) for HBR/SBR/PCR/WRR
+    for (let d = 0; d < plans.length; d += 1) {
+      const plan = plans[d]!;
+      const finalOutcome = plan.retestOutcome ?? plan.firstOutcome;
+      const siteIdx = plan.die.siteNum - 1;
+      waferPartCount += 1;
+      sitePartCnt[siteIdx]! += 1;
+      hbinCounts.set(
+        finalOutcome.hardBin,
+        (hbinCounts.get(finalOutcome.hardBin) ?? 0) + 1,
+      );
+      sbinCounts.set(
+        finalOutcome.softBin,
+        (sbinCounts.get(finalOutcome.softBin) ?? 0) + 1,
+      );
+      if (finalOutcome.mode === 'PASS') {
+        waferGoodCount += 1;
+        siteGoodCnt[siteIdx]! += 1;
+      }
+      if (plan.retestOutcome !== null) {
+        waferRetestCount += 1;
+        siteRtstCnt[siteIdx]! += 1;
+      }
+    }
 
     // 1. Primary 2x2 serpentine multi-site wafer probe pass
     for (let g = 0; g < layout.touchdownGroups.length; g += 1) {
@@ -800,9 +825,6 @@ export function generateDemoLot(
           ptrs,
         };
 
-        waferPrrCount += 1;
-        sitePartCnt[die.siteNum - 1]! += 1;
-
         const dieId: DieId = `${waferId}:${die.x},${die.y}`;
         if (plan.injectedFirstPassFail) {
           injectedFirstPassFailDieIds.push(dieId);
@@ -816,20 +838,6 @@ export function generateDemoLot(
           retestedDieIds.push(dieId);
           if (plan.retestOutcome.mode === 'PASS') {
             recoveredRetestDieIds.push(dieId);
-          }
-        } else {
-          // Final state resolved on first pass
-          hbinCounts.set(
-            firstOutcome.hardBin,
-            (hbinCounts.get(firstOutcome.hardBin) ?? 0) + 1,
-          );
-          sbinCounts.set(
-            firstOutcome.softBin,
-            (sbinCounts.get(firstOutcome.softBin) ?? 0) + 1,
-          );
-          if (firstPassed) {
-            waferGoodCount += 1;
-            siteGoodCnt[die.siteNum - 1]! += 1;
           }
         }
       }
@@ -875,24 +883,6 @@ export function generateDemoLot(
           omitOptionalAfterCoords: true,
           ptrs,
         });
-
-        waferPrrCount += 1;
-        waferRetestCount += 1;
-        sitePartCnt[candidate.die.siteNum - 1]! += 1;
-        siteRtstCnt[candidate.die.siteNum - 1]! += 1;
-
-        hbinCounts.set(
-          retestOutcome.hardBin,
-          (hbinCounts.get(retestOutcome.hardBin) ?? 0) + 1,
-        );
-        sbinCounts.set(
-          retestOutcome.softBin,
-          (sbinCounts.get(retestOutcome.softBin) ?? 0) + 1,
-        );
-        if (retestPassed) {
-          waferGoodCount += 1;
-          siteGoodCnt[candidate.die.siteNum - 1]! += 1;
-        }
       }
 
       touchdowns.push(batch);
@@ -911,7 +901,7 @@ export function generateDemoLot(
         headNum: DEMO_HEAD_NUM,
         siteGrp: 1,
         finishT: waferStartT + 150,
-        partCnt: waferPrrCount,
+        partCnt: waferPartCount,
         rtstCnt: waferRetestCount,
         abrtCnt: 0,
         goodCnt: waferGoodCount,

@@ -68,11 +68,28 @@ describe('Mulberry32 PRNG and Box-Muller sampler (src/core/demo/prng.ts)', () =>
     const arr2 = [1, 2, 3, 4, 5, 6, 7, 8];
     expect(a.shuffle(arr1)).toEqual(b.shuffle(arr2));
 
+    // Fork from identical parent state + same salt reproduces identical stream
     const childA1 = a.fork(1);
-    const childA2 = createPrng(12345);
-    // Advance childA2's parent identically would match; verify same mixSeed salt differs across salts
+    const childB1 = b.fork(1);
+    // Fork from subsequent state with different salts produces independent streams
+    const childA2 = a.fork(2);
+    const childB3 = b.fork(3);
     expect(mixSeed(99, 1)).not.toBe(mixSeed(99, 2));
-    expect(childA1.nextUint32()).toBeGreaterThanOrEqual(0);
-    expect(childA2.nextUint32()).toBeGreaterThanOrEqual(0);
+
+    const streamA1: number[] = [];
+    const streamB1: number[] = [];
+    const streamA2: number[] = [];
+    const streamB3: number[] = [];
+    const parentRemainder: number[] = [];
+    for (let i = 0; i < 16; i += 1) {
+      streamA1.push(childA1.nextUint32());
+      streamB1.push(childB1.nextUint32());
+      streamA2.push(childA2.nextUint32());
+      streamB3.push(childB3.nextUint32());
+      parentRemainder.push(a.nextUint32());
+    }
+    expect(streamA1).toEqual(streamB1);
+    expect(streamA2).not.toEqual(streamB3);
+    expect(streamA1).not.toEqual(parentRemainder);
   });
 });

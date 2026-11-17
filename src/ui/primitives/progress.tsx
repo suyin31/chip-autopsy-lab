@@ -5,6 +5,8 @@ export interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Percentage in `[0, 100]`, or `null` when stream byte length is indeterminate (e.g. gzip). */
   readonly value: number | null;
   readonly label: string;
+  /** Accessible status text announced for determinate or indeterminate progress (Req 14.4). */
+  readonly valueText?: string;
 }
 
 /**
@@ -14,6 +16,7 @@ export interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Progress({
   value,
   label,
+  valueText,
   className,
   ...props
 }: ProgressProps): React.JSX.Element {
@@ -28,6 +31,7 @@ export function Progress({
       aria-valuemin={0}
       aria-valuemax={100}
       {...(clamped !== null ? { 'aria-valuenow': Math.round(clamped) } : {})}
+      {...(valueText !== undefined ? { 'aria-valuetext': valueText } : {})}
       className={cn(
         'relative h-2 w-full overflow-hidden rounded-control border border-hairline bg-raised shadow-none',
         className,

@@ -96,7 +96,10 @@ export function LoadedLotOverview({
           <div className="mt-2 flex flex-wrap items-baseline justify-between gap-4">
             <div>
               <CardTitle className="text-[28px] leading-snug">
-                Lot {lot.lotId} · Final Yield {formatYieldPct(overall.finalYield)}
+                Lot {lot.lotId} · Final Yield{' '}
+                <span className="tabular-nums">
+                  {formatYieldPct(overall.finalYield)}
+                </span>
               </CardTitle>
               <CardDescription className="mt-1 font-mono text-[12px] text-text-secondary">
                 Part {lot.partTyp || 'N/A'} · Job {lot.jobNam || 'N/A'} ·{' '}
@@ -106,14 +109,22 @@ export function LoadedLotOverview({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <label htmlFor="cal-loaded-file-picker" className="sr-only">
+                Choose another STDF V4 file (.stdf, .std, .stdf.gz, .gz)
+              </label>
               <input
+                id="cal-loaded-file-picker"
                 ref={fileInputRef}
+                tabIndex={-1}
                 type="file"
                 accept=".stdf,.std,.gz,application/gzip,application/octet-stream"
                 onChange={handleFileChange}
                 className="sr-only"
                 aria-label="Choose another STDF V4 file"
               />
+              <span id="cal-loaded-file-picker-desc" className="sr-only">
+                Opens local STDF V4 file picker (.stdf, .std, .stdf.gz, .gz)
+              </span>
               <label className="sr-only" htmlFor="cal-preset-switcher">
                 Select synthetic demo lot preset
               </label>
@@ -143,6 +154,8 @@ export function LoadedLotOverview({
               <Button
                 variant="ghost"
                 size="md"
+                aria-controls="cal-loaded-file-picker"
+                aria-describedby="cal-loaded-file-picker-desc"
                 onClick={() => fileInputRef.current?.click()}
               >
                 Choose STDF file
@@ -268,7 +281,7 @@ export function LoadedLotOverview({
                             {anomaly ? (
                               <Badge variant="failure">
                                 z = {anomaly.twoProportionZ.toFixed(1)} (
-                                {anomaly.yieldDeltaPp.toFixed(1)} pp)
+                                {anomaly.yieldDeltaPp.toFixed(1)} pp yield drop)
                               </Badge>
                             ) : (
                               <span className="font-mono text-[12px] text-text-tertiary">

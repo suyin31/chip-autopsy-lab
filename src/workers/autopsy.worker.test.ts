@@ -257,8 +257,10 @@ describe('autopsy.worker plain testable pipeline (without a real Worker)', () =>
     expect(res.siteAnomalies[0]?.twoProportionZ).toBeGreaterThanOrEqual(3.0);
 
     const transfers = collectWorkerResponseTransferables(res);
-    // 13 ColumnarDies typed arrays + 4 PTR Float32Arrays + 1 site anomaly Uint32Array = 18 unique ArrayBuffers
-    expect(transfers.length).toBe(18);
+    const expectedColumnarDieArrays = 13;
+    expect(transfers.length).toBe(
+      expectedColumnarDieArrays + res.lot.tests.size + res.siteAnomalies.length,
+    );
     expect(new Set(transfers).size).toBe(transfers.length);
   });
 
@@ -352,6 +354,72 @@ describe('autopsy.worker plain testable pipeline (without a real Worker)', () =>
           fileName: 'upload.stdf',
           compressed: false,
         });
+      }
+    } finally {
+      client.dispose();
+    }
+  });
+
+  it('avoids double byte retention across worker and client during large-file prompts and supports cancel (J-2)', async () => {
+    const { port1, port2 } = new MessageChannel();
+    const workerApi = createAutopsyWorkerApi();
+    Comlink.expose(workerApi, port1);
+    const client = createAutopsyWorkerClient({
+      endpoint: port2,
+      terminate: () => {
+        port1.close();
+        port2.close();
+      },
+    });
+
+    try {
+      const rawBytes = buildCompactTestStdfBytes();
+      const gzippedBytes = await compressGzipBytes(rawBytes);
+
+      // 1. Oversized gzipped File: client transfers compressed bytes with retainOnLargePrompt=false;
+      //    worker drops its buffer immediately on ceiling_exceeded while client keeps only the File handle.
+      const gzFile = new File([gzippedBytes.slice()], 'oversized.stdf.gz', {
+        type: 'application/gzip',
+      });
+      const gzPrompt = await client.loadFile(gzFile, {
+        maxUncompressedBytes: 32,
+      });
+      expect(gzPrompt.kind).toBe('large-file-prompt');
+
+      // Worker itself holds zero pending bytes (proving no duplicate worker retention)
+      const directWorkerResume = await workerApi.resumeLargeFileParse('bins-only');
+      expect(directWorkerResume.kind).toBe('error');
+      if (directWorkerResume.kind === 'error') {
+        expect(directWorkerResume.error.code).toBe('EMPTY_INPUT');
+      }
+
+      // Client resumes cleanly from the OS-backed File reference
+      const gzResumed = await client.resumeLargeFile('bins-only');
+      expect(gzResumed.kind).toBe('ok');
+      if (gzResumed.kind === 'ok') {
+        expect(gzResumed.lot.parseMode).toBe('bins-only');
+        expect(gzResumed.lot.dies.count).toBe(4);
+        expect(gzResumed.source).toEqual({
+          kind: 'file',
+          fileName: 'oversized.stdf.gz',
+          compressed: true,
+        });
+      }
+
+      // 2. Direct loadBuffer detaches caller's ArrayBuffer (0 bytes on client) and cancelLargeFile() frees worker buffer
+      const rawBuffer = rawBytes.slice().buffer;
+      const bufPrompt = await client.loadBuffer(rawBuffer, {
+        fileName: 'raw-large.stdf',
+        maxUncompressedBytes: 32,
+      });
+      expect(bufPrompt.kind).toBe('large-file-prompt');
+      expect(rawBuffer.byteLength).toBe(0);
+
+      await client.cancelLargeFile();
+      const afterCancel = await client.resumeLargeFile('bins-only');
+      expect(afterCancel.kind).toBe('error');
+      if (afterCancel.kind === 'error') {
+        expect(afterCancel.error.code).toBe('EMPTY_INPUT');
       }
     } finally {
       client.dispose();

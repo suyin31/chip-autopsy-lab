@@ -163,23 +163,29 @@ export function EmptyStateCard({
             </div>
           </div>
         ) : cause === 'no-results' ? (
-          <CardDescription>
-            {activeFilterSummary
-              ? `Active filter: ${activeFilterSummary}. Clear filters to restore the full lot or load a synthetic demo lot.`
-              : 'Clear active selection filters to restore the full lot or load a synthetic demo lot.'}
-          </CardDescription>
+          <div role="status" aria-live="polite" aria-atomic="true">
+            <CardDescription>
+              {activeFilterSummary
+                ? `Active filter: ${activeFilterSummary}. Clear filters or load a demo lot.`
+                : 'Clear active filters to restore the lot, or load a demo lot.'}
+            </CardDescription>
+          </div>
         ) : (
-          <CardDescription className="max-w-2xl">
-            Load a deterministic 25-wafer synthetic STDF V4 lot in one click or
-            drop a local wafer sort log. Decompression, binary framing, retest
-            resolution, and yield analytics execute strictly in browser memory.
+          <CardDescription>
+            Select a 25-wafer synthetic sort lot or drop a local STDF log. Parsed
+            locally in browser memory.
           </CardDescription>
         )}
       </CardHeader>
 
       <CardContent className="pt-6">
+        <label htmlFor="cal-file-picker" className="sr-only">
+          Choose STDF V4 file (.stdf, .std, .stdf.gz, .gz)
+        </label>
         <input
+          id="cal-file-picker"
           ref={fileInputRef}
+          tabIndex={-1}
           type="file"
           accept=".stdf,.std,.gz,application/gzip,application/octet-stream"
           onChange={handleFileInputChange}
@@ -187,6 +193,9 @@ export function EmptyStateCard({
           className="sr-only"
           aria-label="Choose STDF V4 file (.stdf, .std, .stdf.gz, .gz)"
         />
+        <span id="cal-file-picker-desc" className="sr-only">
+          Opens local STDF V4 file picker (.stdf, .std, .stdf.gz, .gz)
+        </span>
 
         {cause === 'no-results' && onClearFilters ? (
           <div className="flex flex-wrap items-center gap-3">
@@ -281,6 +290,8 @@ export function EmptyStateCard({
                   <Button
                     variant="secondary"
                     size="lg"
+                    aria-controls="cal-file-picker"
+                    aria-describedby="cal-file-picker-desc"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={disabled}
                   >
@@ -321,8 +332,7 @@ export function EmptyStateCard({
                   Drop the body.
                 </p>
                 <p className="mt-1 max-w-xs text-[13px] text-text-secondary">
-                  Drag a raw or gzip-compressed wafer sort file anywhere into the
-                  viewport, or browse from disk.
+                  Drag a raw or gzipped sort file anywhere, or browse from disk.
                 </p>
                 <p className="mt-2 font-mono text-[12px] text-text-tertiary">
                   .stdf · .std · .stdf.gz · .gz
@@ -332,6 +342,8 @@ export function EmptyStateCard({
                   variant="secondary"
                   size="md"
                   className="mt-5"
+                  aria-controls="cal-file-picker"
+                  aria-describedby="cal-file-picker-desc"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={disabled}
                 >

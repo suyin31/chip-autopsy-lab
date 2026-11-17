@@ -66,7 +66,6 @@
   *::before,
   *::after {
     border-color: var(--color-hairline);
-    font-variant-numeric: tabular-nums;
   }
 
   html,
@@ -77,12 +76,11 @@
     font-size: 14px;
     font-weight: 400;
     line-height: 1.5;
-    font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Headings use Inter Display optical sizing, -0.02em tracking, weights 510-590 only (never >= 700) */
+  /* Headings use Inter optical sizing, normal tracking (avoiding Inter v4 tnum hyphen widening), weights 510-590 only (never >= 700) */
   h1,
   h2,
   h3,
@@ -92,9 +90,18 @@
   .heading-display {
     font-family: var(--font-display);
     font-optical-sizing: auto;
-    font-variation-settings: "opsz" 32;
-    letter-spacing: -0.02em;
+    letter-spacing: normal;
     font-weight: 540;
+  }
+
+  code,
+  kbd,
+  pre,
+  samp,
+  .tabular-mono,
+  .font-mono,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 
   code,
@@ -103,7 +110,6 @@
   samp,
   .tabular-mono {
     font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
   }
 
   /* Formalin green #7CF2C1 focus rings across all keyboard-operable controls (Req 14.3) */

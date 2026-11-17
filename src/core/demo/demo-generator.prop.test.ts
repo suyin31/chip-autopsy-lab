@@ -36,6 +36,11 @@ import {
 import { buildLotModel } from '../model/lot-builder';
 import type { LotModel } from '../model/types';
 import { parseStdfBytes } from '../stdf/stdf-parser';
+
+type ParsedStdfStream = Extract<
+  ReturnType<typeof parseStdfBytes>,
+  { readonly ok: true }
+>['value'];
 import {
   DEMO_DIES_PER_WAFER,
   DEMO_PARAMETRIC_SPECS,
@@ -69,7 +74,10 @@ function areBytesIdentical(a: Uint8Array, b: Uint8Array): boolean {
   return true;
 }
 
-function parseAndBuildLot(bytes: Uint8Array): LotModel {
+function parseAndBuildLot(bytes: Uint8Array): {
+  readonly raw: ParsedStdfStream;
+  readonly lot: LotModel;
+} {
   const parsed = parseStdfBytes(bytes, { mode: 'full' });
   expect(parsed.ok).toBe(true);
   if (!parsed.ok) {
@@ -83,10 +91,11 @@ function parseAndBuildLot(bytes: Uint8Array): LotModel {
   expect(parsed.value.tsrs).toHaveLength(DEMO_PARAMETRIC_SPECS.length);
   const lot = buildLotModel(parsed.value);
   expect(lot.warnings).toEqual([]);
-  return lot;
+  return { raw: parsed.value, lot };
 }
 
 function assertGroundTruthAndYieldSignature(
+  raw: ParsedStdfStream,
   lot: LotModel,
   truth: DemoLotGroundTruth,
   isDefaultSeed: boolean,
@@ -102,6 +111,38 @@ function assertGroundTruthAndYieldSignature(
     expect(wf.dieEndIndex - wf.dieStartIndex).toBe(DEMO_DIES_PER_WAFER);
   }
 
+  // J-3: Verify HBR, SBR, WRR, and PCR counts reflect unique final-state dies (not inflated PRR executions)
+  expect(raw.validPrrCount).toBe(lot.dies.count + truth.retestedDieIds.length);
+  expect(raw.validPrrCount).toBeGreaterThan(lot.dies.count);
+
+  const expectedHbinFinal = new Map<number, number>();
+  const expectedSbinFinal = new Map<number, number>();
+  for (let i = 0; i < lot.dies.count; i += 1) {
+    const hb = lot.dies.hbin[i]!;
+    const sb = lot.dies.sbin[i]!;
+    expectedHbinFinal.set(hb, (expectedHbinFinal.get(hb) ?? 0) + 1);
+    expectedSbinFinal.set(sb, (expectedSbinFinal.get(sb) ?? 0) + 1);
+  }
+
+  const hbrTotal = raw.hbrs.reduce((acc, h) => acc + h.hbinCnt, 0);
+  const sbrTotal = raw.sbrs.reduce((acc, s) => acc + s.sbinCnt, 0);
+  expect(hbrTotal).toBe(lot.dies.count);
+  expect(sbrTotal).toBe(lot.dies.count);
+  for (const hbr of raw.hbrs) {
+    expect(hbr.hbinCnt).toBe(expectedHbinFinal.get(hbr.hbinNum) ?? 0);
+  }
+  for (const sbr of raw.sbrs) {
+    expect(sbr.sbinCnt).toBe(expectedSbinFinal.get(sbr.sbinNum) ?? 0);
+  }
+
+  const summaryPcr = raw.pcrs.find((p) => p.headNum === 255);
+  expect(summaryPcr).toBeDefined();
+  expect(summaryPcr!.partCnt).toBe(lot.dies.count);
+  expect(summaryPcr!.rtstCnt).toBe(truth.retestedDieIds.length);
+  for (const wf of raw.wafers) {
+    expect(wf.wrr?.partCnt).toBe(DEMO_DIES_PER_WAFER);
+  }
+
   // Verify parametric test metadata & base-unit limits round-tripped via compact PTR inheritance
   for (const expectedTest of DEMO_PARAMETRIC_SPECS) {
     const col = lot.tests.get(expectedTest.testNum);
@@ -111,6 +152,15 @@ function assertGroundTruthAndYieldSignature(
     expect(col!.resScal).toBe(expectedTest.resScal);
     expect(col!.loLimit).toBeCloseTo(expectedTest.loLimit, 6);
     expect(col!.hiLimit).toBeCloseTo(expectedTest.hiLimit, 6);
+
+    // M-10: Verify final-passing dies remain strictly within parametric spec limits
+    for (let i = 0; i < lot.dies.count; i += 47) {
+      if (lot.dies.finalPass[i] === 1) {
+        const v = col!.values[i]!;
+        expect(v).toBeGreaterThanOrEqual(col!.loLimit!);
+        expect(v).toBeLessThanOrEqual(col!.hiLimit!);
+      }
+    }
   }
 
   // Verify ground-truth Die IDs align 1-to-1 with resolved LotModel columnar arrays
@@ -272,13 +322,13 @@ describe('Property 9 (Determinism & Parse/Yield Half): Demo Generator (fast-chec
       expect(areBytesIdentical(lotA.stdfBytes, bytesB)).toBe(true);
       expect(areBytesIdentical(lotA.stdfBytes, bytesOtherSeed)).toBe(false);
 
-      const parsedLot = parseAndBuildLot(lotA.stdfBytes);
+      const { raw, lot: parsedLot } = parseAndBuildLot(lotA.stdfBytes);
       expect(parsedLot.wafers[0]!.geometry.posX).toBe('R');
       expect(parsedLot.wafers[0]!.geometry.posY).toBe('U');
       expect(parsedLot.wafers[0]!.geometry.wfFlat).toBe('D');
       expect(parsedLot.hbins.size).toBe(5);
       expect(parsedLot.sbins.size).toBe(5);
-      assertGroundTruthAndYieldSignature(parsedLot, lotA.groundTruth, true);
+      assertGroundTruthAndYieldSignature(raw, parsedLot, lotA.groundTruth, true);
     },
   );
 
@@ -295,8 +345,8 @@ describe('Property 9 (Determinism & Parse/Yield Half): Demo Generator (fast-chec
 
         expect(areBytesIdentical(generatedA.stdfBytes, bytesB)).toBe(true);
 
-        const parsedLot = parseAndBuildLot(generatedA.stdfBytes);
-        assertGroundTruthAndYieldSignature(parsedLot, generatedA.groundTruth, false);
+        const { raw, lot: parsedLot } = parseAndBuildLot(generatedA.stdfBytes);
+        assertGroundTruthAndYieldSignature(raw, parsedLot, generatedA.groundTruth, false);
       }),
       { numRuns: DEMO_LOT_NUM_RUNS },
     );

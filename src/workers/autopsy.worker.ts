@@ -116,6 +116,13 @@ export interface WorkerLoadBufferRequest {
   readonly mode?: ParseMode;
   readonly maxUncompressedBytes?: number;
   readonly fileName?: string;
+  /**
+   * When `false` (used by `worker-client.ts` `loadFile`, which holds an OS-backed `File`
+   * handle), the worker immediately releases its buffer on `large-file-prompt` so raw
+   * bytes are never simultaneously retained in both client and worker memory.
+   * Defaults to `true` for standalone `loadBuffer` callers whose `ArrayBuffer` was detached.
+   */
+  readonly retainOnLargePrompt?: boolean;
 }
 
 export interface WorkerLoadDemoRequest {
@@ -139,6 +146,7 @@ export interface AutopsyWorkerApi {
     mode: ParseMode,
     onProgress?: WorkerProgressCallback,
   ): Promise<AutopsyWorkerResponse>;
+  discardPendingLargeFile(): void;
   getDemoPresets(): readonly DemoPresetMeta[];
 }
 
@@ -481,7 +489,8 @@ export function createAutopsyWorkerApi(options?: {
 
       if (
         outcome.response.kind === 'large-file-prompt' &&
-        outcome.retainedRawBytes !== undefined
+        outcome.retainedRawBytes !== undefined &&
+        request.retainOnLargePrompt !== false
       ) {
         pendingLargeBytes = outcome.retainedRawBytes;
         pendingFileName = request.fileName;
@@ -575,6 +584,12 @@ export function createAutopsyWorkerApi(options?: {
       );
 
       return wrapWithTransferables(outcome.response, enableTransfer);
+    },
+
+    discardPendingLargeFile(): void {
+      pendingLargeBytes = null;
+      pendingFileName = undefined;
+      pendingMaxBytes = undefined;
     },
 
     getDemoPresets(): readonly DemoPresetMeta[] {

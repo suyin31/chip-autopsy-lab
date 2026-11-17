@@ -90,6 +90,7 @@ export interface AutopsyWorkerClient {
     mode: ParseMode,
     onProgress?: WorkerProgressCallback,
   ): Promise<AutopsyWorkerResponse>;
+  cancelLargeFile(): Promise<void>;
   listDemoPresets(): readonly DemoPresetMeta[];
   dispose(): void;
 }
@@ -142,11 +143,12 @@ export function createAutopsyWorkerClient(
     return onProgress !== undefined ? Comlink.proxy(onProgress) : undefined;
   };
 
-  const loadBuffer = async (
+  const sendBufferToWorker = async (
     buffer: ArrayBuffer,
-    options: ClientLoadBufferOptions = {},
+    options: ClientLoadBufferOptions & {
+      readonly retainOnLargePrompt?: boolean;
+    } = {},
   ): Promise<AutopsyWorkerResponse> => {
-    pendingClientLargeFile = null;
     const workerRemote = ensureRemote();
     const request = {
       ...(options.mode !== undefined ? { mode: options.mode } : {}),
@@ -154,6 +156,9 @@ export function createAutopsyWorkerClient(
         ? { maxUncompressedBytes: options.maxUncompressedBytes }
         : {}),
       ...(options.fileName !== undefined ? { fileName: options.fileName } : {}),
+      ...(options.retainOnLargePrompt !== undefined
+        ? { retainOnLargePrompt: options.retainOnLargePrompt }
+        : {}),
     };
     const transferredBuffer = Comlink.transfer(buffer, [buffer]);
     return workerRemote.loadBuffer(
@@ -161,6 +166,14 @@ export function createAutopsyWorkerClient(
       request,
       proxyProgress(options.onProgress),
     );
+  };
+
+  const loadBuffer = async (
+    buffer: ArrayBuffer,
+    options: ClientLoadBufferOptions = {},
+  ): Promise<AutopsyWorkerResponse> => {
+    pendingClientLargeFile = null;
+    return sendBufferToWorker(buffer, options);
   };
 
   return {
@@ -189,15 +202,26 @@ export function createAutopsyWorkerClient(
         }
       }
 
+      // Note: Browser File.arrayBuffer() allocates an async ArrayBuffer that is
+      // immediately detached via Comlink.transfer(buffer, [buffer]). Pass
+      // retainOnLargePrompt: false so if a .gz stream exceeds maxUncompressedBytes,
+      // the worker drops its buffer and only the OS-backed File Blob handle is kept here.
       const arrayBuffer = await file.arrayBuffer();
-      return loadBuffer(arrayBuffer, {
+      const response = await sendBufferToWorker(arrayBuffer, {
         ...(options.mode !== undefined ? { mode: options.mode } : {}),
         maxUncompressedBytes,
         fileName: file.name,
+        retainOnLargePrompt: false,
         ...(options.onProgress !== undefined
           ? { onProgress: options.onProgress }
           : {}),
       });
+
+      if (response.kind === 'large-file-prompt') {
+        pendingClientLargeFile = { file, maxUncompressedBytes };
+      }
+
+      return response;
     },
 
     async loadDemoLot(
@@ -228,16 +252,24 @@ export function createAutopsyWorkerClient(
         const { file, maxUncompressedBytes } = pendingClientLargeFile;
         pendingClientLargeFile = null;
         const arrayBuffer = await file.arrayBuffer();
-        return loadBuffer(arrayBuffer, {
+        return sendBufferToWorker(arrayBuffer, {
           mode,
           maxUncompressedBytes,
           fileName: file.name,
+          retainOnLargePrompt: false,
           ...(onProgress !== undefined ? { onProgress } : {}),
         });
       }
 
       const workerRemote = ensureRemote();
       return workerRemote.resumeLargeFileParse(mode, proxyProgress(onProgress));
+    },
+
+    async cancelLargeFile(): Promise<void> {
+      pendingClientLargeFile = null;
+      if (!disposed && remote !== null) {
+        await remote.discardPendingLargeFile();
+      }
     },
 
     listDemoPresets(): readonly DemoPresetMeta[] {

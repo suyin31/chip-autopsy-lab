@@ -19,17 +19,17 @@ export interface IngestProgressPanelProps {
 }
 
 const PHASE_COPY: Readonly<Record<WorkerParsePhase, string>> = {
-  'generating-demo': 'Serializing deterministic 25-wafer STDF V4 binary stream',
-  decompressing: 'Decompressing gzip stream in Web Worker (0x1F 0x8B)',
-  parsing: 'Decoding STDF V4 binary records off the main thread',
-  modeling: 'Resolving retests, edge-ring BFS, and multi-site yield summary',
+  'generating-demo': 'Generating 25-wafer synthetic sort log',
+  decompressing: 'Decompressing gzip stream in Web Worker',
+  parsing: 'Decoding STDF V4 binary records in Web Worker',
+  modeling: 'Resolving retests, edge-ring classification, and multi-site yield',
 };
 
 /**
  * Live off-main-thread Web Worker parse progress panel showing bytes processed,
  * records decoded, and resolved dies in `Geist Mono` tabular numerals.
  *
- * Validates: Requirements 1.10, 15.2, 17.3, 17.4
+ * Validates: Requirements 1.10, 14.4, 15.2, 17.3, 17.4
  */
 export function IngestProgressPanel({
   label,
@@ -39,6 +39,12 @@ export function IngestProgressPanel({
     progress.totalBytes !== null && progress.totalBytes > 0
       ? Math.min(100, (progress.bytesProcessed / progress.totalBytes) * 100)
       : null;
+
+  const phaseText = PHASE_COPY[progress.phase];
+  const valueText =
+    pct !== null && progress.totalBytes !== null
+      ? `${phaseText}: ${pct.toFixed(1)}% (${formatByteSize(progress.bytesProcessed)} of ${formatByteSize(progress.totalBytes)}, ${formatGroupedInt(progress.diesResolved)} dies resolved)`
+      : `${phaseText}: ${formatByteSize(progress.bytesProcessed)} processed, ${formatGroupedInt(progress.diesResolved)} dies resolved`;
 
   return (
     <Card aria-busy="true" aria-label="STDF V4 Worker Parse Progress">
@@ -52,12 +58,15 @@ export function IngestProgressPanel({
           </Badge>
         </div>
         <CardTitle className="mt-1 text-[20px]">{label}</CardTitle>
-        <CardDescription>{PHASE_COPY[progress.phase]}</CardDescription>
+        <div aria-live="polite" aria-atomic="true">
+          <CardDescription>{phaseText}</CardDescription>
+        </div>
       </CardHeader>
 
       <CardContent className="pt-6">
         <Progress
           value={pct}
+          valueText={valueText}
           label={`STDF V4 worker parse progress for ${label}`}
         />
 
