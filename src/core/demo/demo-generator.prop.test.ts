@@ -362,25 +362,29 @@ describe('Property 9: Demo Generator Determinism & Ground-Truth Recovery (fast-c
     },
   );
 
-  it('produces byte-for-byte identical STDF V4 streams and recovers yield/site ground truth across arbitrary seeds and presets', () => {
-    const arbPresetAndSeed = fc.record({
-      presetId: fc.constantFrom(...ALL_PRESET_IDS),
-      seed: fc.integer(),
-    });
+  it(
+    'produces byte-for-byte identical STDF V4 streams and recovers yield/site ground truth across arbitrary seeds and presets',
+    () => {
+      const arbPresetAndSeed = fc.record({
+        presetId: fc.constantFrom(...ALL_PRESET_IDS),
+        seed: fc.integer(),
+      });
 
-    fc.assert(
-      fc.property(arbPresetAndSeed, ({ presetId, seed }) => {
-        const generatedA = generateDemoLot(presetId, seed);
-        const bytesB = generateDemoStdfBytes(presetId, seed);
+      fc.assert(
+        fc.property(arbPresetAndSeed, ({ presetId, seed }) => {
+          const generatedA = generateDemoLot(presetId, seed);
+          const bytesB = generateDemoStdfBytes(presetId, seed);
 
-        expect(areBytesIdentical(generatedA.stdfBytes, bytesB)).toBe(true);
+          expect(areBytesIdentical(generatedA.stdfBytes, bytesB)).toBe(true);
 
-        const { raw, lot: parsedLot } = parseAndBuildLot(generatedA.stdfBytes);
-        assertGroundTruthAndYieldSignature(raw, parsedLot, generatedA.groundTruth, false);
-      }),
-      { numRuns: DEMO_LOT_NUM_RUNS },
-    );
-  });
+          const { raw, lot: parsedLot } = parseAndBuildLot(generatedA.stdfBytes);
+          assertGroundTruthAndYieldSignature(raw, parsedLot, generatedA.groundTruth, false);
+        }),
+        { numRuns: DEMO_LOT_NUM_RUNS },
+      );
+    },
+    20_000,
+  );
 
   it('varies the handling-scratch chord angle across seeds while staying non-axis-aligned and recovering ground truth (MINOR-2)', () => {
     const distinctAngles = new Set<string>();

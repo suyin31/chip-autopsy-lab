@@ -4,3 +4,4 @@ Fix pass for task 6 per logs/review-6.md. Do not rewrite unrelated modules.
 - MINOR-2: make the demo scratch chord seeded and non-axis-aligned, keeping ground truth recovery.
 - MINOR-1, MINOR-3, MINOR-5, MINOR-6, MINOR-7 (replace with a standard fab term, hedged), MINOR-8 (keep property runs fast: whole vitest suite should stay under ~60 s; lower numRuns if needed).
 Run `npx tsc --noEmit`, `npx eslint .`, `npx vitest run` until green. Append 2 lines to logs/progress.md. No web search. Finish within 15 minutes; if not done, leave tree compiling and note what remains.
+NOTE: the tree currently has a tsc error (wm811k-classifier.test.ts imports a non-existent computeStackedHeatmap) and 3 failing tests (Property 8 D4, the MAJOR-1 non-uniform test, the adversarial map test) added earlier. Make them all pass by fixing the classifier rules or genuinely wrong test fixtures; never weaken tests just to pass.

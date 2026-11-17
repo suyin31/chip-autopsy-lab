@@ -746,7 +746,9 @@ function analyzeFailGraphAndComponents(
 
     // MINOR-1: Allow compact localized clusters anywhere in the interior (including
     // near-center rho < 0.22 when innerZoneDensity is below the Center disc regime),
-    // while suppressing Loc on broad Center blobs (high innerZoneDensity & low rho).
+    // while suppressing Loc on broad Center blobs (high innerZoneDensity & low rho)
+    // and wide annular/multi-quadrant rings such as Donut (high rmsSpreadNorm).
+    const rmsSpreadNorm = Math.sqrt(basePca.sxx + basePca.syy) / rMax;
     const notBroadCenterDisc = Math.max(
       ramp(centroidRho, 0.12, 0.3),
       1 - ramp(innerZoneDensity, 0.26, 0.42),
@@ -756,6 +758,7 @@ function analyzeFailGraphAndComponents(
         ? ramp(shareOfFails, 0.4, 0.72) *
           ramp(clusteredFailFraction, 0.55, 0.82) *
           notBroadCenterDisc *
+          ramp(0.38 - rmsSpreadNorm, 0.0, 0.12) *
           ramp(0.55 - edgeFrac2, 0.0, 0.3)
         : 0;
 
@@ -1100,17 +1103,33 @@ function classifySpatialGrid(
   // MAJOR-1 tuning rationale: Beta-Binomial (fail + 2) / (total + 20) smoothing (~10%
   // prior) stabilizes small-sample Binomial variance in Z_inner (~90 dies on a 633-die
   // wafer). Reaching full weight at 6% global fail fraction recognizes 4-6% baseline
-  // defectivity, while MIN_CLASS_CONFIDENCE = 0.45 applied to the product of the radial
-  // (3.8, span 1.4), angular (0.52, span 0.22), excess-clustering (0.25, span 0.16), and
-  // structured-competitor (1 - 0.8 * maxStructuredScore) ramps enforces effective cutoffs
-  // of r_zone < 3.17, M_ang < 0.42, and excessClust8 < 0.18 (and tighter joint rejection
-  // whenever mild radial and angular/clustering biases co-occur).
+  // defectivity, while pairing the smoothed 3-zone disparity ramp (3.8, span 1.4) with a
+  // pooled two-proportion periphery-vs-interior uniformity gate (z_edge < 3.8, span 1.0
+  // across large Z_edge3 vs Z_inter partitions), angular (0.52, span 0.22), excess
+  // 8-neighbour clustering (0.25, span 0.16), and structured-competitor suppression
+  // rejects mild peripheral or radial biases (e.g. ~7% random fails + weak edge bias)
+  // without false negatives on finite-sample spatially uniform wafers.
   const smoothInner = (innerFail + 2) / (innerTotal + 20);
   const smoothMid = (midFail + 2) / (midTotal + 20);
   const smoothEdge3 = (edge3Fail + 2) / (edge3Total + 20);
   const maxZone3 = Math.max(smoothInner, smoothMid, smoothEdge3);
   const minZone3 = Math.min(smoothInner, smoothMid, smoothEdge3);
   const radialDisparity = maxZone3 / Math.max(minZone3, 0.015);
+  const edgeInterSe =
+    edge3Total > 0 &&
+    interTotal > 0 &&
+    globalFailFraction > 0 &&
+    globalFailFraction < 1
+      ? Math.sqrt(
+          globalFailFraction *
+            (1 - globalFailFraction) *
+            (1 / edge3Total + 1 / interTotal),
+        )
+      : 0;
+  const edgeBalanceZ =
+    edgeInterSe > 0
+      ? Math.abs(edgeRing3Density - interiorDensity) / edgeInterSe
+      : 0;
   const expectedBernoulliClust8 = 1 - (1 - globalFailFraction) ** 8;
   const excessClust8 = Math.max(
     0,
@@ -1130,6 +1149,7 @@ function classifySpatialGrid(
     ramp(globalFailFraction, 0.02, 0.06) *
       (1 - ramp(globalFailFraction, 0.55, 0.72)) *
       ramp(3.8 - radialDisparity, 0.0, 1.4) *
+      ramp(3.8 - edgeBalanceZ, 0.0, 1.0) *
       ramp(0.52 - angularResultant, 0.0, 0.22) *
       ramp(0.25 - excessClust8, 0.0, 0.16) *
       (1 - 0.8 * maxStructuredScore),

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { computeStackedHeatmap } from '../analytics/yield-summary';
 import { createPrng } from '../demo/prng';
 import { buildLotModel, computeWaferEdgeRingIndices } from '../model/lot-builder';
 import type { LotModel } from '../model/types';
@@ -26,6 +25,7 @@ import {
   MIN_FAIL_COUNT,
   MIN_FAIL_FRACTION,
   STACK_CELL_MIN_FAIL_RATE,
+  type StackedPatternCellInput,
   WM811K_CLASSES,
 } from './wm811k-classifier';
 
@@ -388,6 +388,22 @@ describe('WM-811K spatial classifier & root-cause hypotheses', () => {
       ),
     }));
 
+    // 8. Blended Edge-Ring + mild Center cluster -> dominant Edge-Ring wins
+    const blendedEdgeRingCenterMap = disc.map(({ x, y }, idx) => {
+      const strongEdgeRing =
+        rings[idx]! <= 3 && ((x * 3 + y * 5) & 1) === 0;
+      const mildCenter = Math.hypot(x, y) <= 2.4;
+      return { x, y, failed: strongEdgeRing || mildCenter };
+    });
+
+    // 9. Short 5-cell collinear streak (< 6-cell Scratch floor) -> falls back to Loc, never Scratch
+    const shortStreakDisc = makeDiscCoords(8.8);
+    const shortStreakMap = shortStreakDisc.map(({ x, y }) => ({
+      x,
+      y,
+      failed: y === 3 && x >= -2 && x <= 2,
+    }));
+
     const adversarialCases = [
       { name: 'clean Center blob', cells: centerMap, expected: 'Center' },
       { name: 'Donut ring', cells: donutMap, expected: 'Donut' },
@@ -397,6 +413,8 @@ describe('WM-811K spatial classifier & root-cause hypotheses', () => {
       { name: 'diagonal non-axis Scratch', cells: diagonalScratchMap, expected: 'Scratch' },
       { name: 'Near-full wafer', cells: nearFullMap, expected: 'Near-full' },
       { name: 'clean wafer (None)', cells: cleanWaferMap, expected: 'None' },
+      { name: 'blended Edge-Ring + mild Center', cells: blendedEdgeRingCenterMap, expected: 'Edge-Ring' },
+      { name: 'short 5-cell streak (< 6 Scratch floor)', cells: shortStreakMap, expected: 'Loc' },
     ] as const;
 
     const d4Ops: ReadonlyArray<
@@ -418,8 +436,22 @@ describe('WM-811K spatial classifier & root-cause hypotheses', () => {
       expect(base.pattern, tc.name).toBe(tc.expected);
 
       // MINOR-6: Verify single-wafer stacked delegation matches wafer-0 classification
+      const explicitSingleWaferCells: StackedPatternCellInput[] = Array.from(
+        { length: lot.dies.count },
+        (_, dIdx) => ({
+          x: lot.dies.x[dIdx]!,
+          y: lot.dies.y[dIdx]!,
+          testedWaferCount: 1,
+          failCount: lot.dies.finalPass[dIdx] === 0 ? 1 : 0,
+          failRate: lot.dies.finalPass[dIdx] === 0 ? 1 : 0,
+          failingDieIndices:
+            lot.dies.finalPass[dIdx] === 0
+              ? Uint32Array.of(dIdx)
+              : new Uint32Array(0),
+        }),
+      );
       expect(classifyStackedPattern(lot)).toEqual(base);
-      expect(classifyStackedPattern(lot, computeStackedHeatmap(lot), 1)).toEqual(
+      expect(classifyStackedPattern(lot, explicitSingleWaferCells, 1)).toEqual(
         base,
       );
 
