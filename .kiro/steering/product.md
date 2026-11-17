@@ -40,7 +40,7 @@ Chip Autopsy Lab is a browser-based semiconductor failure analysis tool that ing
 - **One Halloween note only**: clinical autopsy framing plus pumpkin orange (`#FF7A1A`) strictly for failures and cause of death.
 
 ## Built-in Demo Data
-- Ships seeded, deterministic synthetic STDF V4 demo lots (`Edge-Ring` lot and `Scratch` lot).
+- Ships seeded, deterministic synthetic STDF V4 demo lots: `edge-ring-etch` (`Edge-Ring`), `handling-scratch` (`Scratch`), and `site2-probe-contact` (spatially `Random` with a Test Site 1:2 concentration anomaly, exercising the probe card / tester site diagnosis).
 - Loadable in one click from the empty state, and downloadable as raw files so judges can drag them back into the app.
 
 ## Five Demo-Video Moments

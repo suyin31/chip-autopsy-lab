@@ -77,7 +77,7 @@ Confirming and refining `.kiro/steering/structure.md` for Next.js App Router + s
 │   │   │   └── wm811k-classifier.prop.test.ts # Property 8
 │   │   ├── report/
 │   │   │   ├── engine-facts.ts               # Structured EngineFact extractor
-│   │   │   ├── verdict-precedence.ts         # 5-tier primary cause-of-death selector
+│   │   │   ├── verdict-precedence.ts         # 6-tier primary cause-of-death selector
 │   │   │   ├── template-report.ts            # Offline deterministic Autopsy Report generator
 │   │   │   ├── citation-validator.ts         # Outbound privacy sanitizer + LLM claim/numeric validator
 │   │   │   ├── autopsy-report.prop.test.ts   # Property 10
@@ -274,17 +274,13 @@ export interface PtrDefaultContext {
   readonly testNum: number;
   readonly testTxt: string;
   readonly units: string;
-  readonly resScal: number; // I*1 power-of-10 scaling exponent
+  readonly resScal: number; // I*1 power-of-10 display exponent only
   readonly llmScal: number; // I*1
   readonly hlmScal: number; // I*1
-  readonly loLimit: number | null; // Stored value (see SCAL note below); null when OPT_FLAG bit 6 is set
-  readonly hiLimit: number | null; // Stored value (see SCAL note below); null when OPT_FLAG bit 7 is set
+  readonly loLimit: number | null; // Base units; null when OPT_FLAG bit 6 is set (no low limit)
+  readonly hiLimit: number | null; // Base units; null when OPT_FLAG bit 7 is set (no high limit)
 }
-```
 
-> **`RES_SCAL` / `LLM_SCAL` / `HLM_SCAL` Conversion Rule**: In STDF V4, `RESULT`, `LO_LIMIT`, and `HI_LIMIT` are stored in **scaled** units: `base_value = stored_value × 10^SCAL`. Many modern ATE writers store values with `SCAL = 0` (already base), but the parser must always apply the exponent. Internally `PtrDefaultContext` and `ParametricTestColumn` store **base-unit values** after applying `× 10^SCAL` during decode, so all analytics, Cp/Cpk, and display formatting operate on consistent base units.
-
-```typescript
 export interface ParseProgress {
   readonly bytesProcessed: number;
   readonly totalBytes: number | null;
@@ -325,7 +321,7 @@ export function writeStdfBytes(spec: StdfWriteLotSpec): Uint8Array;
 
 **Key STDF V4 Decoding Rules Enforced in `stdf-parser.ts`:**
 - **Bounds-first cursor**: `BinaryCursor` validates `offset + byteCount <= recordEnd <= buffer.byteLength` before every primitive or variable-length (`C*n`, `B*n`, `D*n`, `kxTYPE`) read. If a record stops cleanly at `recordEnd` before optional trailing specification fields, remaining fields resolve to `undefined` without warning (Req 1.7). If a variable-length prefix overflows `recordEnd`, the parser emits `MALFORMED_RECORD_FIELD` and advances to `recordEnd` (Req 2.3).
-- **`PTR` Inheritance & `OPT_FLAG`**: The first `PTR` observed for each `TEST_NUM` populates `Map<number, PtrDefaultContext>`. Subsequent `PTR` records for that `TEST_NUM` inherit `UNITS`, `RES_SCAL`, `LLM_SCAL`, `HLM_SCAL`, `LO_LIMIT`, and `HI_LIMIT` whenever omitted at `recordEnd` or when `OPT_FLAG` bit 0 (`0x01`, `RES_SCAL` invalid) or bits 4/5 (`0x10`/`0x20`, `LO_LIMIT`/`HI_LIMIT` invalid) indicate the value should be inherited from the first PTR's defaults. Bit `6` (`0x40`) forces `loLimit = null` (no low limit for this test); bit `7` (`0x80`) forces `hiLimit = null` (no high limit for this test). `RESULT`, `LO_LIMIT`, and `HI_LIMIT` remain strictly in base units after applying `× 10^SCAL` conversion during decode (Req 1.8).
+- **`PTR` Inheritance & `OPT_FLAG`**: The first `PTR` observed for each `TEST_NUM` populates `Map<number, PtrDefaultContext>`. Subsequent `PTR` records for that `TEST_NUM` inherit `UNITS`, `RES_SCAL`, `LLM_SCAL`, `HLM_SCAL`, `LO_LIMIT`, and `HI_LIMIT` whenever omitted at `recordEnd` or when `OPT_FLAG` bit 0 (`0x01`, `RES_SCAL` invalid) or bits 4/5 (`0x10`/`0x20`, `LO_LIMIT`/`HI_LIMIT` invalid) indicate the value should be inherited from the first PTR's defaults. Bit `6` (`0x40`) forces `loLimit = null` (no low limit for this test); bit `7` (`0x80`) forces `hiLimit = null` (no high limit for this test). `RESULT`, `LO_LIMIT`, and `HI_LIMIT` are stored and kept strictly in base units; the parser never rescales them. `RES_SCAL`, `LLM_SCAL`, and `HLM_SCAL` are power-of-10 display exponents only (displayed = value × 10^SCAL, so `0.0035` V with `RES_SCAL = 3` displays as `3.5 mV`) (Req 1.8).
 - **Multi-site open-part state machine**: `PIR` opens a part context in `openParts: Map<number, OpenPartMeasurements>` keyed by `siteKey = ((headNum & 0xff) << 8) | (siteNum & 0xff)`. Interleaved `PTR`, `MPR`, and `FTR` records attach to `openParts.get(siteKey)`. `PRR` closes `siteKey` and emits a chronological `RawPartExecution` (Req 1.9).
 
 ---

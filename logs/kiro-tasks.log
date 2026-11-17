@@ -1,0 +1,90 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=55
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=57
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now apply the revert of fix #2 only, keeping the OPT_FLAG bit fix.
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=345
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=55
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=62
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=63
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=395
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=74
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=2201
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=482
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=68
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+All three items are done. Nothing is committed, and I ran no tests or other checks.
+
+**1. Spec fixes**
+- **Fix #2 reverted in `design.md`:** I removed the "Conversion Rule" note that said values get multiplied by 10^SCAL. The field comments say base units again. The decoding rules now say `RESULT`, `LO_LIMIT` and `HI_LIMIT` stay in base units and are never rescaled, and that the SCAL fields are display exponents only, using your `0.0035` V → `3.5 mV` example.
+- **Fixes #1 and #3–#10 kept:** this includes the `OPT_FLAG` correction (bits 0/4/5 mean "use the first PTR's value", bits 6/7 mean "no limit"). I also changed one leftover "5-tier" comment in the design's repo layout to "6-tier" so it matches fix #8.
+- **Reviewer log annotated:** I added a short correction note at the top of `logs/review-design-opus46.md`. It says fix #2 and note E were wrong and reverted, and that note D was applied. Note E repeated the same scaling mistake.
+- **Note D applied:** `site2-probe-contact` is now a demo lot in `product.md` and in Requirement 3.1. Property 9 now covers all three demo lots. For this lot it expects a `Random` spatial pattern plus a Test Site 1:2 anomaly, so Property 9 now also validates Requirement 7.4.
+
+**2. `tasks.md`** has 22 top-level tasks.
+- **Vertical slice:** tasks 1–7 build it:
+  1. project setup and design tokens
+  2. STDF reader and writer
+  3. lot model and yield
+  4. the three demo lots running through the Web Worker, plus "Load demo lot"
+  5. the two-layer wafer map and selection store
+  6. the WM-811K classifier
+  7. the verdict card, where clicking a claim highlights its dies
+- **Checkpoint:** task 8 is a Playwright end-to-end check of the slice for all three demo lots.
+- **Property tests:** all 14 are optional `*` sub-tasks placed next to the code they test. The URL part of Property 13 sits in the stretch task.
+- **After the slice:** the LLM narrator is task 16 and Cmd-K is task 17. Motion, accessibility, performance and privacy checks, stretch features (task 21, optional), and deploy plus demo-video prep (task 22) come last.
+
+The slice finishes at task 7 rather than task 6. Putting the classifier and the report in separate tasks kept each one a reasonable size.
+
+**3. `logs/review-tasks.md`** was created with a short log of the above. There was no existing file to append to.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=180
+

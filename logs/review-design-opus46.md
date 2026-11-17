@@ -6,6 +6,8 @@
 
 ---
 
+> **Spec owner correction (2026-11-17)**: Fix #2 and note E are wrong and were reverted in `design.md`. Per STDF V4, `PTR` `RESULT`, `LO_LIMIT`, and `HI_LIMIT` are stored in base units; `RES_SCAL`, `LLM_SCAL`, and `HLM_SCAL` are display exponents only (displayed = value × 10^SCAL, e.g. `0.0035` V with `RES_SCAL = 3` shows as `3.5 mV`). Fixes #1 and #3-#10 stand. Note D was applied to `product.md` and `requirements.md` (Req 3.1, Property 9).
+
 ## Defects Found and Fixed (In-Place Edits)
 
 ### 1. **CRITICAL — OPT_FLAG bits 4/5 vs 6/7 semantics swapped**
