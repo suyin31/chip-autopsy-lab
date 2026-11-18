@@ -89,7 +89,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
   - Ensure all unit and property tests pass; ask the user if questions arise.
   - _Requirements: 3.2, 10.4, 15.6, 16.2_
 
-- [ ] 9. Complete file ingest, error handling, and demo downloads
+- [x] 9. Complete file ingest, error handling, and demo downloads
   - Full-window drop zone with `"Drop the body."`, keyboard file picker, gzip by magic bytes via `DecompressionStream`, parse-failed empty state, partial-result warnings via Sonner, bins-only mode above 200 MB, and `.stdf` download of the demo lots.
   - _Requirements: 1.1, 1.2, 1.3, 2.2, 2.3, 2.5, 3.4, 15.3, 17.6_
 

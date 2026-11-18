@@ -63,8 +63,6 @@ export function EmptyStateCard({
 }: EmptyStateCardProps): React.JSX.Element {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isLocalDragOver, setIsLocalDragOver] = React.useState(false);
-  const demoDownloadFileName = getDemoStdfFileName(selectedPresetId);
-  const isExportingDemo = downloadingPresetId === selectedPresetId;
 
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -94,7 +92,6 @@ export function EmptyStateCard({
 
   const handleDropZoneDrop = (event: React.DragEvent<HTMLDivElement>): void => {
     event.preventDefault();
-    event.stopPropagation();
     setIsLocalDragOver(false);
     if (disabled) {
       return;
@@ -288,43 +285,62 @@ export function EmptyStateCard({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={() => onLoadDemoLot(selectedPresetId)}
-                  disabled={disabled}
-                >
-                  Load demo lot
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  data-testid="download-demo-stdf-button"
-                  aria-label={`Download ${demoDownloadFileName}`}
-                  onClick={() => onDownloadDemoLot?.(selectedPresetId)}
-                  disabled={disabled || isExportingDemo}
-                >
-                  <Download className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
-                  <span className="font-mono text-[13px]">
-                    {isExportingDemo
-                      ? `Exporting ${demoDownloadFileName}...`
-                      : `Download ${demoDownloadFileName}`}
-                  </span>
-                </Button>
-                {cause === 'parse-failed' ? (
+              <div className="flex flex-col gap-3 pt-1">
+                <div className="flex flex-wrap items-center gap-3">
                   <Button
-                    variant="ghost"
+                    variant="primary"
                     size="lg"
-                    aria-label="Choose another STDF file (.stdf, .std, .stdf.gz, .gz)"
-                    aria-controls="cal-file-picker"
-                    aria-describedby="cal-file-picker-desc"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => onLoadDemoLot(selectedPresetId)}
                     disabled={disabled}
                   >
-                    Choose another file
+                    Load demo lot
                   </Button>
-                ) : null}
+                  {cause === 'parse-failed' ? (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      aria-label="Choose another STDF file (.stdf, .std, .stdf.gz, .gz)"
+                      aria-controls="cal-file-picker"
+                      aria-describedby="cal-file-picker-desc"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={disabled}
+                    >
+                      Choose another file
+                    </Button>
+                  ) : null}
+                </div>
+
+                <div
+                  aria-label="Download synthetic demo STDF files"
+                  className="flex flex-wrap items-center gap-2 text-[12px] text-text-tertiary"
+                >
+                  <span>Download .stdf:</span>
+                  {presets.map((preset) => {
+                    const fileName = getDemoStdfFileName(preset.id);
+                    const isExporting = downloadingPresetId === preset.id;
+                    return (
+                      <Button
+                        key={preset.id}
+                        variant="ghost"
+                        size="sm"
+                        data-testid={`download-demo-stdf-${preset.id}`}
+                        aria-label={`Download ${fileName}`}
+                        onClick={() => onDownloadDemoLot?.(preset.id)}
+                        disabled={disabled || downloadingPresetId !== null}
+                        className="h-7 px-2.5 font-mono text-[12px]"
+                      >
+                        <Download
+                          className="h-3.5 w-3.5"
+                          strokeWidth={1.5}
+                          aria-hidden="true"
+                        />
+                        <span>
+                          {isExporting ? `Exporting ${fileName}...` : fileName}
+                        </span>
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 

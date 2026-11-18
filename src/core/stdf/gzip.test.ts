@@ -81,5 +81,15 @@ describe('gzip magic-byte detection (0x1F 0x8B) and DecompressionStream', () => 
     if (failedDecomp.kind === 'error') {
       expect(failedDecomp.error.code).toBe('GZIP_DECOMPRESS_FAILED');
     }
+
+    // Multi-chunk (> 64 KB) invalid gzip payload aborts cleanly without unhandled rejections
+    const multiChunkInvalid = new Uint8Array(130 * 1024);
+    multiChunkInvalid[0] = 0x1f;
+    multiChunkInvalid[1] = 0x8b;
+    const failedMultiChunk = await decompressGzipStreamWithCeiling(multiChunkInvalid);
+    expect(failedMultiChunk.kind).toBe('error');
+    if (failedMultiChunk.kind === 'error') {
+      expect(failedMultiChunk.error.code).toBe('GZIP_DECOMPRESS_FAILED');
+    }
   });
 });

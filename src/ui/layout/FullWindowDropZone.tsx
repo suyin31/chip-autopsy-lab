@@ -9,6 +9,7 @@ export interface FullWindowDropZoneProps {
 }
 
 export interface WindowDropEventLike {
+  readonly defaultPrevented?: boolean;
   readonly dataTransfer?: {
     readonly types?: ArrayLike<string>;
     readonly files?: ArrayLike<File>;
@@ -96,10 +97,14 @@ export function bindWindowFileDropListeners(options: {
     if (!hasDraggedFiles(event)) {
       return;
     }
+    const alreadyHandled = event.defaultPrevented === true;
     event.preventDefault();
     dragDepth = 0;
     setActive(false);
 
+    if (alreadyHandled) {
+      return;
+    }
     const file = event.dataTransfer?.files?.[0];
     if (file) {
       getOnFileDrop()(file);

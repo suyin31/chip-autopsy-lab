@@ -43,7 +43,9 @@ describe('first-run empty state, drop zone, progress panel, and loaded overview 
     );
 
     expect(html).toContain('Load demo lot');
-    expect(html).toContain('Download edge-ring-etch.stdf');
+    expect(html).toContain('aria-label="Download edge-ring-etch.stdf"');
+    expect(html).toContain('aria-label="Download handling-scratch.stdf"');
+    expect(html).toContain('aria-label="Download site2-probe-contact.stdf"');
     expect(html).toContain('Drop the body.');
     expect(html).toContain('Choose STDF file');
     expect(html).toContain('aria-label="Choose STDF file (.stdf, .std, .stdf.gz, .gz)"');
@@ -97,7 +99,9 @@ describe('first-run empty state, drop zone, progress panel, and loaded overview 
     );
     expect(failedHtml).toContain('Load demo lot');
     expect(failedHtml).toContain('Choose another file');
-    expect(failedHtml).toContain('Download edge-ring-etch.stdf');
+    expect(failedHtml).toContain('aria-label="Download edge-ring-etch.stdf"');
+    expect(failedHtml).toContain('aria-label="Download handling-scratch.stdf"');
+    expect(failedHtml).toContain('aria-label="Download site2-probe-contact.stdf"');
 
     const noResultsHtml = renderToStaticMarkup(
       React.createElement(EmptyStateCard, {
@@ -193,6 +197,16 @@ describe('first-run empty state, drop zone, progress panel, and loaded overview 
     expect(addCalls).toBe(6);
     expect(removeCalls).toBe(0);
     expect(droppedByFirstHandler).toEqual([]);
+    expect(droppedByUpdatedHandler).toEqual(['wafer.stdf']);
+
+    // Child drop zone that already handled preventDefault resets overlay without double-invoking onFileDrop
+    emit('dragenter', fileDragEvent());
+    emit('drop', {
+      defaultPrevented: true,
+      dataTransfer: { types: ['Files'], files: [testFile] },
+      preventDefault: () => undefined,
+    });
+    expect(activeTransitions).toEqual([true, false, true, false]);
     expect(droppedByUpdatedHandler).toEqual(['wafer.stdf']);
 
     cleanup();

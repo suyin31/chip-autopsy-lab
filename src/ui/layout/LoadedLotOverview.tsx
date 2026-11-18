@@ -206,10 +206,12 @@ export function LoadedLotOverview({
             data-testid="loaded-download-demo-stdf-button"
             aria-label={`Download ${demoDownloadFileName}`}
             onClick={() => onDownloadDemoLot?.(selectedPresetId)}
-            disabled={isExportingDemo}
+            disabled={downloadingPresetId !== null}
           >
             <Download className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
-            <span className="font-mono text-[12px]">.stdf</span>
+            <span className="font-mono text-[12px]">
+              {isExportingDemo ? 'Exporting...' : '.stdf'}
+            </span>
           </Button>
           <Button
             variant="ghost"
