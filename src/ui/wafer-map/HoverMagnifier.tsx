@@ -193,9 +193,11 @@ const HoverMagnifierImpl = React.forwardRef<
   const hoveredDieIndex = isSynced ? rawHoveredDieIndex : null;
   const colorMode: WaferColorMode = isSynced ? rawColorMode : 'pass-fail';
   const hiddenBins = isSynced ? rawHiddenBins : EMPTY_HIDDEN_BINS;
-  const preferredTestNum = isSynced
-    ? (rawClaimCitedTestNum ?? rawActiveTestNum)
-    : null;
+  // A finding click only reorders the readout's key tests; defer that so the click frame
+  // carries just the urgent highlight render (§5.10)
+  const preferredTestNum = React.useDeferredValue(
+    isSynced ? (rawClaimCitedTestNum ?? rawActiveTestNum) : null,
+  );
 
   const [pinnedDieIndex, setPinnedDieIndex] = React.useState<number | null>(
     null,

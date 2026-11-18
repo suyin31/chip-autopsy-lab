@@ -21,6 +21,7 @@ import { cn } from '@/ui/primitives/cn';
 import {
   type ClaimGlowOrderMode,
   type ClaimHighlightState,
+  flushPendingWaferCommits,
   type SelectionStoreState,
   useSelectionStore,
 } from '@/ui/state';
@@ -406,15 +407,43 @@ export function AutopsyReportCard({
     return renderStatFacts(statFacts, locale);
   }, [lot, analysis, verdict, yieldSummary, effectiveSelectionMask, locale]);
 
+  // §5.10: the claim toggle re-renders the stage, strip, and findings; applying it in the next
+  // animation frame keeps that render out of the frame that handles pointerdown/up/click.
+  // The pressed row (and its `data-ack` stamp) still acknowledges the input in the click frame.
+  const pendingToggleRafsRef = React.useRef(new Set<number>());
+  React.useEffect(() => {
+    const pending = pendingToggleRafsRef.current;
+    return () => {
+      for (const id of pending) {
+        cancelAnimationFrame(id);
+      }
+      pending.clear();
+    };
+  }, []);
+
   const handleToggleClaim = React.useCallback(
     (claim: ReportClaim): void => {
-      toggleReportClaimInStore(
-        store,
-        lot,
-        claim,
-        factsById,
-        analysis.primarySpatial.pattern,
-      );
+      const apply = (): void => {
+        // Commit any deferred strip wafer first so the claim targets the wafer on screen
+        flushPendingWaferCommits();
+        toggleReportClaimInStore(
+          store,
+          lot,
+          claim,
+          factsById,
+          analysis.primarySpatial.pattern,
+        );
+      };
+      if (typeof requestAnimationFrame !== 'function') {
+        apply();
+        return;
+      }
+      const pending = pendingToggleRafsRef.current;
+      const id = requestAnimationFrame(() => {
+        pending.delete(id);
+        apply();
+      });
+      pending.add(id);
     },
     [store, lot, factsById, analysis.primarySpatial.pattern],
   );

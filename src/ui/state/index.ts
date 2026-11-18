@@ -17,3 +17,7 @@ export {
   useSelectionStore,
   type WaferColorMode,
 } from './selection-store';
+export {
+  flushPendingWaferCommits,
+  registerPendingWaferCommit,
+} from './pending-wafer-commit';

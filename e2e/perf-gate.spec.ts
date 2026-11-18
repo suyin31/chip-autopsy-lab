@@ -126,7 +126,7 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
           for (const entry of list.getEntries()) {
             if (entry.duration > 45) {
               const e = entry as PerformanceEntry & { renderStart?: number; styleAndLayoutStart?: number; scripts?: Array<{ invoker: string; duration: number; forcedStyleAndLayoutDuration: number; sourceFunctionName: string; sourceCharPosition: number; startTime: number }> };
-              console.log('[LOAF]', JSON.stringify({ t: Math.round(entry.startTime - startMs), d: Math.round(entry.duration), renderStart: Math.round((e.renderStart ?? 0) - entry.startTime), styleStart: Math.round((e.styleAndLayoutStart ?? 0) - entry.startTime), scripts: (e.scripts ?? []).map((x) => ({ inv: x.invoker, at: Math.round(x.startTime - entry.startTime), d: Math.round(x.duration), fl: Math.round(x.forcedStyleAndLayoutDuration), fn: x.sourceFunctionName + ':' + x.sourceCharPosition })) }));
+              console.log("[LOAF]", JSON.stringify({ t: Math.round(entry.startTime - startMs), d: Math.round(entry.duration), bd: Math.round((entry as any).blockingDuration ?? -1), ui: Math.round(((entry as any).firstUIEventTimestamp ?? 0) - entry.startTime), renderStart: Math.round((e.renderStart ?? 0) - entry.startTime), styleStart: Math.round((e.styleAndLayoutStart ?? 0) - entry.startTime), scripts: (e.scripts ?? []).map((x) => ({ inv: x.invoker, at: Math.round(x.startTime - entry.startTime), d: Math.round(x.duration), fl: Math.round(x.forcedStyleAndLayoutDuration), fn: x.sourceFunctionName + ':' + x.sourceCharPosition })) }));
             }
             longDurations.push({
               startTime: entry.startTime,

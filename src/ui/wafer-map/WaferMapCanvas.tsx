@@ -184,6 +184,84 @@ function isStageHudEventTarget(target: EventTarget | null): boolean {
  * - Two-stacked-base-canvas `160 ms` `ease-out` wafer crossfade on click/single-step, and `0 ms`
  *   instant swap on held `ArrowRight` (`event.repeat === true`) or `prefers-reduced-motion`.
  */
+/**
+ * Visually hidden table of failing dies on the active wafer (§4.7, §6.8). It follows the
+ * stage through `useDeferredValue`, so a wafer change rebuilds its up-to-200 rows in an
+ * interruptible background render instead of inside the input frame (§5.10).
+ */
+const FailingDiesTable = React.memo(function FailingDiesTable({
+  lot,
+  waferIndex,
+}: {
+  readonly lot: LotModel;
+  readonly waferIndex: number;
+}): React.JSX.Element {
+  const { t } = useT();
+  const deferredWaferIndex = React.useDeferredValue(waferIndex);
+  const wafer = lot.wafers[deferredWaferIndex];
+  const waferId = wafer?.waferId ?? 'W01';
+  const rows = React.useMemo(() => {
+    if (!wafer) {
+      return [];
+    }
+    const nextRows: Array<{
+      readonly idx: number;
+      readonly x: number;
+      readonly y: number;
+      readonly siteLabel: string;
+      readonly sbin: number;
+      readonly hbin: number;
+    }> = [];
+    for (
+      let i = wafer.dieStartIndex;
+      i < wafer.dieEndIndex && nextRows.length < MAX_A11Y_FAILING_DIES_ROWS;
+      i += 1
+    ) {
+      if (lot.dies.finalPass[i] !== 0 || lot.dies.hasValidCoords[i] === 0) {
+        continue;
+      }
+      const site = lot.sites[lot.dies.siteIndex[i]!];
+      nextRows.push({
+        idx: i,
+        x: lot.dies.x[i]!,
+        y: lot.dies.y[i]!,
+        siteLabel: site ? `Head ${site.headNum} · Site ${site.siteNum}` : '—',
+        sbin: lot.dies.sbin[i]!,
+        hbin: lot.dies.hbin[i]!,
+      });
+    }
+    return nextRows;
+  }, [wafer, lot.dies, lot.sites]);
+
+  return (
+    <table className="sr-only">
+      <caption>
+        {t('a11y.failingDiesTable', { wafer: waferId })}
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">X, Y</th>
+          <th scope="col">Site</th>
+          <th scope="col">SBIN</th>
+          <th scope="col">HBIN</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, rowPos) => (
+          <tr key={rowPos}>
+            <td>
+              ({row.x}, {row.y})
+            </td>
+            <td>{row.siteLabel}</td>
+            <td>SBIN {row.sbin}</td>
+            <td>HBIN {row.hbin}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+});
+
 function WaferMapCanvasImpl({
   lot,
   byWaferYield,
@@ -1949,6 +2027,8 @@ function WaferMapCanvasImpl({
         : null,
     [claimHighlight, claimHighlightMask, lot],
   );
+  // Strip evidence dots follow one interruptible render after the finding-click frame (§5.10)
+  const deferredEvidencePresence = React.useDeferredValue(evidencePresence);
 
   const evidenceSummary = React.useMemo(() => {
     if (
@@ -1998,38 +2078,6 @@ function WaferMapCanvasImpl({
     safeWaferIndex,
   ]);
 
-  const failingDieRows = React.useMemo(() => {
-    if (!wafer) {
-      return [];
-    }
-    const rows: Array<{
-      readonly idx: number;
-      readonly x: number;
-      readonly y: number;
-      readonly siteLabel: string;
-      readonly sbin: number;
-      readonly hbin: number;
-    }> = [];
-    for (
-      let i = wafer.dieStartIndex;
-      i < wafer.dieEndIndex && rows.length < MAX_A11Y_FAILING_DIES_ROWS;
-      i += 1
-    ) {
-      if (lot.dies.finalPass[i] !== 0 || lot.dies.hasValidCoords[i] === 0) {
-        continue;
-      }
-      const site = lot.sites[lot.dies.siteIndex[i]!];
-      rows.push({
-        idx: i,
-        x: lot.dies.x[i]!,
-        y: lot.dies.y[i]!,
-        siteLabel: site ? `Head ${site.headNum} · Site ${site.siteNum}` : '—',
-        sbin: lot.dies.sbin[i]!,
-        hbin: lot.dies.hbin[i]!,
-      });
-    }
-    return rows;
-  }, [wafer, lot.dies, lot.sites]);
 
   const waferId = wafer?.waferId ?? 'W01';
   const testedCount = waferYield?.testedDies ?? 0;
@@ -2384,31 +2432,7 @@ function WaferMapCanvasImpl({
           </div>
 
           {/* Visually hidden table of failing dies on the active wafer (§4.7, §6.8) */}
-          <table className="sr-only">
-            <caption>
-              {t('a11y.failingDiesTable', { wafer: waferId })}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">X, Y</th>
-                <th scope="col">Site</th>
-                <th scope="col">SBIN</th>
-                <th scope="col">HBIN</th>
-              </tr>
-            </thead>
-            <tbody>
-              {failingDieRows.map((row, rowPos) => (
-                <tr key={rowPos}>
-                  <td>
-                    ({row.x}, {row.y})
-                  </td>
-                  <td>{row.siteLabel}</td>
-                  <td>SBIN {row.sbin}</td>
-                  <td>HBIN {row.hbin}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <FailingDiesTable lot={lot} waferIndex={safeWaferIndex} />
         </div>
 
         {/* Floating Hover Magnifier (z: 20, outside overflow-hidden so placedAboveStage never clips, §4.8) */}
@@ -2442,7 +2466,7 @@ function WaferMapCanvasImpl({
         dies={lot.dies}
         byWaferYield={byWaferYield}
         activeWaferIndex={safeWaferIndex}
-        evidencePresence={evidencePresence}
+        evidencePresence={deferredEvidencePresence}
         dpr={dpr}
         onSelectWafer={handleSelectWafer}
         onPreviewWafer={handlePreviewWafer}

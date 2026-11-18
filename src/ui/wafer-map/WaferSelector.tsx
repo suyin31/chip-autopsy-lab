@@ -6,6 +6,7 @@ import type { YieldMetrics } from '@/core/analytics';
 import type { ColumnarDies, WaferSummaryMeta } from '@/core/model';
 import { Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
+import { registerPendingWaferCommit } from '@/ui/state';
 import { paintWaferThumbnail, resolveCanvasPixelSize } from './wafer-geometry';
 
 export const WAFER_THUMB_BUTTON_PX = 48 as const;
@@ -40,7 +41,9 @@ export interface WaferSelectorProps {
   /**
    * Keyboard stepping paints the stage imperatively through this callback inside the
    * keydown handler; the store commit (`onSelectWafer` with `previewed: true`) follows once
-   * stepping pauses for `WAFER_KEY_COMMIT_DELAY_MS`, on blur, or on a pointer selection.
+   * stepping pauses for `WAFER_KEY_COMMIT_DELAY_MS`, on a pointer selection, or when a store
+   * reader calls `flushPendingWaferCommits()`. Blur does not flush synchronously: a blur caused
+   * by clicking a finding would otherwise add a second full render to the click's frame.
    */
   readonly onPreviewWafer?: (
     waferIndex: number,
@@ -282,6 +285,13 @@ export const WaferSelector = React.memo(function WaferSelector({
     onSelectWaferRef.current(pending.index, { instant: true, previewed: true });
   }, []);
 
+  // Store readers (e.g. finding clicks) flush the pending commit inside their own event,
+  // so both updates share one React render (§5.10 long-frame budget)
+  React.useEffect(
+    () => registerPendingWaferCommit(flushPendingCommit),
+    [flushPendingCommit],
+  );
+
   // Cancel deferred work when the lot changes or the strip unmounts
   React.useEffect(() => {
     return () => {
@@ -406,12 +416,6 @@ export const WaferSelector = React.memo(function WaferSelector({
       aria-orientation="horizontal"
       aria-label={t('strip.aria', { lotId })}
       data-testid="wafer-strip"
-      onBlur={(event) => {
-        const next = event.relatedTarget;
-        if (!(next instanceof Node) || !event.currentTarget.contains(next)) {
-          flushPendingCommit();
-        }
-      }}
       className={cn(
         'wafer-strip-mask flex h-14 w-full flex-nowrap items-center gap-3 overflow-x-auto overflow-y-hidden px-4 md:h-16 md:px-3',
         '[scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
