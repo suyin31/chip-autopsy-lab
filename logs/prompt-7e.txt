@@ -1,0 +1,7 @@
+Continue the task 7 logic fix pass (previous step timed out mid-change). Read logs/review-7.md, logs/assistant-review-7.md, logs/prompt-7d.txt, and `git diff HEAD~1` to see what was started.
+Current failures (fix root causes in code, never weaken properties):
+1. Property 10 broad arbiter: tiny degenerate LotModel (4 dies, one with invalid coords -32768, a failing die whose sbin is marked P) fails an integrity check. Handle degenerate lots: fact die sets must only include valid dies and still be non-empty, pass/fail from finalPass not bin flag.
+2. Property 10 targeted scenario "tier5-single-fail" fails.
+3. Unit test edge-ring-etch report expectations fail after the wording change — update the classifier/report so the assistant-review-7 wording rules hold and the test reflects the new correct wording.
+4. Property 8 flake: counterexample {archetype:"Loc", offsetX:0, offsetY:0, radius:16, seed:-1543656942} -> got None instead of Loc. A Loc at dead centre with radius 16 is arguably Center; if the archetype generator can produce a Loc indistinguishable from Center/None, fix the generator to only make genuine Loc clusters (off-centre, inside the edge band); otherwise fix the classifier. Explain the choice in one line in logs/progress.md.
+Run `npx vitest run` THREE times (property tests are randomized) plus tsc and eslint; all must be green every time. No web search. Finish within 14 minutes; leave tree compiling.

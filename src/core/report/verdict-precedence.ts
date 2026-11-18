@@ -18,11 +18,15 @@ import {
 } from '../analytics/yield-summary';
 import type { BinMode, LotModel } from '../model/types';
 import type { Wm811kClass } from '../patterns/root-causes';
-import type { PatternClassification } from '../patterns/wm811k-classifier';
+import { CLASSIFIER_THRESHOLDS, type PatternClassification } from '../patterns/wm811k-classifier';
 import {
+  capDisplayedConfidence,
+  computeSpatialDieBreakdown,
   findQualifyingWaferExcursions,
-  formatFixed2,
-  formatRatioPct1,
+  formatBinRefLabel,
+  formatBoundedSharePct1,
+  formatFinalFailNoun,
+  formatGroupedInt,
   normalizeDieIndices,
   type QualifyingWaferExcursion,
   STRUCTURED_SPATIAL_CLASSES,
@@ -111,13 +115,61 @@ export function selectDominantFailingBin(lot: LotModel): DominantBinSelection | 
   };
 }
 
-function formatFailingHeadline(
+function formatStructuredSpatialHeadline(
   verdict: string,
-  confidence: number,
-  finalYield: number,
+  pattern: Wm811kClass,
+  lot: LotModel,
+  primarySpatial: PatternClassification,
+  totalFailDies: number,
   dominantBin: DominantBinSelection,
 ): string {
-  return `Cause of death: ${verdict} (confidence ${formatFixed2(confidence)}). Yield ${formatRatioPct1(finalYield)}, most loss in ${dominantBin.mode} ${dominantBin.code}.`;
+  const { sigCount, sigWaferCount, edgeBandFailDies } =
+    computeSpatialDieBreakdown(lot, primarySpatial);
+  const failDenomNoun = formatFinalFailNoun(totalFailDies);
+  const binLabel = formatBinRefLabel(dominantBin);
+  const waferCount = lot.wafers.length;
+
+  if (pattern === 'Edge-Ring' && edgeBandFailDies > 0) {
+    const edgeShare = formatBoundedSharePct1(edgeBandFailDies, totalFailDies);
+    const edgeBandRings = CLASSIFIER_THRESHOLDS.EDGE_RING_BAND;
+    return `Cause of death: ${verdict}. ${edgeShare.displayValue} of ${failDenomNoun} (${formatGroupedInt(edgeBandFailDies)} of ${formatGroupedInt(totalFailDies)}) sit in the outer ${edgeBandRings}-die band, most loss in ${binLabel}.`;
+  }
+
+  const sigShare = formatBoundedSharePct1(sigCount, totalFailDies);
+  const multiWaferSpan =
+    waferCount >= 2
+      ? ` across ${formatGroupedInt(sigWaferCount)} of ${formatGroupedInt(waferCount)} wafers`
+      : '';
+
+  let wherePhrase: string;
+  switch (pattern) {
+    case 'Scratch':
+      wherePhrase =
+        waferCount >= 2
+          ? 'align along a scratch track'
+          : 'align along a linear scratch track';
+      break;
+    case 'Center':
+      wherePhrase = 'cluster in the wafer center';
+      break;
+    case 'Donut':
+      wherePhrase = 'concentrate in the mid-radius annulus';
+      break;
+    case 'Edge-Loc':
+      wherePhrase = 'cluster at the wafer periphery';
+      break;
+    case 'Loc':
+      wherePhrase = 'form a localized interior cluster';
+      break;
+    case 'Near-full':
+      wherePhrase = 'span the wafer surface';
+      break;
+    default:
+      wherePhrase = 'sit in periphery signature cells';
+      break;
+  }
+
+  return `Cause of death: ${verdict}. ${sigShare.displayValue} of ${failDenomNoun} (${formatGroupedInt(sigCount)} of ${formatGroupedInt(totalFailDies)}) ${wherePhrase}${multiWaferSpan}, most loss in ${binLabel}.`;
 }
 
 function selectTopValidSiteAnomaly(
@@ -182,6 +234,10 @@ export function selectPrimaryVerdict(
   const testedDies = overall.testedDies;
   const totalFailDies = overall.finalFailDies;
 
+  const testedDenomNoun = testedDies === 1 ? 'tested die' : 'tested dies';
+  const waferCount = lot.wafers.length;
+  const waferNoun = waferCount === 1 ? 'wafer' : 'wafers';
+
   // Tier 0 — Zero Failing Dies
   if (totalFailDies === 0) {
     const cleanFinalYield = testedDies > 0 ? 1.0 : 0.0;
@@ -197,11 +253,12 @@ export function selectPrimaryVerdict(
       totalFailDies: 0,
       dominantBin: null,
       citedFactIds: ['fact:lot-yield'],
-      headlineText: `Cause of death: ${verdict} (confidence 1.00). Yield ${formatRatioPct1(cleanFinalYield)}.`,
+      headlineText: `Cause of death: ${verdict}. All ${formatGroupedInt(testedDies)} ${testedDenomNoun} passed final sort across ${formatGroupedInt(waferCount)} ${waferNoun}.`,
     };
   }
 
   const finalYield = overall.finalYield ?? 0;
+  const failDenomNoun = formatFinalFailNoun(totalFailDies);
   const dominantBin = selectDominantFailingBin(lot);
   if (dominantBin === null) {
     // Unreachable whenever `totalFailDies >= 1` because every die carries an HBIN (0..65535).
@@ -209,6 +266,7 @@ export function selectPrimaryVerdict(
       'Invariant violation: Lot has final failing dies but no dominant failing bin.',
     );
   }
+  const binLabel = formatBinRefLabel(dominantBin);
 
   const topSiteAnomaly = selectTopValidSiteAnomaly(siteAnomalies, lot.dies.count);
 
@@ -222,8 +280,15 @@ export function selectPrimaryVerdict(
   ) {
     const { headNum, siteNum } = topSiteAnomaly.site;
     const verdict = `Test Site ${headNum}:${siteNum} concentration anomaly`;
-    const confidence = topSiteAnomaly.confidence;
+    const confidence = capDisplayedConfidence(topSiteAnomaly.confidence);
     const siteFactId = `fact:site:${headNum}-${siteNum}`;
+    const siteFpFails = normalizeDieIndices(
+      topSiteAnomaly.failingDieIndices,
+      lot.dies.count,
+    ).length;
+    const totalFpFails = Math.max(siteFpFails, overall.firstPassFailDies);
+    const siteFpShare = formatBoundedSharePct1(siteFpFails, totalFpFails);
+    const fpFailNoun = totalFpFails === 1 ? 'first-pass fail' : 'first-pass fails';
     return {
       tier: 1,
       kind: 'site-anomaly',
@@ -234,7 +299,7 @@ export function selectPrimaryVerdict(
       totalFailDies,
       dominantBin,
       citedFactIds: [siteFactId, dominantBin.factId],
-      headlineText: formatFailingHeadline(verdict, confidence, finalYield, dominantBin),
+      headlineText: `Cause of death: ${verdict}. ${siteFpShare.displayValue} of ${fpFailNoun} (${formatGroupedInt(siteFpFails)} of ${formatGroupedInt(totalFpFails)}) occurred on Site ${headNum}:${siteNum}, most loss in ${binLabel}.`,
       siteAnomaly: topSiteAnomaly,
     };
   }
@@ -242,7 +307,7 @@ export function selectPrimaryVerdict(
   // Tier 2 — Structured Primary Spatial Signature
   if (isStructuredWm811kPattern(primarySpatial.pattern)) {
     const verdict = `${primarySpatial.pattern} failure`;
-    const confidence = primarySpatial.confidence;
+    const confidence = capDisplayedConfidence(primarySpatial.confidence);
     return {
       tier: 2,
       kind: 'spatial-pattern',
@@ -253,13 +318,23 @@ export function selectPrimaryVerdict(
       totalFailDies,
       dominantBin,
       citedFactIds: ['fact:spatial:primary', dominantBin.factId],
-      headlineText: formatFailingHeadline(verdict, confidence, finalYield, dominantBin),
+      headlineText: formatStructuredSpatialHeadline(
+        verdict,
+        primarySpatial.pattern,
+        lot,
+        primarySpatial,
+        totalFailDies,
+        dominantBin,
+      ),
       spatialPattern: primarySpatial.pattern,
     };
   }
 
-  // Tier 3 — Diluted Single-Wafer Excursion (Multi-Wafer Lots)
-  if (lot.wafers.length >= 2) {
+  // Tier 3 — Diluted Single-Wafer Excursion (Multi-Wafer Lots while stacked map is Random/None)
+  if (
+    lot.wafers.length >= 2 &&
+    (primarySpatial.pattern === 'Random' || primarySpatial.pattern === 'None')
+  ) {
     const excursions = findQualifyingWaferExcursions(
       lot,
       perWaferPatterns,
@@ -271,8 +346,14 @@ export function selectPrimaryVerdict(
         sanitizeReportProseText(topExcursion.wafer.waferId) ||
         `W${String(topExcursion.wafer.waferIndex + 1).padStart(2, '0')}`;
       const verdict = `${topExcursion.classification.pattern} excursion on Wafer ${cleanWaferId}`;
-      const confidence = topExcursion.classification.confidence;
+      const confidence = capDisplayedConfidence(
+        topExcursion.classification.confidence,
+      );
       const excursionFactId = `fact:wafer-excursion:${topExcursion.wafer.waferIndex}`;
+      const wfLotShare = formatBoundedSharePct1(
+        topExcursion.waferFailCount,
+        totalFailDies,
+      );
       return {
         tier: 3,
         kind: 'wafer-excursion',
@@ -283,12 +364,7 @@ export function selectPrimaryVerdict(
         totalFailDies,
         dominantBin,
         citedFactIds: [excursionFactId, dominantBin.factId],
-        headlineText: formatFailingHeadline(
-          verdict,
-          confidence,
-          finalYield,
-          dominantBin,
-        ),
+        headlineText: `Cause of death: ${verdict}. ${wfLotShare.displayValue} of ${failDenomNoun} (${formatGroupedInt(topExcursion.waferFailCount)} of ${formatGroupedInt(totalFailDies)}) sit on Wafer ${cleanWaferId}, most loss in ${binLabel}.`,
         waferExcursion: topExcursion,
       };
     }
@@ -297,7 +373,12 @@ export function selectPrimaryVerdict(
   // Tier 4 — Unclustered Spatial Random Loss
   if (primarySpatial.pattern === 'Random') {
     const verdict = 'Random defect failure';
-    const confidence = primarySpatial.confidence;
+    const confidence = capDisplayedConfidence(primarySpatial.confidence);
+    const lotFailShare = formatBoundedSharePct1(totalFailDies, testedDies);
+    const randScope =
+      waferCount >= 2
+        ? `across ${formatGroupedInt(waferCount)} wafers`
+        : 'across the wafer';
     return {
       tier: 4,
       kind: 'random-defect',
@@ -308,14 +389,19 @@ export function selectPrimaryVerdict(
       totalFailDies,
       dominantBin,
       citedFactIds: ['fact:spatial:primary', dominantBin.factId],
-      headlineText: formatFailingHeadline(verdict, confidence, finalYield, dominantBin),
+      headlineText: `Cause of death: ${verdict}. ${formatGroupedInt(totalFailDies)} of ${formatGroupedInt(testedDies)} ${testedDenomNoun} (${lotFailShare.displayValue}) scatter ${randScope} without clustering, most loss in ${binLabel}.`,
       spatialPattern: 'Random',
     };
   }
 
   // Tier 5 — Sub-Threshold Baseline Loss (`totalFailDies >= 1` and `primarySpatial.pattern === 'None'`)
   const verdict = 'Baseline low-density loss';
-  const confidence = primarySpatial.confidence;
+  const confidence = capDisplayedConfidence(primarySpatial.confidence);
+  const lotFailShare = formatBoundedSharePct1(totalFailDies, testedDies);
+  const baseScope =
+    waferCount >= 2
+      ? `across ${formatGroupedInt(waferCount)} wafers`
+      : 'on the wafer';
   return {
     tier: 5,
     kind: 'baseline-loss',
@@ -326,7 +412,7 @@ export function selectPrimaryVerdict(
     totalFailDies,
     dominantBin,
     citedFactIds: ['fact:lot-yield', dominantBin.factId],
-    headlineText: formatFailingHeadline(verdict, confidence, finalYield, dominantBin),
+    headlineText: `Cause of death: ${verdict}. ${formatGroupedInt(totalFailDies)} of ${formatGroupedInt(testedDies)} ${testedDenomNoun} (${lotFailShare.displayValue}) failed ${baseScope} below clustering thresholds, most loss in ${binLabel}.`,
     spatialPattern: 'None',
   };
 }

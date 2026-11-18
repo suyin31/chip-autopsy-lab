@@ -4,13 +4,13 @@ import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { LotModel } from '@/core/model';
-import type {
-  AutopsyReport,
-  AutopsyVerdictDecision,
-  EngineFact,
-  ReportClaim,
+import {
+  type AutopsyReport,
+  type AutopsyVerdictDecision,
+  type EngineFact,
+  formatConfidenceBadgeLabel,
+  type ReportClaim,
 } from '@/core/report';
-import { formatScore2 } from '@/ui/format';
 import { Badge, Card, CardContent, CardHeader } from '@/ui/primitives';
 import {
   type ClaimHighlightState,
@@ -300,15 +300,24 @@ function partitionClaimsAndHypotheses(
   return { evidenceClaims, hypotheses };
 }
 
-function extractHeadlineConfidence(
+function extractHeadlineConfidenceBadge(
   headlineText: string,
-  verdict?: AutopsyVerdictDecision,
+  verdict: AutopsyVerdictDecision | undefined,
+  factsById: ReadonlyMap<string, EngineFact>,
+  headlineFactIds: readonly string[],
 ): string {
   if (verdict !== undefined) {
-    return formatScore2(verdict.confidence);
+    return formatConfidenceBadgeLabel(verdict.confidence);
+  }
+  for (const factId of headlineFactIds) {
+    const fact = factsById.get(factId);
+    const confMetric = fact?.metrics.find((m) => m.key === 'confidence');
+    if (confMetric) {
+      return formatConfidenceBadgeLabel(confMetric.numericValue);
+    }
   }
   const match = /\(confidence (\d\.\d{2})\)/.exec(headlineText);
-  return match?.[1] ?? '1.00';
+  return formatConfidenceBadgeLabel(match ? Number(match[1]) : 0.95);
 }
 
 function resolveSingleWaferBadgeLabel(
@@ -385,9 +394,20 @@ export function AutopsyReportCard({
     );
   }, [verdict, report.causeOfDeathHeadline.text]);
 
-  const confidenceDisplay = extractHeadlineConfidence(
-    report.causeOfDeathHeadline.text,
-    verdict,
+  const confidenceBadgeText = React.useMemo(
+    () =>
+      extractHeadlineConfidenceBadge(
+        report.causeOfDeathHeadline.text,
+        verdict,
+        factsById,
+        report.causeOfDeathHeadline.citedFactIds,
+      ),
+    [
+      report.causeOfDeathHeadline.text,
+      report.causeOfDeathHeadline.citedFactIds,
+      verdict,
+      factsById,
+    ],
   );
 
   const handleToggleClaim = React.useCallback(
@@ -407,12 +427,35 @@ export function AutopsyReportCard({
     [report.causeOfDeathHeadline, lot, factsById],
   );
 
+  const waferLabelByClaimId = React.useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const { claim } of evidenceClaims) {
+      map.set(claim.claimId, resolveSingleWaferBadgeLabel(claim, lot, factsById));
+    }
+    for (const item of hypotheses) {
+      if (item.linkedClaim && !map.has(item.linkedClaim.claimId)) {
+        map.set(
+          item.linkedClaim.claimId,
+          resolveSingleWaferBadgeLabel(item.linkedClaim, lot, factsById),
+        );
+      }
+    }
+    return map;
+  }, [evidenceClaims, hypotheses, lot, factsById]);
+
   return (
     <Card
       aria-label="Autopsy Report"
       data-testid="autopsy-report-card"
       className="border-hairline bg-panel"
     >
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {report.causeOfDeathHeadline.text}
+        {effectiveActiveClaimId
+          ? ` Highlighted claim: ${effectiveActiveClaimId}`
+          : ''}
+      </div>
+
       <CardHeader className="gap-3 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -422,14 +465,15 @@ export function AutopsyReportCard({
             <NarrationBadge source={report.source} />
             <Badge
               variant="neutral"
-              title="Deterministic heuristic feature score (uncalibrated [0, 1] scale)"
+              aria-label={`Confidence ${confidenceBadgeText}`}
+              title="Deterministic heuristic feature score (uncalibrated [0, 1] scale, capped at 0.95)"
             >
-              Confidence {confidenceDisplay}
+              {confidenceBadgeText}
             </Badge>
           </div>
 
           <span className="font-mono text-[12px] text-text-tertiary">
-            Select headline or claim to highlight cited dies
+            Click a finding to light its dies
           </span>
         </div>
 
@@ -458,11 +502,7 @@ export function AutopsyReportCard({
               claim={claim}
               displayText={displayText}
               variant="body"
-              targetWaferLabel={resolveSingleWaferBadgeLabel(
-                claim,
-                lot,
-                factsById,
-              )}
+              targetWaferLabel={waferLabelByClaimId.get(claim.claimId) ?? null}
               isActive={effectiveActiveClaimId === claim.claimId}
               onToggle={handleToggleClaim}
             />
@@ -476,7 +516,7 @@ export function AutopsyReportCard({
               type="button"
               data-testid="autopsy-hypotheses-toggle"
               aria-expanded={hypothesesOpen}
-              aria-controls={hypothesesPanelId}
+              aria-controls={hypothesesOpen ? hypothesesPanelId : undefined}
               onClick={() => setHypothesesOpen((prev) => !prev)}
               className="inline-flex w-full cursor-pointer items-center justify-between gap-3 rounded-control border border-transparent px-2.5 py-1.5 text-left text-[13px] text-text-secondary transition-[transform,opacity] duration-150 ease-[var(--ease-clinical)] hover:bg-raised hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
@@ -517,11 +557,10 @@ export function AutopsyReportCard({
                               : item.mechanismText
                           }
                           variant="body"
-                          targetWaferLabel={resolveSingleWaferBadgeLabel(
-                            item.linkedClaim,
-                            lot,
-                            factsById,
-                          )}
+                          targetWaferLabel={
+                            waferLabelByClaimId.get(item.linkedClaim.claimId) ??
+                            null
+                          }
                           isActive={
                             effectiveActiveClaimId === item.linkedClaim.claimId
                           }

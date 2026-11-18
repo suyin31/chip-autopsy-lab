@@ -59,10 +59,10 @@ const PROP_SEED =
   process.env.FC_SEED !== undefined ? Number(process.env.FC_SEED) : undefined;
 
 const HEADLINE_ZERO_FAIL_REGEX =
-  /^Cause of death: No failure pattern detected \(confidence 1\.00\)\. Yield 100\.0%\.$/;
+  /^Cause of death: No failure pattern detected\. All [\d,]+ tested dies? passed final sort across [\d,]+ wafers?\.$/;
 
 const HEADLINE_FAIL_REGEX =
-  /^Cause of death: (.+) \(confidence (\d\.\d{2})\)\. Yield (\d+\.\d)%, most loss in (SBIN|HBIN) (\d+)\.$/;
+  /^Cause of death: (.+?)\. (.+), most loss in (SBIN|HBIN) (\d+)(?: \((.+)\))?\.$/;
 
 const FORBIDDEN_HORROR_TERMS_REGEX =
   /\b(corpse|morgue|zombie|vampire|ghost|skull|cobweb|blood|gore|spooky|pumpkin|skeleton|graveyard)\b/i;
@@ -368,6 +368,9 @@ function assertProperty10ReportInvariants(
   const expectedDomBin = computeExpectedDominantBinFromLot(lot);
 
   expect(report.causeOfDeathHeadline.isHeadline).toBe(true);
+  expect(report.causeOfDeathHeadline.text).not.toContain('(confidence');
+  expect(report.causeOfDeathHeadline.text).not.toContain('Yield ');
+
   if (totalFailDies === 0) {
     expect(expectedDomBin).toBeNull();
     expect(report.causeOfDeathHeadline.text).toMatch(HEADLINE_ZERO_FAIL_REGEX);
@@ -377,14 +380,20 @@ function assertProperty10ReportInvariants(
     const match = HEADLINE_FAIL_REGEX.exec(report.causeOfDeathHeadline.text);
     expect(match).not.toBeNull();
     if (match && expectedDomBin) {
-      const [, verdictStr, confStr, yieldStr, binModeStr, binCodeStr] = match;
+      const [, verdictStr, whereStr, binModeStr, binCodeStr] = match;
       expect(verdictStr!.length).toBeGreaterThan(0);
-      const parsedConf = Number(confStr);
-      expect(parsedConf).toBeGreaterThanOrEqual(0);
-      expect(parsedConf).toBeLessThanOrEqual(1);
-      expect(yieldStr).toBe(((yieldSummary.overall.finalYield ?? 0) * 100).toFixed(1));
+      expect(whereStr!.length).toBeGreaterThan(0);
       expect(binModeStr).toBe(expectedDomBin.mode);
       expect(Number(binCodeStr)).toBe(expectedDomBin.code);
+    }
+  }
+
+  for (const fact of facts) {
+    for (const metric of fact.metrics) {
+      if (metric.key === 'confidence') {
+        expect(metric.numericValue).toBeGreaterThanOrEqual(0);
+        expect(metric.numericValue).toBeLessThanOrEqual(0.95);
+      }
     }
   }
 
@@ -578,11 +587,12 @@ describe('Autopsy Report & 6-Tier Verdict Precedence Unit Suite', () => {
     expect(verdict.kind).toBe('spatial-pattern');
     expect(verdict.verdict).toBe('Edge-Ring failure');
     expect(verdict.confidence).toBeGreaterThanOrEqual(0.75);
+    expect(verdict.confidence).toBeLessThanOrEqual(0.95);
     expect(verdict.dominantBin?.mode).toBe('SBIN');
     expect(verdict.dominantBin?.code).toBe(7);
 
     expect(report.causeOfDeathHeadline.text).toMatch(
-      /^Cause of death: Edge-Ring failure \(confidence 0\.\d{2}\)\. Yield 8\d\.\d%, most loss in SBIN 7\.$/,
+      /^Cause of death: Edge-Ring failure\. 9\d\.\d% of final fails \([\d,]+ of [\d,]+\) sit in the outer 3-die band, most loss in SBIN 7 \(IDDQ_EDGE_LEAK\)\.$/,
     );
     expect(report.causeOfDeathHeadline.citedFactIds).toEqual([
       'fact:spatial:primary',
@@ -590,12 +600,23 @@ describe('Autopsy Report & 6-Tier Verdict Precedence Unit Suite', () => {
     ]);
     expect(report.causeOfDeathHeadline.citedBins).toEqual([{ mode: 'SBIN', code: 7 }]);
 
-    // Every die highlighted by clicking the Edge-Ring headline lies in the outer 3 rings
+    // Every die highlighted by clicking the Edge-Ring headline lies in the outer 3 rings,
+    // and Claim 1 reconciles exact edge-band + interior final fail counts without a false 0.0%/100.0%.
     expect(report.causeOfDeathHeadline.resolvedDieIndices.length).toBeGreaterThan(500);
     for (const dieIdx of report.causeOfDeathHeadline.resolvedDieIndices) {
       expect(lot.dies.ringIndex[dieIdx]).toBeLessThanOrEqual(3);
       expect(lot.dies.finalPass[dieIdx]).toBe(0);
     }
+    const primaryClaim = report.bodyClaims.find(
+      (c) => c.claimId === 'claim:primary-evidence',
+    );
+    expect(primaryClaim).toBeDefined();
+    expect(primaryClaim!.resolvedDieIndices.length).toBe(
+      report.causeOfDeathHeadline.resolvedDieIndices.length,
+    );
+    expect(primaryClaim!.text).not.toContain('0.0%');
+    expect(primaryClaim!.text).not.toContain('100.0%');
+    expect(primaryClaim!.text).toContain('interior final fails');
 
     // Parametric test 204 (IDDQ_LEAK in uA) & plasma etch hypothesis
     const paramClaim = report.bodyClaims.find(
@@ -620,11 +641,12 @@ describe('Autopsy Report & 6-Tier Verdict Precedence Unit Suite', () => {
     expect(verdict.kind).toBe('spatial-pattern');
     expect(verdict.verdict).toBe('Scratch failure');
     expect(verdict.confidence).toBeGreaterThanOrEqual(0.75);
+    expect(verdict.confidence).toBeLessThanOrEqual(0.95);
     expect(verdict.dominantBin?.mode).toBe('SBIN');
     expect(verdict.dominantBin?.code).toBe(9);
 
     expect(report.causeOfDeathHeadline.text).toMatch(
-      /^Cause of death: Scratch failure \(confidence 0\.\d{2}\)\. Yield 9\d\.\d%, most loss in SBIN 9\.$/,
+      /^Cause of death: Scratch failure\. \d+\.\d% of final fails \([\d,]+ of [\d,]+\) align along a scratch track across \d+ of 25 wafers, most loss in SBIN 9 \(VDD_METAL_SHORT\)\.$/,
     );
     expect(report.causeOfDeathHeadline.citedFactIds).toEqual([
       'fact:spatial:primary',
@@ -655,11 +677,12 @@ describe('Autopsy Report & 6-Tier Verdict Precedence Unit Suite', () => {
     expect(verdict.kind).toBe('site-anomaly');
     expect(verdict.verdict).toBe('Test Site 1:2 concentration anomaly');
     expect(verdict.confidence).toBeGreaterThanOrEqual(0.75);
+    expect(verdict.confidence).toBeLessThanOrEqual(0.95);
     expect(verdict.dominantBin?.mode).toBe('SBIN');
     expect(verdict.dominantBin?.code).toBe(5);
 
     expect(report.causeOfDeathHeadline.text).toMatch(
-      /^Cause of death: Test Site 1:2 concentration anomaly \(confidence 0\.\d{2}\)\. Yield 8\d\.\d%, most loss in SBIN 5\.$/,
+      /^Cause of death: Test Site 1:2 concentration anomaly\. \d+\.\d% of first-pass fails \([\d,]+ of [\d,]+\) occurred on Site 1:2, most loss in SBIN 5 \(CONT_OPEN\)\.$/,
     );
     expect(report.causeOfDeathHeadline.citedFactIds).toEqual([
       'fact:site:1-2',
@@ -689,7 +712,7 @@ describe('Autopsy Report & 6-Tier Verdict Precedence Unit Suite', () => {
     expect(verdict.confidence).toBe(1.0);
     expect(verdict.dominantBin).toBeNull();
     expect(report.causeOfDeathHeadline.text).toBe(
-      'Cause of death: No failure pattern detected (confidence 1.00). Yield 100.0%.',
+      `Cause of death: No failure pattern detected. All ${zeroFailLot.dies.count} tested dies passed final sort across ${zeroFailLot.wafers.length} wafer.`,
     );
     expect(report.causeOfDeathHeadline.resolvedDieIndices.length).toBe(
       zeroFailLot.dies.count,
@@ -812,7 +835,9 @@ describe('Autopsy Report & 6-Tier Verdict Precedence Unit Suite', () => {
     // SBIN 7 and SBIN 9 both have 2 fails -> lowest numeric code SBIN 7 wins
     expect(verdict.dominantBin?.mode).toBe('SBIN');
     expect(verdict.dominantBin?.code).toBe(7);
-    expect(report.causeOfDeathHeadline.text).toContain('most loss in SBIN 7.');
+    expect(report.causeOfDeathHeadline.text).toContain(
+      'most loss in SBIN 7 (LEAK_A).',
+    );
 
     // SI display exponent checks (Req 1.8 & Req 17.4)
     expect(formatScaledParametricValue(8.5e-9, 'A', 9).displayValue).toBe('8.50 nA');
@@ -820,5 +845,61 @@ describe('Autopsy Report & 6-Tier Verdict Precedence Unit Suite', () => {
     expect(formatScaledParametricValue(0.0035, 'V', 3).displayValue).toBe('3.50 mV');
     expect(formatScaledParametricValue(2.4e9, 'Hz', -9).displayValue).toBe('2.40 GHz');
     expect(formatScaledParametricValue(2.5, 'Ohm', 0).displayValue).toBe('2.50 Ohm');
+  });
+
+  it('handles degenerate 4-die lots (missing coords -32768, failing die with SBIN marked P) and extreme scaled PTR limits (B-2)', () => {
+    const degenLot = parseSpecToLotModel({
+      endianness: 'big',
+      mir: { lotId: 'DEGEN-4', partTyp: 'IC', jobNam: 'SORT' },
+      hbrs: [
+        { hbinNum: 1, hbinCnt: 3, hbinPf: 'P', hbinNam: 'PASS' },
+        { hbinNum: 2, hbinCnt: 1, hbinPf: 'F', hbinNam: 'FAIL' },
+      ],
+      sbrs: [
+        { sbinNum: 1, sbinCnt: 4, sbinPf: 'P', sbinNam: 'MISFLAGGED_PASS' },
+      ],
+      wafers: [
+        {
+          wir: { headNum: 1, siteGrp: 1, startT: 1_700_000_000, waferId: 'W01' },
+          touchdowns: [
+            [
+              {
+                headNum: 1,
+                siteNum: 1,
+                partFlg: PRR_PART_FLG.FAILED,
+                hardBin: 2,
+                softBin: 1,
+                xCoord: -32768,
+                yCoord: -32768,
+                ptrs: [
+                  {
+                    testNum: 1,
+                    testFlg: 0,
+                    result: 1.4e-45,
+                    testTxt: 'SUBNORM',
+                    resScal: 9,
+                    llmScal: 9,
+                    hlmScal: 9,
+                    loLimit: -999.9999,
+                    hiLimit: 0,
+                    units: 'A',
+                  },
+                ],
+              },
+              { headNum: 1, siteNum: 1, partFlg: 0, hardBin: 1, softBin: 1, xCoord: 0, yCoord: 0 },
+              { headNum: 1, siteNum: 2, partFlg: 0, hardBin: 1, softBin: 1, xCoord: 1, yCoord: 0 },
+              { headNum: 1, siteNum: 2, partFlg: 0, hardBin: 1, softBin: 1, xCoord: 0, yCoord: 1 },
+            ],
+          ],
+          wrr: { headNum: 1, siteGrp: 1, finishT: 1_700_000_010, partCnt: 4, waferId: 'W01' },
+        },
+      ],
+      mrr: { finishT: 1_700_000_020, dispCod: '0' },
+    });
+
+    const degenRes = generateOfflineAutopsyReport(degenLot);
+    expect(degenRes.verdict.dominantBin?.mode).toBe('SBIN');
+    expect(degenRes.verdict.dominantBin?.code).toBe(1);
+    assertProperty10ReportInvariants(degenLot, degenRes.facts, degenRes.report);
   });
 });

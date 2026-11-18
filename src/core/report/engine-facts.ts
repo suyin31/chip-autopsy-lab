@@ -524,8 +524,51 @@ export function computeSpatialDieBreakdown(
     primarySpatial.signatureDieIndices,
     totalDies,
   );
-  const spatialDieIndices =
-    normalizedSig.length > 0 ? normalizedSig : collectAllFinalFailDieIndices(lot);
+
+  let edgeBandTestedDies = 0;
+  let edgeBandFailDies = 0;
+  let interiorTestedDies = 0;
+  let interiorFailDies = 0;
+  const edgeBandMaxRing = CLASSIFIER_THRESHOLDS.EDGE_RING_BAND;
+  const edgeBandFailIndicesList: number[] = [];
+  const validCoordFailIndicesList: number[] = [];
+
+  for (let i = 0; i < totalDies; i += 1) {
+    if (lot.dies.hasValidCoords[i] === 0) {
+      continue;
+    }
+    const failed = lot.dies.finalPass[i] === 0;
+    if (failed) {
+      validCoordFailIndicesList.push(i);
+    }
+    const ring = lot.dies.ringIndex[i]!;
+    if (ring >= 1 && ring <= edgeBandMaxRing) {
+      edgeBandTestedDies += 1;
+      if (failed) {
+        edgeBandFailDies += 1;
+        edgeBandFailIndicesList.push(i);
+      }
+    } else if (ring > edgeBandMaxRing) {
+      interiorTestedDies += 1;
+      if (failed) {
+        interiorFailDies += 1;
+      }
+    }
+  }
+
+  let spatialDieIndices: Uint32Array;
+  if (
+    primarySpatial.pattern === 'Edge-Ring' &&
+    edgeBandFailIndicesList.length > 0
+  ) {
+    spatialDieIndices = Uint32Array.from(edgeBandFailIndicesList);
+  } else if (normalizedSig.length > 0) {
+    spatialDieIndices = normalizedSig;
+  } else if (validCoordFailIndicesList.length > 0) {
+    spatialDieIndices = Uint32Array.from(validCoordFailIndicesList);
+  } else {
+    spatialDieIndices = collectAllFinalFailDieIndices(lot);
+  }
 
   const waferSeen = new Uint8Array(Math.max(1, lot.wafers.length));
   let sigWaferCount = 0;
@@ -534,30 +577,6 @@ export function computeSpatialDieBreakdown(
     if (w < waferSeen.length && waferSeen[w] === 0) {
       waferSeen[w] = 1;
       sigWaferCount += 1;
-    }
-  }
-
-  let edgeBandTestedDies = 0;
-  let edgeBandFailDies = 0;
-  let interiorTestedDies = 0;
-  let interiorFailDies = 0;
-  const edgeBandMaxRing = CLASSIFIER_THRESHOLDS.EDGE_RING_BAND;
-
-  for (let i = 0; i < totalDies; i += 1) {
-    if (lot.dies.hasValidCoords[i] === 0) {
-      continue;
-    }
-    const ring = lot.dies.ringIndex[i]!;
-    if (ring >= 1 && ring <= edgeBandMaxRing) {
-      edgeBandTestedDies += 1;
-      if (lot.dies.finalPass[i] === 0) {
-        edgeBandFailDies += 1;
-      }
-    } else if (ring > edgeBandMaxRing) {
-      interiorTestedDies += 1;
-      if (lot.dies.finalPass[i] === 0) {
-        interiorFailDies += 1;
-      }
     }
   }
 
@@ -1322,7 +1341,7 @@ export function buildEngineFacts(
       dieIds: resolveDieIdsFromIndices(exc.signatureDieIndices, lot.dieIds),
       waferRef: {
         waferIndex: exc.wafer.waferIndex,
-        waferId: exc.wafer.waferId,
+        waferId: cleanWaferId,
       },
       hypotheses: exc.classification.candidateHypotheses,
     });

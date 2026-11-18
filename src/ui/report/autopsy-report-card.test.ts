@@ -152,18 +152,18 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
     const expectedHeadlines = [
       {
         presetId: 'edge-ring-etch' as const,
-        expectedPrefix: 'Cause of death: Edge-Ring failure',
-        expectedBin: 'most loss in SBIN 7.',
+        expectedPrefix: 'Cause of death: Edge-Ring failure.',
+        expectedBin: 'most loss in SBIN 7 (IDDQ_EDGE_LEAK).',
       },
       {
         presetId: 'handling-scratch' as const,
-        expectedPrefix: 'Cause of death: Scratch failure',
-        expectedBin: 'most loss in SBIN 9.',
+        expectedPrefix: 'Cause of death: Scratch failure.',
+        expectedBin: 'most loss in SBIN 9 (VDD_METAL_SHORT).',
       },
       {
         presetId: 'site2-probe-contact' as const,
-        expectedPrefix: 'Cause of death: Test Site 1:2 concentration anomaly',
-        expectedBin: 'most loss in SBIN 5.',
+        expectedPrefix: 'Cause of death: Test Site 1:2 concentration anomaly.',
+        expectedBin: 'most loss in SBIN 5 (CONT_OPEN).',
       },
     ];
 
@@ -189,11 +189,17 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
       expect(reportIdx).toBeGreaterThanOrEqual(0);
       expect(waferIdx).toBeGreaterThan(reportIdx);
 
-      // Cause-of-death headline, offline provenance badge, button semantics, focus ring, aria-pressed
+      // Cause-of-death headline, hedged <=0.95 confidence chip, offline provenance badge, button semantics, focus ring, aria-pressed
       expect(html).toContain(expectedPrefix);
       expect(html).toContain(expectedBin);
+      expect(html).not.toContain('(confidence');
+      expect(html).toContain('High · 0.9');
+      expect(html).not.toMatch(/High · 0\.9[6-9]|High · 1\.00/);
+      expect(html).toContain('Click a finding to light its dies');
+      expect(html).toContain('aria-live="polite"');
       expect(html).toContain('Template · Offline');
       expect(html).toContain('data-testid="autopsy-headline-button"');
+      expect(html).toContain('data-testid="autopsy-body-claim-button"');
       expect(html).toContain('type="button"');
       expect(html).toContain('aria-pressed="false"');
       expect(html).toContain('focus-visible:outline-accent');

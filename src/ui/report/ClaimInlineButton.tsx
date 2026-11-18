@@ -24,14 +24,23 @@ function renderHeadlineText(
     return <span className="text-text-primary">{text}</span>;
   }
   const confMarker = ' (confidence ';
-  const splitIdx = text.indexOf(confMarker);
-  if (splitIdx <= 0) {
+  const confIdx = text.indexOf(confMarker);
+  if (confIdx > 0) {
+    return (
+      <>
+        <span className="text-failure">{text.slice(0, confIdx)}</span>
+        <span className="text-text-primary">{text.slice(confIdx)}</span>
+      </>
+    );
+  }
+  const sentenceBreakIdx = text.indexOf('. ');
+  if (sentenceBreakIdx <= 0) {
     return <span className="text-failure">{text}</span>;
   }
   return (
     <>
-      <span className="text-failure">{text.slice(0, splitIdx)}</span>
-      <span className="text-text-primary">{text.slice(splitIdx)}</span>
+      <span className="text-failure">{text.slice(0, sentenceBreakIdx + 1)}</span>
+      <span className="text-text-primary">{text.slice(sentenceBreakIdx + 1)}</span>
     </>
   );
 }
@@ -138,6 +147,7 @@ export function ClaimInlineButton({
     <button
       type="button"
       data-claim-id={claim.claimId}
+      data-testid="autopsy-body-claim-button"
       aria-pressed={isActive}
       onClick={() => onToggle(claim)}
       className={cn(

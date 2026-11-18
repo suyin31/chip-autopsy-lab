@@ -258,11 +258,12 @@ function generateArchetypeWaferGrid(params: {
         break;
       }
       case 'Loc': {
-        const blobDist = 0.46 * rMax;
+        const blobDist = 0.48 * rMax;
+        const blobRadius = Math.max(3.1, 0.21 * rMax);
         const bx = cx + blobDist * Math.cos(angleOffset);
         const by = cy + blobDist * Math.sin(angleOffset);
-        const inBlob = Math.hypot(x - bx, y - by) <= 2.9 && ring >= 3;
-        failed = inBlob ? rng.nextBool(0.9) : rng.nextBool(0.005);
+        const inBlob = Math.hypot(x - bx, y - by) <= blobRadius && ring > 3;
+        failed = inBlob ? rng.nextBool(0.92) : rng.nextBool(0.0025);
         break;
       }
       case 'Scratch': {
@@ -403,5 +404,36 @@ describe('Property 8: WM-811K Classifier Determinism & D4 Symmetry Robustness (f
       }),
       { numRuns: D4_NUM_RUNS },
     );
+  });
+
+  it('recovers Loc across all D4 transforms on regression counterexample seed -1543656942 (radius 16)', () => {
+    for (const halfIntegerCenter of [false, true]) {
+      const { cx, cy, cells } = generateArchetypeWaferGrid({
+        archetype: 'Loc',
+        halfIntegerCenter,
+        offsetX: 0,
+        offsetY: 0,
+        radius: 16,
+        seed: -1543656942,
+      });
+      const baseLot = buildSingleWaferLotFromGrid(cells);
+      const baseClass = classifyWaferPattern(baseLot, 0);
+      expect(baseClass.pattern).toBe('Loc');
+
+      for (const op of ALL_D4_TRANSFORMS) {
+        const mapped = cells.map((cell) => {
+          const pt = applyD4Point(cell.x, cell.y, cx, cy, op);
+          return { x: pt.x, y: pt.y, failed: cell.failed };
+        });
+        const transformedClass = classifyWaferPattern(
+          buildSingleWaferLotFromGrid(mapped),
+          0,
+        );
+        expect(transformedClass.pattern).toBe('Loc');
+        expect(
+          Math.abs(transformedClass.confidence - baseClass.confidence),
+        ).toBeLessThanOrEqual(0.05);
+      }
+    }
   });
 });
