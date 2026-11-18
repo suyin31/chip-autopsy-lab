@@ -415,7 +415,7 @@ export function FindingsList({
                     className={cn(
                       'group/finding rounded-lg transition-[background-color,scale] ease-out',
                       isPressed
-                        ? 'bg-fill-2 duration-0 scale-[0.985]'
+                        ? 'bg-fill-2 duration-0 scale-[0.985] motion-reduce:scale-100'
                         : isSelected
                           ? 'bg-fill-2 duration-120'
                           : 'bg-transparent duration-120 hover:bg-fill-1',
@@ -619,7 +619,7 @@ export function FindingsList({
               'group/causes grid h-12 w-full cursor-pointer appearance-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 rounded-lg border-0 px-5 text-left',
               'transition-[background-color,scale] ease-out',
               pressedRowKey === 'possible-causes'
-                ? 'bg-fill-2 duration-0 scale-[0.985]'
+                ? 'bg-fill-2 duration-0 scale-[0.985] motion-reduce:scale-100'
                 : 'bg-transparent duration-120 hover:bg-fill-1',
               'focus-visible:shadow-focus-ring focus-visible:outline-none',
             )}

@@ -77,11 +77,17 @@ export function ConfidencePill({
     );
   }, []);
 
+  // The popover mounts only once its anchored position is known: Motion applies `style` changes
+  // on its next frame, so a popover mounted at the default position would show there for a frame.
+  const [positionReady, setPositionReady] = React.useState(false);
+
   React.useLayoutEffect(() => {
     if (!open || !mounted) {
+      setPositionReady(false);
       return;
     }
     updatePosition();
+    setPositionReady(true);
     const handleRelayout = (): void => updatePosition();
     window.addEventListener('resize', handleRelayout);
     window.addEventListener('scroll', handleRelayout, true);
@@ -299,7 +305,7 @@ export function ConfidencePill({
 
       {mounted && typeof document !== 'undefined' ? (
         createPortal(
-          <AnimatePresence>{open ? popoverBody : null}</AnimatePresence>,
+          <AnimatePresence>{open && positionReady ? popoverBody : null}</AnimatePresence>,
           document.body,
         )
       ) : open ? (

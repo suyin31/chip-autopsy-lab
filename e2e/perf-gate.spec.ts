@@ -12,10 +12,11 @@ interface PerfGateReport {
   readonly maxRafMs: number;
   readonly maxAckMs: number;
   readonly ackSamplesMs: readonly number[];
+  readonly longFrameSteps: readonly string[];
 }
 
-test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and §5.10 perf gate', () => {
-  test('passes §5.10 perf gate (0 frames > 50 ms, median rAF < 20 ms, p95 < 34 ms, ack < 100 ms) and sweeps in <= 1.2 s with verdict < 3 s', async ({
+test.describe('Redesign R8 + premium P34 — reveal motion, reduced motion, visual fixes, and the §5.10 / §8.17 perf gate', () => {
+  test('A39: passes the §5.10 / §8.17 perf gate with a theme switch and a sheen sweep (0 frames > 50 ms, median rAF < 20 ms, p95 < 34 ms, ack < 100 ms); sweeps in <= 1.2 s with verdict < 3 s', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -95,6 +96,7 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
         stop: () => {
           observerType: string;
           longOver50: number[];
+          longOver50Starts: number[];
           rafDeltas: number[];
           ackLatencies: number[];
         };
@@ -193,6 +195,9 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
               longOver50: windowEntries
                 .filter((e) => e.duration > 50)
                 .map((e) => Number(e.duration.toFixed(2))),
+              longOver50Starts: windowEntries
+                .filter((e) => e.duration > 50)
+                .map((e) => e.startTime),
               rafDeltas,
               ackLatencies,
             };
@@ -205,6 +210,13 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
     const cx = stageBox.x + stageBox.width / 2;
     const cy = stageBox.y + stageBox.height / 2;
 
+    // Step start times, so a long frame can be attributed to the step that produced it
+    const stepMarks: Array<{ step: string; t: number }> = [];
+    const mark = async (step: string): Promise<void> => {
+      stepMarks.push({ step, t: await page.evaluate(() => performance.now()) });
+    };
+
+    await mark('wheel');
     // 3a. 12 wheel events (deltaY: -120, 50 ms apart) over wafer centre
     await page.mouse.move(cx, cy);
     for (let i = 0; i < 12; i += 1) {
@@ -212,6 +224,7 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
       await page.waitForTimeout(50);
     }
 
+    await mark('drag');
     // 3b. 2 mouse drags of 200 px in 300 ms with 20 move steps
     for (let dragIdx = 0; dragIdx < 2; dragIdx += 1) {
       const dir = dragIdx === 0 ? 1 : -1;
@@ -225,11 +238,13 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
       await page.mouse.up();
     }
 
+    await mark('dblclick');
     // 3c. Double-click
     await stage.dblclick({
       position: { x: stageBox.width / 2, y: stageBox.height / 2 },
     });
 
+    await mark('strip-keys');
     // 3d. Focus the strip and press ArrowRight 10 times 80 ms apart
     const firstStripOption = page
       .getByTestId('wafer-strip')
@@ -241,12 +256,14 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
       await page.waitForTimeout(80);
     }
 
+    await mark('finding');
     // 3e. Click finding 1, wait 700 ms, click it again
     const finding1 = page.getByTestId('autopsy-body-claim-button').first();
     await finding1.click();
     await page.waitForTimeout(700);
     await finding1.click();
 
+    await mark('rect');
     // 3f. Shift+drag a 200 x 160 rect
     const rectStartX = cx - 100;
     const rectStartY = cy - 80;
@@ -257,6 +274,26 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
     await page.mouse.up();
     await page.keyboard.up('Shift');
 
+    await mark('theme-switch');
+    // 3g. Premium §8.17: one theme switch through the Appearance menu (dark -> light)
+    await page.getByTestId('theme-toggle-trigger').click();
+    await page.getByTestId('theme-option-light').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await page.waitForTimeout(400);
+
+    await mark('sheen-sweep');
+    // 3h. Premium §8.17: a 1 s pointer sweep across the disc (sheen)
+    const disc = (await page.getByTestId('wafer-stage-sheen').boundingBox())!;
+    const sweepSteps = 60;
+    for (let s = 0; s <= sweepSteps; s += 1) {
+      await page.mouse.move(
+        disc.x + (disc.width * s) / sweepSteps,
+        disc.y + disc.height * (0.3 + (0.4 * s) / sweepSteps),
+      );
+      await page.waitForTimeout(1000 / sweepSteps);
+    }
+
+    await mark('tail');
     // 4. Stop after last action + 500 ms
     await page.waitForTimeout(500);
 
@@ -266,6 +303,7 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
           stop: () => {
             observerType: string;
             longOver50: number[];
+            longOver50Starts: number[];
             rafDeltas: number[];
             ackLatencies: number[];
           };
@@ -302,6 +340,10 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
           ? Number(Math.max(...rawMetrics.ackLatencies).toFixed(2))
           : 0,
       ackSamplesMs: rawMetrics.ackLatencies.map((n) => Number(n.toFixed(2))),
+      longFrameSteps: rawMetrics.longOver50Starts.map(
+        (start) =>
+          [...stepMarks].reverse().find((m) => m.t <= start)?.step ?? 'before-wheel',
+      ),
     };
 
     // 6. Log numbers for logs/

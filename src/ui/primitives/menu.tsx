@@ -422,11 +422,17 @@ export function DropdownMenuContent({
     );
   }, [align, expectedWidthPx, sideOffset, triggerRef]);
 
+  // The menu mounts only once its anchored position is known: Motion applies `style` changes on
+  // its next frame, so a menu mounted at the default position would show there for one frame.
+  const [positionReady, setPositionReady] = React.useState(false);
+
   React.useLayoutEffect(() => {
     if (!open || typeof window === 'undefined') {
+      setPositionReady(false);
       return;
     }
     updatePosition();
+    setPositionReady(true);
 
     // Focus checked item or first enabled menuitem when opened
     const frame = requestAnimationFrame(() => {
@@ -595,7 +601,7 @@ export function DropdownMenuContent({
 
   const menuNode = (
     <AnimatePresence initial={false}>
-      {open ? (
+      {open && positionReady ? (
         <motion.div
           ref={menuRef}
           id={contentId}
