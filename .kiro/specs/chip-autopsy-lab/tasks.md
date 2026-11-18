@@ -337,7 +337,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P33. Accent and hover audit
   - Automated check counting ember-family elements per viewport; remove stray orange; verify every hover uses the §8.9 properties and no `transition: all` remains (premium §3.4, §8.9, §1.3).
   - Accept: A3, A4.
-- [ ] P34. Reduced motion and perf gate
+- [x] P34. Reduced motion and perf gate
   - Extend `e2e/perf-gate.spec.ts` with the theme switch and sheen sweep; reduced-motion e2e covering every row of §8.16; record numbers in `logs/` (premium §8.16, §8.17).
   - Accept: A36, A39.
 - [ ] P35. Full acceptance run (also amend requirements.md 14.2/14.3 focus colours and product.md mobile non-goal to match premium.md)

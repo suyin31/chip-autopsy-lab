@@ -599,9 +599,16 @@ export function DropdownMenuContent({
             },
       };
 
+  const [isClientMounted, setIsClientMounted] = React.useState(false);
+
+  React.useLayoutEffect(() => {
+    setIsClientMounted(true);
+  }, []);
+
+  // Server and static renders have no layout pass, so they render the open menu directly
   const menuNode = (
     <AnimatePresence initial={false}>
-      {open && positionReady ? (
+      {open && (positionReady || !isClientMounted) ? (
         <motion.div
           ref={menuRef}
           id={contentId}
@@ -628,12 +635,6 @@ export function DropdownMenuContent({
       ) : null}
     </AnimatePresence>
   );
-
-  const [isClientMounted, setIsClientMounted] = React.useState(false);
-
-  React.useLayoutEffect(() => {
-    setIsClientMounted(true);
-  }, []);
 
   if (!isClientMounted || typeof document === 'undefined') {
     return menuNode;
