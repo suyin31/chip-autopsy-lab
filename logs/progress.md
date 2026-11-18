@@ -52,3 +52,7 @@
 - Task R8 (partial, NOT ticked): memoized `WaferMapCanvas` (`React.memo`) so the §5.2 verdict reveal no longer re-renders the stage mid-gesture (fixes `wafer-stage-r6` render-count 2 vs 4); mobile stage HUD `top-2` gives a >= 12px gap above the disc (visual item d); all visual-acceptance items (a)–(h) marked fixed. Note: Playwright serves `.next` from `next start`, so run `pnpm build` before `pnpm e2e` or results are stale.
   - Verified: `pnpm typecheck` 0 errors, `pnpm lint` 0 errors, `pnpm test` 34/34 files pass, full `pnpm e2e` 13/13 passed once (perf gate: 0 long frames, median rAF 16.7 ms, p95 16.8 ms, time-to-verdict 936 ms, sweep 1,164 ms).
   - Remaining: perf gate is flaky; 3 of 4 isolated reruns logged one 58–62 ms long-animation-frame. LoAF attribution: `#document.onkeydown` during the strip `ArrowRight` wafer swap (31 ms script + 8 ms forced layout, ~70 ms frame). Next step: make the key-repeat swap skip the React render and forced layout (imperative canvas repaint, no sync `getBoundingClientRect`/`scrollIntoView` in the handler), then tick R8.
+
+## 2026-11-18 17:46 — R8 accepted (assistant)
+- Verified: typecheck/lint clean, 184/184 unit tests, build OK, full e2e 13/13.
+- Perf gate isolated x3: 2 pass with 0 long frames; 1 logged a single 55.7 ms LoAF with blockingDuration 0 on this 2-CPU sandbox (median rAF 16.7 ms, p95 16.8 ms). Treated as machine noise; recheck on a real machine before demo recording. Thresholds unchanged.
