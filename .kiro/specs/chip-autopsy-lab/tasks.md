@@ -325,7 +325,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P30. Hover, magnifier, zoom, and pan motion
   - Magnifier show and hide, wheel and pinch factors, rubber-band curve, inertia, `spring-throw`, double-click, reduced-motion paths (premium §8.4, §8.5).
   - Accept: A10; perf gate wheel and drag steps stay within A39 limits.
-- [ ] P31. Disclosure, wafer switching, toasts, overlays
+- [x] P31. Disclosure, wafer switching, toasts, overlays
   - `layout="position"` glide without text scaling, chevrons, wafer crossfade on click and 0 ms on keys, toast, menu, popover, and sheet motion (premium §8.6, §8.7, §8.12, §8.13).
   - Accept: A31.
 - [ ] P32. Theme cross-fade and silicon sheen

@@ -1,0 +1,165 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=34
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=51
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=62
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=34
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Everything passes. Now let me review the code to see what's missing (toasts, wafer crossfade, dialog, etc.).
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=79
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=81
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=54
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=234
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Build is older than the p31 changes; rebuild in the background while I write the spec.
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=109
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1555
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=32
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=76
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=34
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=60
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=140
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now run the new spec plus the related specs (findings, toasts/sheets, primitives, wafer strip, pareto, yield summary, linked interactions).
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=106
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=86
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Both were load-related flakes; they pass on rerun. Final checks and bookkeeping:
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=83
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=330
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=67
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+P31 is finished. The previous session had written all of the code in commit `5cb574f`. What was missing was the A31 end-to-end check, ticking the task, and the progress note, and I added those. `pnpm typecheck` and `pnpm lint` are clean, and `pnpm test` passes 350/350 across 55 files.
+
+**Already in the code from the previous session:**
+- **Disclosure** (`src/ui/primitives/disclosure.tsx`): this covers finding rows, Possible causes, "Show all" bins and wafers, and "Show more findings".
+  - The chevron rotates 180° on `spring-snappy`.
+  - The body mounts in place and fades in with a 4 px rise over `dur-1`, starting 40 ms after the click.
+  - Rows below glide with `layout="position"`.
+  - Closing fades the body over 100 ms, then removes it.
+- **Wafer switching:** every wafer key (arrows, Home/End, PageUp/PageDown, held repeat) swaps at 0 ms. Only a thumbnail click cross-fades. A click during a fade restarts it from the frame currently on screen.
+- **Toasts, menus, tooltips, dialog, sheet:** these follow §8.12 and §8.13. Toasts no longer animate height. Under reduced motion every one of these surfaces only fades, over 120 ms.
+
+**Added this session:**
+- **`e2e/disclosure-p31.spec.ts`** (3 tests, all pass):
+  - It checks every frame for 400 ms while a finding expands, switches to another finding, collapses, and while Possible causes opens and closes. That covers the A31 frames at 0, 40, 80, 120, 200 and 320 ms. Every frame had zero overlapping visible text and zero scaled text.
+  - It also checks that a thumbnail click cross-fades the wafer and a single arrow key swaps instantly.
+- **Bookkeeping:** P31 is ticked in `tasks.md`, and `logs/progress.md` has the P31 entry.
+
+**Related e2e runs, after a fresh build:**
+- These passed: `findings-p19`, `toasts-sheets-p22`, `primitives-p15`, `wafer-strip-p9`, `pareto-p20`, `yield-summary-p21`, `glossary-p24` and `nav-p16`.
+- Two tests failed once while the machine was loaded and passed on two reruns each: `glossary-p24` A22 and `wafer-strip-p9` at 1280 px wide.
+- `linked-interactions-r7` failed only on its known 780 ms timing step.
+- No visual snapshots or locale strings changed.
+
+**Decision:** the previous session made the body fade wait until the gliding rows below have moved clear of it, up to 600 ms, so text never overlaps at any frame. premium.md doesn't say this, so I recorded it in `progress.md` as the restrained choice.
+
+Chromium on this machine is missing system libraries such as `libatk`. As in earlier phases, I ran e2e with `LD_LIBRARY_PATH` pointing at libraries in an old scratch folder, without changing the system. The `logs/p31*` files in the working tree come from the session runner, so I left them alone.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=190
+
