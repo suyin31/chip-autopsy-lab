@@ -135,7 +135,6 @@ test('theme switch is instant under reduced motion and for OS-driven changes', a
   page,
 }) => {
   await trackViewTransitions(page);
-  await page.addInitScript((m) => { (window as any).__p32mode = m; }, process.env.MODE ?? '');
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
   await page.goto('/');
   await chooseTheme(page, 'light');

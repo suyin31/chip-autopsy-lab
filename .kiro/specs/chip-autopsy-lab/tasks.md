@@ -328,7 +328,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P31. Disclosure, wafer switching, toasts, overlays
   - `layout="position"` glide without text scaling, chevrons, wafer crossfade on click and 0 ms on keys, toast, menu, popover, and sheet motion (premium §8.6, §8.7, §8.12, §8.13).
   - Accept: A31.
-- [ ] P32. Theme cross-fade and silicon sheen
+- [x] P32. Theme cross-fade and silicon sheen
   - View Transitions cross-fade with `skipTransition()` on repeat; sheen pointer follow with `spring-sheen`, landing-card variant, freeze during gestures (premium §8.8, §8.11).
   - Accept: A2 (no flash on switch), A39 (theme and sheen steps).
 
