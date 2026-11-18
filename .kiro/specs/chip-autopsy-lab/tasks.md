@@ -179,3 +179,32 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
 - [ ] 22. Deploy and prepare the demo video
   - Deploy to Vercel; update `README.md` with the Kiro usage table (specs, steering, hooks, MCP), third-party disclosures, and demo lot downloads; script and record the five demo moments in under 3 minutes with the problem stated in the first 15 seconds; write the phase summary in `logs/`.
   - _Requirements: 3.4, 15.6, 16.2_
+
+## Redesign
+
+Specification: `.kiro/specs/chip-autopsy-lab/redesign.md`. Each task is a <= 15-minute chunk and must leave `pnpm lint`, `pnpm typecheck`, and `pnpm test` green.
+
+- [ ] R1. Tokens and globals
+  - Apply redesign §2 to `src/ui/tokens/palette.ts`, `tokens.ts`, and `src/app/globals.css` (`bg #000000`, ice `accent #D6E6FF`, `failure #FF6B2C`, `pass-die #63666C`, type scale, radii, springs, z-layers, CJK font variables and `:lang()` overrides); update palette tests.
+  - Accept: `pass-die` >= 3:1 on `#000` and `#141416`; `text-tertiary` >= 4.5:1 on `#000` and `#1A1A1C`; no `7CF2C1` or `FF7A1A` left in `src/`.
+- [ ] R2. i18n core and provider
+  - Add `src/core/i18n/` (locales, typed `t`, `Intl` formatters, `en` table from redesign §6.8, `zh-CN`, `zh-TW`, `ja`, `ko`) and `src/ui/i18n/` (provider, `useT`, pre-hydration locale script, `localStorage["cal.locale"]`).
+  - Accept: key and placeholder parity across all 5 locales; `matchLocale` maps `zh-HK` to `zh-TW`, `zh` to `zh-CN`, `fr` to `en`; core isolation lint passes.
+- [ ] R3. Primitives and nav
+  - Restyle buttons (§4.11), add segmented control and menus, build `NavBar`, `LotPicker`, `LanguageSwitcher`; remove the old header, toolbar row, `Browser Sandbox` badge, and footer counter.
+  - Accept: nav 52 px desktop / 48 px mobile; language change updates `<html lang>` and survives reload; ice 2 px focus rings; Tab order wordmark, lot picker, language, Open STDF.
+- [ ] R4. Landing, drag overlay, parse error, bins-only
+  - Landing hero with three demo cards and wafer thumbnails (§3.1), drag overlay (§3.2), error view per code (§3.7), bins-only sheet and notice (§3.8).
+  - Accept: Playwright screenshots at 1440 x 900 and 390 x 844 match §3.1 above the fold; one click on a card loads the lot; a PNG drop shows "This file isn't an STDF log."; a stubbed 312 MB file opens the sheet with "Use bins-only" focused.
+- [ ] R5. Verdict column
+  - Split `AutopsyReportCard` into `VerdictHero`, `ConfidencePill` (absorbs `NarrationBadge`), `StatRow`, `FindingsList`; add `messageKey`/`params` to claims, `renderReport(report, locale)`, and `stat-facts.ts`.
+  - Accept: "Cause of death: Edge-Ring failure." fits <= 2 lines at 553 px with the cause phrase orange; exactly 3 stats; borderless one-line findings; no monospace or uppercase labels in the column; per-locale report rendering is deterministic.
+- [ ] R6. Wafer stage layout, rendering, and camera
+  - Loaded layout grid (§3.4), boxless stage with vignette and top light, pass/fail geometry cue, three canvases, camera controller (wheel, pinch, drag pan with inertia and rubber-band, double-click reset) on a CSS-transform wrapper with re-raster after settle.
+  - Accept: wafer >= 560 px at 1440 x 900 and 350 px at 390 px; wheel zoom anchored at the cursor; flick pan coasts; double-click resets; no React render during drag; arrow-key die stepping still works.
+- [ ] R7. Linked interactions
+  - Hover magnifier (§4.8), finding select with scrim, ordered glow, and camera frame (§5.4), box select with live stats popover (§3.6, §5.7), wafer strip with scroll-snap, roving keyboard, crossfade, and evidence dots (§4.9, §5.8).
+  - Accept: the edge-band finding lights ring dies clockwise within 600 ms and a second click clears; Shift+drag stats update during the drag; held ArrowRight swaps wafers instantly; magnifier placement never covers the hovered die (unit test).
+- [ ] R8. Reveal motion, reduced motion, and perf gate
+  - Probe sweep (§5.1), verdict rise-in (§5.2), count-up (§5.3), toast styling (§4.13), reduced-motion paths, and `e2e/perf-gate.spec.ts` (§5.10); record measurements in `logs/`.
+  - Accept: first load sweeps in <= 1.2 s and any key skips it; with `reducedMotion: "reduce"` there is no sweep or stagger and stats show final values; perf gate shows 0 frames > 50 ms, median rAF < 20 ms, p95 < 34 ms; demo time-to-verdict < 3 s.
