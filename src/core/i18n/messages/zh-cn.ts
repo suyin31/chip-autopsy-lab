@@ -228,15 +228,12 @@ export const zhCN = {
   'stage.evidenceCaption': '共 {wafers} 片晶圆 {dies} 颗晶粒，本片 {here} 颗',
 
   // Magnifier
-  'magnifier.coords': 'X, Y',
-  'magnifier.site': '工位',
-  'magnifier.bin': '分档',
-  'magnifier.hbin': 'HBIN',
+  'magnifier.failed': '失效',
+  'magnifier.passed': '合格',
+  'magnifier.place': 'X {x}，Y {y}',
   'magnifier.outOfLimits': '超出规格限',
-  'magnifier.retested': '已复测',
-  'magnifier.retestedValue': '是，共测 {count} 次',
-  'magnifier.notch': '切口',
-  'magnifier.notchValue': '{clock} 点钟方向',
+  'magnifier.retested': '已复测，第 {n} 次合格',
+  'magnifier.retestedFailed': '已复测，第 {n} 次仍失效',
 
   // Selection popover
   'selection.dies.one': '已选 {count} 颗晶粒',

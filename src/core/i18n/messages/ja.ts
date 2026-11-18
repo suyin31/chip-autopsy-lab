@@ -232,15 +232,12 @@ export const ja = {
   'stage.evidenceCaption': '全 {wafers} ウェハ中 {dies} ダイ、このウェハに {here}',
 
   // Magnifier
-  'magnifier.coords': 'X, Y',
-  'magnifier.site': 'サイト',
-  'magnifier.bin': 'ビン',
-  'magnifier.hbin': 'HBIN',
+  'magnifier.failed': '不良',
+  'magnifier.passed': '良',
+  'magnifier.place': 'X {x}、Y {y}',
   'magnifier.outOfLimits': '規格外',
-  'magnifier.retested': '再測定',
-  'magnifier.retestedValue': 'あり（{count} 回測定）',
-  'magnifier.notch': 'ノッチ',
-  'magnifier.notchValue': '{clock} 時方向',
+  'magnifier.retested': '再測定、{n} 回目で良',
+  'magnifier.retestedFailed': '再測定、{n} 回目も不良',
 
   // Selection popover
   'selection.dies.one': '{count} ダイを選択',

@@ -11,14 +11,20 @@ import {
 } from '@/core/report';
 import { Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
+import { MATERIAL_THICK_CLASS } from '@/ui/primitives/surfaces';
 import {
   EMPTY_HIDDEN_BINS,
   type SelectionStoreState,
+  useResolvedTheme,
   useSelectionStore,
   type WaferColorMode,
 } from '@/ui/state';
-import { COLOR_TOKENS, getFailBinColor, SPRING_TOKENS } from '@/ui/tokens';
-import { computeMagnifierPlacement } from './linked-interactions';
+import { SPRING_TOKENS, THEME_TOKENS, WAFER_TOKENS } from '@/ui/tokens';
+import {
+  computeMagnifierPlacement,
+  computePinnedReadoutPlacement,
+  formatDieCoordinate,
+} from './linked-interactions';
 import type { CameraState } from './wafer-camera';
 import { cameraToViewportTransform } from './wafer-camera';
 import {
@@ -28,9 +34,9 @@ import {
   resolveCanvasPixelSize,
 } from './wafer-geometry';
 
-export const MAGNIFIER_WIDTH_PX = 184 as const;
-export const LOUPE_WIDTH_PX = 168 as const;
-export const LOUPE_HEIGHT_PX = 120 as const;
+export const MAGNIFIER_WIDTH_PX = 200 as const;
+export const LOUPE_WIDTH_PX = 184 as const;
+export const LOUPE_HEIGHT_PX = 112 as const;
 const HIDE_DELAY_MS = 80 as const;
 
 export interface HoverMagnifierHandle {
@@ -48,12 +54,17 @@ export interface HoverMagnifierHandle {
   syncPositionForCamera(): void;
   /** Positions relative to a keyboard-stepped die's screen centre. */
   notifyKeyboardStepDie(dieIndex: number): void;
-  /** Toggles Enter-key or touch-tap pin on a die (§4.7, §4.8). */
-  togglePinAtDie(dieIndex: number | null): boolean;
+  /**
+   * Toggles Enter-key or touch-tap pin on a die (§4.7, §4.8). A touch pin shows the readout
+   * without the loupe, 12 px above the die (premium §7.15).
+   */
+  togglePinAtDie(dieIndex: number | null, source?: MagnifierPinSource): boolean;
   /** Clears pinned magnifier (`true` if a pin was active and cleared). */
   clearPin(): boolean;
   hasPin(): boolean;
 }
+
+export type MagnifierPinSource = 'keyboard' | 'touch';
 
 export interface HoverMagnifierProps {
   readonly lot: LotModel;
@@ -69,13 +80,6 @@ export interface HoverMagnifierProps {
   readonly onPinnedDieChange?: (dieIndex: number | null) => void;
 }
 
-function resolveNotchClock(wfFlat: 'U' | 'D' | 'L' | 'R' | ' '): number {
-  if (wfFlat === 'U') return 12;
-  if (wfFlat === 'R') return 3;
-  if (wfFlat === 'L') return 9;
-  return 6;
-}
-
 interface KeyTestReadout {
   readonly testNum: number;
   readonly label: string;
@@ -83,13 +87,14 @@ interface KeyTestReadout {
   readonly outOfLimits: boolean;
 }
 
-function selectKeyTestsForDie(
+/** The one key test for the readout's row 3: the cited/active test, else the first out-of-limits test, else the lowest test number. */
+function selectKeyTestForDie(
   lot: LotModel,
   dieIndex: number,
   preferredTestNum: number | null,
-): readonly KeyTestReadout[] {
+): KeyTestReadout | null {
   if (lot.tests.size === 0) {
-    return [];
+    return null;
   }
   const candidates: Array<{
     readonly col: ParametricTestColumn;
@@ -119,36 +124,43 @@ function selectKeyTestsForDie(
     return a.col.testNum - b.col.testNum;
   });
 
-  return candidates.slice(0, 2).map((item) => {
-    const scaled = formatScaledParametricValue(
-      item.value,
-      item.col.units,
-      item.col.resScal,
-    );
-    const cleanName = sanitizeReportProseText(item.col.testName);
-    return {
-      testNum: item.col.testNum,
-      label: cleanName.length > 0 ? cleanName : `T${item.col.testNum}`,
-      valueText: scaled.displayValue,
-      outOfLimits: item.outOfLimits,
-    };
-  });
+  const item = candidates[0];
+  if (item === undefined) {
+    return null;
+  }
+  const scaled = formatScaledParametricValue(
+    item.value,
+    item.col.units,
+    item.col.resScal,
+  );
+  const cleanName = sanitizeReportProseText(item.col.testName);
+  return {
+    testNum: item.col.testNum,
+    label: cleanName.length > 0 ? cleanName : `T${item.col.testNum}`,
+    valueText: scaled.displayValue,
+    outOfLimits: item.outOfLimits,
+  };
+}
+
+/** `--bin-ink-N` index for a fail-bin rank (rank 0 is ember; ranks 1+ cycle through 7 hues, premium §3.5). */
+function binInkIndexForRank(rank: number): number {
+  const safe = Math.max(0, Math.trunc(rank));
+  return safe === 0 ? 0 : 1 + ((safe - 1) % 7);
 }
 
 /**
- * Self-contained Floating Hover Magnifier (`src/ui/wafer-map/HoverMagnifier.tsx`, `redesign.md` §4.8, §5.6).
+ * Self-contained Floating Hover Magnifier (`src/ui/wafer-map/HoverMagnifier.tsx`, premium §5.9, §7.15, §8.4).
  *
  * Subscribes directly to `SelectionStore` so `WaferMapCanvas` incurs ZERO re-renders on hover,
  * wheel zoom, or drag pan:
- * - Material container (`z: 20`, radius `16`, padding `8`, width `184`)
- * - Desktop `168 x 120` (`rounded-md` `12 px`) loupe blitting a `3x` neighbourhood from
- *   `BaseCanvas` via `drawImage` strictly once per hovered-die change + `1.5 px` `#D6E6FF` reticle;
- *   hidden on mobile (`hidden md:block`, readout-only on mobile)
- * - 2-column readout (`footnote` sans labels, `mono-data` values): `X, Y`, `Site`, `Bin`
- *   (with pass/fail swatch shape), `HBIN`, up to 2 key tests (`failure-text` + `"out of limits"`),
- *   `Retested` (when retested), and `Notch`
+ * - `material-thick` + `shadow-popover` container (`z: 20`, `r-lg`, padding `8`, width `200`)
+ * - Hover devices: `184 x 112` `r-sm` loupe blitting a `3x` neighbourhood from `BaseCanvas`
+ *   once per hovered-die change, with a `1.5 px` white rim on the die and an inner 1 px ring
+ * - Inter readout, at most 4 rows, primary and secondary text only: status (swatch +
+ *   "Failed"/"Passed", bin code), place ("X 12, Y −4", site), one key test (value, "out of
+ *   limits"), and the retest line when the die was retested
  * - 1:1 pointer tracking via imperative `transform` written in rAF; `80 ms` leave delay before
- *   `120 ms` fade-out; supports `Enter` / touch-tap pinning.
+ *   `120 ms` fade-out; `Enter` pins at the cursor; a touch tap pins the readout 12 px above the die.
  */
 const HoverMagnifierImpl = React.forwardRef<
   HoverMagnifierHandle,
@@ -170,6 +182,7 @@ const HoverMagnifierImpl = React.forwardRef<
 ): React.JSX.Element {
   const { t, formatInteger } = useT();
   const shouldReduceMotion = useReducedMotion();
+  const resolvedTheme = useResolvedTheme();
   const outerRef = React.useRef<HTMLDivElement>(null);
   const loupeCanvasRef = React.useRef<HTMLCanvasElement>(null);
 
@@ -205,6 +218,12 @@ const HoverMagnifierImpl = React.forwardRef<
   const [pinnedDieIndex, setPinnedDieIndex] = React.useState<number | null>(
     null,
   );
+  const [pinSource, setPinSource] = React.useState<MagnifierPinSource | null>(
+    null,
+  );
+  const pinSourceRef = React.useRef<MagnifierPinSource | null>(null);
+  pinSourceRef.current = pinnedDieIndex !== null ? pinSource : null;
+  const touchPinned = pinnedDieIndex !== null && pinSource === 'touch';
   const [hoverActive, setHoverActive] = React.useState(false);
   const [gestureSuppressed, setGestureSuppressedState] = React.useState(false);
 
@@ -327,7 +346,30 @@ const HoverMagnifierImpl = React.forwardRef<
           ? pointerPosRef.current
           : { x: dieRect.centerX, y: dieRect.centerY };
 
-      const measuredHeight = el.offsetHeight > 0 ? el.offsetHeight : 236;
+      const measuredHeight = el.offsetHeight > 0 ? el.offsetHeight : 216;
+      if (pinnedRef.current !== null && pinSourceRef.current === 'touch') {
+        const pinned = computePinnedReadoutPlacement({
+          dieRect: {
+            x: dieRect.x,
+            y: dieRect.y,
+            width: dieRect.width,
+            height: dieRect.height,
+          },
+          readoutWidth: MAGNIFIER_WIDTH_PX,
+          readoutHeight: measuredHeight,
+          stageWidth: cur.stageWidth,
+        });
+        lastPlacedRef.current = {
+          x: pinned.x,
+          y: pinned.y,
+          origin: pinned.transformOrigin,
+        };
+        el.style.transform = `translate3d(${pinned.x}px, ${pinned.y}px, 0)`;
+        el.style.transformOrigin = pinned.transformOrigin;
+        el.dataset.x = String(pinned.x);
+        el.dataset.y = String(pinned.y);
+        return;
+      }
       const placed = computeMagnifierPlacement({
         pointerX: ptr.x,
         pointerY: ptr.y,
@@ -391,7 +433,7 @@ const HoverMagnifierImpl = React.forwardRef<
     if (visible && displayedDieIndex !== null) {
       applyPlacementNow(displayedDieIndex, pinnedDieIndex !== null);
     }
-  }, [visible, displayedDieIndex, pinnedDieIndex, applyPlacementNow]);
+  }, [visible, displayedDieIndex, pinnedDieIndex, touchPinned, applyPlacementNow]);
 
   React.useImperativeHandle(
     ref,
@@ -453,7 +495,10 @@ const HoverMagnifierImpl = React.forwardRef<
         setHoverActive(true);
         applyPlacementNow(dieIndex, true);
       },
-      togglePinAtDie(dieIndex: number | null): boolean {
+      togglePinAtDie(
+        dieIndex: number | null,
+        source: MagnifierPinSource = 'keyboard',
+      ): boolean {
         clearHideTimer();
         if (dieIndex === null) {
           if (pinnedRef.current !== null) {
@@ -470,6 +515,8 @@ const HoverMagnifierImpl = React.forwardRef<
           return true;
         }
         pinnedRef.current = dieIndex;
+        pinSourceRef.current = source;
+        setPinSource(source);
         setPinnedDieIndex(dieIndex);
         setHoverActive(true);
         applyPlacementNow(dieIndex, true);
@@ -501,7 +548,7 @@ const HoverMagnifierImpl = React.forwardRef<
 
   // Draw 3x neighbourhood loupe ONCE per hovered-die / wafer / mode change (§4.8, §5.6)
   React.useEffect(() => {
-    if (!visible || displayedDieIndex === null || !wafer) {
+    if (!visible || touchPinned || displayedDieIndex === null || !wafer) {
       return;
     }
     const loupeCanvas = loupeCanvasRef.current;
@@ -523,7 +570,7 @@ const HoverMagnifierImpl = React.forwardRef<
     }
 
     ctx.setTransform(dims.dpr, 0, 0, dims.dpr, 0, 0);
-    ctx.fillStyle = COLOR_TOKENS.bg;
+    ctx.fillStyle = THEME_TOKENS[resolvedTheme].bg;
     ctx.fillRect(0, 0, LOUPE_WIDTH_PX, LOUPE_HEIGHT_PX);
 
     const liveCam = getCamera();
@@ -575,7 +622,7 @@ const HoverMagnifierImpl = React.forwardRef<
       ctx.drawImage(baseCanvas, clampedSx, clampedSy, sw, sh, dx, dy, dw, dh);
     }
 
-    // Hovered die 1.5 px ice (#D6E6FF) outline at loupe centre (with 1 px #000 keyline)
+    // Hovered die: 1.5 px white rim at the loupe centre (premium §5.9)
     const liveVp = cameraToViewportTransform(liveCam, stageWidth, stageHeight);
     const liveLayout = computeWaferRenderLayout(
       wafer,
@@ -591,15 +638,13 @@ const HoverMagnifierImpl = React.forwardRef<
     const cx = LOUPE_WIDTH_PX / 2;
     const cy = LOUPE_HEIGHT_PX / 2;
 
-    ctx.strokeStyle = COLOR_TOKENS.bg;
-    ctx.lineWidth = 3;
-    ctx.strokeRect(cx - half, cy - half, loupeDieSize, loupeDieSize);
-
-    ctx.strokeStyle = COLOR_TOKENS.accent;
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = WAFER_TOKENS.hoverStroke.inner;
+    ctx.lineWidth = WAFER_TOKENS.hoverStroke.innerWidthPx;
     ctx.strokeRect(cx - half, cy - half, loupeDieSize, loupeDieSize);
   }, [
     visible,
+    touchPinned,
+    resolvedTheme,
     displayedDieIndex,
     lot,
     wafer,
@@ -637,40 +682,28 @@ const HoverMagnifierImpl = React.forwardRef<
       ? multiHead
         ? `${site.headNum}:${site.siteNum}`
         : String(site.siteNum)
-      : '—';
+      : null;
 
     const useHbin = colorMode === 'hbin' || sbin === 65535;
     const binCode = useHbin ? hbin : sbin;
-    const binDef = useHbin ? lot.hbins.get(hbin) : lot.sbins.get(sbin);
-    const cleanBinName = binDef?.name ? sanitizeReportProseText(binDef.name) : '';
-    const binPrefix = useHbin ? 'HBIN' : 'SBIN';
-    const binLabel =
-      cleanBinName.length > 0
-        ? `${binPrefix} ${binCode} ${cleanBinName}`
-        : `${binPrefix} ${binCode}`;
+    const binLabel = `${useHbin ? 'HBIN' : 'SBIN'} ${binCode}`;
 
+    // Swatch: full ember square for failed, hollow for passed; bin colour in bin modes (§7.15)
     const rank = useHbin
       ? (hbinRankMap.get(hbin) ?? 0)
       : (sbinRankMap.get(sbin) ?? 0);
-    const swatchColor = isPass ? COLOR_TOKENS.passDie : getFailBinColor(rank);
-
-    const keyTests = selectKeyTestsForDie(
-      lot,
-      displayedDieIndex,
-      preferredTestNum,
-    );
-    const notchClock = resolveNotchClock(wafer?.geometry.wfFlat ?? 'D');
+    const swatchInkIndex =
+      !isPass && colorMode !== 'pass-fail' ? binInkIndexForRank(rank) : null;
 
     return {
-      coordsText: `${x}, ${y}`,
+      xText: formatDieCoordinate(x),
+      yText: formatDieCoordinate(y),
       siteText,
       isPass,
       binLabel,
-      swatchColor,
-      hbinText: String(hbin),
-      keyTests,
+      swatchInkIndex,
+      keyTest: selectKeyTestForDie(lot, displayedDieIndex, preferredTestNum),
       retestCount,
-      notchClock,
     };
   }, [
     displayedDieIndex,
@@ -679,7 +712,6 @@ const HoverMagnifierImpl = React.forwardRef<
     hbinRankMap,
     sbinRankMap,
     preferredTestNum,
-    wafer,
   ]);
 
   const isShown = visible && readout !== null;
@@ -700,138 +732,153 @@ const HoverMagnifierImpl = React.forwardRef<
     return () => clearTimeout(timer);
   }, [isShown, domVisible, shouldReduceMotion]);
 
+  // Touch pin and reduced motion: opacity only, 120 ms (premium §8.4)
+  const opacityOnly = Boolean(shouldReduceMotion) || touchPinned;
+
   return (
     <div
       ref={outerRef}
       data-testid="wafer-hover-magnifier"
       data-visible={isShown ? 'true' : 'false'}
       data-pinned={pinnedDieIndex !== null ? 'true' : 'false'}
+      data-pin-source={pinnedDieIndex !== null ? (pinSource ?? 'keyboard') : undefined}
       aria-hidden={!isShown}
       style={{
         transform: `translate3d(${lastPlacedRef.current.x}px, ${lastPlacedRef.current.y}px, 0)`,
         transformOrigin: lastPlacedRef.current.origin,
         visibility: isShown || domVisible ? 'visible' : 'hidden',
       }}
-      className="pointer-events-none absolute top-0 left-0 z-[var(--z-magnifier)] w-[184px] select-none"
+      className="pointer-events-none absolute top-0 left-0 z-[var(--z-magnifier)] w-[200px] select-none"
     >
       <motion.div
         initial={false}
         animate={
           isShown
             ? { opacity: 1, scale: 1 }
-            : { opacity: 0, scale: shouldReduceMotion ? 1 : 0.96 }
+            : { opacity: 0, scale: opacityOnly ? 1 : 0.96 }
         }
         transition={
-          shouldReduceMotion
+          opacityOnly
             ? { duration: 0.12 }
             : isShown
               ? SPRING_TOKENS.snappy
               : { duration: 0.12 }
         }
         style={{ transformOrigin: 'inherit' }}
-        className="surface-material flex flex-col gap-2 rounded-lg p-2"
+        className={cn(MATERIAL_THICK_CLASS, 'flex flex-col gap-2 rounded-lg p-2')}
       >
-        {/* Desktop 168 x 120 rounded-12 3x die-neighbourhood loupe (§4.8) */}
-        <canvas
-          ref={loupeCanvasRef}
-          data-testid="magnifier-loupe-canvas"
-          aria-hidden="true"
-          style={{ width: `${LOUPE_WIDTH_PX}px`, height: `${LOUPE_HEIGHT_PX}px` }}
-          className="hidden rounded-md bg-bg md:block"
-        />
+        {/* Loupe on hover devices only: 184 x 112, r-sm, inner 1 px ring (premium §5.9, §7.15) */}
+        {touchPinned ? null : (
+          <div
+            data-testid="magnifier-loupe"
+            className="relative [@media(hover:none)]:hidden"
+          >
+            <canvas
+              ref={loupeCanvasRef}
+              data-testid="magnifier-loupe-canvas"
+              aria-hidden="true"
+              style={{ width: `${LOUPE_WIDTH_PX}px`, height: `${LOUPE_HEIGHT_PX}px` }}
+              className="block rounded-sm bg-bg"
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-sm shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+            />
+          </div>
+        )}
 
-        {/* Readout: footnote labels in sans, mono-data values, 18 px row height (§4.8, §6.8) */}
+        {/* Inter readout: at most 4 rows, status first, primary and secondary text only (premium §7.15) */}
         {readout ? (
           <div
             data-testid="magnifier-readout"
-            className="grid auto-rows-[18px] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 px-0.5"
+            className="flex flex-col gap-1 px-1 pt-0.5 pb-1 font-sans"
           >
-            <span className="type-subhead leading-[18px] text-text-tertiary">
-              {t('magnifier.coords')}
-            </span>
-            <span
-              data-testid="magnifier-coords-value"
-              className="truncate text-right type-mono-data leading-[18px] text-text-primary"
+            <div
+              data-magnifier-row="status"
+              className="flex min-w-0 items-center justify-between gap-2"
             >
-              <Untranslated>{readout.coordsText}</Untranslated>
-            </span>
-
-            <span className="type-subhead leading-[18px] text-text-tertiary">
-              {t('magnifier.site')}
-            </span>
-            <span className="truncate text-right type-mono-data leading-[18px] text-text-primary">
-              <Untranslated>{readout.siteText}</Untranslated>
-            </span>
-
-            <span className="type-subhead leading-[18px] text-text-tertiary">
-              {t('magnifier.bin')}
-            </span>
-            <span className="inline-flex min-w-0 items-center justify-end gap-1.5 text-right type-mono-data leading-[18px] text-text-primary">
-              <span
-                aria-hidden="true"
-                className="inline-flex h-2.5 w-2.5 shrink-0 items-center justify-center"
-              >
+              <span className="flex min-w-0 items-center gap-1.5">
                 <span
-                  style={{ backgroundColor: readout.swatchColor }}
-                  className={
+                  aria-hidden="true"
+                  data-magnifier-swatch={
                     readout.isPass
-                      ? 'h-[7px] w-[7px] rounded-[1px]'
-                      : 'h-2.5 w-2.5 rounded-[1.5px]'
+                      ? 'hollow'
+                      : readout.swatchInkIndex === null
+                        ? 'fail'
+                        : 'bin'
                   }
-                />
-              </span>
-              <Untranslated className="truncate">{readout.binLabel}</Untranslated>
-            </span>
-
-            <span className="type-subhead leading-[18px] text-text-tertiary">
-              {t('magnifier.hbin')}
-            </span>
-            <span className="truncate text-right type-mono-data leading-[18px] text-text-primary">
-              <Untranslated>{readout.hbinText}</Untranslated>
-            </span>
-
-            {readout.keyTests.map((kt) => (
-              <React.Fragment key={kt.testNum}>
-                <span className="truncate type-subhead leading-[18px] text-text-tertiary">
-                  <Untranslated>{kt.label}</Untranslated>
-                </span>
-                <span
+                  style={
+                    readout.swatchInkIndex !== null
+                      ? { backgroundColor: `var(--bin-ink-${readout.swatchInkIndex})` }
+                      : undefined
+                  }
                   className={cn(
-                    'truncate text-right type-mono-data leading-[18px]',
-                    kt.outOfLimits ? 'text-failure-text' : 'text-text-primary',
+                    'size-2.5 shrink-0 rounded-xs',
+                    readout.isPass
+                      ? 'shadow-[inset_0_0_0_1px_var(--hairline-strong)]'
+                      : readout.swatchInkIndex === null && 'bg-ember',
                   )}
-                >
-                  <Untranslated>{kt.valueText}</Untranslated>
-                  {kt.outOfLimits ? (
-                    <span className="ml-1 font-sans text-[11px] text-failure-text">
+                />
+                <span className="truncate type-row-title text-text-primary">
+                  {readout.isPass ? t('magnifier.passed') : t('magnifier.failed')}
+                </span>
+              </span>
+              <span className="shrink-0 type-subhead text-text-secondary">
+                <Untranslated>{readout.binLabel}</Untranslated>
+              </span>
+            </div>
+
+            <div
+              data-magnifier-row="place"
+              className="flex min-w-0 items-baseline justify-between gap-2"
+            >
+              <span
+                data-testid="magnifier-coords-value"
+                className="truncate type-subhead text-text-secondary"
+              >
+                {t('magnifier.place', { x: readout.xText, y: readout.yText })}
+              </span>
+              {readout.siteText !== null ? (
+                <span className="shrink-0 type-subhead text-text-secondary">
+                  {t('yield.siteLabel', { site: readout.siteText })}
+                </span>
+              ) : null}
+            </div>
+
+            {readout.keyTest ? (
+              <div
+                data-magnifier-row="test"
+                className="flex min-w-0 items-baseline justify-between gap-2"
+              >
+                <span className="max-w-[96px] truncate type-subhead text-text-secondary">
+                  <Untranslated>{readout.keyTest.label}</Untranslated>
+                </span>
+                <span className="flex min-w-0 flex-col items-end">
+                  <span className="truncate type-subhead text-text-primary tabular-nums">
+                    <Untranslated>{readout.keyTest.valueText}</Untranslated>
+                  </span>
+                  {readout.keyTest.outOfLimits ? (
+                    <span className="type-caption text-text-primary">
                       {t('magnifier.outOfLimits')}
                     </span>
                   ) : null}
                 </span>
-              </React.Fragment>
-            ))}
-
-            {readout.retestCount > 0 ? (
-              <>
-                <span className="type-subhead leading-[18px] text-text-tertiary">
-                  {t('magnifier.retested')}
-                </span>
-                <span className="truncate text-right type-mono-data leading-[18px] text-text-primary">
-                  {t('magnifier.retestedValue', {
-                    count: formatInteger(readout.retestCount + 1),
-                  })}
-                </span>
-              </>
+              </div>
             ) : null}
 
-            <span className="type-subhead leading-[18px] text-text-tertiary">
-              {t('magnifier.notch')}
-            </span>
-            <span className="truncate text-right type-mono-data leading-[18px] text-text-tertiary">
-              {t('magnifier.notchValue', {
-                clock: formatInteger(readout.notchClock),
-              })}
-            </span>
+            {readout.retestCount > 0 ? (
+              <div
+                data-magnifier-row="retest"
+                className="truncate type-subhead text-text-secondary"
+              >
+                {t(
+                  readout.isPass
+                    ? 'magnifier.retested'
+                    : 'magnifier.retestedFailed',
+                  { n: formatInteger(readout.retestCount + 1) },
+                )}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </motion.div>

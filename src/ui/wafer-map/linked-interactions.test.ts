@@ -7,9 +7,11 @@ import {
   computeLiveBoxSelectStats,
   computeMagnifierPlacement,
   computeOrderedGlowSchedule,
+  computePinnedReadoutPlacement,
   computePopoverPlacement,
   computeWaferEvidencePresence,
   evaluateGlowSequenceFrame,
+  formatDieCoordinate,
   inferGlowOrderMode,
   rectsOverlap,
   screenRectToWaferGridBounds,
@@ -453,5 +455,68 @@ describe('R7 linked-interactions — pure geometry, glow ordering, camera framin
       const presence = computeWaferEvidencePresence(lot, mask);
       expect(presence).toEqual([true, false]);
     });
+  });
+});
+
+describe('touch-pinned magnifier readout and coordinates (premium §7.15)', () => {
+  it('pins the readout 12 px above the tapped die, centred and clamped inside the stage', () => {
+    const placed = computePinnedReadoutPlacement({
+      dieRect: { x: 300, y: 300, width: 10, height: 10 },
+      readoutWidth: 200,
+      readoutHeight: 100,
+      stageWidth: 600,
+    });
+    expect(placed).toEqual({
+      x: 205,
+      y: 188,
+      transformOrigin: 'bottom center',
+      placedBelow: false,
+    });
+    const nearLeft = computePinnedReadoutPlacement({
+      dieRect: { x: 4, y: 300, width: 10, height: 10 },
+      readoutWidth: 200,
+      readoutHeight: 100,
+      stageWidth: 600,
+    });
+    expect(nearLeft.x).toBe(8);
+  });
+
+  it('flips below the die at the top edge', () => {
+    const placed = computePinnedReadoutPlacement({
+      dieRect: { x: 300, y: 40, width: 10, height: 10 },
+      readoutWidth: 200,
+      readoutHeight: 100,
+      stageWidth: 600,
+    });
+    expect(placed.placedBelow).toBe(true);
+    expect(placed.y).toBe(62);
+    expect(placed.transformOrigin).toBe('top center');
+  });
+
+  it('property: the pinned readout never covers the die', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 800 }),
+        fc.integer({ min: 0, max: 800 }),
+        fc.integer({ min: 1, max: 40 }),
+        fc.integer({ min: 40, max: 240 }),
+        (dx, dy, size, h) => {
+          const dieRect = { x: dx, y: dy, width: size, height: size };
+          const p = computePinnedReadoutPlacement({
+            dieRect,
+            readoutWidth: 200,
+            readoutHeight: h,
+            stageWidth: 840,
+          });
+          return !rectsOverlap({ x: p.x, y: p.y, width: 200, height: h }, dieRect);
+        },
+      ),
+    );
+  });
+
+  it('formats coordinates with a true minus sign', () => {
+    expect(formatDieCoordinate(-4)).toBe('\u22124');
+    expect(formatDieCoordinate(12)).toBe('12');
+    expect(formatDieCoordinate(0)).toBe('0');
   });
 });

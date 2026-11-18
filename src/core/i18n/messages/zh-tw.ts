@@ -228,15 +228,12 @@ export const zhTW = {
   'stage.evidenceCaption': '共 {wafers} 片晶圓 {dies} 顆晶粒，本片 {here} 顆',
 
   // Magnifier
-  'magnifier.coords': 'X, Y',
-  'magnifier.site': '站點',
-  'magnifier.bin': '分級',
-  'magnifier.hbin': 'HBIN',
+  'magnifier.failed': '失效',
+  'magnifier.passed': '合格',
+  'magnifier.place': 'X {x}，Y {y}',
   'magnifier.outOfLimits': '超出規格限',
-  'magnifier.retested': '已重測',
-  'magnifier.retestedValue': '是，共測 {count} 次',
-  'magnifier.notch': '缺口',
-  'magnifier.notchValue': '{clock} 點鐘方向',
+  'magnifier.retested': '已重測，第 {n} 次合格',
+  'magnifier.retestedFailed': '已重測，第 {n} 次仍失效',
 
   // Selection popover
   'selection.dies.one': '已選 {count} 顆晶粒',

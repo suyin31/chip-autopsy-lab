@@ -291,7 +291,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P22. Toasts, selection popover, sheets
   - Sonner styling and timing, selection popover content, dialog and bottom-sheet surfaces (premium §7.13, §7.14, §7.16).
   - Accept: A34.
-- [ ] P23. Magnifier
+- [x] P23. Magnifier
   - Inter readout with 4 rows, status first, loupe radius and rim, touch pinned readout (premium §7.15, §5.9).
   - Accept: A10.
 - [ ] P24. Term and glossary

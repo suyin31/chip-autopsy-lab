@@ -230,15 +230,12 @@ export const en = {
     '{dies} dies on {wafers} wafers, {here} on this wafer',
 
   // Magnifier
-  'magnifier.coords': 'X, Y',
-  'magnifier.site': 'Site',
-  'magnifier.bin': 'Bin',
-  'magnifier.hbin': 'HBIN',
+  'magnifier.failed': 'Failed',
+  'magnifier.passed': 'Passed',
+  'magnifier.place': 'X {x}, Y {y}',
   'magnifier.outOfLimits': 'out of limits',
-  'magnifier.retested': 'Retested',
-  'magnifier.retestedValue': 'Yes, {count} passes',
-  'magnifier.notch': 'Notch',
-  'magnifier.notchValue': "{clock} o'clock",
+  'magnifier.retested': 'Retested, passed on try {n}',
+  'magnifier.retestedFailed': 'Retested, failed on try {n}',
 
   // Selection popover
   'selection.dies.one': '{count} die selected',

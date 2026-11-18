@@ -1559,7 +1559,7 @@ function WaferMapCanvasImpl({
         // §4.8 Touch: tap a die shows the readout pinned above the die; tap elsewhere hides
         if (event.pointerType === 'touch') {
           store.getState().setHoveredDieIndex(hitIndex);
-          magnifierRef.current?.togglePinAtDie(hitIndex);
+          magnifierRef.current?.togglePinAtDie(hitIndex, 'touch');
           if (hitIndex !== null) {
             return;
           }

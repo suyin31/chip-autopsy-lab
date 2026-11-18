@@ -1,0 +1,236 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Read task P23 and recent progress log
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Locate cited premium.md sections
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=37
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read premium §5.9 and §7.15
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=37
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read related premium and redesign magnifier sections
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=76
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Find magnifier code and P26b decisions
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=62
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read magnifier component and references
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=75
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read skill and magnifier references
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=93
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Inspect material classes, placement, and e2e usage
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Inspect popover styles, touch pin, placement fallback
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=89
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Find material-thick class and tokens
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=137
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Inspect colour tokens and bin colour helpers
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check bin colour helper and swatch patterns
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read legend swatch implementation
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=32
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check theme access, site label keys, locales
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=263
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Find minus-sign and number formatters
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=102
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Inspect minus formatting and useT
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check parametric value formatter output
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=62
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check COLOR_TOKENS and resolved theme hook
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=195
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read placement module head/tail and test imports
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=67
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now add the pure helpers to `linked-interactions.ts`.
+[tool] Replace in File
+[tool] status: Pending
+[tool] status: Completed
+[tool] Export new helpers from wafer-map index
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=424
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check key count assertions and old key uses
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=77
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Find existing pass/fail translations
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=80
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Replace magnifier keys in all 5 locales
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=264
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Update i18n test key count and check
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=94
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Confirm radius tokens and imports
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=96
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the component edits.
+[tool] Apply magnifier logic changes
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1529
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Locate readout section boundaries
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Rewrite readout markup and memo
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1277
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Pass touch source and fix swatch radius
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=102
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Add unit tests and run typecheck
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=406
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run lint and unit tests
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=38
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Inspect e2e config and r7 spec
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=70
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Find existing patterns for hovering a fail die
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read overlay states spec patterns
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=837
+[tool] status: Pending
+[tool] status: Completed
+[tool] Confirm CSS variable names
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=62
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Build and run relevant e2e specs
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=58
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Rerun r7 and related stage specs
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=61
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Confirm failure line and workspace status
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=53
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check failure detail and log files origin
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read r7 failure assertion
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=41
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Tick P23 and append progress log entry
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=361
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+I've implemented P23 (the magnifier rework, premium §7.15 and §5.9). Typecheck, lint and `pnpm test` (313 of 313) all pass. The new e2e spec `magnifier-p23` passes 3 of 3: A10 in light and dark, plus the touch pin. `linked-interactions-r7` still fails, but only on its 780 ms settle-timing check (about 830 ms here). That is the known flake, and its magnifier step passes.
+
+**What changed** (mainly `HoverMagnifier.tsx`):
+- **Container:** 200 px wide on `material-thick` with `shadow-popover`, `r-lg` corners and 8 px padding.
+- **Loupe:** now 184 × 112 with `r-sm` corners and the inner 1 px ring. The hovered die gets a 1.5 px white rim, and the area around the disc uses the current theme's page colour. The loupe only shows on devices that can hover.
+- **Readout:** Inter only, at most 4 rows, primary and secondary text only. The rows are:
+  1. Status: a 10 px swatch (ember square for failed, hollow for passed, bin colour in bin modes), "Failed" or "Passed", and the bin code.
+  2. Place: "X 12, Y −4" with a true minus sign, and "Site 2".
+  3. One key test: the name cut off at 96 px, the value, and an "out of limits" line when it applies.
+  4. Retest: only when the die was retested.
+- **Removed:** the HBIN and Notch rows, the bin name, the monospace values, and the orange "out of limits" text.
+- **Touch:** a tap pins the readout 12 px above the die, or below it near the top edge. There is no loupe, and it fades in over 120 ms with opacity only. The new placement function is `computePinnedReadoutPlacement` in `linked-interactions.ts`, alongside a `formatDieCoordinate` helper for the minus sign.
+- **Copy:** magnifier keys are updated in all 5 locales. The total is now 238 keys, and the key-count test is updated to match.
+
+**Decisions where premium.md is silent or conflicts** (all noted in `logs/progress.md`):
+- Magnifier coordinates no longer use monospace. §12.4 asks for mono there, but A10 and §7.15 require Inter only, and A10 is this task's acceptance check.
+- A retested die that still fails reads "Retested, failed on try {n}", because §7.15 only gives the passed wording.
+- "Site 2" reuses the existing `yield.siteLabel` key rather than adding a new one.
+
+P23 is ticked in `tasks.md`. No visual snapshots changed.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=154
+

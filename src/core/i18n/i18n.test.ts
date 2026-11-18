@@ -139,7 +139,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(DICTIONARIES.ko).toBe(ko);
 
     const enKeys = Object.keys(en).sort() as MessageKey[];
-    expect(enKeys.length).toBe(241);
+    expect(enKeys.length).toBe(238);
 
     for (const locale of SUPPORTED_LOCALES) {
       const dict = getDictionary(locale);
@@ -186,7 +186,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
       expect(dict['nav.wordmarkShort']).toBe('Autopsy Lab');
       expect(dict['stage.mode.hbin']).toBe('HBIN');
       expect(dict['stage.mode.sbin']).toBe('SBIN');
-      expect(dict['magnifier.hbin']).toBe('HBIN');
+      expect(dict['magnifier.place']).toMatch(/^X \{x\}.+Y \{y\}$/);
       expect(dict['demo.edgeRing.title']).toContain('Edge-Ring');
       expect(dict['demo.scratch.description']).toContain('18');
       expect(dict['error.notStdf.body']).toContain('FAR (0, 10)');

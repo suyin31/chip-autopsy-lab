@@ -226,6 +226,61 @@ export function computeMagnifierPlacement(
   };
 }
 
+export interface PinnedReadoutPlacementInput {
+  readonly dieRect: ScreenBox;
+  readonly readoutWidth: number;
+  readonly readoutHeight: number;
+  readonly stageWidth: number;
+  readonly gapPx?: number;
+  readonly stageMarginPx?: number;
+}
+
+export interface PinnedReadoutPlacementResult {
+  readonly x: number;
+  readonly y: number;
+  readonly transformOrigin: 'bottom center' | 'top center';
+  readonly placedBelow: boolean;
+}
+
+/**
+ * Places the touch-pinned magnifier readout (premium §7.15): centred on the tapped die,
+ * `12 px` above it, flipping below when it would cross the stage's top edge. Horizontal
+ * position is clamped inside the stage with an `8 px` margin.
+ */
+export function computePinnedReadoutPlacement(
+  input: PinnedReadoutPlacementInput,
+): PinnedReadoutPlacementResult {
+  const gap = input.gapPx ?? 12;
+  const margin = Math.max(0, input.stageMarginPx ?? 8);
+  const w = Math.max(1, input.readoutWidth);
+  const h = Math.max(1, input.readoutHeight);
+  const stageW = Math.max(1, input.stageWidth);
+  const { dieRect } = input;
+  const x = Math.round(
+    clamp(
+      dieRect.x + dieRect.width / 2 - w / 2,
+      margin,
+      Math.max(margin, stageW - margin - w),
+    ),
+  );
+  const aboveY = Math.floor(dieRect.y - gap - h);
+  if (aboveY >= margin) {
+    return { x, y: aboveY, transformOrigin: 'bottom center', placedBelow: false };
+  }
+  return {
+    x,
+    y: Math.ceil(dieRect.y + dieRect.height + gap),
+    transformOrigin: 'top center',
+    placedBelow: true,
+  };
+}
+
+/** Die coordinate text with a true minus sign (U+2212) for negatives (premium §7.15, §9). */
+export function formatDieCoordinate(value: number): string {
+  const n = Math.trunc(value);
+  return n < 0 ? `\u2212${String(-n)}` : String(n);
+}
+
 export interface PopoverPlacementInput {
   readonly rect: ScreenBox;
   readonly popoverWidth: number;

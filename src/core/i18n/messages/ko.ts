@@ -232,15 +232,12 @@ export const ko = {
   'stage.evidenceCaption': '웨이퍼 {wafers}장 중 {dies}개 다이, 현재 웨이퍼 {here}개',
 
   // Magnifier
-  'magnifier.coords': 'X, Y',
-  'magnifier.site': '사이트',
-  'magnifier.bin': '빈',
-  'magnifier.hbin': 'HBIN',
+  'magnifier.failed': '불량',
+  'magnifier.passed': '양품',
+  'magnifier.place': 'X {x}, Y {y}',
   'magnifier.outOfLimits': '규격 이탈',
-  'magnifier.retested': '재측정',
-  'magnifier.retestedValue': '예, {count}회 측정',
-  'magnifier.notch': '노치',
-  'magnifier.notchValue': '{clock}시 방향',
+  'magnifier.retested': '재측정, {n}번째에 양품',
+  'magnifier.retestedFailed': '재측정, {n}번째에도 불량',
 
   // Selection popover
   'selection.dies.one': '{count}개 다이 선택됨',
