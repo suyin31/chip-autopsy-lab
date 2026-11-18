@@ -58,7 +58,7 @@ Chip Autopsy Lab is a browser-based semiconductor failure analysis tool that ing
 ## Non-Goals
 - User accounts, cloud sync, or server-side STDF storage.
 - Editing STDF records, ATDF text format, or STDF V4-2007 scan record (`STR`, `PSR`) analysis.
-- Mobile layouts or replacing an enterprise yield management system.
+- Native mobile apps or replacing an enterprise yield management system. The web app itself supports phone widths down to 390 px (premium.md §6).
 
 ## Success Criteria
 - A judge goes from landing page to reading the cause of death and clicking linked die evidence in under 10 seconds using a built-in demo lot, offline and without an API key.

@@ -126,6 +126,19 @@ function useViewportSize(
   );
 }
 
+function subscribeNever(): () => void {
+  return () => {};
+}
+
+/** False on the server and during hydration, true after; the server snapshot sizes for 1440. */
+function useHydrated(): boolean {
+  return React.useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
+}
+
 function layerStyle(rect: StageLayerRect): React.CSSProperties {
   return {
     left: `${rect.left}px`,
@@ -564,6 +577,7 @@ function LandingHero({
     resolveLandingHeroWaferSize,
     LANDING_HERO_WAFER_SIZE_DEFAULT,
   );
+  const hydrated = useHydrated();
   const ticks = React.useMemo(() => buildLandingReticleTicks(), []);
   const reticleD = size + LANDING_RETICLE_GAP_PX * 2;
   const reticleR = reticleD / 2;
@@ -583,7 +597,8 @@ function LandingHero({
   return (
     <div
       data-testid="landing-hero"
-      className="mt-14 flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-14"
+      // Before hydration the frame has the 1440 size; clip it so narrow screens never scroll sideways
+      className={`mt-14 flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-14${hydrated ? '' : ' overflow-x-clip'}`}
     >
       <div
         data-testid="landing-hero-frame"
