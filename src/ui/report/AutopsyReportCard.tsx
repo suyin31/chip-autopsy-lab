@@ -41,6 +41,12 @@ export interface AutopsyReportCardProps {
   readonly defaultConfidenceOpen?: boolean;
   /** Optional post-load bins-only notice rendered directly beneath the confidence pill (§3.8). */
   readonly binsOnlyNotice?: React.ReactNode;
+  /**
+   * When true (inside `LoadedLotOverview`), splits mobile (`< 1280px`) visual order via
+   * `max-xl:contents` so the Wafer Stage + Strip sit between `StatRow` and `FindingsList`
+   * on mobile (`redesign.md` §3.4) while staying a single scrollable `553 px` column on desktop.
+   */
+  readonly splitForMobileStage?: boolean;
   readonly className?: string;
 }
 
@@ -223,6 +229,7 @@ export function AutopsyReportCard({
   defaultHypothesesOpen = false,
   defaultConfidenceOpen = false,
   binsOnlyNotice,
+  splitForMobileStage = false,
   className,
 }: AutopsyReportCardProps): React.JSX.Element {
   const { locale, t, tPlural } = useT();
@@ -338,36 +345,45 @@ export function AutopsyReportCard({
     <section
       aria-label={rendered.findingsHeading}
       data-testid="autopsy-report-card"
-      className={cn('flex w-full flex-col pt-1 xl:pt-14', className)}
+      className={cn(
+        'flex w-full flex-col xl:pt-14',
+        splitForMobileStage && 'max-xl:contents',
+        className,
+      )}
     >
       <div
-        data-testid="autopsy-live-region"
-        className="sr-only"
-        aria-live="polite"
-        aria-atomic="true"
+        data-testid="verdict-top-block"
+        className={cn('flex flex-col', splitForMobileStage && 'order-1 xl:order-none')}
       >
-        {liveAnnouncement}
+        <div
+          data-testid="autopsy-live-region"
+          className="sr-only"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {liveAnnouncement}
+        </div>
+
+        <VerdictHero
+          verdict={rendered.verdict}
+          headlineClaim={report.causeOfDeathHeadline}
+          causeAria={t('verdict.causeAria')}
+          isActive={
+            effectiveActiveClaimId === report.causeOfDeathHeadline.claimId
+          }
+          onToggleClaim={handleToggleClaim}
+        />
+
+        <ConfidencePill
+          confidence={rendered.confidence}
+          defaultOpen={defaultConfidenceOpen}
+          className="mt-3 md:mt-5"
+        />
+
+        {binsOnlyNotice ? <div className="mt-3">{binsOnlyNotice}</div> : null}
+
+        <StatRow stats={renderedStats} className="mt-6 md:mt-10" />
       </div>
-
-      <VerdictHero
-        verdict={rendered.verdict}
-        headlineClaim={report.causeOfDeathHeadline}
-        causeAria={t('verdict.causeAria')}
-        isActive={
-          effectiveActiveClaimId === report.causeOfDeathHeadline.claimId
-        }
-        onToggleClaim={handleToggleClaim}
-      />
-
-      <ConfidencePill
-        confidence={rendered.confidence}
-        defaultOpen={defaultConfidenceOpen}
-        className="mt-3 md:mt-5"
-      />
-
-      {binsOnlyNotice ? <div className="mt-3">{binsOnlyNotice}</div> : null}
-
-      <StatRow stats={renderedStats} className="mt-6 md:mt-10" />
 
       <FindingsList
         heading={rendered.findingsHeading}
@@ -379,7 +395,10 @@ export function AutopsyReportCard({
         selectionMask={effectiveSelectionMask}
         defaultHypothesesOpen={defaultHypothesesOpen}
         onToggleClaim={handleToggleClaim}
-        className="mt-8 md:mt-12"
+        className={cn(
+          'mt-8 md:mt-12',
+          splitForMobileStage && 'order-3 xl:order-none',
+        )}
       />
     </section>
   );

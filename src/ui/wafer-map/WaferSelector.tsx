@@ -1,62 +1,59 @@
 'use client';
 
+import { useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import type { YieldMetrics } from '@/core/analytics';
 import type { ColumnarDies, WaferSummaryMeta } from '@/core/model';
-import { formatYieldPct } from '@/ui/format';
-import { Button } from '@/ui/primitives';
+import { Untranslated, useT } from '@/ui/i18n';
+import { cn } from '@/ui/primitives/cn';
 import { paintWaferThumbnail, resolveCanvasPixelSize } from './wafer-geometry';
 
-export const WAFER_THUMB_BUTTON_PX = 40 as const;
-export const WAFER_THUMB_CANVAS_PX = 36 as const;
+export const WAFER_THUMB_BUTTON_PX = 48 as const;
+export const WAFER_THUMB_CANVAS_PX = 48 as const;
 
 export interface WaferSelectorProps {
+  readonly lotId?: string;
   readonly wafers: readonly WaferSummaryMeta[];
   readonly dies: ColumnarDies;
   readonly byWaferYield: readonly YieldMetrics[];
   readonly activeWaferIndex: number;
   readonly dpr?: number;
   readonly onSelectWafer: (waferIndex: number) => void;
-}
-
-interface ActiveThumbTooltip {
-  readonly index: number;
-  readonly anchorX: number;
+  readonly className?: string;
 }
 
 /**
- * Horizontal "lot strip" wafer selector (`role="radiogroup"`) rendering 25+ micro
- * Pass/Fail wafer thumbnails (`36 px` canvas in a `40 px` slot) drawn once per lot,
- * letting ATE engineers see at a glance whether spatial failure signatures repeat
- * across wafers.
- *
- * Keeps full ARIA `radiogroup` / `radio` semantics, roving `tabIndex`, `ArrowLeft`/
- * `ArrowRight` stepping, `#D6E6FF` active ring + non-color indicator pip, and a
- * zero-shadow `.surface-overlay` hover/focus tooltip showing wafer ID + yield.
- *
- * Validates: Requirements 4.1, 14.2, 14.3, 17.1, 17.2, 17.5
+ * Boxless horizontal wafer strip (`redesign.md` §0 #6, §3.4, §4.9):
+ * - `role="listbox"` `aria-orientation="horizontal"` with `scroll-snap-type: x proximity`,
+ *   native momentum, hidden scrollbar, and `24 px` horizontal edge-fade mask
+ * - `48 x 48` desktop (`40 x 40` mobile) circle wafer canvas + `caption` wafer label (`W01`)
+ * - Rest opacity `0.72`, hover `1.0` + `accent-soft` ring, active `1.0` + `2 px` `#D6E6FF` ring
+ *   at `3 px` offset, pressed `scale(0.94)`
+ * - Roving `tabIndex`: `ArrowLeft`/`ArrowRight` ±1, `PageUp`/`PageDown` ±5, `Home`/`End`
  */
 export const WaferSelector = React.memo(function WaferSelector({
+  lotId = 'LOT',
   wafers,
   dies,
   byWaferYield,
   activeWaferIndex,
   dpr,
   onSelectWafer,
+  className,
 }: WaferSelectorProps): React.JSX.Element | null {
-  const wrapperRef = React.useRef<HTMLDivElement>(null);
-  const radioRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+  const { t, formatPercent } = useT();
+  const shouldReduceMotion = useReducedMotion();
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const itemRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
   const canvasRefs = React.useRef<Array<HTMLCanvasElement | null>>([]);
   const ctxRefs = React.useRef<Array<CanvasRenderingContext2D | null>>([]);
   const didMountRef = React.useRef(false);
-  const tooltipId = React.useId();
-
-  const [tooltip, setTooltip] = React.useState<ActiveThumbTooltip | null>(null);
+  const lastSelectWasRepeatRef = React.useRef(false);
 
   const count = wafers.length;
-  const safeActive = count > 0 ? Math.min(Math.max(0, activeWaferIndex), count - 1) : 0;
+  const safeActive =
+    count > 0 ? Math.min(Math.max(0, activeWaferIndex), count - 1) : 0;
 
-  // Paint all wafer thumbnails once per loaded lot (or DPR change); never repaints on selection step.
   React.useEffect(() => {
     if (count === 0) {
       return;
@@ -98,78 +95,73 @@ export const WaferSelector = React.memo(function WaferSelector({
     }
   }, [count, wafers, dies, dpr]);
 
-  // Keep stepped wafer visible inside horizontal strip on narrow viewports without scrolling on mount.
   React.useEffect(() => {
     if (!didMountRef.current) {
       didMountRef.current = true;
       return;
     }
-    const btn = radioRefs.current[safeActive];
-    if (btn && typeof btn.scrollIntoView === 'function') {
-      btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
-  }, [safeActive]);
+    const listEl = listRef.current;
+    const itemEl = itemRefs.current[safeActive];
+    const instant = Boolean(shouldReduceMotion) || lastSelectWasRepeatRef.current;
+    lastSelectWasRepeatRef.current = false;
 
-  const showTooltipForButton = React.useCallback(
-    (index: number, buttonEl: HTMLButtonElement | null): void => {
-      const wrapper = wrapperRef.current;
-      if (!wrapper || !buttonEl) {
-        setTooltip({ index, anchorX: 72 });
-        return;
-      }
-      const wrapRect = wrapper.getBoundingClientRect();
-      const btnRect = buttonEl.getBoundingClientRect();
-      const center = btnRect.left - wrapRect.left + btnRect.width / 2;
-      const minX = 68;
-      const maxX = Math.max(minX, wrapRect.width - 68);
-      setTooltip({
-        index,
-        anchorX: Math.min(maxX, Math.max(minX, center)),
+    if (listEl && itemEl && typeof listEl.scrollTo === 'function') {
+      const targetLeft =
+        itemEl.offsetLeft - listEl.clientWidth / 2 + itemEl.offsetWidth / 2;
+      listEl.scrollTo({
+        left: Math.max(0, targetLeft),
+        behavior: instant ? 'instant' : 'smooth',
       });
-    },
-    [],
-  );
-
-  const dismissTooltipForIndex = React.useCallback((index: number): void => {
-    setTooltip((prev) => (prev?.index === index ? null : prev));
-  }, []);
+    }
+  }, [safeActive, shouldReduceMotion]);
 
   if (count === 0) {
     return null;
   }
 
-  const focusAndSelect = (nextIndex: number): void => {
-    const wrapped = ((nextIndex % count) + count) % count;
-    onSelectWafer(wrapped);
-    const targetBtn = radioRefs.current[wrapped] ?? null;
-    targetBtn?.focus();
+  const focusAndSelect = (nextIndex: number, isRepeat: boolean): void => {
+    const clamped = Math.min(count - 1, Math.max(0, nextIndex));
+    lastSelectWasRepeatRef.current = isRepeat;
+    onSelectWafer(clamped);
+    itemRefs.current[clamped]?.focus({ preventScroll: true });
   };
 
-  const handleRadioKeyDown = (
+  const handleItemKeyDown = (
     event: React.KeyboardEvent<HTMLButtonElement>,
     index: number,
   ): void => {
+    const repeat = event.repeat === true;
     switch (event.key) {
       case 'ArrowRight':
       case 'ArrowDown': {
         event.preventDefault();
-        focusAndSelect(index + 1);
+        focusAndSelect((index + 1) % count, repeat);
         break;
       }
       case 'ArrowLeft':
       case 'ArrowUp': {
         event.preventDefault();
-        focusAndSelect(index - 1);
+        focusAndSelect((index - 1 + count) % count, repeat);
+        break;
+      }
+      case 'PageDown': {
+        event.preventDefault();
+        focusAndSelect(Math.min(count - 1, index + 5), repeat);
+        break;
+      }
+      case 'PageUp': {
+        event.preventDefault();
+        focusAndSelect(Math.max(0, index - 5), repeat);
         break;
       }
       case 'Home': {
         event.preventDefault();
-        focusAndSelect(0);
+        focusAndSelect(0, repeat);
         break;
       }
       case 'End': {
         event.preventDefault();
-        focusAndSelect(count - 1);
+        focusAndSelect(count - 1, repeat);
         break;
       }
       default:
@@ -177,136 +169,80 @@ export const WaferSelector = React.memo(function WaferSelector({
     }
   };
 
-  const activeWafer = wafers[safeActive];
-  const activeYieldLabel = formatYieldPct(
-    byWaferYield[safeActive]?.finalYield ?? null,
-  );
-  const tooltipWafer = tooltip !== null ? wafers[tooltip.index] : undefined;
-  const tooltipYieldLabel =
-    tooltip !== null
-      ? formatYieldPct(byWaferYield[tooltip.index]?.finalYield ?? null)
-      : null;
-
   return (
-    <div className="flex w-full flex-col gap-1.5 pt-0.5">
-      <div ref={wrapperRef} className="relative w-full">
-        {/* Hover / focus wafer ID + yield tooltip (outside overflow-x-auto so never clipped) */}
-        {tooltip !== null && tooltipWafer ? (
-          <div
-            id={tooltipId}
-            role="tooltip"
-            style={{ left: `${tooltip.anchorX}px` }}
-            className="surface-overlay pointer-events-none absolute bottom-full z-20 mb-1.5 -translate-x-1/2 rounded-control px-2.5 py-1 font-mono text-[12px] whitespace-nowrap text-text-primary tabular-nums"
+    <div
+      ref={listRef}
+      role="listbox"
+      aria-orientation="horizontal"
+      aria-label={t('strip.aria', { lotId })}
+      data-testid="wafer-strip"
+      className={cn(
+        'flex h-14 w-full flex-nowrap items-center gap-3 overflow-x-auto px-4 md:h-16 md:px-3',
+        '[scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        '[mask-image:linear-gradient(90deg,transparent,#000_24px,#000_calc(100%-24px),transparent)]',
+        className,
+      )}
+    >
+      {wafers.map((wafer, idx) => {
+        const isSelected = idx === safeActive;
+        const yieldRatio = byWaferYield[idx]?.finalYield ?? 0;
+        const yieldLabel = formatPercent(yieldRatio);
+
+        return (
+          <button
+            key={`${wafer.waferId}-${wafer.waferIndex}`}
+            ref={(el) => {
+              itemRefs.current[idx] = el;
+            }}
+            type="button"
+            role="option"
+            aria-selected={isSelected}
+            aria-label={t('strip.itemAria', {
+              wafer: wafer.waferId,
+              yield: yieldLabel,
+            })}
+            tabIndex={isSelected ? 0 : -1}
+            onClick={() => {
+              lastSelectWasRepeatRef.current = false;
+              onSelectWafer(idx);
+            }}
+            onKeyDown={(e) => handleItemKeyDown(e, idx)}
+            className={cn(
+              'group relative inline-flex h-14 w-12 shrink-0 [scroll-snap-align:center] cursor-pointer flex-col items-center justify-center gap-1 rounded-xs select-none md:h-16 md:w-14',
+              'transition-transform duration-[100ms] ease-[var(--ease-out)] active:scale-[0.94]',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+            )}
           >
-            <span className="text-accent">{tooltipWafer.waferId}</span>
-            {' · '}
-            <span>Yield {tooltipYieldLabel}</span>
-          </div>
-        ) : null}
-
-        <div
-          role="radiogroup"
-          aria-label="Select wafer"
-          onScroll={() => setTooltip(null)}
-          className="flex w-full flex-nowrap items-center gap-1 overflow-x-auto rounded-control border border-hairline bg-raised px-2 py-1.5 [scrollbar-width:thin]"
-        >
-          {wafers.map((wafer, idx) => {
-            const isSelected = idx === safeActive;
-            const yieldLabel = formatYieldPct(
-              byWaferYield[idx]?.finalYield ?? null,
-            );
-            const isTooltipTarget = tooltip?.index === idx;
-
-            return (
-              <button
-                key={`${wafer.waferId}-${wafer.waferIndex}`}
+            <span
+              className={cn(
+                'relative inline-flex h-10 w-10 items-center justify-center rounded-full transition-opacity duration-[120ms] ease-[var(--ease-out)] md:h-12 md:w-12',
+                isSelected
+                  ? 'opacity-100 ring-2 ring-accent ring-offset-[3px] ring-offset-bg'
+                  : 'opacity-[0.72] hover:opacity-100 hover:ring-2 hover:ring-[var(--color-accent-soft)]',
+              )}
+            >
+              <canvas
                 ref={(el) => {
-                  radioRefs.current[idx] = el;
+                  canvasRefs.current[idx] = el;
                 }}
-                type="button"
-                role="radio"
-                aria-checked={isSelected}
-                aria-label={`Wafer ${wafer.waferId}, ${idx + 1} of ${count}, final yield ${yieldLabel}`}
-                aria-describedby={isTooltipTarget ? tooltipId : undefined}
-                tabIndex={isSelected ? 0 : -1}
-                onClick={() => onSelectWafer(idx)}
-                onKeyDown={(e) => handleRadioKeyDown(e, idx)}
-                onPointerEnter={(e) => showTooltipForButton(idx, e.currentTarget)}
-                onPointerLeave={() => dismissTooltipForIndex(idx)}
-                onFocus={(e) => showTooltipForButton(idx, e.currentTarget)}
-                onBlur={() => dismissTooltipForIndex(idx)}
-                style={{
-                  width: `${WAFER_THUMB_BUTTON_PX}px`,
-                  height: `${WAFER_THUMB_BUTTON_PX}px`,
-                }}
-                className={`relative inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                  isSelected
-                    ? 'border-2 border-accent bg-accent/12'
-                    : 'border border-hairline bg-bg/60 opacity-85 hover:border-white/25 hover:opacity-100'
-                }`}
-              >
-                <canvas
-                  ref={(el) => {
-                    canvasRefs.current[idx] = el;
-                  }}
-                  data-testid="wafer-lot-strip-thumb"
-                  aria-hidden="true"
-                  style={{
-                    width: `${WAFER_THUMB_CANVAS_PX}px`,
-                    height: `${WAFER_THUMB_CANVAS_PX}px`,
-                  }}
-                  className="pointer-events-none block rounded-full select-none"
-                />
-                {isSelected ? (
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -bottom-1 h-1 w-2 rounded-full bg-accent"
-                  />
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="flex w-full flex-wrap items-center justify-between gap-2 px-0.5">
-        <span className="font-mono text-[12px] text-text-secondary tabular-nums">
-          <span className="text-text-tertiary">Lot Strip · </span>
-          <span className="text-text-primary">
-            Wafer {activeWafer?.waferId ?? 'W01'}
-          </span>{' '}
-          <span className="text-text-tertiary">
-            ({safeActive + 1} of {count}) · Yield {activeYieldLabel}
-          </span>
-        </span>
-
-        {count > 1 ? (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label="Previous wafer"
-              disabled={safeActive === 0}
-              onClick={() => onSelectWafer(Math.max(0, safeActive - 1))}
-              className="h-7 px-2 font-mono text-[12px]"
+                data-testid="wafer-lot-strip-thumb"
+                aria-hidden="true"
+                className="pointer-events-none block h-10 w-10 rounded-full select-none md:h-12 md:w-12"
+              />
+            </span>
+            <span
+              className={cn(
+                'type-caption leading-none tabular-nums',
+                isSelected
+                  ? 'text-text-primary'
+                  : 'hidden text-text-tertiary md:inline',
+              )}
             >
-              ← Prev
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label="Next wafer"
-              disabled={safeActive >= count - 1}
-              onClick={() =>
-                onSelectWafer(Math.min(count - 1, safeActive + 1))
-              }
-              className="h-7 px-2 font-mono text-[12px]"
-            >
-              Next →
-            </Button>
-          </div>
-        ) : null}
-      </div>
+              <Untranslated>{wafer.waferId}</Untranslated>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 });

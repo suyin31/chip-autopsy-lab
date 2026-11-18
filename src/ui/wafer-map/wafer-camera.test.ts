@@ -193,7 +193,7 @@ describe('Wafer Camera Physics & Gesture Controller (Task R6, redesign.md §4.7,
       const overlayFrames: number[] = [];
 
       let nowMs = 1000;
-      let rafCb: FrameRequestCallback | null = null;
+      const rafQueue: { cb: FrameRequestCallback | null } = { cb: null };
 
       const controller = createWaferCameraController({
         getStageMetrics: () => ({
@@ -210,11 +210,11 @@ describe('Wafer Camera Physics & Gesture Controller (Task R6, redesign.md §4.7,
           reRasters.push({ ...camera });
         },
         requestFrame: (cb) => {
-          rafCb = cb;
+          rafQueue.cb = cb;
           return 1;
         },
         cancelFrame: () => {
-          rafCb = null;
+          rafQueue.cb = null;
         },
         now: () => nowMs,
       });
@@ -233,7 +233,9 @@ describe('Wafer Camera Physics & Gesture Controller (Task R6, redesign.md §4.7,
       expect(reRasters).toHaveLength(0);
 
       // Before settle: wrapper transform scales relative to fit (raster = 1, 0, 0)
-      expect(wrapperTransforms.at(-1)).toContain(`scale(${zoomedCam.scale}`);
+      expect(wrapperTransforms.at(-1)).toContain(
+        `scale(${Number(zoomedCam.scale.toFixed(5))})`,
+      );
 
       // Advance < 120 ms -> still not re-rastered
       vi.advanceTimersByTime(100);
@@ -283,12 +285,12 @@ describe('Wafer Camera Physics & Gesture Controller (Task R6, redesign.md §4.7,
         timeMs: nowMs,
       });
 
-      expect(rafCb).not.toBeNull();
+      expect(rafQueue.cb).not.toBeNull();
       // Step rAF -> camera coasts forward in +X!
-      for (let step = 0; step < 5 && rafCb !== null; step += 1) {
+      for (let step = 0; step < 5 && rafQueue.cb !== null; step += 1) {
         nowMs += 16;
-        const cb = rafCb;
-        rafCb = null;
+        const cb = rafQueue.cb;
+        rafQueue.cb = null;
         cb(nowMs);
       }
       expect(controller.getCamera().tx).toBeGreaterThan(txAtRelease);

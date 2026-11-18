@@ -188,14 +188,14 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
         }),
       );
 
-      // Verdict column precedes wafer map; 553fr / 783fr responsive desktop split
+      // Verdict column precedes wafer map in DOM; 783fr stage (left) / 553fr verdict (right) desktop split (§3.4)
       const heroGridIdx = html.indexOf('data-testid="verdict-wafer-hero-grid"');
       const reportIdx = html.indexOf('data-testid="autopsy-report-card"');
       const waferIdx = html.indexOf('data-testid="wafer-base-canvas"');
       expect(heroGridIdx).toBeGreaterThanOrEqual(0);
       expect(reportIdx).toBeGreaterThan(heroGridIdx);
       expect(waferIdx).toBeGreaterThan(reportIdx);
-      expect(html).toContain('xl:grid-cols-[minmax(0,553fr)_minmax(0,783fr)]');
+      expect(html).toContain('xl:grid-cols-[minmax(0,783fr)_minmax(0,553fr)]');
 
       // Isolated verdict column markup check
       const cardHtml = renderToStaticMarkup(

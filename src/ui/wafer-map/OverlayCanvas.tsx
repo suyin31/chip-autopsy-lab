@@ -7,6 +7,11 @@ import type { LotModel } from '@/core/model';
 import { CLASSIFIER_THRESHOLDS } from '@/core/patterns';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
+  type CameraState,
+  cameraToViewportTransform,
+  DEFAULT_CAMERA_STATE,
+} from './wafer-camera';
+import {
   computeWaferRenderLayout,
   paintWaferOverlayLayer,
   resolveCanvasPixelSize,
@@ -14,12 +19,17 @@ import {
   type WaferRenderLayout,
 } from './wafer-geometry';
 
+export interface OverlayCanvasHandle {
+  paintForCamera(camera: CameraState): void;
+}
+
 export interface OverlayCanvasProps {
   readonly lot: LotModel;
   readonly waferIndex: number;
   readonly cssWidth: number;
   readonly cssHeight: number;
-  readonly transform: ViewportTransform;
+  readonly transform?: ViewportTransform;
+  readonly getCamera?: () => CameraState;
   readonly dpr?: number;
   readonly layout?: WaferRenderLayout | null;
   readonly store?: StoreApi<SelectionStoreState>;
@@ -28,23 +38,30 @@ export interface OverlayCanvasProps {
 const EMPTY_MASK = new Uint8Array(0);
 
 /**
- * DPR-scaled Canvas2D overlay layer stacked above `BaseCanvas` (`pointer-events: none`).
+ * DPR-scaled screen-space Canvas2D overlay layer (`z: 3`, `pointer-events: none`, `redesign.md` §4.7).
  *
  * Subscribes via a single `useShallow` selector to `SelectionStore` highlight,
- * brush, and hover slices so `#D6E6FF` outlines/glows and hover reticles repaint
- * in `< 1 ms` without ever re-rendering or repainting `BaseCanvas`
- * (Requirements 4.3, 10.4, 15.4).
+ * brush, and hover slices AND exposes an imperative `paintForCamera` handle so
+ * camera gestures/springs redraw screen-space strokes every animated frame with
+ * zero React re-renders and zero `BaseCanvas` repaints (Requirements 4.3, 10.4, 15.4).
  */
-export const OverlayCanvas = React.memo(function OverlayCanvas({
-  lot,
-  waferIndex,
-  cssWidth,
-  cssHeight,
-  transform,
-  dpr,
-  layout,
-  store = useSelectionStore,
-}: OverlayCanvasProps): React.JSX.Element {
+const OverlayCanvasImpl = React.forwardRef<
+  OverlayCanvasHandle,
+  OverlayCanvasProps
+>(function OverlayCanvas(
+  {
+    lot,
+    waferIndex,
+    cssWidth,
+    cssHeight,
+    transform,
+    getCamera,
+    dpr,
+    layout,
+    store = useSelectionStore,
+  },
+  ref,
+): React.JSX.Element {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
 
@@ -73,6 +90,29 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
 
   const safeCssWidth = Math.max(1, Math.round(cssWidth));
   const safeCssHeight = Math.max(1, Math.round(cssHeight));
+
+  const latestRef = React.useRef({
+    lot,
+    waferIndex,
+    safeCssWidth,
+    safeCssHeight,
+    dpr,
+    overlayHighlightMask,
+    overlayHighlightCount,
+    hoveredDieIndex,
+    brush,
+  });
+  latestRef.current = {
+    lot,
+    waferIndex,
+    safeCssWidth,
+    safeCssHeight,
+    dpr,
+    overlayHighlightMask,
+    overlayHighlightCount,
+    hoveredDieIndex,
+    brush,
+  };
 
   const lotHighlightStats = React.useMemo(() => {
     if (
@@ -125,81 +165,122 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
     return { waferCount, waferOuterBandCount };
   }, [lot, waferIndex, overlayHighlightMask, overlayHighlightCount]);
 
+  const paintWithViewport = React.useCallback(
+    (vp: ViewportTransform, explicitLayout?: WaferRenderLayout | null): void => {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        return;
+      }
+      if (!ctxRef.current || ctxRef.current.canvas !== canvas) {
+        ctxRef.current = canvas.getContext('2d');
+      }
+      const ctx = ctxRef.current;
+      if (!ctx) {
+        return;
+      }
+
+      const cur = latestRef.current;
+      const resolvedDpr =
+        cur.dpr ??
+        (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+      const dims = resolveCanvasPixelSize(
+        cur.safeCssWidth,
+        cur.safeCssHeight,
+        resolvedDpr,
+      );
+      if (canvas.width !== dims.pixelWidth) {
+        canvas.width = dims.pixelWidth;
+      }
+      if (canvas.height !== dims.pixelHeight) {
+        canvas.height = dims.pixelHeight;
+      }
+
+      const wafer = cur.lot.wafers[cur.waferIndex];
+      if (!wafer) {
+        ctx.setTransform(dims.dpr, 0, 0, dims.dpr, 0, 0);
+        ctx.clearRect(0, 0, dims.cssWidth, dims.cssHeight);
+        return;
+      }
+
+      const resolvedLayout =
+        explicitLayout &&
+        explicitLayout.cssWidth === dims.cssWidth &&
+        explicitLayout.cssHeight === dims.cssHeight &&
+        vp.scale === 1 &&
+        vp.panX === 0 &&
+        vp.panY === 0
+          ? explicitLayout
+          : computeWaferRenderLayout(
+              wafer,
+              dims.cssWidth,
+              dims.cssHeight,
+              cur.lot.dies,
+              vp,
+            );
+
+      paintWaferOverlayLayer(ctx, {
+        lot: cur.lot,
+        waferIndex: cur.waferIndex,
+        layout: resolvedLayout,
+        dpr: dims.dpr,
+        overlayHighlightMask: cur.overlayHighlightMask,
+        overlayHighlightCount: cur.overlayHighlightCount,
+        hoveredDieIndex: cur.hoveredDieIndex,
+        brush: cur.brush,
+      });
+    },
+    [],
+  );
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      paintForCamera(camera: CameraState): void {
+        const cur = latestRef.current;
+        if (
+          cur.overlayHighlightCount === 0 &&
+          cur.hoveredDieIndex === null &&
+          cur.brush === null
+        ) {
+          return;
+        }
+        const vp = cameraToViewportTransform(
+          camera,
+          cur.safeCssWidth,
+          cur.safeCssHeight,
+        );
+        paintWithViewport(vp, null);
+      },
+    }),
+    [paintWithViewport],
+  );
+
   React.useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-    if (!ctxRef.current || ctxRef.current.canvas !== canvas) {
-      ctxRef.current = canvas.getContext('2d');
-    }
-    const ctx = ctxRef.current;
-    if (!ctx) {
-      return;
-    }
-
-    const resolvedDpr =
-      dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
-    const dims = resolveCanvasPixelSize(
-      safeCssWidth,
-      safeCssHeight,
-      resolvedDpr,
-    );
-    if (canvas.width !== dims.pixelWidth) {
-      canvas.width = dims.pixelWidth;
-    }
-    if (canvas.height !== dims.pixelHeight) {
-      canvas.height = dims.pixelHeight;
-    }
-
-    const wafer = lot.wafers[waferIndex];
-    if (!wafer) {
-      ctx.setTransform(dims.dpr, 0, 0, dims.dpr, 0, 0);
-      ctx.clearRect(0, 0, dims.cssWidth, dims.cssHeight);
-      return;
-    }
-
-    const resolvedLayout =
-      layout &&
-      layout.cssWidth === dims.cssWidth &&
-      layout.cssHeight === dims.cssHeight
-        ? layout
-        : computeWaferRenderLayout(
-            wafer,
-            dims.cssWidth,
-            dims.cssHeight,
-            lot.dies,
-            transform,
-          );
-
-    paintWaferOverlayLayer(ctx, {
-      lot,
-      waferIndex,
-      layout: resolvedLayout,
-      dpr: dims.dpr,
-      overlayHighlightMask,
-      overlayHighlightCount,
-      hoveredDieIndex,
-      brush,
-    });
+    const cam = getCamera ? getCamera() : DEFAULT_CAMERA_STATE;
+    const vp =
+      transform ?? cameraToViewportTransform(cam, safeCssWidth, safeCssHeight);
+    paintWithViewport(vp, layout);
   }, [
     lot,
     waferIndex,
     safeCssWidth,
     safeCssHeight,
     transform,
+    getCamera,
     dpr,
     layout,
     overlayHighlightMask,
     overlayHighlightCount,
     hoveredDieIndex,
     brush,
+    paintWithViewport,
   ]);
 
   return (
     <div
       data-testid="wafer-overlay-wrapper"
       data-highlight-count={overlayHighlightCount}
+      data-hovered-die={hoveredDieIndex !== null ? hoveredDieIndex : ''}
       data-outer-band-highlight-count={lotHighlightStats.outerBandCount}
       data-interior-highlight-count={lotHighlightStats.interiorCount}
       data-wafer-highlight-count={waferHighlightStats.waferCount}
@@ -207,7 +288,7 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
         waferHighlightStats.waferOuterBandCount
       }
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0"
+      className="pointer-events-none absolute inset-0 z-[var(--z-canvas-overlay)]"
     >
       <canvas
         ref={canvasRef}
@@ -219,3 +300,5 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
     </div>
   );
 });
+
+export const OverlayCanvas = React.memo(OverlayCanvasImpl);
