@@ -117,7 +117,9 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(html).toContain('rounded-2xl bg-surface p-6 text-left shadow-card');
     expect(html).toContain('Example result');
     expect(html).toContain('<bdi translate="no">Edge-Ring</bdi> failure.');
-    expect(html).toContain('93.8% of fails sit in the outer 3 rings.');
+    // Premium §11.5: the percent is its own count-up from 0, sized by its final string
+    expect(html.replace(/<[^>]+>/g, '')).toContain('0.0% of fails sit in the outer 3 rings.');
+    expect(html).toMatch(/data-testid="landing-example-percent" data-final="93.8%" class="count-up"/);
     expect(html).toContain('See how it was found<span aria-hidden="true">→</span>');
 
     // 152 px server-rendered disc with contact shadow and masked sheen; no R-series vignette or top light

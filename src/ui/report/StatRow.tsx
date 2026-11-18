@@ -6,6 +6,7 @@ import type { RenderedStatFact, RenderedStatFactTuple } from '@/core/report';
 import type { GlossaryTermId } from '@/core/i18n';
 import type { StatCaptionKey } from '@/core/report';
 import { GlossaryText, useT } from '@/ui/i18n';
+import { CountUpCompleteContext } from '@/ui/primitives/count-up';
 import { cn } from '@/ui/primitives/cn';
 import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
 import {
@@ -29,9 +30,9 @@ const STAT_SECONDARY_CAPTION_TERMS: readonly GlossaryTermId[] = ['firstTest'];
 
 export interface StatRowProps {
   readonly stats: RenderedStatFactTuple;
-  /** When false (during initial 0..85% probe sweep), holds count-up until Verdict rise-in starts (§5.3). */
+  /** When false (before the §8.1 ignite starts), holds the count-up until the verdict rise-in starts (premium §8.2). */
   readonly revealStarted?: boolean;
-  /** Delay in ms matching the StatRow's §5.2 rise-in stagger (`180 ms` normal, `0 ms` reduced). */
+  /** Delay in ms matching the stat block's §8.2 rise-in stagger (`180 ms` normal, `0 ms` reduced). */
   readonly revealDelayMs?: number;
   /** Active selection-store highlight ID; a stat whose evidence ID matches shows selected. */
   readonly activeClaimId?: string | null;
@@ -49,9 +50,10 @@ export interface StatRowProps {
  * - Number `<dd>`: `stat`, `text-primary`, tabular; never orange (A4).
  * - Caption `<dt>` (`subhead` secondary, max 2 lines, optional `subhead` tertiary second line)
  *   precedes `<dd>` in DOM and sits visually below it (6 px gap) via `flex-direction: column-reverse`.
- * - §5.3 Count-up:
- *   - First reveal: `0 -> target` in `700 ms` `ease-out-expo` via one rAF loop writing `textContent`
- *     to refs (zero React state per frame).
+ * - Count-up (premium §8.2, §11.5):
+ *   - First reveal: `0 -> target` in `600 ms` `ease-out-quart`, starting with the stat block, via one
+ *     rAF loop writing `textContent` to refs (zero React state per frame). `.count-up` sets the
+ *     min-width from the final string. Input in the verdict column completes it at once.
  *   - Selection-linked updates: `previous -> target` in `300 ms` `ease-out-expo` (interruptible).
  *   - Accessibility: visible animating `<span>` is `aria-hidden="true"`; sibling `.sr-only` `<span>`
  *     holds the final value.
@@ -85,6 +87,8 @@ export function StatRow({
     stats[2].numericValue,
   ]);
   const hasCompletedInitialRevealRef = React.useRef(false);
+  const initialRevealRunningRef = React.useRef(false);
+  const revealCompleted = React.useContext(CountUpCompleteContext);
   const rafRef = React.useRef<number | null>(null);
   const itemRefs = React.useRef<Array<HTMLDivElement | null>>([null, null, null]);
   const pressedIdxRef = React.useRef<number | null>(null);
@@ -137,9 +141,19 @@ export function StatRow({
       stats[2].numericValue,
     ];
 
-    if (prefersReduced || typeof requestAnimationFrame !== 'function') {
+    // Premium §8.2 interrupt: input in the verdict column shows the reveal count's final values
+    const finishRevealNow =
+      revealCompleted &&
+      (!hasCompletedInitialRevealRef.current || initialRevealRunningRef.current);
+
+    if (
+      prefersReduced ||
+      finishRevealNow ||
+      typeof requestAnimationFrame !== 'function'
+    ) {
       cancelRaf();
       hasCompletedInitialRevealRef.current = true;
+      initialRevealRunningRef.current = false;
       prevTargetsRef.current = nextTargets;
       displayedValuesRef.current = [...nextTargets];
       for (let i = 0; i < 3; i += 1) {
@@ -188,6 +202,7 @@ export function StatRow({
 
     hasCompletedInitialRevealRef.current = true;
     cancelRaf();
+    initialRevealRunningRef.current = isInitialReveal;
 
     const fromValues: [number, number, number] = isInitialReveal
       ? [0, 0, 0]
@@ -232,6 +247,7 @@ export function StatRow({
           elapsedMs,
           durationMs,
           prefersReducedMotion: false,
+          easing: isInitialReveal ? 'quart' : 'expo',
         });
         displayedValuesRef.current[i] = v;
         const el = valueRefs.current[i];
@@ -249,6 +265,7 @@ export function StatRow({
         rafRef.current = requestAnimationFrame(tick);
       } else {
         rafRef.current = null;
+        initialRevealRunningRef.current = false;
       }
     };
 
@@ -258,6 +275,7 @@ export function StatRow({
     stats,
     revealStarted,
     revealDelayMs,
+    revealCompleted,
     prefersReduced,
     formatInteger,
     formatPercent,
@@ -315,8 +333,9 @@ export function StatRow({
                   valueRefs.current[idx] = el;
                 }}
                 data-testid="verdict-stat-value"
+                data-final={stat.valueText}
                 aria-hidden="true"
-                className="pointer-events-none relative z-[1]"
+                className="count-up pointer-events-none relative z-[1]"
               >
                 {stat.valueText}
               </span>

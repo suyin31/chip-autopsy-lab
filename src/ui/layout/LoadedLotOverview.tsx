@@ -35,8 +35,8 @@ export interface LoadedLotOverviewProps {
 
 /**
  * Loaded Verdict & Wafer Stage Workspace (`src/ui/layout/LoadedLotOverview.tsx`, `redesign.md` §3.4, §5.1–§5.3):
- * - Coordinates the once-per-session §5.1 probe sweep with the §5.2 Verdict rise-in (triggered when
- *   the sweep reaches `85%`, or immediately on skip / subsequent lot load / `prefers-reduced-motion`).
+ * - Coordinates the once-per-session probe sweep (premium §8.1) with the verdict rise-in (§8.2),
+ *   triggered at ignite start, or at once on skip / subsequent lot load / `prefers-reduced-motion`.
  * - Desktop (`>= 1280px`, premium §6.2): 12-column grid with a `24 px` gutter. The sticky stage
  *   column (cols 1–7, `top: 52px`, `calc(100dvh - 52px)` tall, min 640, padding 20 / 16) holds the
  *   header, flex-1 wafer area, control row, and strip; the verdict column (cols 8–12) scrolls with

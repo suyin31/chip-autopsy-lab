@@ -499,7 +499,7 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
     });
 
     expect(reducedAudit.sawSweepRunning).toBe(false);
-    expect(reducedAudit.staggerDelays).toEqual([0, 0, 0, 0, 0]);
+    expect(reducedAudit.staggerDelays).toEqual([0, 0, 0, 0, 0, 0]);
     expect(reducedAudit.firstStatSnapshot).toEqual([
       '93.8%',
       '82.8%',

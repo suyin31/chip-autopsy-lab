@@ -56,6 +56,11 @@ export interface FindingsListProps {
   readonly waferCount?: number;
   readonly defaultHypothesesOpen?: boolean;
   readonly onToggleClaim: (claim: ReportClaim) => void;
+  /** Wraps the label + card and the possible causes trigger as verdict rise-in blocks 5 and 6 (premium §8.2). */
+  readonly renderRiseBlock?: (
+    id: 'findings' | 'causes',
+    children: React.ReactNode,
+  ) => React.ReactNode;
   readonly className?: string;
 }
 
@@ -154,8 +159,13 @@ export function FindingsList({
   waferCount = 1,
   defaultHypothesesOpen = false,
   onToggleClaim,
+  renderRiseBlock,
   className,
 }: FindingsListProps): React.JSX.Element {
+  const rise = (
+    id: 'findings' | 'causes',
+    children: React.ReactNode,
+  ): React.ReactNode => (renderRiseBlock ? renderRiseBlock(id, children) : children);
   const { t, tPlural, formatInteger } = useT();
   const shouldReduceMotion = useReducedMotion();
   const [hypothesesOpen, setHypothesesOpen] = React.useState<boolean>(
@@ -219,261 +229,267 @@ export function FindingsList({
 
   return (
     <div data-testid="verdict-findings-section" className={className}>
-      <h2
-        data-testid="findings-label"
-        className="flex items-baseline gap-2"
-      >
-        <span className="type-headline text-text-primary">{heading}</span>
-        <span
-          data-testid="findings-count"
-          className="type-subhead text-text-tertiary tabular-nums"
-        >
-          {formatInteger(findings.length)}
-        </span>
-      </h2>
-
-      <ul
-        data-testid="verdict-findings-list"
-        className="mt-3 flex flex-col rounded-xl bg-surface p-1 shadow-card"
-      >
-        {shownFindings.map((row, idx) => {
-          const isSelected = activeClaimId === row.claimId;
-          const isPressed = pressedRowKey === row.claimId;
-          const detailId = `finding-detail-${row.claimId.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
-          const KindIcon = KIND_ICONS[row.kind];
-
-          const trailingCountLabel = selectionMask
-            ? t('findings.inSelection', {
-                count: formatInteger(
-                  countDiesInSelection(
-                    row.claim.resolvedDieIndices,
-                    selectionMask,
-                  ),
-                ),
-                total: formatInteger(row.dieCount),
-              })
-            : row.dieCountLabel;
-
-          const metaLabel =
-            waferCount > 1
-              ? t('findings.meta', {
-                  wafer: formatInteger(
-                    dieWaferIndex
-                      ? countDiesOnWafer(
-                          row.claim.resolvedDieIndices,
-                          dieWaferIndex,
-                          activeWaferIndex,
-                        )
-                      : 0,
-                  ),
-                  lot: formatInteger(row.dieCount),
-                  wafers: formatInteger(waferCount),
-                })
-              : t('findings.metaOneWafer', {
-                  lot: formatInteger(row.dieCount),
-                });
-
-          return (
-            <motion.li
-              key={row.claimId}
-              layout="position"
-              transition={layoutTransition}
-              data-active={isSelected ? 'true' : undefined}
-              data-pressed={isPressed ? 'true' : undefined}
-              data-kind={row.kind}
-              className="finding-list-item list-none"
+      {rise(
+        'findings',
+        <>
+          <h2
+            data-testid="findings-label"
+            className="flex items-baseline gap-2"
+          >
+            <span className="type-headline text-text-primary">{heading}</span>
+            <span
+              data-testid="findings-count"
+              className="type-subhead text-text-tertiary tabular-nums"
             >
-              {idx > 0 ? (
+              {formatInteger(findings.length)}
+            </span>
+          </h2>
+
+          <ul
+            data-testid="verdict-findings-list"
+            className="mt-3 flex flex-col rounded-xl bg-surface p-1 shadow-card"
+          >
+            {shownFindings.map((row, idx) => {
+              const isSelected = activeClaimId === row.claimId;
+              const isPressed = pressedRowKey === row.claimId;
+              const detailId = `finding-detail-${row.claimId.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+              const KindIcon = KIND_ICONS[row.kind];
+
+              const trailingCountLabel = selectionMask
+                ? t('findings.inSelection', {
+                    count: formatInteger(
+                      countDiesInSelection(
+                        row.claim.resolvedDieIndices,
+                        selectionMask,
+                      ),
+                    ),
+                    total: formatInteger(row.dieCount),
+                  })
+                : row.dieCountLabel;
+
+              const metaLabel =
+                waferCount > 1
+                  ? t('findings.meta', {
+                      wafer: formatInteger(
+                        dieWaferIndex
+                          ? countDiesOnWafer(
+                              row.claim.resolvedDieIndices,
+                              dieWaferIndex,
+                              activeWaferIndex,
+                            )
+                          : 0,
+                      ),
+                      lot: formatInteger(row.dieCount),
+                      wafers: formatInteger(waferCount),
+                    })
+                  : t('findings.metaOneWafer', {
+                      lot: formatInteger(row.dieCount),
+                    });
+
+              return (
+                <motion.li
+                  key={row.claimId}
+                  layout="position"
+                  transition={layoutTransition}
+                  data-active={isSelected ? 'true' : undefined}
+                  data-pressed={isPressed ? 'true' : undefined}
+                  data-kind={row.kind}
+                  className="finding-list-item list-none"
+                >
+                  {idx > 0 ? (
+                    <div
+                      aria-hidden="true"
+                      className="finding-row-separator mx-4 h-px bg-hairline transition-opacity duration-120 ease-out"
+                    />
+                  ) : null}
+
+                  <div
+                    className={cn(
+                      'group/finding rounded-lg transition-[background-color,scale] ease-out',
+                      isPressed
+                        ? 'bg-fill-2 duration-0 scale-[0.985]'
+                        : isSelected
+                          ? 'bg-fill-2 duration-120'
+                          : 'bg-transparent duration-120 hover:bg-fill-1',
+                    )}
+                  >
+                    <button
+                      type="button"
+                      data-testid="autopsy-body-claim-button"
+                      data-claim-id={row.claimId}
+                      aria-expanded={isSelected}
+                      aria-pressed={isSelected}
+                      aria-controls={isSelected ? detailId : undefined}
+                      onPointerDown={(e) => handleRowPointerDown(row.claimId, e)}
+                      onPointerUp={clearPressedRow}
+                      onPointerLeave={clearPressedRow}
+                      onPointerCancel={clearPressedRow}
+                      onClick={() => onToggleClaim(row.claim)}
+                      className={cn(
+                        'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[16px_minmax(0,1fr)_auto] items-start gap-x-3 rounded-lg border-0 bg-transparent px-4 py-3 text-left',
+                        'focus-visible:shadow-focus-ring focus-visible:outline-none',
+                      )}
+                    >
+                      <KindIcon
+                        aria-hidden="true"
+                        data-testid="finding-kind-icon"
+                        strokeWidth={1.5}
+                        className={cn(
+                          'mt-0.5 size-4 transition-colors duration-120 ease-out',
+                          row.kind === 'scratch' && 'rotate-30',
+                          isSelected ? 'text-text-primary' : 'text-text-tertiary',
+                        )}
+                      />
+
+                      <span className="min-w-0">
+                        <span
+                          data-testid="finding-row-headline"
+                          title={row.headline}
+                          className="line-clamp-2 block type-row-title text-text-primary md:line-clamp-none md:truncate"
+                        >
+                          {renderWithUntranslatedTokens(
+                            row.headline,
+                            row.untranslatedTokens,
+                          )}
+                        </span>
+                        {row.subline.length > 0 ? (
+                          <span
+                            data-testid="finding-row-subline"
+                            className="mt-0.5 line-clamp-2 block type-subhead text-text-secondary tabular-nums md:line-clamp-none md:truncate"
+                          >
+                            {renderWithUntranslatedTokens(
+                              row.subline,
+                              row.untranslatedTokens,
+                            )}
+                          </span>
+                        ) : null}
+                      </span>
+
+                      <span className="flex h-5 items-center gap-2">
+                        {isSelected ? (
+                          <span
+                            data-testid="finding-clear-label"
+                            className="type-control whitespace-nowrap text-text-primary"
+                          >
+                            {clearLabel}
+                          </span>
+                        ) : (
+                          <span
+                            data-testid="claim-cited-dies-count"
+                            className="type-subhead whitespace-nowrap text-text-tertiary tabular-nums"
+                          >
+                            {trailingCountLabel}
+                          </span>
+                        )}
+                        <ChevronDown
+                          aria-hidden="true"
+                          data-testid="finding-chevron"
+                          strokeWidth={1.5}
+                          className={cn(
+                            'size-3 shrink-0 transition-[rotate,color] duration-160 ease-out',
+                            isSelected
+                              ? 'rotate-180 text-text-secondary'
+                              : 'text-text-tertiary group-hover/finding:text-text-secondary',
+                          )}
+                        />
+                      </span>
+                    </button>
+
+                    {isSelected ? (
+                      <motion.div
+                        id={detailId}
+                        data-testid="finding-expanded-detail"
+                        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={
+                          shouldReduceMotion
+                            ? { duration: 0 }
+                            : {
+                                delay: 0.04,
+                                duration: MOTION_TOKENS.durBaseMs / 1000,
+                                ease: MOTION_TOKENS.easeOutTuple,
+                              }
+                        }
+                        // Premium §7.6.4: padding 0 16 16 44 puts the text on the headline's left edge
+                        className="pb-4 pl-11 pr-4"
+                      >
+                        <p
+                          data-testid="finding-engine-sentence"
+                          className="line-clamp-3 type-callout text-text-secondary tabular-nums"
+                        >
+                          <GlossaryText
+                            text={row.detailText}
+                            terms={ENGINE_SENTENCE_TERMS}
+                            untranslatedTokens={row.untranslatedTokens}
+                          />
+                        </p>
+                        {row.checkNextSteps.length > 0 ? (
+                          <div data-testid="finding-check-next" className="mt-3">
+                            <p className="type-subhead text-text-tertiary">
+                              {checkNextLabel}
+                            </p>
+                            <ul className="mt-1 flex flex-col gap-1">
+                              {row.checkNextSteps.slice(0, 3).map((step, stepIdx) => (
+                                <li
+                                  key={stepIdx}
+                                  className="relative list-none pl-2 type-callout text-text-primary"
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    className="absolute left-0 top-[calc(0.5lh-2px)] size-1 rounded-full bg-text-tertiary"
+                                  />
+                                  {step}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                        <p
+                          data-testid="finding-meta"
+                          className="mt-3 type-subhead text-text-tertiary tabular-nums"
+                        >
+                          {metaLabel}
+                        </p>
+                      </motion.div>
+                    ) : null}
+                  </div>
+                </motion.li>
+              );
+            })}
+
+            {hiddenCount > 0 ? (
+              <motion.li
+                layout="position"
+                transition={layoutTransition}
+                className="finding-list-item list-none"
+              >
                 <div
                   aria-hidden="true"
                   className="finding-row-separator mx-4 h-px bg-hairline transition-opacity duration-120 ease-out"
                 />
-              ) : null}
-
-              <div
-                className={cn(
-                  'group/finding rounded-lg transition-[background-color,scale] ease-out',
-                  isPressed
-                    ? 'bg-fill-2 duration-0 scale-[0.985]'
-                    : isSelected
-                      ? 'bg-fill-2 duration-120'
-                      : 'bg-transparent duration-120 hover:bg-fill-1',
-                )}
-              >
                 <button
                   type="button"
-                  data-testid="autopsy-body-claim-button"
-                  data-claim-id={row.claimId}
-                  aria-expanded={isSelected}
-                  aria-pressed={isSelected}
-                  aria-controls={isSelected ? detailId : undefined}
-                  onPointerDown={(e) => handleRowPointerDown(row.claimId, e)}
-                  onPointerUp={clearPressedRow}
-                  onPointerLeave={clearPressedRow}
-                  onPointerCancel={clearPressedRow}
-                  onClick={() => onToggleClaim(row.claim)}
+                  data-testid="findings-show-more"
+                  onClick={() => setShowAll(true)}
                   className={cn(
-                    'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[16px_minmax(0,1fr)_auto] items-start gap-x-3 rounded-lg border-0 bg-transparent px-4 py-3 text-left',
+                    'flex h-11 w-full cursor-pointer appearance-none items-center justify-center rounded-lg border-0 bg-transparent px-4 type-control text-text-secondary',
+                    'transition-[background-color,color] duration-120 ease-out hover:bg-fill-1 hover:text-text-primary active:bg-fill-2',
                     'focus-visible:shadow-focus-ring focus-visible:outline-none',
                   )}
                 >
-                  <KindIcon
-                    aria-hidden="true"
-                    data-testid="finding-kind-icon"
-                    strokeWidth={1.5}
-                    className={cn(
-                      'mt-0.5 size-4 transition-colors duration-120 ease-out',
-                      row.kind === 'scratch' && 'rotate-30',
-                      isSelected ? 'text-text-primary' : 'text-text-tertiary',
-                    )}
-                  />
-
-                  <span className="min-w-0">
-                    <span
-                      data-testid="finding-row-headline"
-                      title={row.headline}
-                      className="line-clamp-2 block type-row-title text-text-primary md:line-clamp-none md:truncate"
-                    >
-                      {renderWithUntranslatedTokens(
-                        row.headline,
-                        row.untranslatedTokens,
-                      )}
-                    </span>
-                    {row.subline.length > 0 ? (
-                      <span
-                        data-testid="finding-row-subline"
-                        className="mt-0.5 line-clamp-2 block type-subhead text-text-secondary tabular-nums md:line-clamp-none md:truncate"
-                      >
-                        {renderWithUntranslatedTokens(
-                          row.subline,
-                          row.untranslatedTokens,
-                        )}
-                      </span>
-                    ) : null}
-                  </span>
-
-                  <span className="flex h-5 items-center gap-2">
-                    {isSelected ? (
-                      <span
-                        data-testid="finding-clear-label"
-                        className="type-control whitespace-nowrap text-text-primary"
-                      >
-                        {clearLabel}
-                      </span>
-                    ) : (
-                      <span
-                        data-testid="claim-cited-dies-count"
-                        className="type-subhead whitespace-nowrap text-text-tertiary tabular-nums"
-                      >
-                        {trailingCountLabel}
-                      </span>
-                    )}
-                    <ChevronDown
-                      aria-hidden="true"
-                      data-testid="finding-chevron"
-                      strokeWidth={1.5}
-                      className={cn(
-                        'size-3 shrink-0 transition-[rotate,color] duration-160 ease-out',
-                        isSelected
-                          ? 'rotate-180 text-text-secondary'
-                          : 'text-text-tertiary group-hover/finding:text-text-secondary',
-                      )}
-                    />
-                  </span>
+                  {tPlural('findings.more', hiddenCount, {
+                    count: formatInteger(hiddenCount),
+                  })}
                 </button>
-
-                {isSelected ? (
-                  <motion.div
-                    id={detailId}
-                    data-testid="finding-expanded-detail"
-                    initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={
-                      shouldReduceMotion
-                        ? { duration: 0 }
-                        : {
-                            delay: 0.04,
-                            duration: MOTION_TOKENS.durBaseMs / 1000,
-                            ease: MOTION_TOKENS.easeOutTuple,
-                          }
-                    }
-                    // Premium §7.6.4: padding 0 16 16 44 puts the text on the headline's left edge
-                    className="pb-4 pl-11 pr-4"
-                  >
-                    <p
-                      data-testid="finding-engine-sentence"
-                      className="line-clamp-3 type-callout text-text-secondary tabular-nums"
-                    >
-                      <GlossaryText
-                        text={row.detailText}
-                        terms={ENGINE_SENTENCE_TERMS}
-                        untranslatedTokens={row.untranslatedTokens}
-                      />
-                    </p>
-                    {row.checkNextSteps.length > 0 ? (
-                      <div data-testid="finding-check-next" className="mt-3">
-                        <p className="type-subhead text-text-tertiary">
-                          {checkNextLabel}
-                        </p>
-                        <ul className="mt-1 flex flex-col gap-1">
-                          {row.checkNextSteps.slice(0, 3).map((step, stepIdx) => (
-                            <li
-                              key={stepIdx}
-                              className="relative list-none pl-2 type-callout text-text-primary"
-                            >
-                              <span
-                                aria-hidden="true"
-                                className="absolute left-0 top-[calc(0.5lh-2px)] size-1 rounded-full bg-text-tertiary"
-                              />
-                              {step}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-                    <p
-                      data-testid="finding-meta"
-                      className="mt-3 type-subhead text-text-tertiary tabular-nums"
-                    >
-                      {metaLabel}
-                    </p>
-                  </motion.div>
-                ) : null}
-              </div>
-            </motion.li>
-          );
-        })}
-
-        {hiddenCount > 0 ? (
-          <motion.li
-            layout="position"
-            transition={layoutTransition}
-            className="finding-list-item list-none"
-          >
-            <div
-              aria-hidden="true"
-              className="finding-row-separator mx-4 h-px bg-hairline transition-opacity duration-120 ease-out"
-            />
-            <button
-              type="button"
-              data-testid="findings-show-more"
-              onClick={() => setShowAll(true)}
-              className={cn(
-                'flex h-11 w-full cursor-pointer appearance-none items-center justify-center rounded-lg border-0 bg-transparent px-4 type-control text-text-secondary',
-                'transition-[background-color,color] duration-120 ease-out hover:bg-fill-1 hover:text-text-primary active:bg-fill-2',
-                'focus-visible:shadow-focus-ring focus-visible:outline-none',
-              )}
-            >
-              {tPlural('findings.more', hiddenCount, {
-                count: formatInteger(hiddenCount),
-              })}
-            </button>
-          </motion.li>
-        ) : null}
-      </ul>
+              </motion.li>
+            ) : null}
+          </ul>
+        </>,
+      )}
 
       {/* Premium §7.6.5: the "Possible causes" disclosure sits 16 px below the findings card */}
-      {hypotheses.length > 0 ? (
+      {hypotheses.length > 0 ? rise(
+        'causes',
         <motion.div
           layout="position"
           transition={layoutTransition}
@@ -575,7 +591,7 @@ export function FindingsList({
               </>
             ) : null}
           </div>
-        </motion.div>
+        </motion.div>,
       ) : null}
     </div>
   );

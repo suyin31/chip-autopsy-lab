@@ -65,6 +65,7 @@ export {
   computeVerdictRiseSchedule,
   easeInOutSine,
   easeOutExpo,
+  easeOutQuart,
   type InitialRevealMode,
   type InitialRevealPlan,
   PROBE_LIGHT_FADE_IN_MS,
@@ -82,7 +83,8 @@ export {
   VERDICT_RISE_BLOCK_ORDER,
   type VerdictRiseBlockId,
   VERDICT_RISE_STAGGER_MS,
-  VERDICT_RISE_SWEEP_THRESHOLD,
+  VERDICT_RISE_OFFSET_PX,
+  VERDICT_REVEAL_SETTLE_MS,
   type VerdictRiseStepSpec,
 } from './probe-sweep';
 export {

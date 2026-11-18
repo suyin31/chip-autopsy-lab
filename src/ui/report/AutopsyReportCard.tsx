@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
@@ -19,6 +19,7 @@ import {
 } from '@/core/report';
 import { useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
+import { CountUpCompleteContext } from '@/ui/primitives/count-up';
 import { cn } from '@/ui/primitives/cn';
 import {
   type ClaimGlowOrderMode,
@@ -27,10 +28,10 @@ import {
   type SelectionStoreState,
   useSelectionStore,
 } from '@/ui/state';
-import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
 import {
   computeVerdictRiseSchedule,
   readPrefersReducedMotionSync,
+  VERDICT_REVEAL_SETTLE_MS,
   type VerdictRiseBlockId,
   type VerdictRiseStepSpec,
 } from '@/ui/wafer-map/probe-sweep';
@@ -38,6 +39,7 @@ import { ConfidencePill } from './ConfidencePill';
 import { FindingsList } from './FindingsList';
 import { StatRow } from './StatRow';
 import { VerdictHero } from './VerdictHero';
+import { VerdictRiseBlock } from './VerdictRiseBlock';
 
 export interface AutopsyReportCardProps {
   readonly lot: LotModel;
@@ -67,8 +69,8 @@ export interface AutopsyReportCardProps {
   /** Optional quiet block rendered below the Findings list (the Bin Pareto, Requirement 6). */
   readonly belowFindings?: React.ReactNode;
   /**
-   * Controls §5.2 Verdict rise-in trigger (`true` once the §5.1 probe sweep reaches `85%`,
-   * or immediately on skip / subsequent load / reduced motion / standalone tests).
+   * Controls the premium §8.2 verdict rise-in trigger (`true` from the §8.1 ignite start, or at once
+   * on skip / subsequent load / reduced motion / standalone tests).
    */
   readonly verdictRevealed?: boolean;
   readonly className?: string;
@@ -313,55 +315,50 @@ export function AutopsyReportCard({
     return map;
   }, [prefersReduced]);
 
-  const buildRiseMotionProps = React.useCallback(
-    (id: VerdictRiseBlockId) => {
-      const step = riseByBlock.get(id)!;
-      if (prefersReduced) {
-        return {
-          'data-verdict-rise-block': id,
-          'data-rise-stagger-ms': 0,
-          initial: false as const,
-          animate: { opacity: 1 },
-          transition: {
-            duration: (step.durationMs ?? 120) / 1000,
-            ease: MOTION_TOKENS.easeOutTuple,
-          },
-        };
-      }
-      return {
-        'data-verdict-rise-block': id,
-        'data-rise-stagger-ms': step.delayMs,
-        initial: {
-          opacity: 0,
-          y: step.initialY,
-          filter: `blur(${step.initialBlurPx}px)`,
-        },
-        animate: effectiveRevealed
-          ? {
-              opacity: 1,
-              y: 0,
-              filter: 'blur(0px)',
-              transitionEnd: { filter: 'none' },
-            }
-          : {
-              opacity: 0,
-              y: step.initialY,
-              filter: `blur(${step.initialBlurPx}px)`,
-            },
-        transition: {
-          ...(step.spring ?? SPRING_TOKENS.ui),
-          delay: effectiveRevealed ? step.delayMs / 1000 : 0,
-        },
-      };
-    },
-    [effectiveRevealed, prefersReduced, riseByBlock],
-  );
+  // Premium §8.2 interrupt: pointer or key input in the verdict column completes every block and
+  // count at once. The flag is per lot, so the next lot load plays the reveal again.
+  const [riseCompletedLotId, setRiseCompletedLotId] = React.useState<
+    string | null
+  >(null);
+  const riseCompleted = riseCompletedLotId === lot.lotId;
+  // Once the reveal has settled there is nothing to complete, so later input never renders here
+  const riseStartRef = React.useRef<{ lotId: string; atMs: number } | null>(null);
+  React.useEffect(() => {
+    if (effectiveRevealed && riseStartRef.current?.lotId !== lot.lotId) {
+      riseStartRef.current = { lotId: lot.lotId, atMs: performance.now() };
+    }
+  }, [effectiveRevealed, lot.lotId]);
+  const handleRiseInterrupt = React.useCallback((): void => {
+    const start = riseStartRef.current;
+    if (
+      riseCompleted ||
+      (start !== null &&
+        start.lotId === lot.lotId &&
+        performance.now() - start.atMs > VERDICT_REVEAL_SETTLE_MS)
+    ) {
+      return;
+    }
+    setRiseCompletedLotId(lot.lotId);
+  }, [lot.lotId, riseCompleted]);
 
-  const renderHeroRiseBlock = React.useCallback(
-    (id: VerdictRiseBlockId, children: React.ReactNode): React.ReactNode => (
-      <motion.div {...buildRiseMotionProps(id)}>{children}</motion.div>
+  const renderRiseBlock = React.useCallback(
+    (
+      id: VerdictRiseBlockId,
+      children: React.ReactNode,
+      className?: string,
+    ): React.ReactNode => (
+      <VerdictRiseBlock
+        step={riseByBlock.get(id)!}
+        revealed={effectiveRevealed}
+        completed={riseCompleted}
+        reduced={prefersReduced}
+        replayKey={lot.lotId}
+        {...(className !== undefined ? { className } : {})}
+      >
+        {children}
+      </VerdictRiseBlock>
     ),
-    [buildRiseMotionProps],
+    [riseByBlock, effectiveRevealed, riseCompleted, prefersReduced, lot.lotId],
   );
 
   const {
@@ -593,112 +590,114 @@ export function AutopsyReportCard({
         splitForMobileStage && 'max-lg:contents',
         className,
       )}
+      onPointerDownCapture={handleRiseInterrupt}
+      onKeyDownCapture={handleRiseInterrupt}
     >
-      <div
-        data-testid="verdict-top-block"
-        className={cn('flex flex-col', splitForMobileStage && 'order-1 lg:order-none')}
-      >
+      <CountUpCompleteContext.Provider value={riseCompleted}>
         <div
-          data-testid="autopsy-live-region"
-          className="sr-only"
-          aria-live="polite"
-          aria-atomic="true"
+          data-testid="verdict-top-block"
+          className={cn('flex flex-col', splitForMobileStage && 'order-1 lg:order-none')}
         >
-          {liveAnnouncement}
+          <div
+            data-testid="autopsy-live-region"
+            className="sr-only"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {liveAnnouncement}
+          </div>
+
+          <VerdictHero
+            verdict={rendered.verdict}
+            headlineClaim={report.causeOfDeathHeadline}
+            causeAria={t('verdict.causeAria')}
+            isActive={headlineActive && headlineSource !== 'button'}
+            onToggleClaim={() => toggleHeadlineFrom('phrase')}
+            renderRiseBlock={renderRiseBlock}
+          />
+
+          {renderRiseBlock(
+            'confidence',
+            <>
+              {/* Premium §6.2 block 3, §7.4: "Show on wafer" (40 h) + 16 + the confidence chip, centred on it */}
+              <div
+                data-testid="verdict-action-row"
+                className="flex flex-wrap items-center gap-x-4 gap-y-2"
+              >
+                <Button
+                  variant="primary"
+                  data-testid="verdict-show-on-wafer"
+                  data-claim-id={report.causeOfDeathHeadline.claimId}
+                  onPointerDown={handleShowOnWaferPointerDown}
+                  onClick={() => toggleHeadlineFrom('button')}
+                >
+                  {t('verdict.showOnWafer')}
+                </Button>
+                <ConfidencePill
+                  confidence={rendered.confidence}
+                  defaultOpen={defaultConfidenceOpen}
+                />
+              </div>
+              {binsOnlyNotice ? <div className="mt-3">{binsOnlyNotice}</div> : null}
+            </>,
+            'mt-3 md:mt-5 lg:mt-6',
+          )}
         </div>
 
-        <VerdictHero
-          verdict={rendered.verdict}
-          headlineClaim={report.causeOfDeathHeadline}
-          causeAria={t('verdict.causeAria')}
-          isActive={headlineActive && headlineSource !== 'button'}
-          onToggleClaim={() => toggleHeadlineFrom('phrase')}
-          renderRiseBlock={renderHeroRiseBlock}
-        />
-
-        <motion.div
-          {...buildRiseMotionProps('confidence')}
-          className="mt-3 md:mt-5 lg:mt-6"
-        >
-          {/* Premium §6.2 block 3, §7.4: "Show on wafer" (40 h) + 16 + the confidence chip, centred on it */}
-          <div
-            data-testid="verdict-action-row"
-            className="flex flex-wrap items-center gap-x-4 gap-y-2"
-          >
-            <Button
-              variant="primary"
-              data-testid="verdict-show-on-wafer"
-              data-claim-id={report.causeOfDeathHeadline.claimId}
-              onPointerDown={handleShowOnWaferPointerDown}
-              onClick={() => toggleHeadlineFrom('button')}
-            >
-              {t('verdict.showOnWafer')}
-            </Button>
-            <ConfidencePill
-              confidence={rendered.confidence}
-              defaultOpen={defaultConfidenceOpen}
-            />
-          </div>
-          {binsOnlyNotice ? <div className="mt-3">{binsOnlyNotice}</div> : null}
-        </motion.div>
-      </div>
-
-      {/* Premium §6.2: stats follow the strip below 1024 and the action row from 1024 */}
-      <motion.div
-        {...buildRiseMotionProps('stats')}
-        className={
+        {/* Premium §6.2: stats follow the strip below 1024 and the action row from 1024 */}
+        {renderRiseBlock(
+          'stats',
+          <StatRow
+            key={lot.lotId}
+            stats={renderedStats}
+            revealStarted={effectiveRevealed}
+            revealDelayMs={riseByBlock.get('stats')?.delayMs ?? 0}
+            activeClaimId={effectiveActiveClaimId}
+            onToggleStat={handleToggleStat}
+          />,
           splitForMobileStage
             ? 'order-3 mt-8 lg:order-none lg:mt-10'
-            : 'mt-6 md:mt-10'
-        }
-      >
-        <StatRow
-          key={lot.lotId}
-          stats={renderedStats}
-          revealStarted={effectiveRevealed}
-          revealDelayMs={riseByBlock.get('stats')?.delayMs ?? 0}
-          activeClaimId={effectiveActiveClaimId}
-          onToggleStat={handleToggleStat}
-        />
-      </motion.div>
-
-      <motion.div
-        {...buildRiseMotionProps('findings')}
-        className={cn(
-          'mt-8 md:mt-12',
-          splitForMobileStage && 'order-4 lg:order-none',
+            : 'mt-6 md:mt-10',
         )}
-      >
-        <FindingsList
-          heading={rendered.findingsHeading}
-          clearLabel={rendered.clearLabel}
-          possibleCausesHeading={rendered.possibleCausesHeading}
-          checkNextLabel={rendered.checkNextLabel}
-          causesNote={rendered.causesNote}
-          lotKey={lot.lotId}
-          dieWaferIndex={lot.dies.waferIndex}
-          activeWaferIndex={storeLot === lot ? storeActiveWaferIndex : 0}
-          waferCount={lot.wafers.length}
-          findings={visibleFindings}
-          hypotheses={rendered.hypotheses}
-          activeClaimId={effectiveActiveClaimId}
-          selectionMask={effectiveSelectionMask}
-          defaultHypothesesOpen={defaultHypothesesOpen}
-          onToggleClaim={handleToggleFinding}
-        />
-      </motion.div>
 
-      {belowFindings ? (
         <div
-          data-testid="verdict-below-findings"
           className={cn(
-            'mt-10 pb-6 md:mt-12 lg:mt-24 lg:pb-16',
-            splitForMobileStage && 'order-5 lg:order-none',
+            'mt-8 md:mt-12',
+            splitForMobileStage && 'order-4 lg:order-none',
           )}
         >
-          {belowFindings}
+          <FindingsList
+            heading={rendered.findingsHeading}
+            clearLabel={rendered.clearLabel}
+            possibleCausesHeading={rendered.possibleCausesHeading}
+            checkNextLabel={rendered.checkNextLabel}
+            causesNote={rendered.causesNote}
+            lotKey={lot.lotId}
+            dieWaferIndex={lot.dies.waferIndex}
+            activeWaferIndex={storeLot === lot ? storeActiveWaferIndex : 0}
+            waferCount={lot.wafers.length}
+            findings={visibleFindings}
+            hypotheses={rendered.hypotheses}
+            activeClaimId={effectiveActiveClaimId}
+            selectionMask={effectiveSelectionMask}
+            defaultHypothesesOpen={defaultHypothesesOpen}
+            onToggleClaim={handleToggleFinding}
+            renderRiseBlock={renderRiseBlock}
+          />
         </div>
-      ) : null}
+
+        {belowFindings ? (
+          <div
+            data-testid="verdict-below-findings"
+            className={cn(
+              'mt-10 pb-6 md:mt-12 lg:mt-24 lg:pb-16',
+              splitForMobileStage && 'order-5 lg:order-none',
+            )}
+          >
+            {belowFindings}
+          </div>
+        ) : null}
+      </CountUpCompleteContext.Provider>
     </section>
   );
 }

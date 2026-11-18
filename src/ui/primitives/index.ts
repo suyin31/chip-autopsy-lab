@@ -19,6 +19,7 @@ export {
   CardTitle,
 } from './card';
 export { cn } from './cn';
+export { CountUp, CountUpCompleteContext, type CountUpProps } from './count-up';
 export {
   type AnchoredMenuPosition,
   type AnchorRectLike,

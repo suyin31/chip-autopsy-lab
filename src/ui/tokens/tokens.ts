@@ -518,7 +518,7 @@ export const MOTION_TOKENS = {
   revealCeilingsMs: {
     probeSweep: 1200,
     verdictStagger: 60,
-    statCountUp: 700,
+    statCountUp: 600,
     statUpdate: 300,
     claimEvidenceStagger: 600,
     waferGalleryCollapse: 800,

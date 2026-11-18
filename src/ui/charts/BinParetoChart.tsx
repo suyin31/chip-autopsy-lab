@@ -10,6 +10,7 @@ import type { GlossaryTermId } from '@/core/i18n';
 import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import { Button } from '@/ui/primitives/button';
+import { CountUp } from '@/ui/primitives/count-up';
 import { SegmentedControl } from '@/ui/primitives/segmented-control';
 import { Tooltip } from '@/ui/primitives/tooltip';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
@@ -89,6 +90,14 @@ export function BinParetoChart({
 
   const [mode, setMode] = React.useState<BinMode>('SBIN');
   const [expanded, setExpanded] = React.useState(false);
+
+  // Premium §11.5: share pills count up with the rows that mount with the lot; rows that mount
+  // later (mode switch, "Show all") show their final value at once (§8.14)
+  const pillsPlayedLotRef = React.useRef<LotModel | null>(null);
+  const playPills = pillsPlayedLotRef.current !== lot;
+  React.useEffect(() => {
+    pillsPlayedLotRef.current = lot;
+  }, [lot]);
 
   // A finding that cites a bin of the other kind switches the chart to that kind
   const claimId = synced ? (claimHighlight?.claimId ?? null) : null;
@@ -331,7 +340,13 @@ export function BinParetoChart({
                       data-testid="bin-pareto-pill"
                       className="inline-flex h-6 items-center justify-self-end rounded-pill bg-fill-2 px-2 type-caption text-text-primary tabular-nums"
                     >
-                      {formatPercent(entry.shareOfFailures)}
+                      {/* §11.5: pills count up once per lot; rows shown later read final */}
+                      <CountUp
+                        value={entry.shareOfFailures}
+                        format={formatPercent}
+                        playKey={lot.lotId}
+                        play={playPills}
+                      />
                     </span>
                   </button>
                 </li>

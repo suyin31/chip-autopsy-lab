@@ -19,9 +19,6 @@ export const PROBE_SWEEP_FAIL_FADE_MS = 280 as const;
 /** Incremental die-reveal window (`900 ms` + `280 ms` fail fade = `1,180 ms <= 1,200 ms`). */
 export const PROBE_SWEEP_REVEAL_MS = 900 as const;
 
-/** Sweep reveal fraction at which the Verdict Column starts its rise-in (`redesign.md` §5.2: 85%). */
-export const VERDICT_RISE_SWEEP_THRESHOLD = 0.85 as const;
-
 /** Probe light opacity 0 -> 1 over the first 120 ms of the sweep (premium §8.1). */
 export const PROBE_LIGHT_FADE_IN_MS = 120 as const;
 
@@ -35,9 +32,9 @@ export const REDUCED_MOTION_FADE_MS = 120 as const;
 export const VERDICT_RISE_STAGGER_MS =
   MOTION_TOKENS.revealCeilingsMs.verdictStagger; // 60 ms
 
-/** Initial stat count-up duration (`redesign.md` §5.3: 700 ms). */
+/** Count-up on reveal (premium §11.5 over §8.2: 600 ms `ease-out-quart`). */
 export const STAT_INITIAL_COUNTUP_MS =
-  MOTION_TOKENS.revealCeilingsMs.statCountUp; // 700 ms
+  MOTION_TOKENS.revealCeilingsMs.statCountUp; // 600 ms
 
 /** Selection-linked stat update duration (`redesign.md` §5.3: 300 ms). */
 export const STAT_UPDATE_COUNTUP_MS =
@@ -74,6 +71,14 @@ export function easeOutExpo(u: number): number {
   if (t <= 0) return 0;
   if (t >= 1) return 1;
   return 1 - Math.pow(2, -10 * t);
+}
+
+/** Quartic ease-out for count-ups on reveal (premium §11.5). */
+export function easeOutQuart(u: number): number {
+  const t = clamp01(u);
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  return 1 - Math.pow(1 - t, 4);
 }
 
 /**
@@ -124,12 +129,17 @@ export function resolveInitialRevealMode(params: {
   return { mode: 'sweep', fadeDurationMs: 0 };
 }
 
+/**
+ * The six verdict rise-in blocks in order (premium §8.2): headline line group, takeaway, action row,
+ * stat row, findings label + card, and the possible causes trigger.
+ */
 export type VerdictRiseBlockId =
   | 'headline'
   | 'subline'
   | 'confidence'
   | 'stats'
-  | 'findings';
+  | 'findings'
+  | 'causes';
 
 export const VERDICT_RISE_BLOCK_ORDER: readonly VerdictRiseBlockId[] = [
   'headline',
@@ -137,22 +147,32 @@ export const VERDICT_RISE_BLOCK_ORDER: readonly VerdictRiseBlockId[] = [
   'confidence',
   'stats',
   'findings',
+  'causes',
 ] as const;
+
+/**
+ * Time from the rise-in start until every block and count has settled: the stat count starts with
+ * the stat block (180 ms) and runs 600 ms. Input after this has nothing left to complete.
+ */
+export const VERDICT_REVEAL_SETTLE_MS =
+  VERDICT_RISE_STAGGER_MS * 3 + STAT_INITIAL_COUNTUP_MS; // 780 ms
+
+/** Rise-in start offset (premium §8.2: `translateY(12px -> 0)`). */
+export const VERDICT_RISE_OFFSET_PX = 12 as const;
 
 export interface VerdictRiseStepSpec {
   readonly id: VerdictRiseBlockId;
   readonly delayMs: number;
   readonly initialY: number;
-  readonly initialBlurPx: number;
   readonly durationMs?: number;
   readonly spring?: typeof SPRING_TOKENS.ui;
 }
 
 /**
- * Builds the 5-element Verdict rise-in schedule (`redesign.md` §5.2):
- * - Normal motion: `60 ms` stagger (`0, 60, 120, 180, 240 ms`), `y: 12 -> 0`,
- *   `blur(4px) -> blur(0px)`, `spring-ui`.
- * - Reduced motion: `0 ms` stagger, `y: 0`, `blur: 0`, `120 ms` opacity-only fade.
+ * Builds the six-block verdict rise-in schedule (premium §8.2):
+ * - Normal motion: `60 ms` stagger (`0 ... 300 ms`), `opacity 0 -> 1`, `y: 12 -> 0`, `spring-ui`,
+ *   no blur; all settled by about 650 ms.
+ * - Reduced motion: every block together, `y: 0`, `120 ms` opacity-only fade.
  */
 export function computeVerdictRiseSchedule(
   prefersReducedMotion: boolean,
@@ -163,22 +183,21 @@ export function computeVerdictRiseSchedule(
         id,
         delayMs: 0,
         initialY: 0,
-        initialBlurPx: 0,
         durationMs: REDUCED_MOTION_FADE_MS,
       };
     }
     return {
       id,
       delayMs: idx * VERDICT_RISE_STAGGER_MS,
-      initialY: 12,
-      initialBlurPx: 4,
+      initialY: VERDICT_RISE_OFFSET_PX,
       spring: SPRING_TOKENS.ui,
     };
   });
 }
 
 /**
- * Samples an interruptible `ease-out-expo` stat count-up value (`redesign.md` §5.3).
+ * Samples an interruptible count-up value: `ease-out-quart` for the reveal count (premium §11.5),
+ * `ease-out-expo` (default) for selection-linked updates (`redesign.md` §5.3).
  */
 export function sampleStatCountUp(params: {
   readonly from: number;
@@ -186,6 +205,7 @@ export function sampleStatCountUp(params: {
   readonly elapsedMs: number;
   readonly durationMs: number;
   readonly prefersReducedMotion: boolean;
+  readonly easing?: 'expo' | 'quart';
 }): number {
   const { from, to, elapsedMs, durationMs, prefersReducedMotion } = params;
   if (prefersReducedMotion || durationMs <= 0 || elapsedMs >= durationMs) {
@@ -194,7 +214,8 @@ export function sampleStatCountUp(params: {
   if (elapsedMs <= 0) {
     return from;
   }
-  const k = easeOutExpo(elapsedMs / durationMs);
+  const u = elapsedMs / durationMs;
+  const k = params.easing === 'quart' ? easeOutQuart(u) : easeOutExpo(u);
   return from + (to - from) * k;
 }
 

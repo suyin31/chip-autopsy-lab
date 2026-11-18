@@ -292,8 +292,22 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       expect(statItemMatches).toHaveLength(3);
       expect(cardHtml.match(/data-testid="verdict-stat-sr"/g)).toHaveLength(3);
       expect(cardHtml.match(/data-testid="verdict-stat-value"[^>]*aria-hidden="true"/g)).toHaveLength(3);
-      expect(cardHtml).toContain('data-verdict-rise-block="headline"');
-      expect(cardHtml).toContain('data-verdict-rise-block="findings"');
+      // Premium §8.2: six rise blocks in order, 60 ms apart, starting at opacity 0 / 12 px with no blur
+      const riseBlocks = Array.from(
+        cardHtml.matchAll(/data-verdict-rise-block="(\w+)" data-rise-stagger-ms="(\d+)"/g),
+      ).map((m) => [m[1], Number(m[2])]);
+      expect(riseBlocks).toEqual([
+        ['headline', 0],
+        ['subline', 60],
+        ['confidence', 120],
+        ['stats', 180],
+        ['findings', 240],
+        ['causes', 300],
+      ]);
+      expect(cardHtml).not.toMatch(/filter:\s*blur/);
+      expect(cardHtml).toMatch(/data-verdict-rise-block="headline"[^>]*style="opacity:0;transform:translateY\(12px\)"/);
+      // Count-up keeps the width of the final string (premium §8.2)
+      expect(cardHtml.match(/data-testid="verdict-stat-value" data-final="[^"]+"[^>]*class="count-up/g)).toHaveLength(3);
       // Premium §7.5 / A4: each stat is a button bound to its evidence; numbers are never orange
       expect(cardHtml.match(/data-testid="verdict-stat-button"/g)).toHaveLength(3);
       expect(cardHtml.match(/data-testid="verdict-stat-button"[^>]*aria-pressed="false"/g)).toHaveLength(3);

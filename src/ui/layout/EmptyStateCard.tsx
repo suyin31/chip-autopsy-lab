@@ -17,6 +17,7 @@ import { Untranslated, useT } from '@/ui/i18n';
 import {
   Button,
   cn,
+  CountUp,
   renderAccentPhrase,
   DropdownMenu,
   DropdownMenuContent,
@@ -469,6 +470,9 @@ interface LandingHeroProps {
   readonly onOpenSample: () => void;
 }
 
+/** Placeholder that splits the example fact around its counting percent (premium §11.5). */
+const FACT_PERCENT_SLOT = '\u0000';
+
 /**
  * Landing hero row (premium §11.1): the `edge-ring-etch` W01 wafer inside a probe-station
  * reticle (hairline circle at D + 32, 72 ticks, 0° / 90° / 180° / 270° mono labels), and the
@@ -496,6 +500,9 @@ function LandingHero({
   const [titleBefore = '', titleAfter = ''] = t('verdict.pattern', {
     pattern: patternName,
   }).split(patternName);
+  const [factBefore = '', factAfter = ''] = t('landing.example.fact', {
+    percent: FACT_PERCENT_SLOT,
+  }).split(FACT_PERCENT_SLOT);
 
   return (
     <div
@@ -624,9 +631,14 @@ function LandingHero({
           data-testid="landing-example-fact"
           className="mt-2 type-body text-text-secondary"
         >
-          {t('landing.example.fact', {
-            percent: formatPercent(LANDING_EXAMPLE_EDGE_SHARE),
-          })}
+          {factBefore}
+          {/* §11.5: the percent counts up; the words around it stay still */}
+          <CountUp
+            value={LANDING_EXAMPLE_EDGE_SHARE}
+            format={formatPercent}
+            data-testid="landing-example-percent"
+          />
+          {factAfter}
         </p>
         <Button
           variant="text"

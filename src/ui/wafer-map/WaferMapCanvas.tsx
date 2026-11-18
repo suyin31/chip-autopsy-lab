@@ -50,7 +50,6 @@ import {
   PROBE_SWEEP_SESSION_KEY,
   readPrefersReducedMotionSync,
   resolveInitialRevealMode,
-  VERDICT_RISE_SWEEP_THRESHOLD,
 } from './probe-sweep';
 import {
   SELECTION_POPOVER_WIDTH_PX,
@@ -845,11 +844,6 @@ function WaferMapCanvasImpl({
         revealedCount = targetCount;
       }
 
-      if (!verdictTriggered && revealFrac >= VERDICT_RISE_SWEEP_THRESHOLD) {
-        verdictTriggered = true;
-        onVerdictRevealTriggerRef.current?.();
-      }
-
       if (elapsed < PROBE_SWEEP_REVEAL_MS) {
         const headDie =
           revealedCount > 0 ? probeOrder[revealedCount - 1]! : null;
@@ -875,6 +869,11 @@ function WaferMapCanvasImpl({
         overlayCanvasRef.current?.setProbeHeadDieIndex(null);
         // Header caption swaps from "Reading…" to the fail count at ignite start (0 ms)
         setSweepReading(false);
+        // Premium §8.2: the verdict rise-in starts at ignite start
+        if (!verdictTriggered) {
+          verdictTriggered = true;
+          onVerdictRevealTriggerRef.current?.();
+        }
       }
 
       if (elapsed >= totalSweepMs) {

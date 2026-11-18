@@ -7,12 +7,15 @@ import {
   computeProbeSweepFraction,
   computeVerdictRiseSchedule,
   easeInOutSine,
+  easeOutQuart,
   PROBE_SWEEP_FAIL_FADE_MS,
   PROBE_SWEEP_REVEAL_MS,
   PROBE_SWEEP_SESSION_KEY,
   PROBE_SWEEP_TOTAL_MAX_MS,
   resolveInitialRevealMode,
   sampleStatCountUp,
+  STAT_INITIAL_COUNTUP_MS,
+  VERDICT_REVEAL_SETTLE_MS,
 } from './probe-sweep';
 import {
   type Canvas2DContextLike,
@@ -184,32 +187,42 @@ describe('R8 reveal motion math & canvas probe-sweep painters (§5.1–§5.3)', 
     ).toEqual({ mode: 'reduced', fadeDurationMs: 120 });
   });
 
-  it('builds 5-block 60 ms stagger schedule for Verdict rise-in (§5.2) and collapses stagger/blur/y under reduced motion', () => {
+  it('builds the six-block 60 ms stagger for the verdict rise-in (premium §8.2), no blur, and one 120 ms fade under reduced motion', () => {
     const normal = computeVerdictRiseSchedule(false);
-    expect(normal).toHaveLength(5);
-    expect(normal.map((s) => s.delayMs)).toEqual([0, 60, 120, 180, 240]);
+    expect(normal.map((s) => s.id)).toEqual([
+      'headline',
+      'subline',
+      'confidence',
+      'stats',
+      'findings',
+      'causes',
+    ]);
+    expect(normal.map((s) => s.delayMs)).toEqual([0, 60, 120, 180, 240, 300]);
     for (const item of normal) {
       expect(item.initialY).toBe(12);
-      expect(item.initialBlurPx).toBe(4);
+      expect(item.spring).toEqual({ type: 'spring', duration: 0.35, bounce: 0 });
+      expect(item).not.toHaveProperty('initialBlurPx');
     }
 
     const reduced = computeVerdictRiseSchedule(true);
-    expect(reduced).toHaveLength(5);
-    expect(reduced.map((s) => s.delayMs)).toEqual([0, 0, 0, 0, 0]);
+    expect(reduced).toHaveLength(6);
+    expect(reduced.map((s) => s.delayMs)).toEqual([0, 0, 0, 0, 0, 0]);
     for (const item of reduced) {
       expect(item.initialY).toBe(0);
-      expect(item.initialBlurPx).toBe(0);
       expect(item.durationMs).toBe(120);
     }
+    // The stat count (from 180 ms, 600 ms long) is the last thing to settle
+    expect(VERDICT_REVEAL_SETTLE_MS).toBe(780);
   });
 
-  it('samples stat count-up (§5.3) over 700 ms / 300 ms ease-out-expo and returns target immediately under reduced motion', () => {
+  it('samples the reveal count-up over 600 ms ease-out-quart (premium §11.5), updates on ease-out-expo, and returns the target under reduced motion', () => {
+    expect(STAT_INITIAL_COUNTUP_MS).toBe(600);
     expect(
       sampleStatCountUp({
         from: 0,
         to: 2721,
         elapsedMs: 10,
-        durationMs: 700,
+        durationMs: 600,
         prefersReducedMotion: true,
       }),
     ).toBe(2721);
@@ -219,30 +232,58 @@ describe('R8 reveal motion math & canvas probe-sweep painters (§5.1–§5.3)', 
         from: 0,
         to: 2721,
         elapsedMs: 0,
-        durationMs: 700,
+        durationMs: 600,
         prefersReducedMotion: false,
+        easing: 'quart',
       }),
     ).toBe(0);
 
-    const mid = sampleStatCountUp({
+    const midQuart = sampleStatCountUp({
       from: 0,
       to: 2721,
-      elapsedMs: 350,
-      durationMs: 700,
+      elapsedMs: 300,
+      durationMs: 600,
+      prefersReducedMotion: false,
+      easing: 'quart',
+    });
+    expect(midQuart).toBeCloseTo(2721 * (1 - 0.5 ** 4), 6);
+    expect(easeOutQuart(0.5)).toBeCloseTo(0.9375, 10);
+
+    const midExpo = sampleStatCountUp({
+      from: 0,
+      to: 2721,
+      elapsedMs: 150,
+      durationMs: 300,
       prefersReducedMotion: false,
     });
-    expect(mid).toBeGreaterThan(2000);
-    expect(mid).toBeLessThan(2721);
+    expect(midExpo).toBeCloseTo(2721 * (1 - 2 ** -5), 6);
 
     expect(
       sampleStatCountUp({
         from: 0,
         to: 2721,
-        elapsedMs: 700,
-        durationMs: 700,
+        elapsedMs: 600,
+        durationMs: 600,
         prefersReducedMotion: false,
+        easing: 'quart',
       }),
     ).toBe(2721);
+
+    // Monotone, never past the target (no overshoot)
+    let prev = 0;
+    for (let t = 0; t <= 600; t += 20) {
+      const v = sampleStatCountUp({
+        from: 0,
+        to: 0.938,
+        elapsedMs: t,
+        durationMs: 600,
+        prefersReducedMotion: false,
+        easing: 'quart',
+      });
+      expect(v).toBeGreaterThanOrEqual(prev);
+      expect(v).toBeLessThanOrEqual(0.938);
+      prev = v;
+    }
   });
 
   it('paints substrate-only, incremental O(n) pass-colour sweep batches, and overlay probe-head light (§5.1)', () => {
