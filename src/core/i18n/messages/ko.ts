@@ -182,6 +182,8 @@ export const ko = {
   // Strip
   'strip.aria': '로트 {lotId}의 웨이퍼 목록',
   'strip.itemAria': '웨이퍼 {wafer}, 수율 {yield}',
+  'strip.earlier': '이전 웨이퍼',
+  'strip.later': '다음 웨이퍼',
 
   // Errors
   'error.notStdf.title': '이 파일은 STDF 로그가 아닙니다.',

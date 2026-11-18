@@ -182,6 +182,8 @@ export const ja = {
   // Strip
   'strip.aria': 'ロット {lotId} のウェハ一覧',
   'strip.itemAria': 'ウェハ {wafer}、歩留まり {yield}',
+  'strip.earlier': '前のウェハ',
+  'strip.later': '後のウェハ',
 
   // Errors
   'error.notStdf.title': 'このファイルは STDF ログではありません。',

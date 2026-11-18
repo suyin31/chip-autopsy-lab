@@ -243,7 +243,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P8. Overlay die states
   - `dim-veil` with punched evidence mask, evidence rim and pre-rendered bloom sprite, hover and pinned strokes, selection rect (premium §5.4).
   - Accept: A9 (static state, no animation yet).
-- [ ] P9. Wafer strip
+- [x] P9. Wafer strip
   - Scroller padding, 48 x 64 items, active and focus rings, hover scale, evidence opacity, side-aware edge fades, desktop chevrons (premium §5.8).
   - Accept: A12.
 - [ ] P10. Stage header, control row, legend

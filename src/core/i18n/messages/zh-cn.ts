@@ -176,6 +176,8 @@ export const zhCN = {
   // Strip
   'strip.aria': '批次 {lotId} 中的晶圆',
   'strip.itemAria': '晶圆 {wafer}，良率 {yield}',
+  'strip.earlier': '较早的晶圆',
+  'strip.later': '较晚的晶圆',
 
   // Errors
   'error.notStdf.title': '此文件不是 STDF 日志。',

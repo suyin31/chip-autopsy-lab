@@ -893,7 +893,7 @@ export function computeLiveBoxSelectStats(
 
 /**
  * Computes per-wafer evidence presence (`true` if wafer has `>= 1` coordinate-bearing die
- * in `evidenceMask`) for wafer-strip dimming and `4 px` ice evidence dots (`redesign.md` §3.5).
+ * in `evidenceMask`) for wafer-strip dimming (premium §5.8).
  */
 export function computeWaferEvidencePresence(
   lot: LotModel,

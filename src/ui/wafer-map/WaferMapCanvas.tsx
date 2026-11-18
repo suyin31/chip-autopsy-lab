@@ -2347,7 +2347,7 @@ function WaferMapCanvasImpl({
         />
       </div>
 
-      {/* Horizontal Wafer Strip: 16 px below stage on desktop (783 x 64), 12 px on mobile (390 x 56) (§3.4, §4.9) */}
+      {/* Horizontal wafer strip: 76 px desktop, 64 px mobile (premium §5.8) */}
       <WaferSelector
         lotId={lot.lotId}
         wafers={lot.wafers}

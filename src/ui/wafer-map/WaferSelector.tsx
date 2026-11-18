@@ -1,17 +1,21 @@
-'use client';
+"use client";
 
-import { useReducedMotion } from 'motion/react';
-import * as React from 'react';
-import type { YieldMetrics } from '@/core/analytics';
-import type { ColumnarDies, WaferSummaryMeta } from '@/core/model';
-import { Untranslated, useT } from '@/ui/i18n';
-import { cn } from '@/ui/primitives/cn';
-import { registerPendingWaferCommit } from '@/ui/state';
-import { usePrefersMoreContrast } from './use-prefers-more-contrast';
-import { paintWaferThumbnail, resolveCanvasPixelSize } from './wafer-geometry';
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useReducedMotion } from "motion/react";
+import * as React from "react";
+import type { YieldMetrics } from "@/core/analytics";
+import type { ColumnarDies, WaferSummaryMeta } from "@/core/model";
+import { Untranslated, useT } from "@/ui/i18n";
+import { cn } from "@/ui/primitives/cn";
+import { registerPendingWaferCommit } from "@/ui/state";
+import { usePrefersMoreContrast } from "./use-prefers-more-contrast";
+import { paintWaferThumbnail, resolveCanvasPixelSize } from "./wafer-geometry";
 
 export const WAFER_THUMB_BUTTON_PX = 48 as const;
-export const WAFER_THUMB_CANVAS_PX = 48 as const;
+export const WAFER_THUMB_CANVAS_PX = 40 as const;
+
+/** Fraction of the visible strip width one chevron click scrolls (premium §5.8). */
+export const WAFER_STRIP_CHEVRON_SCROLL_FRACTION = 0.8 as const;
 
 /** Idle time after the last keyboard step before the strip commits the wafer to the store. */
 export const WAFER_KEY_COMMIT_DELAY_MS = 140 as const;
@@ -29,9 +33,8 @@ export interface WaferSelectorProps {
   readonly byWaferYield: readonly YieldMetrics[];
   readonly activeWaferIndex: number;
   /**
-   * Optional per-wafer boolean mask when a finding is active (`redesign.md` §3.5):
-   * - `false` -> thumbnail drops to `40%` opacity
-   * - `true` -> wafer gets a `4 px` ice (`#D6E6FF`) dot beneath it
+   * Optional per-wafer boolean mask when a finding is active (premium §5.8, §8.3):
+   * `false` drops the thumbnail to `0.32` opacity; `true` keeps it at `1.0`.
    */
   readonly evidencePresence?: readonly boolean[] | null;
   readonly dpr?: number;
@@ -54,14 +57,15 @@ export interface WaferSelectorProps {
 }
 
 /**
- * Boxless horizontal wafer strip (`redesign.md` §0 #6, §3.4, §3.5, §4.9, §5.8):
- * - `role="listbox"` `aria-orientation="horizontal"` with `scroll-snap-type: x proximity`,
- *   native momentum, hidden scrollbar, and `24 px` horizontal edge-fade mask
- * - `48 x 48` desktop (`40 x 40` mobile) circle wafer canvas + `caption` wafer label (`W01`)
- * - Rest opacity `0.72`, hover `1.0` + `accent-soft` ring, active `1.0` + `2 px` `#D6E6FF` ring
- *   at `3 px` offset, pressed `scale(0.94)`
- * - Finding evidence state: zero-evidence thumbnails drop to `0.40` opacity; wafers with evidence
- *   render a `4 px` `#D6E6FF` dot beneath them
+ * Boxless horizontal wafer strip (premium §5.8; keyboard and commit flow per `redesign.md` §5.8):
+ * - `role="listbox"` `aria-orientation="horizontal"` scroller, `padding: 6px 8px` (`6px 16px`
+ *   mobile), `scroll-padding-inline: 32px`, `scroll-snap-type: x proximity`, hidden scrollbar
+ * - `48 x 64` items (`44 x 52` mobile) with a `40 px` thumbnail at `y 4` (`36 px` mobile) and a
+ *   `caption` label (mobile: active item only)
+ * - Hover `scale(1.06)`, pressed `scale(0.94)`, active ring `2 px bg + 3.5 px ink`, focus-visible
+ *   ring `2 px bg + 4 px ink`; zero-evidence wafers drop to `0.32` opacity during a finding
+ * - Edge fade and desktop chevrons appear only on a side that can scroll, toggled imperatively
+ *   from the scroll position (no React render)
  * - Roving `tabIndex`: `ArrowLeft`/`ArrowRight` ±1, `PageUp`/`PageDown` ±5, `Home`/`End`;
  *   held key-repeat (`event.repeat === true`) passes `{ instant: true }` for `0 ms` stage swap
  * - Keyboard steps never render React or read layout in the keydown handler: selection
@@ -69,7 +73,7 @@ export interface WaferSelectorProps {
  *   the next frame from cached item offsets, and the store commit is deferred until stepping pauses
  */
 export const WaferSelector = React.memo(function WaferSelector({
-  lotId = 'LOT',
+  lotId = "LOT",
   wafers,
   dies,
   byWaferYield,
@@ -95,6 +99,12 @@ export const WaferSelector = React.memo(function WaferSelector({
     [],
   );
   const listWidthRef = React.useRef(0);
+  const earlierChevronRef = React.useRef<HTMLButtonElement>(null);
+  const laterChevronRef = React.useRef<HTMLButtonElement>(null);
+  /** Last written edge state, so scroll events only touch the DOM when a side flips. */
+  const edgeStateRef = React.useRef<{ start: boolean; end: boolean } | null>(
+    null,
+  );
   const pendingCommitRef = React.useRef<{
     index: number;
     timer: ReturnType<typeof setTimeout>;
@@ -120,7 +130,7 @@ export const WaferSelector = React.memo(function WaferSelector({
       return;
     }
     const resolvedDpr =
-      dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+      dpr ?? (typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1);
     const dims = resolveCanvasPixelSize(
       WAFER_THUMB_CANVAS_PX,
       WAFER_THUMB_CANVAS_PX,
@@ -136,7 +146,7 @@ export const WaferSelector = React.memo(function WaferSelector({
         }
         let ctx = ctxRefs.current[i] ?? null;
         if (!ctx || ctx.canvas !== canvas) {
-          ctx = canvas.getContext('2d');
+          ctx = canvas.getContext("2d");
           ctxRefs.current[i] = ctx;
         }
         if (!ctx) {
@@ -170,18 +180,16 @@ export const WaferSelector = React.memo(function WaferSelector({
     let cancelled = false;
     let idleHandle: number | null = null;
     const ric =
-      typeof window !== 'undefined' &&
+      typeof window !== "undefined" &&
       typeof (
         window as Window & {
           requestIdleCallback?: (cb: () => void) => number;
         }
-      ).requestIdleCallback === 'function'
-        ? (
-            window as Window & {
-              requestIdleCallback: (cb: () => void) => number;
-              cancelIdleCallback: (id: number) => void;
-            }
-          )
+      ).requestIdleCallback === "function"
+        ? (window as Window & {
+            requestIdleCallback: (cb: () => void) => number;
+            cancelIdleCallback: (id: number) => void;
+          })
         : null;
 
     const scheduleBatch = (): void => {
@@ -197,7 +205,7 @@ export const WaferSelector = React.memo(function WaferSelector({
       };
       if (ric) {
         idleHandle = ric.requestIdleCallback(runBatch);
-      } else if (typeof requestAnimationFrame === 'function') {
+      } else if (typeof requestAnimationFrame === "function") {
         idleHandle = requestAnimationFrame(runBatch);
       } else {
         drawIndices(nextStart, count);
@@ -211,7 +219,7 @@ export const WaferSelector = React.memo(function WaferSelector({
       if (idleHandle !== null) {
         if (ric) {
           ric.cancelIdleCallback(idleHandle);
-        } else if (typeof cancelAnimationFrame === 'function') {
+        } else if (typeof cancelAnimationFrame === "function") {
           cancelAnimationFrame(idleHandle);
         }
       }
@@ -225,8 +233,34 @@ export const WaferSelector = React.memo(function WaferSelector({
     }
     listWidthRef.current = listEl.clientWidth;
     itemGeometryRef.current = itemRefs.current.map((el) =>
-      el ? { left: el.offsetLeft, width: el.offsetWidth } : { left: 0, width: 0 },
+      el
+        ? { left: el.offsetLeft, width: el.offsetWidth }
+        : { left: 0, width: 0 },
     );
+  }, []);
+
+  // Side-aware edge fade and chevrons (premium §5.8): flip data attributes only when a side changes
+  const syncEdges = React.useCallback((): void => {
+    const listEl = listRef.current;
+    if (!listEl) {
+      return;
+    }
+    const maxScroll = listEl.scrollWidth - listEl.clientWidth;
+    const start = listEl.scrollLeft > 1;
+    const end = listEl.scrollLeft < maxScroll - 1;
+    const prev = edgeStateRef.current;
+    if (prev && prev.start === start && prev.end === end) {
+      return;
+    }
+    edgeStateRef.current = { start, end };
+    listEl.dataset.fadeStart = String(start);
+    listEl.dataset.fadeEnd = String(end);
+    if (earlierChevronRef.current) {
+      earlierChevronRef.current.dataset.visible = String(start);
+    }
+    if (laterChevronRef.current) {
+      laterChevronRef.current.dataset.visible = String(end);
+    }
   }, []);
 
   // Measure item offsets after layout (mount, wafer list change, resize) so input handlers never force layout
@@ -236,26 +270,53 @@ export const WaferSelector = React.memo(function WaferSelector({
       return;
     }
     measureGeometry();
-    if (typeof ResizeObserver === 'undefined') {
+    edgeStateRef.current = null;
+    syncEdges();
+    listEl.addEventListener("scroll", syncEdges, { passive: true });
+    if (typeof ResizeObserver === "undefined") {
+      return () => listEl.removeEventListener("scroll", syncEdges);
+    }
+    const observer = new ResizeObserver(() => {
+      measureGeometry();
+      syncEdges();
+    });
+    observer.observe(listEl);
+    return () => {
+      observer.disconnect();
+      listEl.removeEventListener("scroll", syncEdges);
+    };
+  }, [count, measureGeometry, syncEdges]);
+
+  const scrollByChevron = (direction: -1 | 1): void => {
+    const listEl = listRef.current;
+    if (!listEl || typeof listEl.scrollBy !== "function") {
       return;
     }
-    const observer = new ResizeObserver(() => measureGeometry());
-    observer.observe(listEl);
-    return () => observer.disconnect();
-  }, [count, measureGeometry]);
+    listEl.scrollBy({
+      left:
+        direction * listEl.clientWidth * WAFER_STRIP_CHEVRON_SCROLL_FRACTION,
+      behavior: shouldReduceMotion ? "instant" : "smooth",
+    });
+  };
+
+  const stampAck = (event: React.PointerEvent<HTMLElement>): void => {
+    if (typeof performance !== "undefined") {
+      event.currentTarget.dataset.ack = String(performance.now());
+    }
+  };
 
   const scrollToIndex = React.useCallback(
     (index: number, instant: boolean): void => {
       const listEl = listRef.current;
       const geom = itemGeometryRef.current[index];
-      if (!listEl || !geom || typeof listEl.scrollTo !== 'function') {
+      if (!listEl || !geom || typeof listEl.scrollTo !== "function") {
         return;
       }
       scrolledIndexRef.current = index;
       const targetLeft = geom.left - listWidthRef.current / 2 + geom.width / 2;
       listEl.scrollTo({
         left: Math.max(0, targetLeft),
-        behavior: instant ? 'instant' : 'smooth',
+        behavior: instant ? "instant" : "smooth",
       });
     },
     [],
@@ -264,7 +325,7 @@ export const WaferSelector = React.memo(function WaferSelector({
   // Defer strip scrolling to the next frame so the keydown task stays free of layout work
   const scheduleScrollToIndex = React.useCallback(
     (index: number, instant: boolean): void => {
-      if (typeof requestAnimationFrame !== 'function') {
+      if (typeof requestAnimationFrame !== "function") {
         scrollToIndex(index, instant);
         return;
       }
@@ -340,11 +401,11 @@ export const WaferSelector = React.memo(function WaferSelector({
     // Focus before mutating attributes so focus() finds clean style and forces no recalc
     nextEl?.focus({ preventScroll: true });
     if (prevEl) {
-      prevEl.setAttribute('aria-selected', 'false');
+      prevEl.setAttribute("aria-selected", "false");
       prevEl.tabIndex = -1;
     }
     if (nextEl) {
-      nextEl.setAttribute('aria-selected', 'true');
+      nextEl.setAttribute("aria-selected", "true");
       nextEl.tabIndex = 0;
     }
     liveActiveRef.current = clamped;
@@ -370,40 +431,40 @@ export const WaferSelector = React.memo(function WaferSelector({
   const handleItemKeyDown = (
     event: React.KeyboardEvent<HTMLButtonElement>,
   ): void => {
-    if (typeof performance !== 'undefined') {
+    if (typeof performance !== "undefined") {
       event.currentTarget.dataset.ack = String(performance.now());
     }
     const repeat = event.repeat === true;
     const baseIndex = liveActiveRef.current;
     switch (event.key) {
-      case 'ArrowRight':
-      case 'ArrowDown': {
+      case "ArrowRight":
+      case "ArrowDown": {
         event.preventDefault();
         focusAndSelect(Math.min(count - 1, baseIndex + 1), repeat);
         break;
       }
-      case 'ArrowLeft':
-      case 'ArrowUp': {
+      case "ArrowLeft":
+      case "ArrowUp": {
         event.preventDefault();
         focusAndSelect(Math.max(0, baseIndex - 1), repeat);
         break;
       }
-      case 'PageDown': {
+      case "PageDown": {
         event.preventDefault();
         focusAndSelect(Math.min(count - 1, baseIndex + 5), repeat);
         break;
       }
-      case 'PageUp': {
+      case "PageUp": {
         event.preventDefault();
         focusAndSelect(Math.max(0, baseIndex - 5), repeat);
         break;
       }
-      case 'Home': {
+      case "Home": {
         event.preventDefault();
         focusAndSelect(0, repeat);
         break;
       }
-      case 'End': {
+      case "End": {
         event.preventDefault();
         focusAndSelect(count - 1, repeat);
         break;
@@ -413,112 +474,143 @@ export const WaferSelector = React.memo(function WaferSelector({
     }
   };
 
-  return (
-    <div
-      ref={listRef}
-      role="listbox"
-      aria-orientation="horizontal"
-      aria-label={t('strip.aria', { lotId })}
-      data-testid="wafer-strip"
-      className={cn(
-        'wafer-strip-mask flex h-14 w-full flex-nowrap items-center gap-3 overflow-x-auto overflow-y-hidden px-4 md:h-16 md:px-3',
-        '[scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-        className,
-      )}
-    >
-      {wafers.map((wafer, idx) => {
-        const isSelected = idx === safeActive;
-        const yieldRatio = byWaferYield[idx]?.finalYield ?? 0;
-        const yieldLabel = formatPercent(yieldRatio);
-        const hasFindingActive = evidencePresence !== null;
-        const waferHasEvidence =
-          hasFindingActive && Boolean(evidencePresence[idx]);
-        const isZeroEvidenceDimmed =
-          hasFindingActive && !waferHasEvidence;
+  const chevronClass = cn(
+    "absolute top-4 z-[1] hidden size-7 cursor-pointer items-center justify-center rounded-full bg-surface text-text-secondary shadow-chevron select-none outline-none sm:data-[visible=true]:inline-flex",
+    // 28 px pill extended to a 40 px hit target (premium §3.10)
+    "after:absolute after:-inset-1.5",
+    "motion-safe:transition-transform motion-safe:duration-[var(--dur-2)] motion-safe:ease-[var(--ease-out)] motion-safe:active:scale-[0.94]",
+    "focus-visible:shadow-focus-ring",
+  );
 
-        return (
-          <button
-            key={`${wafer.waferId}-${wafer.waferIndex}`}
-            ref={(el) => {
-              itemRefs.current[idx] = el;
-            }}
-            type="button"
-            role="option"
-            aria-selected={isSelected}
-            aria-label={t('strip.itemAria', {
-              wafer: wafer.waferId,
-              yield: yieldLabel,
-            })}
-            data-wafer-index={idx}
-            data-has-evidence={
-              hasFindingActive ? (waferHasEvidence ? 'true' : 'false') : undefined
-            }
-            tabIndex={isSelected ? 0 : -1}
-            onPointerDown={(e) => {
-              if (typeof performance !== 'undefined') {
-                e.currentTarget.dataset.ack = String(performance.now());
+  return (
+    <div className={cn("relative w-full", className)}>
+      <div
+        ref={listRef}
+        role="listbox"
+        aria-orientation="horizontal"
+        aria-label={t("strip.aria", { lotId })}
+        data-testid="wafer-strip"
+        className={cn(
+          "wafer-strip-mask flex h-16 w-full flex-nowrap items-start overflow-x-auto overflow-y-hidden px-4 py-1.5 sm:h-[76px] sm:px-2",
+          "[scroll-padding-inline:32px] [scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        )}
+      >
+        {wafers.map((wafer, idx) => {
+          const isSelected = idx === safeActive;
+          const yieldRatio = byWaferYield[idx]?.finalYield ?? 0;
+          const yieldLabel = formatPercent(yieldRatio);
+          const hasFindingActive = evidencePresence !== null;
+          const waferHasEvidence =
+            hasFindingActive && Boolean(evidencePresence[idx]);
+          const isZeroEvidenceDimmed = hasFindingActive && !waferHasEvidence;
+
+          return (
+            <button
+              key={`${wafer.waferId}-${wafer.waferIndex}`}
+              ref={(el) => {
+                itemRefs.current[idx] = el;
+              }}
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              aria-label={t("strip.itemAria", {
+                wafer: wafer.waferId,
+                yield: yieldLabel,
+              })}
+              data-wafer-index={idx}
+              data-has-evidence={
+                hasFindingActive
+                  ? waferHasEvidence
+                    ? "true"
+                    : "false"
+                  : undefined
               }
-            }}
-            onClick={() => {
-              flushPendingCommit();
-              const instant = Boolean(shouldReduceMotion);
-              const prevEl = itemRefs.current[liveActiveRef.current];
-              if (prevEl && liveActiveRef.current !== idx) {
-                prevEl.setAttribute('aria-selected', 'false');
-                prevEl.tabIndex = -1;
-              }
-              liveActiveRef.current = idx;
-              onSelectWafer(idx, { instant });
-              scheduleScrollToIndex(idx, instant);
-            }}
-            onKeyDown={handleItemKeyDown}
-            className={cn(
-              'group relative inline-flex h-14 w-12 shrink-0 [scroll-snap-align:center] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xs select-none md:h-16 md:w-14',
-              'transition-transform duration-[100ms] ease-[var(--ease-out)] active:scale-[0.94]',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-            )}
-          >
-            <span
-              data-testid="wafer-strip-thumb-ring"
+              tabIndex={isSelected ? 0 : -1}
+              onPointerDown={stampAck}
+              onClick={() => {
+                flushPendingCommit();
+                const instant = Boolean(shouldReduceMotion);
+                const prevEl = itemRefs.current[liveActiveRef.current];
+                if (prevEl && liveActiveRef.current !== idx) {
+                  prevEl.setAttribute("aria-selected", "false");
+                  prevEl.tabIndex = -1;
+                }
+                liveActiveRef.current = idx;
+                onSelectWafer(idx, { instant });
+                scheduleScrollToIndex(idx, instant);
+              }}
+              onKeyDown={handleItemKeyDown}
               className={cn(
-                'relative inline-flex h-10 w-10 items-center justify-center rounded-full transition-opacity duration-[120ms] ease-[var(--ease-out)] md:h-12 md:w-12',
-                // Selection styling keys off the button's `aria-selected` so keyboard steps can
-                // flip it imperatively without a React render (§5.8, §5.10)
-                'group-aria-selected:ring-2 group-aria-selected:ring-accent group-aria-selected:ring-offset-[3px] group-aria-selected:ring-offset-bg',
-                'group-aria-[selected=false]:hover:ring-2 group-aria-[selected=false]:hover:ring-[var(--color-accent-soft)]',
-                isZeroEvidenceDimmed
-                  ? 'opacity-40 group-aria-[selected=false]:hover:opacity-70'
-                  : 'opacity-[0.72] group-aria-selected:opacity-100 group-aria-[selected=false]:hover:opacity-100',
+                "group relative flex h-[52px] w-11 shrink-0 [scroll-snap-align:center] cursor-pointer flex-col items-center gap-0.5 pt-0.5 outline-none select-none sm:h-16 sm:w-12 sm:gap-1.5 sm:pt-1",
               )}
             >
-              <canvas
-                ref={(el) => {
-                  canvasRefs.current[idx] = el;
-                }}
-                data-testid="wafer-lot-strip-thumb"
-                aria-hidden="true"
-                className="pointer-events-none block h-10 w-10 rounded-full select-none md:h-12 md:w-12"
-              />
-            </span>
-            <span className="flex items-center gap-1">
+              <span
+                data-testid="wafer-strip-thumb-ring"
+                className={cn(
+                  "relative block size-9 shrink-0 rounded-full sm:size-10",
+                  // Selection styling keys off the button's `aria-selected` so keyboard steps can
+                  // flip it imperatively without a React render (redesign §5.10)
+                  "group-aria-selected:shadow-[0_0_0_2px_var(--bg),0_0_0_3.5px_var(--ink)]",
+                  "group-focus-visible:shadow-[0_0_0_2px_var(--bg),0_0_0_4px_var(--ink)] group-aria-selected:group-focus-visible:shadow-[0_0_0_2px_var(--bg),0_0_0_4px_var(--ink)]",
+                  "[transition-property:transform,opacity] duration-[var(--dur-2)] ease-[var(--ease-out)] motion-reduce:transition-none",
+                  "motion-safe:group-hover:scale-[1.06] motion-safe:group-active:scale-[0.94]",
+                  isZeroEvidenceDimmed ? "opacity-[0.32]" : "opacity-100",
+                )}
+              >
+                <canvas
+                  ref={(el) => {
+                    canvasRefs.current[idx] = el;
+                  }}
+                  data-testid="wafer-lot-strip-thumb"
+                  aria-hidden="true"
+                  className="pointer-events-none block size-9 rounded-full select-none sm:size-10"
+                />
+              </span>
               <span
                 className={cn(
-                  'type-caption leading-none tabular-nums text-text-tertiary group-aria-selected:text-text-primary',
+                  "type-caption leading-none tabular-nums text-text-tertiary transition-colors duration-[var(--dur-2)] ease-[var(--ease-out)]",
+                  "group-aria-[selected=false]:group-hover:text-text-secondary group-aria-selected:font-[590] group-aria-selected:text-text-primary",
+                  "max-sm:group-aria-[selected=false]:hidden",
                 )}
               >
                 <Untranslated>{wafer.waferId}</Untranslated>
               </span>
-              {waferHasEvidence ? (
-                <span
-                  data-testid="wafer-strip-evidence-dot"
-                  aria-hidden="true"
-                  className="inline-block h-1 w-1 shrink-0 rounded-full bg-accent"
-                />
-              ) : null}
-            </span>
-          </button>
-        );
-      })}
+            </button>
+          );
+        })}
+      </div>
+      <button
+        ref={earlierChevronRef}
+        type="button"
+        data-testid="wafer-strip-chevron-earlier"
+        data-visible="false"
+        aria-label={t("strip.earlier")}
+        onPointerDown={stampAck}
+        onClick={() => scrollByChevron(-1)}
+        className={cn(chevronClass, "left-1")}
+      >
+        <ChevronLeft
+          aria-hidden="true"
+          className="size-3.5"
+          strokeWidth={1.75}
+        />
+      </button>
+      <button
+        ref={laterChevronRef}
+        type="button"
+        data-testid="wafer-strip-chevron-later"
+        data-visible="false"
+        aria-label={t("strip.later")}
+        onPointerDown={stampAck}
+        onClick={() => scrollByChevron(1)}
+        className={cn(chevronClass, "right-1")}
+      >
+        <ChevronRight
+          aria-hidden="true"
+          className="size-3.5"
+          strokeWidth={1.75}
+        />
+      </button>
     </div>
   );
 });

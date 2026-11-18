@@ -39,7 +39,7 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
       magBox.y + magBox.height > dieProbeBox.y;
     expect(overlapsHoveredDie).toBe(false);
 
-    // 2. Edge-band finding lights ring dies clockwise within 600 ms, dims non-evidence dies under the dim-veil, shows evidence dots, and clears on second click (§3.5, §5.4)
+    // 2. Edge-band finding lights ring dies clockwise within 600 ms, dims non-evidence dies under the dim-veil, marks evidence wafers, and clears on second click (§3.5, §5.4)
     const edgeBandRow = page.getByTestId('autopsy-body-claim-button').first();
     await expect(edgeBandRow).toContainText('of fails are in the edge band');
 
@@ -49,8 +49,9 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
     await expect(edgeBandRow).toHaveAttribute('aria-pressed', 'true');
     await expect(overlayWrapper).toHaveAttribute('data-glow-mode', 'polar-cw');
     await expect(page.getByTestId('stage-evidence-caption')).toBeVisible();
+    // Premium §5.8: evidence wafers stay at full opacity, the rest dim (no evidence dot)
     expect(
-      await page.getByTestId('wafer-strip-evidence-dot').count(),
+      await page.locator('[data-has-evidence="true"]').count(),
     ).toBeGreaterThan(0);
 
     // Wait until glow sequence reaches 'settled' and assert total settle elapsed <= 780 ms (600 ms animation + frame scheduling budget)

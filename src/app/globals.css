@@ -725,19 +725,30 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .wafer-strip-mask {
+  /* Side-aware strip edge fade (premium §5.8): only a side that can scroll fades */
+  .wafer-strip-mask[data-fade-start="true"] {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000000 32px, #000000 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000000 32px, #000000 100%);
+  }
+
+  .wafer-strip-mask[data-fade-end="true"] {
+    -webkit-mask-image: linear-gradient(90deg, #000000 0, #000000 calc(100% - 32px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000000 0, #000000 calc(100% - 32px), transparent 100%);
+  }
+
+  .wafer-strip-mask[data-fade-start="true"][data-fade-end="true"] {
     -webkit-mask-image: linear-gradient(
       90deg,
-      transparent 0px,
-      #000000 24px,
-      #000000 calc(100% - 24px),
+      transparent 0,
+      #000000 32px,
+      #000000 calc(100% - 32px),
       transparent 100%
     );
     mask-image: linear-gradient(
       90deg,
-      transparent 0px,
-      #000000 24px,
-      #000000 calc(100% - 24px),
+      transparent 0,
+      #000000 32px,
+      #000000 calc(100% - 32px),
       transparent 100%
     );
   }

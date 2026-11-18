@@ -176,6 +176,8 @@ export const zhTW = {
   // Strip
   'strip.aria': '批次 {lotId} 中的晶圓',
   'strip.itemAria': '晶圓 {wafer}，良率 {yield}',
+  'strip.earlier': '較早的晶圓',
+  'strip.later': '較晚的晶圓',
 
   // Errors
   'error.notStdf.title': '此檔案不是 STDF 記錄檔。',

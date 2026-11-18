@@ -183,6 +183,8 @@ export const en = {
   // Strip
   'strip.aria': 'Wafers in lot {lotId}',
   'strip.itemAria': 'Wafer {wafer}, yield {yield}',
+  'strip.earlier': 'Earlier wafers',
+  'strip.later': 'Later wafers',
 
   // Errors
   'error.notStdf.title': "This file isn't an STDF log.",

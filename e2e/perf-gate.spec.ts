@@ -386,7 +386,7 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
     );
     await expect(stage).toHaveAttribute('data-sweep', 'done');
 
-    // Mobile 390x844 checks: (d) >= 12px gap between segmented control and wafer disc; (e) all 25 strip labels visible
+    // Mobile 390x844 checks: (d) >= 12px gap between segmented control and wafer disc; (e) only the active strip label is visible (premium §5.8)
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileChecks = await page.evaluate(() => {
       const seg = document.querySelector<HTMLElement>(
@@ -410,7 +410,7 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
       };
     });
     expect(mobileChecks.gapAboveDiscPx).toBeGreaterThanOrEqual(12);
-    expect(mobileChecks.visibleLabelCount).toBe(25);
+    expect(mobileChecks.visibleLabelCount).toBe(1);
   });
 
   test('disables sweep, stagger, and count-up under prefers-reduced-motion: reduce', async ({
