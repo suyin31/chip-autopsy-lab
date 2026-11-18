@@ -1,0 +1,6 @@
+Fix pass 2/2 for task 7 (UI). Read logs/review-7.md and logs/assistant-review-7.md items 4, 5, 7.
+- Layout: at >=1280 px place the AutopsyReportCard and the wafer map side by side (verdict left ~44%, wafer map + lot strip right) so the verdict and the dies it cites are both visible above the fold at 1440x900. Below 1280 stack them, verdict first. Move the lot header (lot id, final yield, part/job, preset select, Load demo lot, Choose STDF file) into one slim bar above both. Tiles and site table stay below.
+- Replace the tiny hollow circles before claims and site rows with a clear affordance (left accent bar on hover/pressed, aria-pressed) or remove them.
+- Helper text: "Click a finding to light its dies".
+- review-7 M-1 (memoize per-render work), M-2 (aria-live polite region announcing verdict and selection), M-3 (data-testid on body claims), and minors m-1..m-5 where safe.
+Keep existing tokens, Apple-grade restraint. Run `npx tsc --noEmit`, `npx eslint .`, `npx vitest run` (twice), `npx next build` until green. Append 1 line to logs/progress.md. No web search. Finish within 14 minutes; leave tree compiling.
