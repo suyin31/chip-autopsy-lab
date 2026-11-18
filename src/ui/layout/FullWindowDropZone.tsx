@@ -154,12 +154,11 @@ const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
 /**
- * Viewport-wide STDF file drag-and-drop wrapper (`redesign.md` §3.2, §5.9):
- * - Full viewport `rgba(0, 0, 0, 0.55)` + `blur(32px)` at `z-index: 80`, hidden on mobile
- * - Inset frame (`inset: 16px`, radius `28px`, ice `0.35` ring or `text-tertiary` on non-file drag)
- *   plus a `24px` radial-masked dot grid
- * - `"Drop the body."` (`display-xl`) + `"Release to open. STDF, STD, or gzip."` (`title-3` secondary),
- *   or `"Only files can be opened here."` when dragging text/links
+ * Viewport-wide STDF file drag-and-drop wrapper (premium §6.5):
+ * - Full viewport `scrim` at `z-index: 80`, not shown on touch devices
+ * - Frame `inset: 16px`, `r-3xl`, `inset 0 0 0 1.5px hairline-strong` for every drag kind; no dot grid
+ * - `"Drop the body."` (`display-xl`); 12 px; `"Release to open. STDF, STD, or gzip."` (`title-3`
+ *   secondary), or `"Only files can be opened here."` when dragging text/links
  */
 export function FullWindowDropZone({
   disabled = false,
@@ -169,7 +168,7 @@ export function FullWindowDropZone({
   const { t } = useT();
   const shouldReduceMotion = useReducedMotion();
   const [dragKind, setDragKind] = React.useState<DragItemKind | null>(null);
-  const [isMobileViewport, setIsMobileViewport] = React.useState(false);
+  const [isTouchDevice, setIsTouchDevice] = React.useState(false);
   const [listenersBound, setListenersBound] = React.useState(false);
 
   const onFileDropRef = React.useRef(onFileDrop);
@@ -179,15 +178,15 @@ export function FullWindowDropZone({
     if (typeof window === 'undefined') {
       return;
     }
-    const mql = window.matchMedia('(max-width: 767px)');
-    const sync = (): void => setIsMobileViewport(mql.matches);
+    const mql = window.matchMedia('(hover: none) and (pointer: coarse)');
+    const sync = (): void => setIsTouchDevice(mql.matches);
     sync();
     mql.addEventListener('change', sync);
     return () => mql.removeEventListener('change', sync);
   }, []);
 
   useIsomorphicLayoutEffect(() => {
-    if (typeof window === 'undefined' || disabled || isMobileViewport) {
+    if (typeof window === 'undefined' || disabled || isTouchDevice) {
       setDragKind(null);
       setListenersBound(false);
       return;
@@ -209,9 +208,9 @@ export function FullWindowDropZone({
       unbind();
       setListenersBound(false);
     };
-  }, [disabled, isMobileViewport]);
+  }, [disabled, isTouchDevice]);
 
-  const showOverlay = dragKind !== null && !isMobileViewport;
+  const showOverlay = dragKind !== null && !isTouchDevice;
   const isFileDrag = dragKind === 'file';
 
   return (
@@ -249,31 +248,16 @@ export function FullWindowDropZone({
                 ? { duration: 0 }
                 : { duration: 0.12, ease: MOTION_TOKENS.easeOutTuple },
             }}
-            className="drag-overlay-surface pointer-events-none fixed inset-0 z-[var(--z-drag-overlay)] max-md:hidden"
+            className="drag-overlay-surface pointer-events-none fixed inset-0 z-[var(--z-drag-overlay)]"
           >
-            {/* Inset 16px frame, radius 28px, ice 0.35 ring (or text-tertiary on non-file) */}
+            {/* Frame: inset 16 px, r-3xl, 1.5 px inset hairline-strong for file and non-file drags */}
             <div
               data-testid="full-window-drop-frame"
               style={{
-                boxShadow: isFileDrag
-                  ? 'inset 0 0 0 1px rgba(214, 230, 255, 0.35)'
-                  : 'inset 0 0 0 1px rgba(255, 255, 255, 0.48)',
+                boxShadow: 'inset 0 0 0 1.5px var(--hairline-strong)',
               }}
-              className="absolute inset-4 flex items-center justify-center overflow-hidden rounded-3xl"
+              className="absolute inset-4 flex items-center justify-center rounded-3xl"
             >
-              {/* 24px dot grid masked by radial fade from centre (§3.2) */}
-              <div
-                style={{
-                  backgroundImage:
-                    'radial-gradient(rgba(214, 230, 255, 0.10) 1px, transparent 1px)',
-                  backgroundSize: '24px 24px',
-                  maskImage:
-                    'radial-gradient(closest-side, #000000 32%, transparent 100%)',
-                  WebkitMaskImage:
-                    'radial-gradient(closest-side, #000000 32%, transparent 100%)',
-                }}
-                className="absolute inset-0"
-              />
 
               <motion.div
                 initial={shouldReduceMotion ? { scale: 1 } : { scale: 0.98 }}

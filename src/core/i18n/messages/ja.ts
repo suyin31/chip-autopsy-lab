@@ -137,6 +137,7 @@ export const ja = {
   'legend.more': '他 +{count}',
   'stage.title': 'ウェハ {wafer}',
   'stage.caption': '{total} ダイ中 {failed} ダイが不良',
+  'stage.reading': '読み込み中…',
   'stage.selected.one': '{count} ダイを選択',
   'stage.selected.other': '{count} ダイを選択',
   'stage.selectArea': '範囲を選択',

@@ -643,13 +643,9 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       <main
         className={cn(
           'mx-auto flex w-full max-w-[1440px] flex-col',
-          // Premium §6.2 loaded view: margins 16 xs, 32 sm and md, 40 from 1280
-          workspace.status === 'ready' ? 'px-4 sm:px-8 xl:px-10' : 'px-4 md:px-10',
-          isLandingOrError
-            ? 'pt-0'
-            : workspace.status === 'ready'
-              ? 'pt-5 pb-12 lg:py-0'
-              : 'py-4 md:py-6',
+          // Premium §6.2 loaded view (and §6.3 loading, same layout): margins 16 xs, 32 sm and md, 40 from 1280
+          isLandingOrError ? 'px-4 md:px-10' : 'px-4 sm:px-8 xl:px-10',
+          isLandingOrError ? 'pt-0' : 'pt-5 pb-12 lg:py-0',
         )}
       >
         <section

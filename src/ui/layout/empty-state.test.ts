@@ -251,7 +251,13 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(failedHtml).toContain("This file isn&#x27;t an STDF log.");
     expect(failedHtml).toContain('89 50 4E 47');
     expect(failedHtml).toContain('Open another file');
-    expect(failedHtml).toContain('Load demo lot');
+    // premium §6.4 / §9.6: `title-1`, secondary reads "Open the sample lot", one `ink` primary (A20)
+    expect(failedHtml).toContain('type-title-1');
+    expect(failedHtml).toMatch(
+      /data-testid="parse-error-load-demo"[^>]*>Open the sample lot</,
+    );
+    expect(failedHtml).not.toContain('Load demo lot');
+    expect(failedHtml.match(/bg-ink text-on-ink/g)?.length).toBe(1);
     expect(failedHtml).toContain('Show details');
     // Demo cards remain below so the next step is one click
     expect(failedHtml).toContain('Edge-Ring Plasma Etch');
@@ -306,6 +312,11 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(sheetHtml).toContain('21s');
     expect(sheetHtml).toContain('Use bins-only');
     expect(sheetHtml).toContain('Parse everything');
+    // premium §6.6 / §7.16: `title-1`, one `ink` primary, primary last on desktop
+    expect(sheetHtml).toContain('type-title-1');
+    expect(sheetHtml.match(/bg-ink text-on-ink/g)?.length).toBe(1);
+    expect(sheetHtml).toContain('md:flex-row-reverse');
+    expect(sheetHtml).toContain('bg-surface');
 
     const noticeHtml = renderWithLocale(
       React.createElement(BinsOnlyNotice, {
@@ -484,6 +495,13 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(determinateHtml).toContain('scaleX(0.5)');
     expect(determinateHtml).not.toContain('uppercase');
     expect(determinateHtml).not.toContain('font-mono');
+    // premium §6.3: §6.2 grid, stage caption "Reading…", 2 px `fill-3` track 320 wide, `ink` fill
+    expect(determinateHtml).toContain('data-testid="ingest-stage-column"');
+    expect(determinateHtml).toContain('Reading…');
+    expect(determinateHtml).toContain('bg-fill-3');
+    expect(determinateHtml).toContain('sm:w-80');
+    expect(determinateHtml).toContain('bg-ink');
+    expect(determinateHtml).toContain('data-testid="ingest-loading-disc"');
 
     const site2Res = await ingestDemoPreset('site2-probe-contact');
     expect(site2Res.kind).toBe('ok');

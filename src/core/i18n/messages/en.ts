@@ -134,6 +134,7 @@ export const en = {
   'legend.more': '+{count} more',
   'stage.title': 'Wafer {wafer}',
   'stage.caption': '{failed} of {total} dies failed',
+  'stage.reading': 'Reading…',
   'stage.selected.one': '{count} die selected',
   'stage.selected.other': '{count} dies selected',
   'stage.selectArea': 'Select an area',

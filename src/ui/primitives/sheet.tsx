@@ -232,7 +232,7 @@ export function ModalSheet({
           className="fixed inset-0 z-[var(--z-sheets)] flex items-end justify-center overscroll-contain md:items-center md:p-4"
           onKeyDown={handleKeyDown}
         >
-          {/* Scrim: rgba(0,0,0,0.5) + 32px blur (§3.8) */}
+          {/* Scrim: premium §3.2 `scrim` token (light 0.60 + 24 px blur, dark 0.55 + 32 px blur) */}
           <motion.div
             aria-hidden="true"
             data-testid="sheet-scrim"
@@ -297,21 +297,22 @@ export function ModalSheet({
                     }
             }
             className={cn(
-              'surface-material relative z-10 w-full rounded-t-2xl px-6 pt-3 pb-8 text-text-primary outline-none',
+              // premium §7.16: `surface`, `r-2xl`, `shadow-popover`; mobile padding 24 16 + safe area
+              'relative z-10 w-full rounded-t-2xl bg-surface px-4 pt-0 pb-[calc(24px+env(safe-area-inset-bottom))] text-text-primary shadow-popover outline-none',
               'md:w-[480px] md:max-w-[calc(100vw-32px)] md:rounded-2xl md:p-8',
               className,
             )}
           >
-            {/* Mobile bottom-sheet drag handle (36 x 5 px, §3.8) */}
+            {/* Mobile grabber: 36 x 5 `fill-3`, 8 px from the top, content starts at 24 (premium §7.16) */}
             <div
               onPointerDown={handleDragPointerDown}
               onPointerMove={handleDragPointerMove}
               onPointerUp={finishMobileDrag}
               onPointerCancel={finishMobileDrag}
-              className="-mx-2 flex touch-none items-center justify-center py-2 md:hidden"
+              className="-mx-2 flex h-6 touch-none items-start justify-center pt-2 md:hidden"
               aria-hidden="true"
             >
-              <span className="h-[5px] w-9 rounded-pill bg-white/24" />
+              <span className="h-[5px] w-9 rounded-pill bg-fill-3" />
             </div>
 
             {children}

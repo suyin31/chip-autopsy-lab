@@ -132,6 +132,7 @@ export const zhTW = {
   'legend.more': '另外 {count} 項',
   'stage.title': '晶圓 {wafer}',
   'stage.caption': '{total} 顆晶粒中 {failed} 顆失效',
+  'stage.reading': '正在讀取…',
   'stage.selected.one': '已選 {count} 顆晶粒',
   'stage.selected.other': '已選 {count} 顆晶粒',
   'stage.selectArea': '框選區域',

@@ -132,6 +132,7 @@ export const zhCN = {
   'legend.more': '另外 {count} 项',
   'stage.title': '晶圆 {wafer}',
   'stage.caption': '{total} 颗晶粒中 {failed} 颗失效',
+  'stage.reading': '正在读取…',
   'stage.selected.one': '已选 {count} 颗晶粒',
   'stage.selected.other': '已选 {count} 颗晶粒',
   'stage.selectArea': '框选区域',

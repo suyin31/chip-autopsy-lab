@@ -13,8 +13,8 @@ export interface BinsOnlyNoticeProps {
 }
 
 /**
- * Post-load bins-only notice (`redesign.md` §3.8 Moment 2):
- * One line under the confidence pill in `footnote` secondary with a leading info glyph:
+ * Post-load bins-only notice (premium §6.6):
+ * One line under the action row in `subhead` secondary with a leading 14 px info icon:
  * `"Bins-only mode. Parametric findings are hidden."` + text button `"Parse everything"`.
  */
 export function BinsOnlyNotice({
@@ -34,7 +34,7 @@ export function BinsOnlyNotice({
       )}
     >
       <Info
-        className="size-3.5 shrink-0 text-text-tertiary"
+        className="size-3.5 shrink-0"
         strokeWidth={1.5}
         aria-hidden="true"
       />
@@ -45,7 +45,7 @@ export function BinsOnlyNotice({
           disabled={disabled}
           data-testid="bins-only-parse-everything-inline"
           onClick={onParseEverything}
-          className="type-subhead font-medium text-text-primary enabled:hover:underline"
+          className="type-subhead font-medium text-text-primary"
         >
           {t('binsOnly.parseAll')}
         </Button>

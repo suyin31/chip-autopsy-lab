@@ -137,6 +137,7 @@ export const ko = {
   'legend.more': '+{count}개 더보기',
   'stage.title': '웨이퍼 {wafer}',
   'stage.caption': '다이 {total}개 중 {failed}개 불량',
+  'stage.reading': '읽는 중…',
   'stage.selected.one': '{count}개 다이 선택됨',
   'stage.selected.other': '{count}개 다이 선택됨',
   'stage.selectArea': '영역 선택',

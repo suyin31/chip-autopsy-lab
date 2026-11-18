@@ -261,7 +261,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P13. Loaded view, tablet and mobile
   - 1024 two-column variant, sm single column, 390 order and full-bleed stage, mobile finding-click scroll (premium §6.2).
   - Accept: A17, A18.
-- [ ] P14. Loading, error, drag overlay, bins-only
+- [x] P14. Loading, error, drag overlay, bins-only
   - Loading column and progress, parse error layout, drag overlay frame, bins-only sheet and notice (premium §6.3–§6.6, §9.6).
   - Accept: A20 (error, bins-only).
 

@@ -382,8 +382,9 @@ function DemoLotCardButton({
  * - `first-run`: premium §6.1 hero ("Drop the body.", subline, primary "Open the sample lot",
  *   secondary "Open file", hint), "Sample lots" cards with 152 / 140 / 120 / 112 px discs, and
  *   the footer line with "Download sample files"
- * - `parse-failed`: icon-free localized error view per `redesign.md` §3.7 with
- *   `"Open another file"`, `"Load demo lot"`, and `"Show details"` sheet, keeping the cards below
+ * - `parse-failed`: premium §6.4 / §9.6 error view (`title-1`, `redesign.md` §3.7 copy) with
+ *   primary "Open another file", secondary "Open the sample lot", and "Show details", keeping
+ *   the cards below
  */
 export function EmptyStateCard({
   cause = 'first-run',
@@ -483,27 +484,28 @@ export function EmptyStateCard({
           </div>
         </div>
       ) : cause === 'parse-failed' && errorVm ? (
-        /* §3.7 Parse error hero (replaces landing hero; cards remain below) */
+        /* premium §6.4 parse error: replaces the landing hero, cards stay below; centred at
+           top y = 164 from 1024, left-aligned at y = 96 below; no icon, no red, no orange */
         <div
           role="alert"
           data-error-code={errorVm.uiCode}
-          className="pt-12 text-left md:mx-auto md:max-w-[640px] md:pt-32 md:text-center"
+          className="pt-12 text-left lg:mx-auto lg:max-w-[880px] lg:pt-[112px] lg:text-center"
         >
           <h1
             data-testid="parse-error-title"
-            className="type-title-2 text-text-primary"
+            className="type-title-1 text-text-primary"
           >
             {errorVm.title}
           </h1>
 
           <p
             data-testid="parse-error-body"
-            className="mt-3 type-body text-text-secondary md:mx-auto md:max-w-[560px]"
+            className="mt-3 max-w-[560px] type-body text-text-secondary lg:mx-auto"
           >
             {errorVm.body}
           </p>
 
-          <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-center">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-center">
             <Button
               variant="primary"
               size="lg"
@@ -511,7 +513,12 @@ export function EmptyStateCard({
               aria-controls="cal-file-picker"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
-              className="w-full max-md:h-[50px] md:w-auto"
+              className={cn(
+                'h-12 w-full sm:w-auto',
+                // premium §7.11 primary: `ink` fill, `on-ink` text (A20)
+                'bg-ink text-on-ink enabled:hover:bg-[#333336] enabled:active:bg-black',
+                'dark:enabled:hover:bg-white dark:enabled:active:bg-[#e8e8ed]',
+              )}
             >
               {t('error.openAnother')}
             </Button>
@@ -522,13 +529,17 @@ export function EmptyStateCard({
               data-testid="parse-error-load-demo"
               onClick={() => onLoadDemoLot('edge-ring-etch')}
               disabled={disabled}
-              className="w-full md:w-auto"
+              className={cn(
+                'h-11 w-full sm:h-12 sm:w-auto',
+                // premium §7.11 secondary: `fill-2`, hover `fill-3`
+                'bg-fill-2 text-text-primary enabled:hover:bg-fill-3 enabled:active:bg-fill-3',
+              )}
             >
-              {t('error.loadDemo')}
+              {t('landing.primary')}
             </Button>
           </div>
 
-          <div className="mt-3">
+          <div className="mt-4 flex lg:justify-center">
             <Button
               variant="text"
               data-testid="parse-error-show-details"

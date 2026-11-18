@@ -772,16 +772,12 @@
     box-shadow: var(--shadow-ring-strong);
   }
 
-  .sheet-scrim-surface {
-    background-color: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(var(--blur-heavy));
-    -webkit-backdrop-filter: blur(var(--blur-heavy));
-  }
-
+  /* Sheet backdrop and drag overlay on the premium §3.2 `scrim` token */
+  .sheet-scrim-surface,
   .drag-overlay-surface {
-    background-color: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(var(--blur-heavy));
-    -webkit-backdrop-filter: blur(var(--blur-heavy));
+    background-color: var(--scrim);
+    backdrop-filter: var(--scrim-filter);
+    -webkit-backdrop-filter: var(--scrim-filter);
   }
 
   /* Finding rows: hide 1 px inset separator adjacent to hovered, pressed, or active rows (redesign.md §4.6) */
@@ -817,12 +813,6 @@
     -webkit-backdrop-filter: none;
   }
 
-  .sheet-scrim-surface,
-  .drag-overlay-surface {
-    background-color: rgba(0, 0, 0, 0.88);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,6 +3,13 @@
 import * as React from 'react';
 import { formatByteSize, formatGroupedInt } from '@/ui/format';
 import { Untranslated, useT } from '@/ui/i18n';
+import { WAFER_TOKENS } from '@/ui/tokens';
+import { computeStageDiscLayerRects } from '@/ui/wafer-map/stage-layers';
+import {
+  paintWaferDiscMaterial,
+  resolveCanvasPixelSize,
+  resolveFitWaferDiameterPx,
+} from '@/ui/wafer-map/wafer-geometry';
 import type { WorkerParseProgress } from '@/workers';
 
 export interface IngestProgressPanelProps {
@@ -10,17 +17,123 @@ export interface IngestProgressPanelProps {
   readonly progress: WorkerParseProgress;
 }
 
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
+
+interface AreaSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 /**
- * Loading state matching the loaded two-column grid (`redesign.md` §3.3):
- * - Left 7 columns (`783fr`): boxless wafer stage with a `624 px` (`350 px` mobile)
- *   silicon disc outline (`ring` only) so nothing jumps when parsing ends.
- * - Right 5 columns (`553fr`, top-aligned with verdict position):
- *   1. `headline` primary: file/lot label (1 line, ellipsis)
- *   2. `8 px` gap, `body` secondary: `"Reading records"` (`aria-live="polite"`)
- *   3. `16 px` gap, `2 px` progress track (`rgba(255,255,255,0.12)`) driven by
- *      `transform: scaleX(p)` (`transform-origin: left`), zero layout animation
- *   4. `8 px` gap, `footnote` tertiary tabular byte readout (`"4.2 of 9.8 MB"`).
- * - Zero `uppercase` labels and zero monospace labels (§0 #2).
+ * Bare silicon disc for the loading stage (premium §6.3, §8.1 "Disc"): the §5.2 material at
+ * the loaded view's fit diameter, plus the light ambient and contact shadows and the dark
+ * halo (§5.1), drawn at frame 0 with no fade. The notch uses the 6 o'clock default because
+ * `WCR` geometry is not known yet.
+ */
+function LoadingDisc(): React.JSX.Element {
+  const areaRef = React.useRef<HTMLDivElement | null>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const [size, setSize] = React.useState<AreaSize | null>(null);
+
+  useIsomorphicLayoutEffect(() => {
+    const el = areaRef.current;
+    if (!el) {
+      return;
+    }
+    const measure = (): void => {
+      const rect = el.getBoundingClientRect();
+      setSize((prev) =>
+        prev && prev.width === rect.width && prev.height === rect.height
+          ? prev
+          : { width: rect.width, height: rect.height },
+      );
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const diameter =
+    size && size.width > 0 && size.height > 0
+      ? Math.max(0, resolveFitWaferDiameterPx(size.width, size.height))
+      : 0;
+
+  useIsomorphicLayoutEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !size || diameter <= 0) {
+      return;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const dims = resolveCanvasPixelSize(size.width, size.height, dpr);
+    canvas.width = dims.pixelWidth;
+    canvas.height = dims.pixelHeight;
+    ctx.setTransform(dims.dpr, 0, 0, dims.dpr, 0, 0);
+    ctx.clearRect(0, 0, size.width, size.height);
+    paintWaferDiscMaterial(ctx, {
+      centerXCss: size.width / 2,
+      centerYCss: size.height / 2,
+      waferRadiusPx: diameter / 2,
+      wfFlat: 'D',
+      devicePixelCss: 1 / dims.dpr,
+    });
+  }, [size, diameter]);
+
+  const rects =
+    size && diameter > 0
+      ? computeStageDiscLayerRects(size.width / 2, size.height / 2, diameter / 2)
+      : null;
+
+  return (
+    <div
+      ref={areaRef}
+      aria-hidden="true"
+      data-testid="ingest-loading-disc"
+      data-wafer-diameter-px={Math.round(diameter)}
+      className="relative aspect-square w-full lg:aspect-auto lg:min-h-0 lg:flex-1"
+    >
+      {rects ? (
+        <>
+          <div
+            style={{ ...rects.ambient, backgroundImage: WAFER_TOKENS.ambientShadow }}
+            className="pointer-events-none absolute dark:hidden"
+          />
+          <div
+            style={{ ...rects.contact, backgroundImage: WAFER_TOKENS.contactShadow }}
+            className="pointer-events-none absolute dark:hidden"
+          />
+          <div
+            style={{ ...rects.halo, backgroundImage: WAFER_TOKENS.halo }}
+            className="pointer-events-none absolute hidden dark:block"
+          />
+        </>
+      ) : null}
+      <canvas
+        ref={canvasRef}
+        style={size ? { width: size.width, height: size.height } : undefined}
+        className="pointer-events-none absolute inset-0 block"
+      />
+    </div>
+  );
+}
+
+/**
+ * Loading state (premium §6.3), laid out exactly like the loaded verdict view (§6.2) so
+ * nothing jumps when parsing ends:
+ * - Stage column: header caption "Reading…" (`subhead` tertiary), the bare disc at the fit
+ *   diameter, and space reserved for the control row and strip from 1024.
+ * - Verdict column at the verdict position: `headline` file name (1 line, ellipsis); 8 px;
+ *   `body` secondary status; 20 px; 2 px `fill-3` track, 320 wide (full width below 640),
+ *   `ink` fill scaled by `transform: scaleX(p)` from the left; 8 px; `subhead` tertiary bytes.
+ * - No skeletons, no spinners.
  */
 export function IngestProgressPanel({
   label,
@@ -46,18 +159,24 @@ export function IngestProgressPanel({
 
   const valueText =
     pctLabel !== null
-      ? `${statusCopy} · ${pctLabel} (${bytesCopy}, ${formatGroupedInt(progress.diesResolved)} dies)`
-      : `${statusCopy} · ${bytesCopy} (${formatGroupedInt(progress.diesResolved)} dies)`;
+      ? `${statusCopy}, ${pctLabel} (${bytesCopy}, ${formatGroupedInt(progress.diesResolved)} dies)`
+      : `${statusCopy}, ${bytesCopy} (${formatGroupedInt(progress.diesResolved)} dies)`;
 
   return (
     <div
       data-testid="ingest-loading-view"
       aria-busy="true"
-      className="flex w-full flex-col xl:grid xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,783fr)_minmax(0,553fr)] xl:gap-6"
+      className="flex w-full flex-col sm:max-lg:mx-auto sm:max-lg:max-w-[640px] lg:grid lg:grid-cols-[540px_minmax(0,1fr)] lg:items-start lg:gap-x-5 xl:grid-cols-12 xl:gap-x-6"
     >
-      {/* Right column on desktop / first on mobile: file name + progress stack (§3.3) */}
-      <div className="order-1 flex w-full flex-col xl:order-none xl:col-start-2 xl:row-start-1 xl:pt-14">
-        <p className="truncate type-headline text-text-primary">
+      {/* Verdict column position (§6.2 padding-top 72, 84 at 1440) */}
+      <div
+        data-testid="ingest-progress-column"
+        className="order-1 flex w-full min-w-0 flex-col lg:order-none lg:col-start-2 lg:row-start-1 lg:pt-[72px] xl:col-span-5 xl:col-start-8 min-[90rem]:pt-[84px]"
+      >
+        <p
+          data-testid="ingest-file-name"
+          className="truncate type-headline text-text-primary"
+        >
           <Untranslated>{label}</Untranslated>
         </p>
 
@@ -74,6 +193,7 @@ export function IngestProgressPanel({
 
         <div
           role="progressbar"
+          data-testid="ingest-progress-track"
           aria-label={t('loading.progressAria', {
             percent: pctLabel ?? '0%',
           })}
@@ -81,14 +201,14 @@ export function IngestProgressPanel({
           aria-valuemax={100}
           aria-valuenow={pct !== null ? Math.round(pct) : undefined}
           aria-valuetext={valueText}
-          className="mt-4 h-0.5 w-full overflow-hidden rounded-pill bg-white/12"
+          className="mt-5 h-0.5 w-full overflow-hidden rounded-pill bg-fill-3 sm:w-80"
         >
           <div
             style={{
               transform: `scaleX(${ratio !== null ? Number(ratio.toFixed(4)) : 0.15})`,
               transformOrigin: 'left',
             }}
-            className="h-full w-full rounded-pill bg-text-primary transition-transform duration-[120ms] ease-[var(--ease-out)]"
+            className="h-full w-full rounded-pill bg-ink transition-transform duration-[120ms] ease-[var(--ease-out)]"
           />
         </div>
 
@@ -97,12 +217,24 @@ export function IngestProgressPanel({
         </p>
       </div>
 
-      {/* Left column on desktop / second on mobile: 624px / 350px wafer disc outline with ring only (§3.3) */}
-      <div className="order-2 -mx-4 mt-6 flex h-[456px] w-[calc(100%+2rem)] items-center justify-center bg-bg md:mx-0 md:h-auto md:aspect-square md:w-full md:max-w-[680px] xl:order-none xl:col-start-1 xl:row-start-1 xl:mt-0 xl:aspect-auto xl:h-full xl:min-h-[600px] xl:max-w-none">
-        <div
-          aria-hidden="true"
-          className="h-[350px] w-[350px] rounded-full ring-surface xl:h-[624px] xl:w-[624px]"
-        />
+      {/* Stage column position (§6.2): same sticky box, header, and wafer area as the loaded stage */}
+      <div
+        data-testid="ingest-stage-column"
+        className="order-2 -mx-4 mt-5 w-[calc(100%+2rem)] sm:mx-0 sm:w-full lg:sticky lg:top-[52px] lg:order-none lg:col-start-1 lg:row-start-1 lg:mt-0 lg:h-[calc(100dvh-52px)] lg:min-h-[640px] lg:pt-5 lg:pb-4 xl:col-span-7"
+      >
+        <div className="flex w-full flex-col lg:h-full">
+          <div className="flex items-baseline px-4 pb-2 sm:h-10 sm:items-end sm:px-0">
+            <p
+              data-testid="ingest-stage-caption"
+              className="type-subhead text-text-tertiary"
+            >
+              {t('stage.reading')}
+            </p>
+          </div>
+          <LoadingDisc />
+          {/* Reserved control row (72 at 1024–1279, 40 from 1280) + 12 gap + 76 strip */}
+          <div aria-hidden="true" className="hidden lg:block lg:h-40 xl:h-32" />
+        </div>
       </div>
     </div>
   );
