@@ -18,6 +18,7 @@ import {
 import { useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import {
+  type ClaimGlowOrderMode,
   type ClaimHighlightState,
   type SelectionStoreState,
   useSelectionStore,
@@ -163,6 +164,40 @@ export function resolveClaimWaferTarget(
   return { isSingleWaferClaim: false };
 }
 
+function resolveClaimGlowOrderMode(
+  claim: ReportClaim,
+  spatialPattern?: string,
+): ClaimGlowOrderMode {
+  if (
+    claim.messageKey === 'findings.scratch.headline' ||
+    (claim.messageKey === 'verdict.pattern' && spatialPattern === 'Scratch')
+  ) {
+    return 'principal-axis';
+  }
+  if (
+    claim.messageKey === 'findings.edgeBand.headline' ||
+    ((claim.messageKey === 'verdict.pattern' ||
+      claim.messageKey === 'findings.excursion.headline') &&
+      (spatialPattern === 'Edge-Ring' ||
+        spatialPattern === 'Donut' ||
+        spatialPattern === 'Center'))
+  ) {
+    return 'polar-cw';
+  }
+  if (
+    typeof claim.params.pattern === 'string' &&
+    (claim.params.pattern === 'Edge-Ring' ||
+      claim.params.pattern === 'Donut' ||
+      claim.params.pattern === 'Center')
+  ) {
+    return 'polar-cw';
+  }
+  if (claim.params.pattern === 'Scratch') {
+    return 'principal-axis';
+  }
+  return 'centroid-distance';
+}
+
 /**
  * Builds the `ClaimHighlightState` written to `SelectionStore` when a user activates
  * a headline or body `ReportClaim`.
@@ -172,6 +207,7 @@ export function buildClaimHighlightPayload(
   lot: LotModel,
   activeWaferIndex: number,
   factsById?: ReadonlyMap<string, EngineFact>,
+  spatialPattern?: string,
 ): ClaimHighlightState {
   const { targetWaferIndex } = resolveClaimWaferTarget(
     claim,
@@ -185,6 +221,7 @@ export function buildClaimHighlightPayload(
     citedBins: claim.citedBins,
     citedTestNums: claim.citedTestNums,
     citedSites: claim.citedSites,
+    glowOrderMode: resolveClaimGlowOrderMode(claim, spatialPattern),
     ...(targetWaferIndex !== undefined ? { targetWaferIndex } : {}),
   };
 }
@@ -198,6 +235,7 @@ export function toggleReportClaimInStore(
   lot: LotModel,
   claim: ReportClaim,
   factsById?: ReadonlyMap<string, EngineFact>,
+  spatialPattern?: string,
 ): void {
   const state = store.getState();
   if (state.lot !== lot) {
@@ -209,6 +247,7 @@ export function toggleReportClaimInStore(
     lot,
     currentActiveWafer,
     factsById,
+    spatialPattern,
   );
   store.getState().toggleClaimHighlight(payload);
 }
@@ -292,9 +331,15 @@ export function AutopsyReportCard({
 
   const handleToggleClaim = React.useCallback(
     (claim: ReportClaim): void => {
-      toggleReportClaimInStore(store, lot, claim, factsById);
+      toggleReportClaimInStore(
+        store,
+        lot,
+        claim,
+        factsById,
+        analysis.primarySpatial.pattern,
+      );
     },
-    [store, lot, factsById],
+    [store, lot, factsById, analysis.primarySpatial.pattern],
   );
 
   // §3.5: Pressing Escape clears the active finding when no overlay/popover consumed Escape

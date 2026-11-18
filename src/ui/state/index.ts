@@ -2,6 +2,7 @@ export {
   areHiddenBinSetsEqual,
   type BinSelectionFilter,
   type CapabilityPredicateClause,
+  type ClaimGlowOrderMode,
   type ClaimHighlightState,
   type ComparisonOp,
   createSelectionStore,

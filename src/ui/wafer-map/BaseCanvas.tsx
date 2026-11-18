@@ -18,6 +18,7 @@ import {
 
 export interface BaseCanvasHandle {
   paintForCamera(rasterCamera: CameraState): void;
+  getCanvasElement(): HTMLCanvasElement | null;
 }
 
 export interface BaseCanvasProps {
@@ -194,6 +195,9 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
             cur.safeCssHeight,
           );
           paintWithViewport(vp, null);
+        },
+        getCanvasElement(): HTMLCanvasElement | null {
+          return canvasRef.current;
         },
       }),
       [paintWithViewport],

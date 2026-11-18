@@ -526,6 +526,8 @@ export interface Canvas2DContextLike {
   strokeStyle: string | CanvasGradient | CanvasPattern;
   lineWidth: number;
   lineJoin: CanvasLineJoin;
+  globalAlpha?: number;
+  globalCompositeOperation?: GlobalCompositeOperation;
   setTransform(
     a: number,
     b: number,
@@ -560,6 +562,13 @@ export interface Canvas2DContextLike {
   stroke(): void;
   rect(x: number, y: number, w: number, h: number): void;
   setLineDash(segments: number[]): void;
+  drawImage?(
+    image: CanvasImageSource,
+    dx: number,
+    dy: number,
+    dw: number,
+    dh: number,
+  ): void;
 }
 
 function drawDieRoundedRect(
@@ -838,6 +847,40 @@ export function paintWaferFailLayer(
   }
 }
 
+let cachedGlowSprite: CanvasImageSource | null | undefined;
+
+function getEvidenceGlowSprite(): CanvasImageSource | null {
+  if (cachedGlowSprite !== undefined) {
+    return cachedGlowSprite;
+  }
+  if (typeof OffscreenCanvas !== 'undefined') {
+    const size = 64;
+    const canvas = new OffscreenCanvas(size, size);
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const g = ctx.createRadialGradient(32, 32, 4, 32, 32, 32);
+      g.addColorStop(0, 'rgba(214, 230, 255, 0.45)');
+      g.addColorStop(0.45, 'rgba(214, 230, 255, 0.18)');
+      g.addColorStop(1, 'rgba(214, 230, 255, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, size, size);
+      cachedGlowSprite = canvas;
+      return cachedGlowSprite;
+    }
+  }
+  cachedGlowSprite = null;
+  return null;
+}
+
+export interface OverlayGlowSequenceOverride {
+  readonly scrimAlpha: number;
+  readonly dieIndices: Uint32Array;
+  readonly dieAlphas: Float32Array;
+  /** Optional outgoing finding fade-out dies (`redesign.md` §5.4 step 7). */
+  readonly outgoingIndices?: Uint32Array;
+  readonly outgoingAlphas?: Float32Array;
+}
+
 export interface PaintWaferOverlayParams {
   readonly lot: LotModel;
   readonly waferIndex: number;
@@ -847,12 +890,22 @@ export interface PaintWaferOverlayParams {
   readonly overlayHighlightCount: number;
   readonly hoveredDieIndex: number | null;
   readonly brush: SpatialBrushRect | null;
+  /** Optional animated scrim + per-die ordered glow state (`redesign.md` §2.1, §5.4). */
+  readonly glowOverride?: OverlayGlowSequenceOverride | null;
+  /** Optional screen-space override rect during live Shift+drag or spring-snappy snap (`redesign.md` §3.6, §5.7). */
+  readonly liveBrushScreenRect?: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  } | null;
 }
 
 /**
- * Draws the DPR-scaled screen-space overlay canvas (`#000000` 1px outer keyline +
- * `#D6E6FF` 1.5px evidence stroke + soft ice halo, spatial brush bounds, and hovered
- * die reticle) WITHOUT touching or repainting `BaseCanvas`.
+ * Draws the DPR-scaled screen-space overlay canvas (`dim-scrim` punched out at evidence dies,
+ * `#000000` 1px outer keyline + `#D6E6FF` 1.5px evidence stroke + pre-rendered ice glow sprite,
+ * `accent-soft` + `1px #D6E6FF` selection rectangle, and hovered die reticle) WITHOUT touching
+ * or repainting `BaseCanvas`.
  */
 export function paintWaferOverlayLayer(
   ctx: Canvas2DContextLike,
@@ -867,6 +920,8 @@ export function paintWaferOverlayLayer(
     overlayHighlightCount,
     hoveredDieIndex,
     brush,
+    glowOverride = null,
+    liveBrushScreenRect = null,
   } = params;
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -880,18 +935,193 @@ export function paintWaferOverlayLayer(
   const { dies } = lot;
   const start = wafer.dieStartIndex;
   const end = wafer.dieEndIndex;
+  const xArr = dies.x;
+  const yArr = dies.y;
+  const validArr = dies.hasValidCoords;
+  const passArr = dies.finalPass;
+  const minCullX = -layout.diePitchPx;
+  const maxCullX = layout.cssWidth + layout.diePitchPx;
+  const minCullY = -layout.diePitchPx;
+  const maxCullY = layout.cssHeight + layout.diePitchPx;
 
-  // 1. Batched #000000 keyline + #D6E6FF evidence outer glow + crisp inner outline (never a fill)
-  if (overlayHighlightCount > 0 && overlayHighlightMask.length >= end) {
-    const xArr = dies.x;
-    const yArr = dies.y;
-    const validArr = dies.hasValidCoords;
-    const passArr = dies.finalPass;
-    const minCullX = -layout.diePitchPx;
-    const maxCullX = layout.cssWidth + layout.diePitchPx;
-    const minCullY = -layout.diePitchPx;
-    const maxCullY = layout.cssHeight + layout.diePitchPx;
+  // 0. Finding dim-scrim (`rgba(0, 0, 0, scrimAlpha)`, up to 0.62) punched out at evidence dies (§2.1, §5.4)
+  if (glowOverride !== null && glowOverride.scrimAlpha > 0.002) {
+    const notch = computeWaferNotchGeometry(
+      layout.centerXCss,
+      layout.centerYCss,
+      layout.waferRadiusPx,
+      wafer.geometry.wfFlat,
+    );
+    ctx.beginPath();
+    ctx.arc(
+      layout.centerXCss,
+      layout.centerYCss,
+      layout.waferRadiusPx,
+      notch.arcStartRad,
+      notch.arcEndRad,
+      false,
+    );
+    ctx.lineTo(notch.apexX, notch.apexY);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(0, 0, 0, ${glowOverride.scrimAlpha.toFixed(4)})`;
+    ctx.fill();
 
+    const evIndices = glowOverride.dieIndices;
+    for (let k = 0; k < evIndices.length; k += 1) {
+      const i = evIndices[k]!;
+      if (i < start || i >= end || validArr[i] === 0) {
+        continue;
+      }
+      const cx =
+        layout.centerXCss +
+        (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+      const cy =
+        layout.centerYCss +
+        (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+      if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+        continue;
+      }
+      const size = passArr[i] !== 0 ? layout.passDieSizePx : layout.dieSizePx;
+      const half = size / 2;
+      ctx.clearRect(cx - half - 0.5, cy - half - 0.5, size + 1, size + 1);
+    }
+  }
+
+  // 1. Evidence glow + 1 px #000000 keyline + 1.5 px #D6E6FF stroke (§2.1, §5.4)
+  const glowSprite = getEvidenceGlowSprite();
+
+  const paintGlowSubset = (
+    indices: Uint32Array,
+    alphas: Float32Array,
+  ): void => {
+    const keylineW = layout.diePitchPx >= 6 ? 3 : 2.25;
+    const strokeW = layout.diePitchPx >= 6 ? 1.5 : 1;
+    const haloW = Math.min(4.5, Math.max(2.75, layout.diePitchPx * 0.26));
+    const canSprite = glowSprite !== null && typeof ctx.drawImage === 'function';
+
+    ctx.setLineDash([]);
+    ctx.lineJoin = 'round';
+
+    if (canSprite && glowSprite) {
+      ctx.globalCompositeOperation = 'lighter';
+      for (let r = 0; r < indices.length; r += 1) {
+        const a = alphas[r]!;
+        if (a <= 0.005) continue;
+        const i = indices[r]!;
+        if (i < start || i >= end || validArr[i] === 0) continue;
+        const cx =
+          layout.centerXCss +
+          (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+        const cy =
+          layout.centerYCss +
+          (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+        if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+          continue;
+        }
+        const size = passArr[i] !== 0 ? layout.passDieSizePx : layout.dieSizePx;
+        const spriteSpan = size + 12;
+        ctx.globalAlpha = a;
+        ctx.drawImage!(
+          glowSprite,
+          cx - spriteSpan / 2,
+          cy - spriteSpan / 2,
+          spriteSpan,
+          spriteSpan,
+        );
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
+
+    // Fast path when all alphas === 1: batch into one path
+    let allFull = indices.length > 0;
+    for (let r = 0; r < alphas.length; r += 1) {
+      if (alphas[r]! < 0.999) {
+        allFull = false;
+        break;
+      }
+    }
+
+    if (allFull) {
+      let anyVisible = false;
+      ctx.beginPath();
+      for (let r = 0; r < indices.length; r += 1) {
+        const i = indices[r]!;
+        if (i < start || i >= end || validArr[i] === 0) continue;
+        const cx =
+          layout.centerXCss +
+          (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+        const cy =
+          layout.centerYCss +
+          (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+        if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+          continue;
+        }
+        anyVisible = true;
+        const size = passArr[i] !== 0 ? layout.passDieSizePx : layout.dieSizePx;
+        const half = size / 2;
+        ctx.rect(cx - half, cy - half, size, size);
+      }
+      if (anyVisible) {
+        if (!canSprite) {
+          ctx.strokeStyle = OVERLAY_HALO_STROKE;
+          ctx.lineWidth = haloW;
+          ctx.stroke();
+        }
+        ctx.strokeStyle = OVERLAY_KEYLINE_STROKE;
+        ctx.lineWidth = keylineW;
+        ctx.stroke();
+        ctx.strokeStyle = COLOR_TOKENS.accent;
+        ctx.lineWidth = strokeW;
+        ctx.stroke();
+      }
+      return;
+    }
+
+    for (let r = 0; r < indices.length; r += 1) {
+      const a = alphas[r]!;
+      if (a <= 0.005) continue;
+      const i = indices[r]!;
+      if (i < start || i >= end || validArr[i] === 0) continue;
+      const cx =
+        layout.centerXCss +
+        (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+      const cy =
+        layout.centerYCss +
+        (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+      if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+        continue;
+      }
+      const size = passArr[i] !== 0 ? layout.passDieSizePx : layout.dieSizePx;
+      const half = size / 2;
+      ctx.globalAlpha = a;
+      if (!canSprite) {
+        ctx.strokeStyle = OVERLAY_HALO_STROKE;
+        ctx.lineWidth = haloW;
+        ctx.strokeRect(cx - half, cy - half, size, size);
+      }
+      ctx.strokeStyle = OVERLAY_KEYLINE_STROKE;
+      ctx.lineWidth = keylineW;
+      ctx.strokeRect(cx - half, cy - half, size, size);
+      ctx.strokeStyle = COLOR_TOKENS.accent;
+      ctx.lineWidth = strokeW;
+      ctx.strokeRect(cx - half, cy - half, size, size);
+    }
+    ctx.globalAlpha = 1;
+  };
+
+  if (glowOverride !== null) {
+    if (
+      glowOverride.outgoingIndices &&
+      glowOverride.outgoingAlphas &&
+      glowOverride.outgoingIndices.length > 0
+    ) {
+      paintGlowSubset(glowOverride.outgoingIndices, glowOverride.outgoingAlphas);
+    }
+    if (glowOverride.dieIndices.length > 0) {
+      paintGlowSubset(glowOverride.dieIndices, glowOverride.dieAlphas);
+    }
+  } else if (overlayHighlightCount > 0 && overlayHighlightMask.length >= end) {
     let anyOnWafer = false;
     ctx.beginPath();
     for (let i = start; i < end; i += 1) {
@@ -917,35 +1147,51 @@ export function paintWaferOverlayLayer(
       ctx.setLineDash([]);
       ctx.lineJoin = 'round';
 
-      // Soft outer ice halo
       ctx.strokeStyle = OVERLAY_HALO_STROKE;
       ctx.lineWidth = Math.min(4.5, Math.max(2.75, layout.diePitchPx * 0.26));
       ctx.stroke();
 
-      // 1 px #000000 keyline separating ice #D6E6FF from orange #FF6B2C (>= 3:1 WCAG 2.2)
       ctx.strokeStyle = OVERLAY_KEYLINE_STROKE;
       ctx.lineWidth = layout.diePitchPx >= 6 ? 3 : 2.25;
       ctx.stroke();
 
-      // Crisp 1.5 px #D6E6FF stroke
       ctx.strokeStyle = COLOR_TOKENS.accent;
       ctx.lineWidth = layout.diePitchPx >= 6 ? 1.5 : 1;
       ctx.stroke();
     }
   }
 
-  // 2. Active spatial brush rectangle (1 px ice accent stroke)
-  if (
-    brush !== null &&
+  // 2. Active or live spatial brush rectangle: 1 px ice accent stroke + accent-soft fill (§3.6)
+  const resolvedBrushRect =
+    liveBrushScreenRect ??
+    (brush !== null &&
     (brush.scope === 'stacked' ||
       brush.waferIndex === undefined ||
       brush.waferIndex === waferIndex)
+      ? projectBrushToCanvasRect(brush, layout)
+      : null);
+
+  if (
+    resolvedBrushRect !== null &&
+    resolvedBrushRect.width > 0.5 &&
+    resolvedBrushRect.height > 0.5
   ) {
-    const bRect = projectBrushToCanvasRect(brush, layout);
     ctx.setLineDash([]);
+    ctx.fillStyle = COLOR_TOKENS.accentSoft;
+    ctx.fillRect(
+      resolvedBrushRect.x,
+      resolvedBrushRect.y,
+      resolvedBrushRect.width,
+      resolvedBrushRect.height,
+    );
     ctx.strokeStyle = COLOR_TOKENS.accent;
     ctx.lineWidth = 1;
-    ctx.strokeRect(bRect.x, bRect.y, bRect.width, bRect.height);
+    ctx.strokeRect(
+      resolvedBrushRect.x,
+      resolvedBrushRect.y,
+      resolvedBrushRect.width,
+      resolvedBrushRect.height,
+    );
   }
 
   // 3. Hovered die crisp reticle on active wafer

@@ -61,6 +61,11 @@ export interface BinSelectionFilter {
   readonly code: number;
 }
 
+export type ClaimGlowOrderMode =
+  | 'polar-cw'
+  | 'principal-axis'
+  | 'centroid-distance';
+
 export interface ClaimHighlightState {
   readonly claimId: string;
   readonly dieIndices: Uint32Array;
@@ -75,6 +80,8 @@ export interface ClaimHighlightState {
   }>;
   /** Optional wafer index selected atomically when activating a wafer-specific claim. */
   readonly targetWaferIndex?: number;
+  /** Ordered glow stagger mode (`redesign.md` §5.4). */
+  readonly glowOrderMode?: ClaimGlowOrderMode;
 }
 
 export interface SelectionMaskInputs {

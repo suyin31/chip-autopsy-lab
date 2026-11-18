@@ -11,25 +11,41 @@ import { paintWaferThumbnail, resolveCanvasPixelSize } from './wafer-geometry';
 export const WAFER_THUMB_BUTTON_PX = 48 as const;
 export const WAFER_THUMB_CANVAS_PX = 48 as const;
 
+export interface WaferSelectOptions {
+  readonly instant?: boolean;
+}
+
 export interface WaferSelectorProps {
   readonly lotId?: string;
   readonly wafers: readonly WaferSummaryMeta[];
   readonly dies: ColumnarDies;
   readonly byWaferYield: readonly YieldMetrics[];
   readonly activeWaferIndex: number;
+  /**
+   * Optional per-wafer boolean mask when a finding is active (`redesign.md` §3.5):
+   * - `false` -> thumbnail drops to `40%` opacity
+   * - `true` -> wafer gets a `4 px` ice (`#D6E6FF`) dot beneath it
+   */
+  readonly evidencePresence?: readonly boolean[] | null;
   readonly dpr?: number;
-  readonly onSelectWafer: (waferIndex: number) => void;
+  readonly onSelectWafer: (
+    waferIndex: number,
+    options?: WaferSelectOptions,
+  ) => void;
   readonly className?: string;
 }
 
 /**
- * Boxless horizontal wafer strip (`redesign.md` §0 #6, §3.4, §4.9):
+ * Boxless horizontal wafer strip (`redesign.md` §0 #6, §3.4, §3.5, §4.9, §5.8):
  * - `role="listbox"` `aria-orientation="horizontal"` with `scroll-snap-type: x proximity`,
  *   native momentum, hidden scrollbar, and `24 px` horizontal edge-fade mask
  * - `48 x 48` desktop (`40 x 40` mobile) circle wafer canvas + `caption` wafer label (`W01`)
  * - Rest opacity `0.72`, hover `1.0` + `accent-soft` ring, active `1.0` + `2 px` `#D6E6FF` ring
  *   at `3 px` offset, pressed `scale(0.94)`
- * - Roving `tabIndex`: `ArrowLeft`/`ArrowRight` ±1, `PageUp`/`PageDown` ±5, `Home`/`End`
+ * - Finding evidence state: zero-evidence thumbnails drop to `0.40` opacity; wafers with evidence
+ *   render a `4 px` `#D6E6FF` dot beneath them
+ * - Roving `tabIndex`: `ArrowLeft`/`ArrowRight` ±1, `PageUp`/`PageDown` ±5, `Home`/`End`;
+ *   held key-repeat (`event.repeat === true`) passes `{ instant: true }` for `0 ms` stage swap
  */
 export const WaferSelector = React.memo(function WaferSelector({
   lotId = 'LOT',
@@ -37,6 +53,7 @@ export const WaferSelector = React.memo(function WaferSelector({
   dies,
   byWaferYield,
   activeWaferIndex,
+  evidencePresence = null,
   dpr,
   onSelectWafer,
   className,
@@ -122,7 +139,9 @@ export const WaferSelector = React.memo(function WaferSelector({
   const focusAndSelect = (nextIndex: number, isRepeat: boolean): void => {
     const clamped = Math.min(count - 1, Math.max(0, nextIndex));
     lastSelectWasRepeatRef.current = isRepeat;
-    onSelectWafer(clamped);
+    onSelectWafer(clamped, {
+      instant: isRepeat || Boolean(shouldReduceMotion),
+    });
     itemRefs.current[clamped]?.focus({ preventScroll: true });
   };
 
@@ -130,18 +149,21 @@ export const WaferSelector = React.memo(function WaferSelector({
     event: React.KeyboardEvent<HTMLButtonElement>,
     index: number,
   ): void => {
+    if (typeof performance !== 'undefined') {
+      event.currentTarget.dataset.ack = String(performance.now());
+    }
     const repeat = event.repeat === true;
     switch (event.key) {
       case 'ArrowRight':
       case 'ArrowDown': {
         event.preventDefault();
-        focusAndSelect((index + 1) % count, repeat);
+        focusAndSelect(Math.min(count - 1, index + 1), repeat);
         break;
       }
       case 'ArrowLeft':
       case 'ArrowUp': {
         event.preventDefault();
-        focusAndSelect((index - 1 + count) % count, repeat);
+        focusAndSelect(Math.max(0, index - 1), repeat);
         break;
       }
       case 'PageDown': {
@@ -187,6 +209,11 @@ export const WaferSelector = React.memo(function WaferSelector({
         const isSelected = idx === safeActive;
         const yieldRatio = byWaferYield[idx]?.finalYield ?? 0;
         const yieldLabel = formatPercent(yieldRatio);
+        const hasFindingActive = evidencePresence !== null;
+        const waferHasEvidence =
+          hasFindingActive && Boolean(evidencePresence[idx]);
+        const isZeroEvidenceDimmed =
+          hasFindingActive && !waferHasEvidence;
 
         return (
           <button
@@ -201,10 +228,19 @@ export const WaferSelector = React.memo(function WaferSelector({
               wafer: wafer.waferId,
               yield: yieldLabel,
             })}
+            data-wafer-index={idx}
+            data-has-evidence={
+              hasFindingActive ? (waferHasEvidence ? 'true' : 'false') : undefined
+            }
             tabIndex={isSelected ? 0 : -1}
+            onPointerDown={(e) => {
+              if (typeof performance !== 'undefined') {
+                e.currentTarget.dataset.ack = String(performance.now());
+              }
+            }}
             onClick={() => {
               lastSelectWasRepeatRef.current = false;
-              onSelectWafer(idx);
+              onSelectWafer(idx, { instant: Boolean(shouldReduceMotion) });
             }}
             onKeyDown={(e) => handleItemKeyDown(e, idx)}
             className={cn(
@@ -214,11 +250,16 @@ export const WaferSelector = React.memo(function WaferSelector({
             )}
           >
             <span
+              data-testid="wafer-strip-thumb-ring"
               className={cn(
                 'relative inline-flex h-10 w-10 items-center justify-center rounded-full transition-opacity duration-[120ms] ease-[var(--ease-out)] md:h-12 md:w-12',
                 isSelected
-                  ? 'opacity-100 ring-2 ring-accent ring-offset-[3px] ring-offset-bg'
-                  : 'opacity-[0.72] hover:opacity-100 hover:ring-2 hover:ring-[var(--color-accent-soft)]',
+                  ? isZeroEvidenceDimmed
+                    ? 'opacity-40 ring-2 ring-accent ring-offset-[3px] ring-offset-bg'
+                    : 'opacity-100 ring-2 ring-accent ring-offset-[3px] ring-offset-bg'
+                  : isZeroEvidenceDimmed
+                    ? 'opacity-40 hover:opacity-70 hover:ring-2 hover:ring-[var(--color-accent-soft)]'
+                    : 'opacity-[0.72] hover:opacity-100 hover:ring-2 hover:ring-[var(--color-accent-soft)]',
               )}
             >
               <canvas
@@ -230,15 +271,24 @@ export const WaferSelector = React.memo(function WaferSelector({
                 className="pointer-events-none block h-10 w-10 rounded-full select-none md:h-12 md:w-12"
               />
             </span>
-            <span
-              className={cn(
-                'type-caption leading-none tabular-nums',
-                isSelected
-                  ? 'text-text-primary'
-                  : 'hidden text-text-tertiary md:inline',
-              )}
-            >
-              <Untranslated>{wafer.waferId}</Untranslated>
+            <span className="flex items-center gap-1">
+              <span
+                className={cn(
+                  'type-caption leading-none tabular-nums',
+                  isSelected
+                    ? 'text-text-primary'
+                    : 'hidden text-text-tertiary md:inline',
+                )}
+              >
+                <Untranslated>{wafer.waferId}</Untranslated>
+              </span>
+              {waferHasEvidence ? (
+                <span
+                  data-testid="wafer-strip-evidence-dot"
+                  aria-hidden="true"
+                  className="inline-block h-1 w-1 shrink-0 rounded-full bg-accent"
+                />
+              ) : null}
             </span>
           </button>
         );
