@@ -209,3 +209,130 @@ Specification: `.kiro/specs/chip-autopsy-lab/redesign.md`. Each task is a <= 15-
   - Also fix every open item (a)–(h) in logs/visual-acceptance.md (R4 landing + R6 stage visual issues) and mark each fixed there.
   - Probe sweep (§5.1), verdict rise-in (§5.2), count-up (§5.3), toast styling (§4.13), reduced-motion paths, and `e2e/perf-gate.spec.ts` (§5.10); record measurements in `logs/`.
   - Accept: first load sweeps in <= 1.2 s and any key skips it; with `reducedMotion: "reduce"` there is no sweep or stagger and stats show final values; perf gate shows 0 frames > 50 ms, median rAF < 20 ms, p95 < 34 ms; demo time-to-verdict < 3 s.
+
+## Premium pass
+
+Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.md` for visuals and interaction). Each task is one ~15-minute agent session, must leave `pnpm lint`, `pnpm typecheck`, and `pnpm test` green, and records the screenshots for its acceptance items in `logs/premium-acceptance.md`.
+
+**Tokens and theme**
+
+- [ ] P1. Steering and requirement amendments
+  - Rewrite `.kiro/steering/design-language.md` as the short form of premium §1, §3, §4, §8 (light default, one accent, new tokens); record the pass-die contrast amendment to Requirement 14.1 in `requirements.md` (premium §5.3).
+  - Accept: no steering rule contradicts premium.md; `requirements.md` 14.1 names the `prefers-contrast: more` fallback.
+- [ ] P2. Colour, elevation, radius, and motion tokens
+  - `src/ui/tokens/palette.ts` exports `THEME_TOKENS.light`, `THEME_TOKENS.dark`, `WAFER_TOKENS`, bin palettes (`bin-n`, `bin-n-ink`), and `bar-neutral`; `globals.css` defines the variables under `:root[data-theme]` and maps them in `@theme inline`; contrast tests for every ratio in premium §3.2, §3.3, §3.5 (premium §3.2–§3.12, §7.9).
+  - Accept: A1 (tokens), A13 (token ratio); palette tests assert `text-tertiary` >= 4.5:1 on `bg`, `surface`, `surface-sunken` in both themes.
+- [ ] P3. Theme mechanism
+  - Pre-hydration script for `data-theme` and `color-scheme`, `localStorage["cal.theme"]`, `DEFAULT_THEME_PREFERENCE = "system"`, live `matchMedia` listener, `theme-color` meta, Zustand `theme` slice and `useResolvedTheme()` (premium §3.1).
+  - Accept: A2 (without the menu, set via `localStorage`).
+- [ ] P4. Typography
+  - Type tokens and utilities for every style in premium §4.2, Inter feature settings, `opsz` on display roles, CJK line-heights, sizes, and break rules (premium §4.1–§4.3).
+  - Accept: computed styles match §4.2 for `display-l`, `stat`, `row-title`, `subhead` at 1440 and 390; A40 letter-spacing check.
+
+**Wafer rendering**
+
+- [ ] P5. Disc material
+  - Notch geometry from `WCR.WF_FLAT`, body gradient, thin film (feature-detected), exclusion line, bevel; unit test that no die crosses the exclusion radius (premium §5.2 steps 1–5).
+  - Accept: A5.
+- [ ] P6. Die tiles and thumbnails
+  - Street, fail die radius and facet, 80 % pass tile, `pass-tile-hc` under `prefers-contrast: more`, thumbnail rules for `p < 3` (premium §5.3).
+  - Accept: A6, A7, A13.
+- [ ] P7. Stage shadows and static sheen
+  - Ambient and contact shadow (light), halo (dark) inside the camera wrapper; sheen layer with the SVG notch mask at its rest position; hidden under reduced transparency (premium §5.1, §5.2 step 6, §3.3).
+  - Accept: A8.
+- [ ] P8. Overlay die states
+  - `dim-veil` with punched evidence mask, evidence rim and pre-rendered bloom sprite, hover and pinned strokes, selection rect (premium §5.4).
+  - Accept: A9 (static state, no animation yet).
+- [ ] P9. Wafer strip
+  - Scroller padding, 48 x 64 items, active and focus rings, hover scale, evidence opacity, side-aware edge fades, desktop chevrons (premium §5.8).
+  - Accept: A12.
+- [ ] P10. Stage header, control row, legend
+  - Header caption and evidence caption, one control row, legend entries and "+N more" popover, Select an area and Reset view, stage focus ring (premium §5.5–§5.7, §7.7).
+  - Accept: A11, A35 (stage part).
+
+**Layout**
+
+- [ ] P11. Landing
+  - Hero, buttons, hint, sample cards with 152 px discs, footer, at 1440, 1280, 1024, sm, and 390 (premium §6.1).
+  - Accept: A14, A20 (landing).
+- [ ] P12. Loaded view, desktop
+  - Sticky stage column, verdict column blocks 1–9 with the §6.2 spacing at 1440 and 1280 (premium §6.2).
+  - Accept: A15, A16, A19.
+- [ ] P13. Loaded view, tablet and mobile
+  - 1024 two-column variant, sm single column, 390 order and full-bleed stage, mobile finding-click scroll (premium §6.2).
+  - Accept: A17, A18.
+- [ ] P14. Loading, error, drag overlay, bins-only
+  - Loading column and progress, parse error layout, drag overlay frame, bins-only sheet and notice (premium §6.3–§6.6, §9.6).
+  - Accept: A20 (error, bins-only).
+
+**Components**
+
+- [ ] P15. Primitives
+  - Buttons (all variants and states), segmented control, menu, popover, and tooltip surfaces (premium §7.11, §7.8, §7.12).
+  - Accept: A30; primitives test asserts one primary variant per screen helper.
+- [ ] P16. Nav, theme toggle, lot picker
+  - Nav grid and scroll hairline, language switcher, Appearance menu (desktop button, mobile globe group), lot picker trigger and menu (premium §7.1, §7.2).
+  - Accept: A2 (menu path), A28, A29, A35 (tab order).
+- [ ] P17. Verdict headline, takeaway, confidence chip
+  - Cause phrase button states, healthy-lot variant, takeaway templates in core, confidence levels and popover (premium §7.3, §7.4, §9.3).
+  - Accept: A25, A26.
+- [ ] P18. Stats
+  - Stat buttons with evidence, captions, second caption line, no orange (premium §7.5).
+  - Accept: A4.
+- [ ] P19. Findings and possible causes
+  - Card, rows (rest, hover, pressed, selected), kind icons, expanded body, "Show N more", Possible causes disclosure, finding title templates (premium §7.6, §9.3).
+  - Accept: A27.
+- [ ] P20. "Where the yield went"
+  - Section card, takeaway, bar rows with `bar-neutral`, selected state linked to the store, show-all, empty state (premium §7.9).
+  - Accept: A32.
+- [ ] P21. Yield summary panel
+  - Restyle `src/ui/charts/YieldSummaryPanel.tsx`: section card, takeaway, lot numbers, site and wafer rows, anomaly label, narrow-viewport column rule; keep current store behaviour and tests (premium §7.10).
+  - Accept: A33, A19.
+- [ ] P22. Toasts, selection popover, sheets
+  - Sonner styling and timing, selection popover content, dialog and bottom-sheet surfaces (premium §7.13, §7.14, §7.16).
+  - Accept: A34.
+- [ ] P23. Magnifier
+  - Inter readout with 4 rows, status first, loupe radius and rim, touch pinned readout (premium §7.15, §5.9).
+  - Accept: A10.
+- [ ] P24. Term and glossary
+  - `Term` component and popover, all `glossary.*` keys in 5 locales, Terms placed per §2.2 (premium §2.3, §7.17, §9.5).
+  - Accept: A21, A22.
+- [ ] P25. Coach marks
+  - Three hints, anchoring, persistence in `localStorage["cal.hints.v1"]`, `?nohints=1`, suppression rules (premium §2.4, §7.18).
+  - Accept: A23, A24.
+- [ ] P26. Copy and i18n pass
+  - Plain labels from §2.2, every key in §9.5 in all 5 locales with parity, `<bdi translate="no">` wrapping, overflow behaviours from §9.7 (premium §9).
+  - Accept: A40, A26 (no exclamation marks).
+
+**Motion**
+
+- [ ] P27. Probe sweep and ignite
+  - Session flag, progress pacing, probe light, 280 ms ignite, skip on any input, reduced-motion fade, `data-sweep` (premium §8.1).
+  - Accept: A37, A36 (sweep part).
+- [ ] P28. Verdict reveal and count-up
+  - Six-block stagger with `spring-ui`, ref-based count-up, interrupt on input, reduced-motion path (premium §8.2).
+  - Accept: A36.
+- [ ] P29. Evidence ignite and camera focus
+  - Veil fade, pattern-ordered rim and bloom stagger, camera targeting rules, strip dimming, clear and switch behaviour, mobile scroll then ignite (premium §8.3).
+  - Accept: A38, A9 (animated).
+- [ ] P30. Hover, magnifier, zoom, and pan motion
+  - Magnifier show and hide, wheel and pinch factors, rubber-band curve, inertia, `spring-throw`, double-click, reduced-motion paths (premium §8.4, §8.5).
+  - Accept: A10; perf gate wheel and drag steps stay within A39 limits.
+- [ ] P31. Disclosure, wafer switching, toasts, overlays
+  - `layout="position"` glide without text scaling, chevrons, wafer crossfade on click and 0 ms on keys, toast, menu, popover, and sheet motion (premium §8.6, §8.7, §8.12, §8.13).
+  - Accept: A31.
+- [ ] P32. Theme cross-fade and silicon sheen
+  - View Transitions cross-fade with `skipTransition()` on repeat; sheen pointer follow with `spring-sheen`, landing-card variant, freeze during gestures (premium §8.8, §8.11).
+  - Accept: A2 (no flash on switch), A39 (theme and sheen steps).
+
+**Polish**
+
+- [ ] P33. Accent and hover audit
+  - Automated check counting ember-family elements per viewport; remove stray orange; verify every hover uses the §8.9 properties and no `transition: all` remains (premium §3.4, §8.9, §1.3).
+  - Accept: A3, A4.
+- [ ] P34. Reduced motion and perf gate
+  - Extend `e2e/perf-gate.spec.ts` with the theme switch and sheen sweep; reduced-motion e2e covering every row of §8.16; record numbers in `logs/` (premium §8.16, §8.17).
+  - Accept: A36, A39.
+- [ ] P35. Full acceptance run
+  - Screenshots for A1–A40 at the four viewports and both themes; fix small regressions found; write `logs/premium-acceptance.md` with pass or fail per item and `logs/phase-premium-summary.md` (premium §10).
+  - Accept: every item A1–A40 marked pass.

@@ -1,0 +1,8 @@
+Continue the premium spec. The previous session wrote .kiro/specs/chip-autopsy-lab/premium.md sections 0 to 6.6 and timed out. Read logs/prompt-premium-spec.txt for the full brief, then read premium.md (do NOT rewrite existing sections; only fix a clear contradiction if you find one).
+APPEND the missing sections to premium.md, writing each section with its own file append so a stall loses little:
+7. Components — every component with exact styles and states: nav (incl. quiet theme toggle), lot picker, segmented controls, buttons, confidence chip, stats, findings rows (rest/hover/expanded), possible causes, Pareto, yield summary panel (src/ui/charts/YieldSummaryPanel.tsx), toasts, magnifier, glossary tooltip, coach marks.
+8. Interaction + motion — for each interaction (load/probe sweep, verdict reveal, finding click -> dies light up + camera focus, hover, zoom/pan, wafer switching, theme switch, disclosure, toasts): duration, easing/spring, what animates (transform/opacity only), interruptibility, reduced-motion fallback. 2-3 restrained signature delight moments.
+9. Copy tone and i18n (5 locales; bin/test names untranslated; CJK adjustments).
+10. Acceptance checklist: 25-40 numbered, screenshot-verifiable items (A1..An), including Clarity items.
+Then append to .kiro/specs/chip-autopsy-lab/tasks.md a section "## Premium pass" with tasks P1..Pn, each one ~15-minute agent session, ordered tokens+theme -> wafer rendering -> layout -> components -> motion -> polish, each citing premium.md sections and acceptance items.
+Keep it tight: concrete values, no prose padding. Do NOT change source code. No web fetch.

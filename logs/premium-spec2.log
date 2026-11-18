@@ -1,0 +1,138 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8
+[tool] Read brief and premium spec outline
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=25
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=28
+[tool] status: Completed
+[tool] List cross-references to unwritten sections
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=104
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Survey UI source, i18n, and tasks file
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=227
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read yield panel and locale list
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Skim redesign headings, errors, references
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=118
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read redesign components, motion, i18n
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=84
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Fix section and acceptance cross-references
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=120
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check translations, icon lib, file ending
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=2304
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read existing CJK autopsy phrase translations
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=41
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now appending §7 in parts.
+[tool] Append components 7.1 to 7.5
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1227
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Append components 7.6 to 7.10
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1381
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Append components 7.11 to 7.19
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1380
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Tidy selection popover row wording
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=115
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now §8 part 1.
+[tool] Append motion sections 8.1 to 8.5
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1179
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Append motion sections 8.6 to 8.17
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1253
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Clarify magnifier blur perf fallback
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=127
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Append section 9 copy and i18n
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1539
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Fix two copy rule inaccuracies
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=164
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Append section 10 acceptance checklist
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1348
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Polish A13/A34 and append Premium pass tasks
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1416
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Validate cross-references and acceptance coverage
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=191
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+I appended §7 to §10 to `premium.md` and added a "## Premium pass" section with tasks P1 to P35 to `tasks.md`. I wrote each section with its own file append. No source code was changed, and no web fetches were made. I ran a script that confirmed every `§` reference resolves to a real heading, and that every acceptance item A1 to A40 is cited by at least one task.
+
+**What was added**
+- **§7 Components (7.1 to 7.19):** every component on your list, plus menus, sheets and empty states. Each has sizes, tokens and its states (rest, hover, pressed, selected, focus).
+  - **Theme toggle:** a 32 px icon button that opens a "Match system / Light / Dark" menu. On mobile it moves into the language menu.
+  - **Yield summary panel:** keeps the current behaviour of `YieldSummaryPanel.tsx` and changes only visuals and copy.
+- **§8 Interaction and motion (8.1 to 8.17):** each interaction has its duration, easing or spring, what animates, how it is interrupted, and the reduced-motion fallback. There are three delight moments:
+  1. The probe sweep on first load, after which all the failing dies light up together.
+  2. Evidence dies lighting up in pattern order, for example clockwise round an edge ring.
+  3. A sheen on the wafer disc that follows the pointer.
+- **§9 Copy and i18n:** tone rules, the never-translated list, English sentence templates, the two themed phrases in all 5 locales (taken from the existing dictionaries), every new string key, how long text should wrap or truncate, and the extra CJK rules.
+- **§10 Acceptance checklist:** A1 to A40, each checkable from a screenshot or a DOM or pixel check. There are 8 items on clarity (A20 to A27).
+- **Tasks P1 to P35:** ordered tokens and theme, wafer rendering, layout, components, motion, then polish. Each cites its `premium.md` sections and acceptance items.
+
+**Fixes to the existing sections**
+- The earlier text expected copy in §10 and the checklist in §12, with items named `A-nn`. You asked for copy in §9 and the checklist in §10 as A1 to An. I changed the old references to match (`§10.x` → `§9.x`, `A-12/15/16` → `A12/15/16`, and the notation line).
+- The table in §0 pointed the stage focus ring to §7.6, which is the findings section. It now points to §7.7.
+
+**Decisions worth checking**
+- The Pareto chart needed a grey for bars other than the main one, so I added a new token, `bar-neutral`. Task P2 adds it to the palette.
+- The Retests column in the yield panel is hidden on screens narrower than 400 px, which includes the 390 px mobile view.
+- If the moving magnifier's blur makes animation stutter in the performance test, it switches to a solid background.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=201
+
