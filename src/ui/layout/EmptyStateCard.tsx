@@ -31,6 +31,14 @@ import {
   computeStageDiscLayerRects,
   type StageLayerRect,
 } from '@/ui/wafer-map/stage-layers';
+import {
+  canSheenFollow,
+  computeSheenTarget,
+  createSheenFollower,
+  readSheenFollowEnvironment,
+  SHEEN_CARD_AMPLITUDE_D,
+  SHEEN_REST,
+} from '@/ui/wafer-map/sheen-motion';
 import { usePrefersMoreContrast } from '@/ui/wafer-map/use-prefers-more-contrast';
 import {
   computeLandingCardWaferRadiusPx,
@@ -127,11 +135,71 @@ function layerStyle(rect: StageLayerRect): React.CSSProperties {
   };
 }
 
+/**
+ * Premium §8.11 landing variant: while the wafer's button (card or hero) is hovered by a mouse
+ * or pen, the sheen ellipse follows the pointer at 0.03 D on `spring-sheen`; it returns to rest
+ * on leave. Native listeners and one `transform` write per moving frame, no React render.
+ */
+function useLandingSheenFollow(
+  frameRef: React.RefObject<HTMLDivElement | null>,
+  sheenRef: React.RefObject<HTMLDivElement | null>,
+  ellipseRef: React.RefObject<HTMLDivElement | null>,
+): void {
+  React.useEffect(() => {
+    const frame = frameRef.current;
+    const host: HTMLElement | null = frame?.closest('button') ?? frame;
+    if (!host) {
+      return;
+    }
+    const follower = createSheenFollower({
+      write: (transform) => {
+        if (ellipseRef.current) {
+          ellipseRef.current.style.transform = transform;
+        }
+      },
+      requestFrame: (cb) => window.requestAnimationFrame(cb),
+      cancelFrame: (id) => window.cancelAnimationFrame(id),
+    });
+    const onMove = (event: PointerEvent): void => {
+      const sheen = sheenRef.current;
+      const env = readSheenFollowEnvironment();
+      const disabled = host instanceof HTMLButtonElement && host.disabled;
+      if (!sheen || disabled || !canSheenFollow(event.pointerType, env)) {
+        if (env.reducedMotion || env.reducedTransparency) {
+          follower.snapToRest();
+        }
+        return;
+      }
+      const r = sheen.getBoundingClientRect();
+      follower.setTarget(
+        computeSheenTarget(
+          event.clientX,
+          event.clientY,
+          r.left + r.width / 2,
+          r.top + r.height / 2,
+          r.width / 2,
+          SHEEN_CARD_AMPLITUDE_D,
+        ),
+      );
+    };
+    const onLeave = (): void => follower.setTarget(SHEEN_REST);
+    host.addEventListener('pointermove', onMove);
+    host.addEventListener('pointerleave', onLeave);
+    return () => {
+      host.removeEventListener('pointermove', onMove);
+      host.removeEventListener('pointerleave', onLeave);
+      follower.dispose();
+    };
+  }, [frameRef, sheenRef, ellipseRef]);
+}
+
 interface LandingWaferDiscProps {
   readonly presetId: DemoPresetId;
   readonly size: number;
   /** Test ID for a layer (`undefined` is the canvas). */
-  readonly testId: (part?: 'frame' | 'contact' | 'ambient' | 'halo' | 'sheen') => string;
+  readonly testId: (
+    part?: 'frame' | 'contact' | 'ambient' | 'halo' | 'sheen' | 'sheen-ellipse',
+  ) => string;
   /**
    * Hero wafer (premium §11.1): full §5 disc material with the thin film and the stage shadows
    * (light ambient + contact, dark halo). Card wafers keep the §5.3 thumbnail rules.
@@ -153,6 +221,10 @@ function LandingWaferDisc({
   renderWorkerThumbnail,
 }: LandingWaferDiscProps): React.JSX.Element {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const frameRef = React.useRef<HTMLDivElement | null>(null);
+  const sheenRef = React.useRef<HTMLDivElement | null>(null);
+  const sheenEllipseRef = React.useRef<HTMLDivElement | null>(null);
+  useLandingSheenFollow(frameRef, sheenRef, sheenEllipseRef);
   const preview = React.useMemo(
     () => getDemoPresetPreview(presetId),
     [presetId],
@@ -246,6 +318,7 @@ function LandingWaferDisc({
   // both with the §5.2 step 6 sheen at rest, masked to the notch-cut disc
   return (
     <div
+      ref={frameRef}
       data-testid={testId('frame')}
       style={{ width: `${size}px`, height: `${size}px` }}
       className="relative shrink-0"
@@ -289,6 +362,7 @@ function LandingWaferDisc({
         className="pointer-events-none relative block select-none"
       />
       <div
+        ref={sheenRef}
         aria-hidden="true"
         data-testid={testId('sheen')}
         style={{
@@ -303,6 +377,8 @@ function LandingWaferDisc({
         className="wafer-sheen pointer-events-none absolute overflow-hidden rounded-full mix-blend-screen"
       >
         <div
+          ref={sheenEllipseRef}
+          data-testid={testId('sheen-ellipse')}
           style={{
             ...computeSheenEllipseRestStyle(),
             backgroundImage: WAFER_TOKENS.sheen,

@@ -17,6 +17,7 @@ import { useThemeStore } from '@/ui/state/theme-store';
 import {
   DEFAULT_THEME_PREFERENCE,
   type ResolvedTheme,
+  switchThemePreference,
   THEME_PREFERENCES,
   type ThemePreference,
 } from '@/ui/theme';
@@ -100,7 +101,7 @@ export function AppearanceRadioRows({
                 aria-hidden="true"
               />
             }
-            onSelect={() => useThemeStore.getState().setPreference(item)}
+            onSelect={() => switchThemePreference(item)}
           >
             {label}
           </DropdownMenuRadioItem>

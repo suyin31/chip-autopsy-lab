@@ -16,4 +16,11 @@ export {
   writeStoredThemePreference,
 } from './theme-preference';
 export { THEME_INIT_SCRIPT } from './theme-script';
-export { ThemeController } from './ThemeController';
+export { switchThemePreference, ThemeController } from './ThemeController';
+export {
+  createThemeSwitcher,
+  THEME_SWITCHING_ATTRIBUTE,
+  type ThemeSwitcher,
+  type ViewTransitionLike,
+  withTransitionsSuppressed,
+} from './theme-transition';

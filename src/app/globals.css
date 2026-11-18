@@ -937,6 +937,23 @@
   }
 }
 
+/*
+ * Theme switch (premium §8.8): the Appearance menu runs the change in a View Transition; the
+ * root snapshots cross-fade over dur-4 ease-in-out, opacity only (UA fade keyframes). While the
+ * theme attributes change, every CSS transition is off so no element animates its own colours.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-4);
+  animation-timing-function: var(--ease-in-out);
+}
+
+:root[data-theme-switching] *,
+:root[data-theme-switching] *::before,
+:root[data-theme-switching] *::after {
+  transition: none !important;
+}
+
 @media (prefers-reduced-transparency: reduce) {
   /* The silicon sheen is hidden under reduced transparency (premium §5.2 step 6) */
   .wafer-sheen {

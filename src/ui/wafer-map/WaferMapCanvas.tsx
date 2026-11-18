@@ -83,6 +83,15 @@ import {
   computeSheenEllipseRestStyle,
   computeStageDiscLayerRects,
 } from './stage-layers';
+import {
+  canSheenFollow,
+  computeSheenTarget,
+  createSheenFollower,
+  readSheenFollowEnvironment,
+  SHEEN_REST,
+  SHEEN_STAGE_AMPLITUDE_D,
+  type SheenFollower,
+} from './sheen-motion';
 import { usePrefersMoreContrast } from './use-prefers-more-contrast';
 
 export interface WaferMapCanvasProps {
@@ -290,6 +299,10 @@ function WaferMapCanvasImpl({
   const contactShadowRef = React.useRef<HTMLDivElement>(null);
   const haloRef = React.useRef<HTMLDivElement>(null);
   const sheenRef = React.useRef<HTMLDivElement>(null);
+  const sheenEllipseRef = React.useRef<HTMLDivElement>(null);
+  // Premium §8.11: pointer-follow sheen; last hover pointer (client px) for the post-settle re-target
+  const sheenFollowerRef = React.useRef<SheenFollower | null>(null);
+  const sheenPointerRef = React.useRef<{ x: number; y: number } | null>(null);
   const resetViewRef = React.useRef<HTMLDivElement>(null);
   const skipHintRef = React.useRef<HTMLParagraphElement>(null);
   const finishSweepRef = React.useRef<(() => void) | null>(null);
@@ -390,6 +403,53 @@ function WaferMapCanvasImpl({
 
   const reducedMotionRef = React.useRef(prefersReduced);
   reducedMotionRef.current = prefersReduced;
+
+  if (sheenFollowerRef.current === null && typeof window !== 'undefined') {
+    sheenFollowerRef.current = createSheenFollower({
+      write: (transform) => {
+        const el = sheenEllipseRef.current;
+        if (el) {
+          el.style.transform = transform;
+        }
+      },
+      requestFrame: (cb) => window.requestAnimationFrame(cb),
+      cancelFrame: (id) => window.cancelAnimationFrame(id),
+    });
+  }
+
+  // Sheen target for a pointer in client px, from the disc's on-screen box (camera included)
+  const retargetSheen = React.useCallback((clientX: number, clientY: number) => {
+    const follower = sheenFollowerRef.current;
+    const sheenEl = sheenRef.current;
+    if (!follower || !sheenEl) {
+      return;
+    }
+    const r = sheenEl.getBoundingClientRect();
+    follower.setTarget(
+      computeSheenTarget(
+        clientX,
+        clientY,
+        r.left + r.width / 2,
+        r.top + r.height / 2,
+        r.width / 2,
+        SHEEN_STAGE_AMPLITUDE_D,
+      ),
+    );
+  }, []);
+
+  React.useEffect(() => {
+    if (prefersReduced) {
+      sheenPointerRef.current = null;
+      sheenFollowerRef.current?.snapToRest();
+    }
+  }, [prefersReduced]);
+
+  React.useEffect(
+    () => () => {
+      sheenFollowerRef.current?.dispose();
+    },
+    [],
+  );
 
   const probeOrderByWaferRef = React.useRef(probeOrderByWafer);
   probeOrderByWaferRef.current = probeOrderByWafer;
@@ -592,6 +652,19 @@ function WaferMapCanvasImpl({
         if (cameraMotionActiveRef.current !== motionActive) {
           cameraMotionActiveRef.current = motionActive;
           magnifierRef.current?.setCameraMotion(motionActive);
+          // Premium §8.11: the sheen target holds while the camera moves, then re-aims at the pointer
+          const follower = sheenFollowerRef.current;
+          if (follower) {
+            if (motionActive) {
+              follower.setFrozen(true);
+            } else {
+              const pointer = sheenPointerRef.current;
+              if (pointer) {
+                retargetSheen(pointer.x, pointer.y);
+              }
+              follower.setFrozen(false);
+            }
+          }
         }
         magnifierRef.current?.syncPositionForCamera();
         syncCommittedPopoverForCamera(camera);
@@ -1405,6 +1478,12 @@ function WaferMapCanvasImpl({
       const pointerX = event.clientX - bounds.left;
       const pointerY = event.clientY - bounds.top;
 
+      // Premium §8.11: sheen follows a hovering mouse or pen; touch keeps it at rest
+      if (canSheenFollow(event.pointerType, readSheenFollowEnvironment())) {
+        sheenPointerRef.current = { x: event.clientX, y: event.clientY };
+        retargetSheen(event.clientX, event.clientY);
+      }
+
       // Active box-select drag: update live rect & popover in rAF with 0 React renders (§5.7, §5.10)
       if (
         boxSelectDragRef.current !== null &&
@@ -1463,7 +1542,13 @@ function WaferMapCanvasImpl({
         magnifierRef.current?.notifyStagePointer(pointerX, pointerY, hitIndex);
       }
     },
-    [clearTouchLongPress, flushBoxSelectFrame, hitTestAtStagePoint, store],
+    [
+      clearTouchLongPress,
+      flushBoxSelectFrame,
+      hitTestAtStagePoint,
+      retargetSheen,
+      store,
+    ],
   );
 
   const finishPointer = React.useCallback(
@@ -1659,6 +1744,10 @@ function WaferMapCanvasImpl({
     ) {
       store.getState().setHoveredDieIndex(null);
       magnifierRef.current?.notifyStagePointerLeave();
+    }
+    if (sheenPointerRef.current !== null) {
+      sheenPointerRef.current = null;
+      sheenFollowerRef.current?.setTarget(SHEEN_REST);
     }
   }, [store]);
 
@@ -2360,6 +2449,7 @@ function WaferMapCanvasImpl({
               className="wafer-sheen pointer-events-none absolute z-[2] overflow-hidden rounded-full mix-blend-screen"
             >
               <div
+                ref={sheenEllipseRef}
                 data-testid="wafer-stage-sheen-ellipse"
                 style={{
                   ...sheenEllipseRest,

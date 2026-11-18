@@ -6,17 +6,67 @@
  * Renders nothing. On mount it re-reads `localStorage["cal.theme"]` and the OS scheme
  * into the `theme` store, listens to `(prefers-color-scheme: dark)` live, persists
  * preference changes, and writes `data-theme`, `color-scheme`, and `theme-color`
- * whenever the resolved theme changes. OS-driven changes apply instantly (§8.8).
+ * whenever the resolved theme changes, with CSS transitions off for that write. OS-driven
+ * changes apply instantly; Appearance menu choices go through `switchThemePreference`,
+ * which cross-fades the root with a View Transition (§8.8).
  */
 
 import * as React from 'react';
+import { flushSync } from 'react-dom';
 import { useThemeStore } from '@/ui/state/theme-store';
 import {
   applyResolvedTheme,
   DARK_SCHEME_QUERY,
   readStoredThemePreference,
+  resolveTheme,
+  type ResolvedTheme,
+  type ThemePreference,
   writeStoredThemePreference,
 } from './theme-preference';
+import {
+  createThemeSwitcher,
+  type ViewTransitionDocumentLike,
+  withTransitionsSuppressed,
+} from './theme-transition';
+
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+
+function applyThemeToDocument(theme: ResolvedTheme): void {
+  withTransitionsSuppressed(
+    document,
+    () => applyResolvedTheme(theme, document),
+    (body) => {
+      if (body instanceof Element) {
+        void window.getComputedStyle(body).color;
+      }
+    },
+  );
+}
+
+const themeSwitcher = createThemeSwitcher<ThemePreference>({
+  getDocument: () =>
+    typeof document === 'undefined'
+      ? null
+      : (document as unknown as ViewTransitionDocumentLike),
+  prefersReducedMotion: () =>
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia(REDUCED_MOTION_QUERY).matches,
+  changesResolvedTheme: (preference) => {
+    const { resolved, systemPrefersDark } = useThemeStore.getState();
+    return resolveTheme(preference, systemPrefersDark) !== resolved;
+  },
+  // The store subscriber below writes the DOM synchronously; `flushSync` renders React
+  // (menu check, magnifier canvas theme) before the new snapshot is taken.
+  apply: (preference) => {
+    flushSync(() => useThemeStore.getState().setPreference(preference));
+  },
+});
+
+/** Appearance menu entry point: View Transition cross-fade, instant when unsupported or reduced (§8.8). */
+export function switchThemePreference(preference: ThemePreference): void {
+  themeSwitcher.switchTo(preference);
+}
 
 function getStorage(): Storage | null {
   try {
@@ -44,7 +94,7 @@ export function ThemeController(): null {
         writeStoredThemePreference(getStorage(), state.preference);
       }
       if (state.resolved !== prev.resolved) {
-        applyResolvedTheme(state.resolved, document);
+        applyThemeToDocument(state.resolved);
       }
     });
 
