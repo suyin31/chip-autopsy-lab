@@ -19,7 +19,7 @@ import {
   useSelectionStore,
   type WaferColorMode,
 } from '@/ui/state';
-import { SPRING_TOKENS } from '@/ui/tokens';
+import { SPRING_PHYSICS_EQUIVALENTS } from '@/ui/tokens';
 import { BaseCanvas, type BaseCanvasHandle } from './BaseCanvas';
 import { BinLegend } from './BinLegend';
 import { FailCanvas, type FailCanvasHandle } from './FailCanvas';
@@ -1139,9 +1139,9 @@ function WaferMapCanvasImpl({
       const bTarget = targetRect.y + targetRect.height;
 
       const spring = {
-        stiffness: SPRING_TOKENS.snappy.stiffness,
-        damping: SPRING_TOKENS.snappy.damping,
-        mass: SPRING_TOKENS.snappy.mass,
+        stiffness: SPRING_PHYSICS_EQUIVALENTS.snappy.stiffness,
+        damping: SPRING_PHYSICS_EQUIVALENTS.snappy.damping,
+        mass: SPRING_PHYSICS_EQUIVALENTS.snappy.mass,
       };
       let lastMs =
         typeof performance !== 'undefined' ? performance.now() : Date.now();

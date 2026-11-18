@@ -133,7 +133,7 @@ export function FindingsList({
 
               <div
                 className={cn(
-                  'group/finding rounded-md transition-[background-color,transform] ease-out',
+                  'group/finding rounded-lg transition-[background-color,transform] ease-out',
                   isPressed
                     ? 'bg-surface-2 duration-0 scale-[0.99]'
                     : isSelected
@@ -154,7 +154,7 @@ export function FindingsList({
                   onPointerCancel={clearPressedRow}
                   onClick={() => onToggleClaim(row.claim)}
                   className={cn(
-                    'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 rounded-md border-0 bg-transparent px-4 py-[14px] text-left',
+                    'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 rounded-lg border-0 bg-transparent px-4 py-[14px] text-left',
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
                   )}
                 >
@@ -257,7 +257,7 @@ export function FindingsList({
 
             <div
               className={cn(
-                'rounded-md transition-[background-color,transform] duration-120 ease-out',
+                'rounded-lg transition-[background-color,transform] duration-120 ease-out',
                 pressedRowKey === 'possible-causes'
                   ? 'bg-surface-3 scale-[0.99]'
                   : hypothesesOpen
@@ -278,7 +278,7 @@ export function FindingsList({
                 onPointerCancel={clearPressedRow}
                 onClick={() => setHypothesesOpen((prev) => !prev)}
                 className={cn(
-                  'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 rounded-md border-0 bg-transparent px-4 py-[14px] text-left',
+                  'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 rounded-lg border-0 bg-transparent px-4 py-[14px] text-left',
                   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
                 )}
               >

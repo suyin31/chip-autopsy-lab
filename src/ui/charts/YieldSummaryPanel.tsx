@@ -126,7 +126,7 @@ export function YieldSummaryPanel({
   const rowClass = (pressed: boolean): string =>
     cn(
       ROW_GRID,
-      'w-full cursor-pointer appearance-none rounded-md border-0 px-4 py-2.5 text-left transition-[background-color] duration-120 ease-out',
+      'w-full cursor-pointer appearance-none rounded-lg border-0 px-4 py-2.5 text-left transition-[background-color] duration-120 ease-out',
       'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
       pressed ? 'bg-surface-2' : 'bg-transparent hover:bg-surface-1',
     );
@@ -292,7 +292,7 @@ export function YieldSummaryPanel({
             aria-expanded={expanded}
             aria-controls={wafersListId}
             onClick={() => setExpanded((v) => !v)}
-            className="mt-1 cursor-pointer rounded-md px-4 py-2 type-control text-text-secondary transition-colors duration-120 ease-out hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="mt-1 cursor-pointer rounded-lg px-4 py-2 type-control text-text-secondary transition-colors duration-120 ease-out hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             {expanded
               ? t('yield.showFewer')

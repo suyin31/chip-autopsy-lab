@@ -199,7 +199,7 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
     expect(openHtml).toContain('aria-expanded="true"');
     expect(openHtml).toContain('role="menu"');
     expect(openHtml).toContain('surface-material');
-    expect(openHtml).toContain('rounded-lg');
+    expect(openHtml).toContain('rounded-2xl');
     expect(openHtml).toContain('role="menuitemradio"');
     expect(openHtml).toContain('aria-checked="true"');
     expect(openHtml).toContain('lang="ja"');
@@ -273,7 +273,7 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
 
     const toastClass = SONNER_TOAST_OPTIONS.classNames.toast;
     expect(toastClass).toContain('surface-material');
-    expect(toastClass).toContain('rounded-md');
+    expect(toastClass).toContain('rounded-lg');
     expect(toastClass).toContain('w-[360px]');
     expect(toastClass).toContain('px-4');
     expect(toastClass).toContain('py-3');

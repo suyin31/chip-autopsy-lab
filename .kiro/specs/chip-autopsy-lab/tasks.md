@@ -219,7 +219,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P1. Steering and requirement amendments
   - Rewrite `.kiro/steering/design-language.md` as the short form of premium §1, §3, §4, §8 (light default, one accent, new tokens); record the pass-die contrast amendment to Requirement 14.1 in `requirements.md` (premium §5.3).
   - Accept: no steering rule contradicts premium.md; `requirements.md` 14.1 names the `prefers-contrast: more` fallback.
-- [ ] P2. Colour, elevation, radius, and motion tokens
+- [x] P2. Colour, elevation, radius, and motion tokens
   - `src/ui/tokens/palette.ts` exports `THEME_TOKENS.light`, `THEME_TOKENS.dark`, `WAFER_TOKENS`, bin palettes (`bin-n`, `bin-n-ink`), and `bar-neutral`; `globals.css` defines the variables under `:root[data-theme]` and maps them in `@theme inline`; contrast tests for every ratio in premium §3.2, §3.3, §3.5 (premium §3.2–§3.12, §7.9).
   - Accept: A1 (tokens), A13 (token ratio); palette tests assert `text-tertiary` >= 4.5:1 on `bg`, `surface`, `surface-sunken` in both themes.
 - [ ] P3. Theme mechanism
@@ -333,6 +333,6 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [ ] P34. Reduced motion and perf gate
   - Extend `e2e/perf-gate.spec.ts` with the theme switch and sheen sweep; reduced-motion e2e covering every row of §8.16; record numbers in `logs/` (premium §8.16, §8.17).
   - Accept: A36, A39.
-- [ ] P35. Full acceptance run
+- [ ] P35. Full acceptance run (also amend requirements.md 14.2/14.3 focus colours and product.md mobile non-goal to match premium.md)
   - Screenshots for A1–A40 at the four viewports and both themes; fix small regressions found; write `logs/premium-acceptance.md` with pass or fail per item and `logs/phase-premium-summary.md` (premium §10).
   - Accept: every item A1–A40 marked pass.

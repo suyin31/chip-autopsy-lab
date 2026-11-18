@@ -170,7 +170,7 @@ function DemoWaferThumbnail({
   }, [presetId, preview, renderWorkerThumbnail]);
 
   return (
-    <div className="relative flex h-[176px] w-full shrink-0 items-center justify-center overflow-hidden rounded-md md:h-[196px]">
+    <div className="relative flex h-[176px] w-full shrink-0 items-center justify-center overflow-hidden rounded-lg md:h-[196px]">
       {/* Radial vignette behind wafer: diameter = 190 * 1.5 = 285 px (§2.1, §3.1, visual-acceptance (c)) */}
       <div
         aria-hidden="true"
@@ -276,7 +276,7 @@ function DemoLotCardButton({
       onPointerCancel={releasePress}
       onClick={() => onLoadDemoLot(presetId)}
       className={cn(
-        'group flex h-[280px] w-[300px] shrink-0 snap-start cursor-pointer flex-col rounded-lg bg-surface-1 p-2 text-left ring-surface shadow-none select-none',
+        'group flex h-[280px] w-[300px] shrink-0 snap-start cursor-pointer flex-col rounded-2xl bg-surface-1 p-2 text-left ring-surface shadow-none select-none',
         'md:h-[300px] md:w-auto',
         'transition-[background-color,box-shadow,opacity] duration-[120ms] ease-[var(--ease-out)]',
         '[@media(hover:hover)]:enabled:hover:bg-surface-2 [@media(hover:hover)]:enabled:hover:ring-surface-strong',

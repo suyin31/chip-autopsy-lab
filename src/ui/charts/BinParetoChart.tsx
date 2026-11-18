@@ -238,7 +238,7 @@ export function BinParetoChart({
                   })}
                   onClick={() => handleToggle(entry.binCode)}
                   className={cn(
-                    'block w-full cursor-pointer appearance-none rounded-md border-0 px-4 py-3 text-left transition-[background-color] duration-120 ease-out',
+                    'block w-full cursor-pointer appearance-none rounded-lg border-0 px-4 py-3 text-left transition-[background-color] duration-120 ease-out',
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
                     isFiltered || isHighlighted
                       ? 'bg-surface-2'
@@ -308,7 +308,7 @@ export function BinParetoChart({
           data-testid="bin-pareto-expand"
           aria-expanded={expanded}
           onClick={() => setExpanded((v) => !v)}
-          className="mt-1 cursor-pointer rounded-md px-4 py-2 type-control text-text-secondary transition-colors duration-120 ease-out hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="mt-1 cursor-pointer rounded-lg px-4 py-2 type-control text-text-secondary transition-colors duration-120 ease-out hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           {expanded
             ? t('pareto.showFewer')

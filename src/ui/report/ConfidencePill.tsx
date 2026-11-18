@@ -189,7 +189,7 @@ export function ConfidencePill({
           : undefined
       }
       className={cn(
-        'z-(--z-menus) w-[300px] max-w-[calc(100vw-32px)] rounded-md p-4 surface-material',
+        'z-(--z-menus) w-[300px] max-w-[calc(100vw-32px)] rounded-lg p-4 surface-material',
         !mounted && 'mt-2',
       )}
     >

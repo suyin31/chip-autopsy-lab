@@ -199,7 +199,7 @@ export function BinLegend({
             {moreBinsOpen && overflowBinItems.length > 0 ? (
               <div
                 role="dialog"
-                className="surface-material absolute bottom-full left-0 mb-2 flex max-h-56 min-w-[220px] flex-col gap-1 overflow-y-auto rounded-md p-2.5"
+                className="surface-material absolute bottom-full left-0 mb-2 flex max-h-56 min-w-[220px] flex-col gap-1 overflow-y-auto rounded-lg p-2.5"
               >
                 {binLegendItems.map((item) => {
                   const isHidden = hiddenBins.has(item.code);

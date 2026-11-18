@@ -107,7 +107,7 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(html).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
     expect(html).toContain('md:h-[190px]');
     expect(html).toContain('md:w-[190px]');
-    expect(html).not.toContain('rounded-md bg-bg');
+    expect(html).not.toContain('rounded-lg bg-bg');
   });
 
   it('maps all 7 §3.7 error codes cleanly and renders icon-free parse-failed hero above demo cards', () => {

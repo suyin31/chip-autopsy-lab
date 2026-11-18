@@ -13,7 +13,7 @@ export const SONNER_TOAST_OPTIONS = {
   mobileOffset: 16,
   classNames: {
     toast:
-      'surface-material flex w-[360px] max-w-[calc(100vw-2rem)] items-start gap-3 rounded-md px-4 py-3 text-text-primary shadow-none',
+      'surface-material flex w-[360px] max-w-[calc(100vw-2rem)] items-start gap-3 rounded-lg px-4 py-3 text-text-primary shadow-none',
     content: 'flex min-w-0 flex-1 flex-col gap-0.5',
     title: 'type-callout text-text-primary',
     description: 'type-footnote text-text-secondary tabular-nums',
@@ -30,7 +30,7 @@ export const SONNER_TOAST_OPTIONS = {
 /**
  * Owned Sonner toast host implementing `redesign.md` §4.13:
  * - Bottom-centre, `24 px` offset (`16 px` + safe-area inset on mobile), `z: 70` (`--z-toasts`)
- * - Max width `360 px`, `surface-material`, `16 px` radius (`rounded-md`), `12 x 16 px` padding
+ * - Max width `360 px`, `surface-material`, `16 px` radius (`rounded-lg`), `12 x 16 px` padding
  * - `callout` primary title + optional `footnote` secondary body + right text action
  * - Max `3` visible stacked with `8 px` gap, `4 s` default duration (errors/warnings persist when specified)
  * - Motion (`.cal-toaster` rules in `globals.css`): enter `y 16 -> 0` + fade on `spring-ui`,

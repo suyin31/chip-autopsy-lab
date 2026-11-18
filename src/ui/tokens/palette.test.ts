@@ -191,7 +191,7 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
 
     // §2.3 Spacing, layout, concentric radii
     expect(SPACING_SCALE_PX).toEqual([
-      2, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 64, 96, 128,
+      2, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64, 72, 96, 128,
     ]);
     expect(LAYOUT_GRID.desktop).toEqual({
       columns: 12,
@@ -205,16 +205,20 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
       marginPx: 16,
       contentWidthPx: 358,
     });
+    // premium.md §3.9 concentric radii
     expect(RADIUS_TOKENS_PX).toEqual({
-      xs: 6,
-      sm: 12,
-      md: 16,
-      lg: 24,
-      xl: 28,
+      xs: 4,
+      sm: 8,
+      md: 12,
+      lg: 16,
+      xl: 20,
+      '2xl': 24,
+      '3xl': 28,
       pill: 999,
     });
-    // Concentric check: 24-radius card with 8px padding holds a 16-radius thumbnail
-    expect(RADIUS_TOKENS_PX.lg - 8).toBe(RADIUS_TOKENS_PX.md);
+    // Findings card (20) = finding row (16) + padding 4; section card (24) - 12 inset = Pareto row (12)
+    expect(RADIUS_TOKENS_PX.xl - 4).toBe(RADIUS_TOKENS_PX.lg);
+    expect(RADIUS_TOKENS_PX['2xl'] - 12).toBe(RADIUS_TOKENS_PX.md);
 
     // §2.4 Blur bounds
     expect(BLUR_TOKENS_PX).toEqual({
@@ -232,24 +236,30 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
       stageHud: 10,
       magnifier: 20,
       selectionPopover: 30,
+      hints: 35,
       nav: 40,
       menus: 50,
+      tooltips: 55,
       sheets: 60,
       toasts: 70,
       dragOverlay: 80,
     });
 
     // §2.6 Motion springs, easings, durations, deceleration
+    // premium.md §3.12: duration-based UI springs, never bounce
     expect(SPRING_TOKENS.ui).toEqual({
       type: 'spring',
-      stiffness: 300,
-      damping: 30,
-      mass: 1,
+      duration: 0.35,
+      bounce: 0,
     });
     expect(SPRING_TOKENS.snappy).toEqual({
       type: 'spring',
-      stiffness: 520,
-      damping: 40,
+      duration: 0.22,
+      bounce: 0,
+    });
+    expect(SPRING_TOKENS.sheen).toEqual({
+      stiffness: 120,
+      damping: 22,
       mass: 1,
     });
     expect(SPRING_TOKENS.camera).toEqual({
@@ -268,6 +278,21 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
     expect(MOTION_TOKENS.durFastMs).toBe(120);
     expect(MOTION_TOKENS.durBaseMs).toBe(160);
     expect(MOTION_TOKENS.decelPerMs).toBe(0.998);
+    expect(MOTION_TOKENS.easeInOut).toBe('cubic-bezier(0.45, 0, 0.25, 1)');
+    expect([
+      MOTION_TOKENS.dur0Ms,
+      MOTION_TOKENS.dur1Ms,
+      MOTION_TOKENS.dur2Ms,
+      MOTION_TOKENS.dur3Ms,
+      MOTION_TOKENS.dur4Ms,
+    ]).toEqual([0, 120, 160, 240, 280]);
+    expect(MOTION_TOKENS.pressScale).toEqual({
+      button: 0.97,
+      card: 0.985,
+      row: 0.985,
+      icon: 0.94,
+      thumbnail: 0.94,
+    });
   });
 
   it('defines matching @theme CSS variables and §6.7 CJK :lang() overrides in globals.css with self-hosted fonts', () => {
@@ -277,16 +302,14 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
       'utf8',
     );
     expect(globalsCss).toContain('@theme');
-    expect(globalsCss).toContain('--color-bg: #000000;');
     expect(globalsCss).toContain('--color-surface-1: #0f0f10;');
     expect(globalsCss).toContain('--color-surface-2: #1a1a1c;');
     expect(globalsCss).toContain('--color-surface-3: #242426;');
-    expect(globalsCss).toContain('--color-material: rgba(22, 22, 24, 0.72);');
     expect(globalsCss).toContain('--color-separator: rgba(255, 255, 255, 0.08);');
-    expect(globalsCss).toContain('--color-text-primary: rgba(255, 255, 255, 0.92);');
-    expect(globalsCss).toContain('--color-text-secondary: rgba(255, 255, 255, 0.56);');
-    expect(globalsCss).toContain('--color-text-tertiary: rgba(255, 255, 255, 0.48);');
-    expect(globalsCss).toContain('--color-text-disabled: rgba(255, 255, 255, 0.28);');
+    // Without data-theme the legacy R-series text tiers stay in force until P3
+    expect(globalsCss).toMatch(
+      /:root:not\(\[data-theme\]\) \{\s*--text-secondary: rgba\(255, 255, 255, 0\.56\);\s*--text-tertiary: rgba\(255, 255, 255, 0\.48\);/,
+    );
     expect(globalsCss).toContain('--color-accent: #d6e6ff;');
     expect(globalsCss).toContain('--color-accent-soft: rgba(214, 230, 255, 0.12);');
     expect(globalsCss).toContain('--color-failure: #ff6b2c;');

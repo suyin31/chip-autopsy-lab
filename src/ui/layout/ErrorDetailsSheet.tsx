@@ -57,7 +57,7 @@ export function ErrorDetailsSheet({
         </p>
       ) : null}
 
-      <dl className="mt-4 flex flex-col gap-3 rounded-md bg-surface-1 p-4 ring-surface">
+      <dl className="mt-4 flex flex-col gap-3 rounded-lg bg-surface-1 p-4 ring-surface">
         <div className="flex items-baseline justify-between gap-4">
           <dt className="type-mono-data text-text-tertiary">
             <Untranslated>{hexOffset}</Untranslated>

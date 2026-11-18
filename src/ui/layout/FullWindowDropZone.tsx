@@ -259,7 +259,7 @@ export function FullWindowDropZone({
                   ? 'inset 0 0 0 1px rgba(214, 230, 255, 0.35)'
                   : 'inset 0 0 0 1px rgba(255, 255, 255, 0.48)',
               }}
-              className="absolute inset-4 flex items-center justify-center overflow-hidden rounded-xl"
+              className="absolute inset-4 flex items-center justify-center overflow-hidden rounded-3xl"
             >
               {/* 24px dot grid masked by radial fade from centre (§3.2) */}
               <div

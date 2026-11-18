@@ -297,8 +297,8 @@ export function ModalSheet({
                     }
             }
             className={cn(
-              'surface-material relative z-10 w-full rounded-t-lg px-6 pt-3 pb-8 text-text-primary outline-none',
-              'md:w-[480px] md:max-w-[calc(100vw-32px)] md:rounded-lg md:p-8',
+              'surface-material relative z-10 w-full rounded-t-2xl px-6 pt-3 pb-8 text-text-primary outline-none',
+              'md:w-[480px] md:max-w-[calc(100vw-32px)] md:rounded-2xl md:p-8',
               className,
             )}
           >

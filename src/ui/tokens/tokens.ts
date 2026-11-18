@@ -1,6 +1,7 @@
 /**
  * Typography, spacing, layout grid, concentric radii, blur, z-layer,
- * and physics-spring motion tokens locked by `redesign.md` §2.2–§2.6 and §6.7.
+ * and motion tokens. Typography still follows `redesign.md` §2.2 and §6.7
+ * until task P4; spacing, radii, z-layers, and motion follow `premium.md` §3.9–§3.12.
  */
 
 export interface TypeRoleSpec {
@@ -244,9 +245,9 @@ export const CJK_TYPOGRAPHY_OVERRIDES = {
   },
 } as const;
 
-/** Spacing scale in CSS px (`redesign.md` §2.3). */
+/** Spacing scale in CSS px (`premium.md` §3.10). */
 export const SPACING_SCALE_PX = [
-  2, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 64, 96, 128,
+  2, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64, 72, 96, 128,
 ] as const;
 
 /** Compatibility alias for `SPACING_SCALE_PX`. */
@@ -270,15 +271,28 @@ export const LAYOUT_GRID = {
     desktop: 40,
     mobile: 44,
   },
+  /** Per-breakpoint grids (`premium.md` §3.10); `maxContentPx: null` = fluid. */
+  breakpoints: {
+    xl: { minPx: 1440, columns: 12, gutterPx: 24, marginPx: 40, maxContentPx: 1360 },
+    lg: { minPx: 1280, columns: 12, gutterPx: 24, marginPx: 40, maxContentPx: 1200 },
+    md: { minPx: 1024, columns: 8, gutterPx: 20, marginPx: 32, maxContentPx: null },
+    sm: { minPx: 640, columns: 1, gutterPx: 0, marginPx: 32, maxContentPx: 640 },
+    xs: { minPx: 0, columns: 4, gutterPx: 12, marginPx: 16, maxContentPx: null },
+  },
 } as const;
 
-/** Concentric border radii in CSS px (`redesign.md` §2.3). */
+/**
+ * Concentric border radii in CSS px (`premium.md` §3.9, tokens `r-xs` .. `r-pill`).
+ * Rule: inner radius = outer radius - padding whenever the padding is <= 24 px.
+ */
 export const RADIUS_TOKENS_PX = {
-  xs: 6,
-  sm: 12,
-  md: 16,
-  lg: 24,
-  xl: 28,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  '2xl': 24,
+  '3xl': 28,
   pill: 999,
 } as const;
 
@@ -297,7 +311,7 @@ export const OVERLAY_BLUR_BOUNDS_PX = {
   animatedMax: 8,
 } as const;
 
-/** Explicit z-index stacking layers (`redesign.md` §2.5). */
+/** Explicit z-index stacking layers (`redesign.md` §2.5 plus `premium.md` §3.11). */
 export const Z_LAYERS = {
   content: 0,
   canvasBase: 1,
@@ -306,26 +320,29 @@ export const Z_LAYERS = {
   stageHud: 10,
   magnifier: 20,
   selectionPopover: 30,
+  hints: 35,
   nav: 40,
   menus: 50,
+  tooltips: 55,
   sheets: 60,
   toasts: 70,
   dragOverlay: 80,
 } as const;
 
-/** Physics spring parameters for Motion and the custom rAF camera integrator (`redesign.md` §2.6). */
+/**
+ * Spring parameters for Motion and the custom rAF integrators (`premium.md` §3.12).
+ * UI springs are duration-based with `bounce: 0`; no UI spring ever bounces.
+ */
 export const SPRING_TOKENS = {
   ui: {
     type: 'spring',
-    stiffness: 300,
-    damping: 30,
-    mass: 1,
+    duration: 0.35,
+    bounce: 0,
   },
   snappy: {
     type: 'spring',
-    stiffness: 520,
-    damping: 40,
-    mass: 1,
+    duration: 0.22,
+    bounce: 0,
   },
   camera: {
     stiffness: 170,
@@ -337,18 +354,51 @@ export const SPRING_TOKENS = {
     damping: 22,
     mass: 1,
   },
+  sheen: {
+    stiffness: 120,
+    damping: 22,
+    mass: 1,
+  },
 } as const;
 
-/** Complete motion token suite (`redesign.md` §2.6, §5.1–§5.4). */
+/**
+ * Mass-spring equivalents of the duration-based UI springs for own rAF integrators
+ * (critically damped). `ui` is the premium.md §3.12 value; `snappy` scales the same
+ * natural frequency by 0.35 / 0.22.
+ */
+export const SPRING_PHYSICS_EQUIVALENTS = {
+  ui: { stiffness: 320, damping: 36, mass: 1 },
+  snappy: { stiffness: 810, damping: 57, mass: 1 },
+} as const;
+
+/** Complete motion token suite (`premium.md` §3.12; reveal ceilings from `redesign.md` §5). */
 export const MOTION_TOKENS = {
   springUi: SPRING_TOKENS.ui,
   springSnappy: SPRING_TOKENS.snappy,
   springCamera: SPRING_TOKENS.camera,
   springThrow: SPRING_TOKENS.throw,
+  springSheen: SPRING_TOKENS.sheen,
   easeOut: 'cubic-bezier(0.22, 1, 0.36, 1)',
   easeOutTuple: [0.22, 1, 0.36, 1] as const,
   easeOutExpo: 'cubic-bezier(0.16, 1, 0.3, 1)',
   easeOutExpoTuple: [0.16, 1, 0.3, 1] as const,
+  /** Theme cross-fade only (`premium.md` §8.8). */
+  easeInOut: 'cubic-bezier(0.45, 0, 0.25, 1)',
+  easeInOutTuple: [0.45, 0, 0.25, 1] as const,
+  dur0Ms: 0,
+  dur1Ms: 120,
+  dur2Ms: 160,
+  dur3Ms: 240,
+  dur4Ms: 280,
+  /** `:active` / pointerdown scale per surface kind. */
+  pressScale: {
+    button: 0.97,
+    card: 0.985,
+    row: 0.985,
+    icon: 0.94,
+    thumbnail: 0.94,
+  },
+  // Compatibility aliases (redesign.md §2.6 names)
   durInstantMs: 0,
   durFastMs: 120,
   durBaseMs: 160,

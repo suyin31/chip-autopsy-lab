@@ -139,7 +139,7 @@ function selectKeyTestsForDie(
  * Subscribes directly to `SelectionStore` so `WaferMapCanvas` incurs ZERO re-renders on hover,
  * wheel zoom, or drag pan:
  * - Material container (`z: 20`, radius `16`, padding `8`, width `184`)
- * - Desktop `168 x 120` (`rounded-sm` `12 px`) loupe blitting a `3x` neighbourhood from
+ * - Desktop `168 x 120` (`rounded-md` `12 px`) loupe blitting a `3x` neighbourhood from
  *   `BaseCanvas` via `drawImage` strictly once per hovered-die change + `1.5 px` `#D6E6FF` reticle;
  *   hidden on mobile (`hidden md:block`, readout-only on mobile)
  * - 2-column readout (`footnote` sans labels, `mono-data` values): `X, Y`, `Site`, `Bin`
@@ -720,7 +720,7 @@ const HoverMagnifierImpl = React.forwardRef<
               : { duration: 0.12 }
         }
         style={{ transformOrigin: 'inherit' }}
-        className="surface-material flex flex-col gap-2 rounded-md p-2"
+        className="surface-material flex flex-col gap-2 rounded-lg p-2"
       >
         {/* Desktop 168 x 120 rounded-12 3x die-neighbourhood loupe (§4.8) */}
         <canvas
@@ -728,7 +728,7 @@ const HoverMagnifierImpl = React.forwardRef<
           data-testid="magnifier-loupe-canvas"
           aria-hidden="true"
           style={{ width: `${LOUPE_WIDTH_PX}px`, height: `${LOUPE_HEIGHT_PX}px` }}
-          className="hidden rounded-sm bg-bg md:block"
+          className="hidden rounded-md bg-bg md:block"
         />
 
         {/* Readout: footnote labels in sans, mono-data values, 18 px row height (§4.8, §6.8) */}

@@ -13,13 +13,22 @@ export {
 } from './contrast';
 
 export {
+  BIN_DISC_PALETTE,
+  BIN_INK_PALETTE_LIGHT,
   COLOR_TOKENS,
+  getBinColor,
   getFailBinColor,
   MAGMA_LUT_256,
   MAGMA_RGB_256,
   sampleMagmaHex,
   sampleMagmaRgb,
   SECONDARY_FAIL_BIN_PALETTE,
+  THEME_TOKENS,
+  WAFER_TOKENS,
+  type BinColorSurface,
+  type MaterialToken,
+  type ThemeName,
+  type ThemeTokens,
 } from './palette';
 
 export {
@@ -33,6 +42,7 @@ export {
   RADIUS_TOKENS_PX,
   SPACING_GRID_PX,
   SPACING_SCALE_PX,
+  SPRING_PHYSICS_EQUIVALENTS,
   SPRING_TOKENS,
   TYPOGRAPHY_SCALE_PX,
   TYPOGRAPHY_TOKENS,

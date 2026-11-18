@@ -612,7 +612,7 @@ export function DropdownMenuContent({
             transformOrigin: position.transformOrigin,
           }}
           className={cn(
-            'surface-material fixed z-[var(--z-menus)] flex flex-col rounded-lg p-2 text-text-primary outline-none select-none',
+            'surface-material fixed z-[var(--z-menus)] flex flex-col rounded-2xl p-2 text-text-primary outline-none select-none',
             className,
           )}
           {...props}
@@ -689,7 +689,7 @@ export const DropdownMenuItem = React.forwardRef<
       }}
       onClick={handleClick}
       className={cn(
-        'flex w-full cursor-pointer items-center justify-between gap-3 rounded-sm px-3 py-2 text-left type-control text-text-primary',
+        'flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left type-control text-text-primary',
         'transition-[background-color,color,transform] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
         'hover:bg-surface-2 focus:bg-surface-2 enabled:active:scale-[0.99] enabled:active:bg-surface-3',
         'outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
@@ -765,7 +765,7 @@ export const DropdownMenuRadioItem = React.forwardRef<
       }}
       onClick={handleClick}
       className={cn(
-        'flex w-full cursor-pointer items-center justify-between gap-3 rounded-sm px-3 py-2 text-left type-control text-text-primary',
+        'flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left type-control text-text-primary',
         'transition-[background-color,color,transform] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
         'hover:bg-surface-2 focus:bg-surface-2 enabled:active:scale-[0.99] enabled:active:bg-surface-3',
         'outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',

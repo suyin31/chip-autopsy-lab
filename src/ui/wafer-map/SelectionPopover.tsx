@@ -184,7 +184,7 @@ export const SelectionPopover = React.forwardRef<
           opacity: committedShown ? 1 : 0,
           transformOrigin: 'inherit',
         }}
-        className="surface-material flex flex-col gap-2 rounded-md px-3.5 py-3"
+        className="surface-material flex flex-col gap-2 rounded-lg px-3.5 py-3"
       >
         <div
           ref={titleRef}
