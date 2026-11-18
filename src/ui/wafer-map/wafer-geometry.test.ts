@@ -332,6 +332,10 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     // D = clamp(320, min(areaW - 96, areaH - 48), 680)
     expect(resolveFitWaferDiameterPx(1200, 1000)).toBe(680);
     expect(resolveFitWaferDiameterPx(540, 512)).toBe(444);
+    // sm single column (premium §6.2): square 576–640 stage -> D = min(560, vw - 64) = 560
+    expect(resolveFitWaferDiameterPx(576, 576)).toBe(560);
+    expect(resolveFitWaferDiameterPx(640, 640)).toBe(560);
+    expect(resolveFitWaferDiameterPx(656, 656)).toBe(560);
 
     const mobileLayout = computeWaferRenderLayout(wafer, 390, 390, lot.dies);
     expect(mobileLayout.waferRadiusPx * 2).toBe(350);
@@ -663,7 +667,9 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(html).toContain('Failing dies on wafer W01');
     // visual-acceptance (d), (e), (f) + §5.10 data-sweep attribute
     expect(html).toContain('data-sweep=');
-    expect(html).toContain('h-[456px]');
+    // P13: square stage below 1024 (390 x 390 full-bleed on mobile), flex-1 area from 1024
+    expect(html).toContain('relative isolate aspect-square w-full');
+    expect(html).toContain('lg:aspect-auto lg:min-h-0 lg:flex-1');
     expect(html).toContain('wafer-strip-mask');
     expect(html).not.toContain('hidden text-text-tertiary md:inline');
   });

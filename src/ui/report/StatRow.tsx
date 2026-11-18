@@ -214,7 +214,7 @@ export function StatRow({
           data-testid="verdict-stat-item"
           className="flex min-w-0 flex-col-reverse justify-end gap-1.5"
         >
-          <dt className="line-clamp-2 type-subhead text-text-secondary">
+          <dt className="line-clamp-2 type-subhead text-text-secondary lg:max-xl:line-clamp-3">
             {stat.captionText}
           </dt>
           <dd

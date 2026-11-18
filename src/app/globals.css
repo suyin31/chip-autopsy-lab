@@ -891,3 +891,12 @@
     --size-display-xl: 64px;
   }
 }
+
+/* Loaded view at md (premium.md §6.2: 1024-1279 takeaway steps down to callout) */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .verdict-takeaway {
+    font-size: var(--size-callout);
+    line-height: var(--leading-callout);
+    letter-spacing: var(--tracking-callout);
+  }
+}

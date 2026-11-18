@@ -52,11 +52,16 @@ export interface AutopsyReportCardProps {
   /** Optional post-load bins-only notice rendered directly beneath the confidence pill (§3.8). */
   readonly binsOnlyNotice?: React.ReactNode;
   /**
-   * When true (inside `LoadedLotOverview`), splits mobile (`< 1280px`) visual order via
-   * `max-xl:contents` so the Wafer Stage + Strip sit between `StatRow` and `FindingsList`
-   * on mobile (`redesign.md` §3.4) while staying one page-scrolling column on desktop (premium §6.2).
+   * When true (inside `LoadedLotOverview`), splits the single-column (`< 1024px`) visual order via
+   * `max-lg:contents` so the stage sits between the action row and `StatRow` (premium §6.2 sm and
+   * xs order) while staying one page-scrolling column from 1024.
    */
   readonly splitForMobileStage?: boolean;
+  /**
+   * Called when a finding row (not the verdict cause phrase) is clicked, with `true` when the click
+   * activates it. `LoadedLotOverview` scrolls the stage into view below 1024 (premium §6.2).
+   */
+  readonly onFindingToggle?: (activated: boolean) => void;
   /** Optional quiet block rendered below the Findings list (the Bin Pareto, Requirement 6). */
   readonly belowFindings?: React.ReactNode;
   /**
@@ -286,6 +291,7 @@ export function AutopsyReportCard({
   binsOnlyNotice,
   splitForMobileStage = false,
   belowFindings,
+  onFindingToggle,
   verdictRevealed = true,
   className,
 }: AutopsyReportCardProps): React.JSX.Element {
@@ -451,6 +457,14 @@ export function AutopsyReportCard({
     [store, lot, factsById, analysis.primarySpatial.pattern],
   );
 
+  const handleToggleFinding = React.useCallback(
+    (claim: ReportClaim): void => {
+      handleToggleClaim(claim);
+      onFindingToggle?.(effectiveActiveClaimId !== claim.claimId);
+    },
+    [handleToggleClaim, onFindingToggle, effectiveActiveClaimId],
+  );
+
   // §3.5: Pressing Escape clears the active finding when no overlay/popover consumed Escape
   React.useEffect(() => {
     if (!effectiveActiveClaimId) {
@@ -501,15 +515,15 @@ export function AutopsyReportCard({
       data-testid="autopsy-report-card"
       data-verdict-scroll="true"
       className={cn(
-        // Premium §6.2: column padding-top 72 at 1280, 84 at 1440 (verdict cap height meets the disc top)
-        'flex w-full flex-col xl:pt-[72px] min-[90rem]:pt-[84px]',
-        splitForMobileStage && 'max-xl:contents',
+        // Premium §6.2: column padding-top 72 from 1024, 84 at 1440 (verdict cap height meets the disc top)
+        'flex w-full flex-col lg:pt-[72px] min-[90rem]:pt-[84px]',
+        splitForMobileStage && 'max-lg:contents',
         className,
       )}
     >
       <div
         data-testid="verdict-top-block"
-        className={cn('flex flex-col', splitForMobileStage && 'order-1 xl:order-none')}
+        className={cn('flex flex-col', splitForMobileStage && 'order-1 lg:order-none')}
       >
         <div
           data-testid="autopsy-live-region"
@@ -533,7 +547,7 @@ export function AutopsyReportCard({
 
         <motion.div
           {...buildRiseMotionProps('confidence')}
-          className="mt-3 md:mt-5 xl:mt-6"
+          className="mt-3 md:mt-5 lg:mt-6"
         >
           <ConfidencePill
             confidence={rendered.confidence}
@@ -541,25 +555,30 @@ export function AutopsyReportCard({
           />
           {binsOnlyNotice ? <div className="mt-3">{binsOnlyNotice}</div> : null}
         </motion.div>
-
-        <motion.div
-          {...buildRiseMotionProps('stats')}
-          className="mt-6 md:mt-10"
-        >
-          <StatRow
-            key={lot.lotId}
-            stats={renderedStats}
-            revealStarted={effectiveRevealed}
-            revealDelayMs={riseByBlock.get('stats')?.delayMs ?? 0}
-          />
-        </motion.div>
       </div>
+
+      {/* Premium §6.2: stats follow the strip below 1024 and the action row from 1024 */}
+      <motion.div
+        {...buildRiseMotionProps('stats')}
+        className={
+          splitForMobileStage
+            ? 'order-3 mt-8 lg:order-none lg:mt-10'
+            : 'mt-6 md:mt-10'
+        }
+      >
+        <StatRow
+          key={lot.lotId}
+          stats={renderedStats}
+          revealStarted={effectiveRevealed}
+          revealDelayMs={riseByBlock.get('stats')?.delayMs ?? 0}
+        />
+      </motion.div>
 
       <motion.div
         {...buildRiseMotionProps('findings')}
         className={cn(
           'mt-8 md:mt-12',
-          splitForMobileStage && 'order-3 xl:order-none',
+          splitForMobileStage && 'order-4 lg:order-none',
         )}
       >
         <FindingsList
@@ -571,7 +590,7 @@ export function AutopsyReportCard({
           activeClaimId={effectiveActiveClaimId}
           selectionMask={effectiveSelectionMask}
           defaultHypothesesOpen={defaultHypothesesOpen}
-          onToggleClaim={handleToggleClaim}
+          onToggleClaim={handleToggleFinding}
         />
       </motion.div>
 
@@ -579,8 +598,8 @@ export function AutopsyReportCard({
         <div
           data-testid="verdict-below-findings"
           className={cn(
-            'mt-10 pb-6 md:mt-12 xl:mt-24 xl:pb-16',
-            splitForMobileStage && 'order-4 xl:order-none',
+            'mt-10 pb-6 md:mt-12 lg:mt-24 lg:pb-16',
+            splitForMobileStage && 'order-5 lg:order-none',
           )}
         >
           {belowFindings}

@@ -40,8 +40,10 @@ export interface LoadedLotOverviewProps {
  *   column (cols 1–7, `top: 52px`, `calc(100dvh - 52px)` tall, min 640, padding 20 / 16) holds the
  *   header, flex-1 wafer area, control row, and strip; the verdict column (cols 8–12) scrolls with
  *   the page and ends with the privacy footer line (96 above, 64 below).
- * - Mobile (`390 x 844`): single column with Verdict + Stats first, full-bleed `390 x 456` Stage +
- *   Strip second, and Findings list third.
+ * - md (`1024–1279`): two columns, stage fixed 540 + 20 gutter + verdict column; stage stays sticky.
+ * - sm (`640–1023`): one centred 640 px column. xs (`< 640`): full-bleed `390 x 390` stage.
+ *   Both order verdict, takeaway, action row, stage (header, wafer, controls, strip), stats,
+ *   findings, possible causes, sections. A finding click scrolls the stage to 8 px under the nav.
  */
 export function LoadedLotOverview({
   data,
@@ -85,6 +87,32 @@ export function LoadedLotOverview({
     store.getState().setLot(lot);
   }, [lot, store]);
 
+  // Premium §6.2: below 1024 the findings sit under the wafer, so activating one scrolls the
+  // stage top to 8 px under the nav (smooth; instant under reduced motion). Never on desktop.
+  const stageColumnRef = React.useRef<HTMLDivElement | null>(null);
+  const prefersReducedRef = React.useRef(prefersReduced);
+  prefersReducedRef.current = prefersReduced;
+  const handleFindingToggle = React.useCallback((activated: boolean): void => {
+    if (!activated || typeof window === 'undefined' || window.innerWidth >= 1024) {
+      return;
+    }
+    const stageEl = stageColumnRef.current?.querySelector<HTMLElement>(
+      '[data-testid="wafer-stage"]',
+    );
+    if (!stageEl) {
+      return;
+    }
+    const navHeight = window.innerWidth < 768 ? 48 : 52;
+    const targetScrollY = Math.max(
+      0,
+      window.scrollY + stageEl.getBoundingClientRect().top - navHeight - 8,
+    );
+    window.scrollTo({
+      top: targetScrollY,
+      behavior: prefersReducedRef.current ? 'instant' : 'smooth',
+    });
+  }, []);
+
   const sanitizedWarnings = React.useMemo(
     () =>
       lot.warnings.slice(0, 5).map((w) => ({
@@ -100,7 +128,7 @@ export function LoadedLotOverview({
   return (
     <div
       data-testid="verdict-wafer-hero-grid"
-      className="flex w-full flex-col xl:grid xl:grid-cols-12 xl:items-start xl:gap-x-6"
+      className="flex w-full flex-col sm:max-lg:mx-auto sm:max-lg:max-w-[640px] lg:grid lg:grid-cols-[540px_minmax(0,1fr)] lg:items-start lg:gap-x-5 xl:grid-cols-12 xl:gap-x-6"
     >
       <AutopsyReportCard
         lot={lot}
@@ -119,17 +147,18 @@ export function LoadedLotOverview({
               yieldSummary={yieldSummary}
               facts={facts}
               store={store}
-              className="mt-12 xl:mt-24"
+              className="mt-12 lg:mt-24"
             />
             <p
               data-testid="verdict-footer"
-              className="mt-12 type-subhead text-text-tertiary xl:mt-24"
+              className="mt-12 type-subhead text-text-tertiary lg:mt-24"
             >
               {t('report.footer')}
             </p>
           </>
         }
-        className="xl:col-span-5 xl:col-start-8 xl:row-start-1"
+        onFindingToggle={handleFindingToggle}
+        className="lg:col-start-2 lg:row-start-1 xl:col-span-5 xl:col-start-8"
         binsOnlyNotice={
           lot.parseMode === 'bins-only' ? (
             <BinsOnlyNotice
@@ -142,8 +171,9 @@ export function LoadedLotOverview({
       />
 
       <div
+        ref={stageColumnRef}
         data-testid="stage-column"
-        className="order-2 -mx-4 mt-6 w-[calc(100%+2rem)] md:mx-0 md:w-full xl:sticky xl:top-[52px] xl:order-none xl:col-span-7 xl:col-start-1 xl:row-start-1 xl:mt-0 xl:h-[calc(100dvh-52px)] xl:min-h-[640px] xl:pt-5 xl:pb-4"
+        className="order-2 -mx-4 mt-5 w-[calc(100%+2rem)] sm:mx-0 sm:w-full lg:sticky lg:top-[52px] lg:order-none lg:col-start-1 lg:row-start-1 lg:mt-0 lg:h-[calc(100dvh-52px)] lg:min-h-[640px] lg:pt-5 lg:pb-4 xl:col-span-7"
       >
         <WaferMapCanvas
           lot={lot}

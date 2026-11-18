@@ -175,8 +175,8 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
 
     expect(mobileMetrics.stageWidth).toBe(390);
     expect(mobileMetrics.waferDiameter).toBeGreaterThanOrEqual(350);
-    // Mobile §3.4 vertical order: Stats -> Stage -> Findings
-    expect(mobileMetrics.statTop).toBeLessThan(mobileMetrics.stageTop);
-    expect(mobileMetrics.stageTop).toBeLessThan(mobileMetrics.findingTop);
+    // Premium §6.2 xs order: Stage -> Stats -> Findings
+    expect(mobileMetrics.stageTop).toBeLessThan(mobileMetrics.statTop);
+    expect(mobileMetrics.statTop).toBeLessThan(mobileMetrics.findingTop);
   });
 });

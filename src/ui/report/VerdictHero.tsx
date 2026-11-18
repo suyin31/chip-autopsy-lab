@@ -145,7 +145,7 @@ export function VerdictHero({
     verdict.subline.length > 0 ? (
       <p
         data-testid="verdict-subline"
-        className="mt-3 line-clamp-2 type-body text-text-secondary md:mt-4"
+        className="verdict-takeaway mt-3 line-clamp-3 type-body text-text-secondary sm:line-clamp-2 md:mt-4"
       >
         {renderWithUntranslatedTokens(
           verdict.subline,

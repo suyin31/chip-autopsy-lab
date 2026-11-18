@@ -1,0 +1,273 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=17
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=40
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=19
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=120
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=31
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=34
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=14
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=156
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=553
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Let me measure the current state at the three viewports before changing anything.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=291
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=55
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=32
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=179
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=86
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=124
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=123
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Failed: Run Command
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=397
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=81
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=709
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Failed: Run Command
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=177
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=119
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=540
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=59
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=268
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now WaferMapCanvas: remove the old scroll block, and apply the breakpoint changes.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=402
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=296
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now AppShell main padding for the loaded view.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=136
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=53
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=17
+[tool] status: InProgress
+[tool] status: Completed
+Both layouts render as intended. Next I'll update the r6 mobile-order assertion and add the P13 e2e spec.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1041
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=87
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now unit tests and the other related e2e specs (strip, stage controls, linked interactions, vertical slice, perf-gate mobile checks).
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=65
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=35
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=31
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=155
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=263
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Perf-gate failure is the known long-frame flake. Fixing the remaining unit assertion:
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=34
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Unit tests pass and the related e2e specs pass. Now the task tick and progress log.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=362
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+I've implemented P13 (premium §6.2 tablet and mobile layouts), and A17 and A18 now pass. Typecheck and lint are clean, and `pnpm test` passes 276/276. The new e2e spec `e2e/loaded-responsive-p13.spec.ts` passes 5/5, and the other e2e specs this change touches pass too. In `perf-gate`, only the known long-frame check fails. No snapshots changed.
+
+**What changed by screen width:**
+- **1024–1279:** two columns. The stage column is fixed at 540 px and sticky, with a 20 px gutter and a 400 px verdict column at 1024. Margins are 32 and the verdict column has 72 px top padding. The takeaway uses the `callout` style and stat captions can wrap to 3 lines. The legend sits on its own line under the segmented control; it now goes inline only from 1280.
+- **640–1023:** one centred 640 px column with a square stage and a 560 px disc, and the stage is not sticky. I added a square-stage rule to `resolveFitWaferDiameterPx` to get that size.
+- **Under 640:** the stage is full-bleed at 390 × 390 with a 350 px disc. The control row is 36 px tall, and the legend line moved below the strip.
+- **Order below 1024:** verdict, takeaway, action row, stage, controls, strip, stats, findings, possible causes, then the sections.
+- **Finding click below 1024:** the page scrolls so the wafer sits 8 px under the nav (instant under reduced motion). On desktop and for the "Cause of death" phrase it never scrolls. I moved this logic out of `WaferMapCanvas` into `LoadedLotOverview` through a new `onFindingToggle` callback, so only finding rows trigger it.
+- **Locales:** no new text, so all 5 locales are still in parity.
+
+**Tests I changed:** the mobile check in `wafer-stage-r6` now expects the stage before the stats. The mobile check in `perf-gate` now waits for the disc to resize after the viewport change. The unit tests now check the new layout classes and the 560 px disc rule.
+
+**Decisions where premium.md is silent or inconsistent (also in `logs/progress.md`):**
+- **Disc at 1024 × 768:** premium.md quotes a 444 px disc, but its own part heights (control row 72) leave a 540 × 480 wafer area. The formula then gives 432 px. I followed the listed heights and the formula.
+- **Spacing at 1024–1279:** I used the desktop values from 1024 up: 96 px above the sections and footer, 64 px bottom padding.
+- **Spacing at 640–1023:** these widths keep the existing small-screen gaps.
+- **Spacing under 640:** gaps follow the 390 px diagram.
+
+I ticked P13 in `tasks.md`.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=176
+

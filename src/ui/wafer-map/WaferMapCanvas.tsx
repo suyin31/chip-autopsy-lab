@@ -922,26 +922,6 @@ function WaferMapCanvasImpl({
       });
       controller.animateToCamera(targetCam);
     }
-
-    // §3.5 Mobile: scroll page so stage top sits 8 px below sticky nav (48 px mobile / 52 px tablet)
-    if (
-      typeof window !== 'undefined' &&
-      window.innerWidth < 1280 &&
-      stageRef.current
-    ) {
-      const stageRect = stageRef.current.getBoundingClientRect();
-      const navHeight = window.innerWidth < 768 ? 48 : 52;
-      const targetScrollY = Math.max(
-        0,
-        window.scrollY + stageRect.top - navHeight - 8,
-      );
-      if (Math.abs(window.scrollY - targetScrollY) > 12) {
-        window.scrollTo({
-          top: targetScrollY,
-          behavior: reducedMotionRef.current ? 'instant' : 'smooth',
-        });
-      }
-    }
   }, [
     claimHighlight,
     claimHighlightMask,
@@ -2120,11 +2100,17 @@ function WaferMapCanvasImpl({
   };
 
   return (
-    <div className={cn('flex w-full flex-col xl:h-full', className)}>
+    <div
+      className={cn(
+        // Premium §6.2 xs: grid so the legend line sits under the strip (390 x 844 order)
+        'grid w-full grid-cols-[minmax(0,1fr)_auto] sm:flex sm:flex-col lg:h-full',
+        className,
+      )}
+    >
       {/* Stage header (premium §5.5): wafer title + caption that cross-fades for evidence and box select */}
       <div
         data-testid="stage-header"
-        className="flex flex-wrap items-baseline gap-x-3 px-4 pb-2 md:h-10 md:items-end md:px-0"
+        className="col-span-2 flex flex-wrap items-baseline gap-x-3 px-4 pb-2 sm:h-10 sm:items-end sm:px-0"
       >
         <h2 className="type-headline text-text-primary">
           {titleParts[0]}
@@ -2156,7 +2142,7 @@ function WaferMapCanvasImpl({
       </div>
 
       {/* Unclipped floating anchor wrapper so magnifier/popover can place above stage edge (§4.8) */}
-      <div className="relative flex w-full flex-col xl:min-h-0 xl:flex-1">
+      <div className="relative col-span-2 flex w-full flex-col lg:min-h-0 lg:flex-1">
         {/* Boxless Wafer Stage (premium §6.2: flex-1 wafer area, 783 x 644 at 1440 x 900; 390 x 390 mobile; §4.7 role="application") */}
         <div
           ref={stageRef}
@@ -2182,12 +2168,13 @@ function WaferMapCanvasImpl({
           onDoubleClick={handleDoubleClick}
           onKeyDown={handleStageKeyDown}
           className={cn(
-            'relative isolate h-[456px] w-full overflow-hidden select-none',
+            'relative isolate aspect-square w-full overflow-hidden select-none',
             // Premium §7.7: default at zoom 1, grab when zoomed, crosshair in Select mode
             stageTool === 'select'
               ? 'cursor-crosshair'
               : 'cursor-default data-[zoomed=true]:cursor-grab data-[zoomed=true]:active:cursor-grabbing',
-            'md:mx-auto md:h-auto md:aspect-square md:max-w-[680px] xl:mx-0 xl:aspect-auto xl:min-h-0 xl:max-w-none xl:flex-1',
+            // Premium §6.2: square below 1024 (390 x 390 full-bleed, sm column width), flex-1 wafer area from 1024
+            'lg:aspect-auto lg:min-h-0 lg:flex-1',
             // Premium §7.7: keyboard-only 2 px ink ring with 28 px corners, inset 8 px from the wafer area
             'focus-visible:outline-none',
             "focus-visible:after:pointer-events-none focus-visible:after:absolute focus-visible:after:inset-2 focus-visible:after:z-[var(--z-stage-hud)] focus-visible:after:rounded-3xl focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ink focus-visible:after:content-['']",
@@ -2344,9 +2331,9 @@ function WaferMapCanvasImpl({
       {/* Control row (premium §5.6, §7.7): segmented control, legend, Reset view, Select an area */}
       <div
         data-testid="stage-control-row"
-        className="flex flex-wrap items-center px-4 md:px-0"
+        className="contents sm:flex sm:flex-wrap sm:items-center"
       >
-        <div className="flex h-10 items-center">
+        <div className="mt-2 flex h-9 items-center pl-4 sm:mt-0 sm:h-10 sm:pl-0">
           <SegmentedControl
             data-testid="stage-mode-segmented"
             ariaLabel={t('stage.roleDescription')}
@@ -2364,9 +2351,9 @@ function WaferMapCanvasImpl({
           passCount={passCount}
           failCount={failCount}
           store={store}
-          className="order-last mt-2 basis-full lg:order-none lg:mt-0 lg:ml-6 lg:basis-auto"
+          className="order-last col-span-2 mt-2 min-h-6 px-4 sm:basis-full sm:px-0 xl:order-none xl:mt-0 xl:ml-6 xl:min-h-0 xl:basis-auto"
         />
-        <div className="ml-auto flex h-10 items-center gap-2 pl-3">
+        <div className="mt-2 ml-auto flex h-9 items-center gap-2 pr-4 pl-3 sm:mt-0 sm:h-10 sm:pr-0">
           <div
             ref={resetViewRef}
             data-testid="stage-reset-view"
@@ -2425,7 +2412,7 @@ function WaferMapCanvasImpl({
         dpr={dpr}
         onSelectWafer={handleSelectWafer}
         onPreviewWafer={handlePreviewWafer}
-        className="mt-3"
+        className="col-span-2 mt-2 sm:mt-3"
       />
     </div>
   );

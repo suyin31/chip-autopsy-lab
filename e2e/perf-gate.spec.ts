@@ -388,6 +388,16 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
 
     // Mobile 390x844 checks: (d) the segmented control sits in the control row >= 12px below the wafer disc (premium §5.6); (e) only the active strip label is visible (premium §5.8)
     await page.setViewportSize({ width: 390, height: 844 });
+    // Wait for the resize observer to refit the disc to the 390 x 390 stage (premium §6.2)
+    await expect
+      .poll(async () =>
+        Math.round(
+          await page
+            .getByTestId('wafer-stage-sheen')
+            .evaluate((el) => el.getBoundingClientRect().width),
+        ),
+      )
+      .toBe(350);
     const mobileChecks = await page.evaluate(() => {
       const seg = document.querySelector<HTMLElement>(
         '[data-testid="stage-mode-segmented"]',

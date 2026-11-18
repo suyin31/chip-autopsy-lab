@@ -258,7 +258,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P12. Loaded view, desktop
   - Sticky stage column, verdict column blocks 1–9 with the §6.2 spacing at 1440 and 1280 (premium §6.2).
   - Accept: A15, A16, A19.
-- [ ] P13. Loaded view, tablet and mobile
+- [x] P13. Loaded view, tablet and mobile
   - 1024 two-column variant, sm single column, 390 order and full-bleed stage, mobile finding-click scroll (premium §6.2).
   - Accept: A17, A18.
 - [ ] P14. Loading, error, drag overlay, bins-only

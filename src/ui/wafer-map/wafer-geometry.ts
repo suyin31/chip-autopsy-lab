@@ -282,7 +282,8 @@ export function resolveStageMarginPx(minDim: number): number {
  * Fit wafer diameter for a stage of `cssWidth x cssHeight` CSS px:
  * - Desktop wafer area (non-square, premium §6.2): `D = clamp(320, min(areaW - 96, areaH - 48), 680)`
  *   (`783 x 644` -> 596 at 1440 x 900, `690 x 544` -> 496 at 1280 x 800).
- * - Square stages (mobile and sm) and areas too small for the 320 px floor keep the
+ * - Square sm stages (`576–655`, the 640 px column at 640–1023): `D = min(560, vw − 64)` = 560.
+ * - Other square stages (xs) and areas too small for the 320 px floor keep the
  *   `resolveStageMarginPx` ramp (`390 x 390` -> 350).
  */
 export function resolveFitWaferDiameterPx(
@@ -293,6 +294,9 @@ export function resolveFitWaferDiameterPx(
   const areaFit = Math.min(cssWidth - 96, cssHeight - 48);
   if (Math.abs(cssWidth - cssHeight) > 1 && areaFit >= 320) {
     return Math.min(680, areaFit);
+  }
+  if (minDim >= 576 && minDim < 656) {
+    return 560;
   }
   return minDim - 2 * resolveStageMarginPx(minDim);
 }

@@ -97,7 +97,7 @@ export function FindingsList({
     <div data-testid="verdict-findings-section" className={className}>
       <h2 className="type-headline text-text-primary">{heading}</h2>
 
-      <ul data-testid="verdict-findings-list" className="mt-2 flex flex-col xl:mt-3">
+      <ul data-testid="verdict-findings-list" className="mt-2 flex flex-col lg:mt-3">
         {findings.map((row, idx) => {
           const isSelected = activeClaimId === row.claimId;
           const isPressed = pressedRowKey === row.claimId;
