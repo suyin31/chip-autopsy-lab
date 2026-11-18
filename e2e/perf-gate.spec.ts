@@ -322,13 +322,13 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
 
-    // (b) Nav Open STDF hidden on landing; (c) 190px landing wafer thumbnail without boxed bg-bg
+    // (b) Nav Open STDF hidden on landing; (c) premium §6.1 152px landing wafer at 1440 without boxed bg-bg
     await expect(page.getByTestId('nav-open-stdf')).toHaveCount(0);
     const thumbBox = await page
       .getByTestId('landing-demo-wafer-edge-ring-etch')
       .boundingBox();
-    expect(Math.round(thumbBox!.width)).toBe(190);
-    expect(Math.round(thumbBox!.height)).toBe(190);
+    expect(Math.round(thumbBox!.width)).toBe(152);
+    expect(Math.round(thumbBox!.height)).toBe(152);
 
     // Click demo card -> catch running sweep -> skip immediately with Space key
     await page.getByTestId('demo-card-edge-ring-etch').click();

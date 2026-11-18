@@ -882,3 +882,10 @@
     transition: opacity 120ms var(--ease-out) !important;
   }
 }
+
+/* Landing headline step between xl and mobile (premium.md §6.1: 64 px at 1024) */
+@media (min-width: 640px) and (max-width: 1279px) {
+  .landing-headline {
+    --size-display-xl: 64px;
+  }
+}

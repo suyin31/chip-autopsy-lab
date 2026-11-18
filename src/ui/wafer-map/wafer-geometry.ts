@@ -1947,9 +1947,14 @@ export function paintWaferThumbnail(
   paintThumbnailDisc(ctx, { ...params, cssSize: safeSize, dpr }, radiusPx);
 }
 
+/** Disc radius of the landing card wafer inside its `cssSize` square canvas (CSS px). */
+export function computeLandingCardWaferRadiusPx(cssSize: number): number {
+  return Math.max(8, cssSize / 2 - 1.5);
+}
+
 /**
  * Draws the landing demo card wafer with the premium §5.3 thumbnail rules (disc material
- * without thin film or sheen, notch from `WF_FLAT`, die tiles).
+ * without thin film, notch from `WF_FLAT`, die tiles). The sheen is a DOM layer (§6.1).
  */
 export function paintLandingCardWafer(
   ctx: Canvas2DContextLike,
@@ -1962,6 +1967,6 @@ export function paintLandingCardWafer(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, safeSize, safeSize);
 
-  const radiusPx = Math.max(8, safeSize / 2 - 1.5);
+  const radiusPx = computeLandingCardWaferRadiusPx(safeSize);
   paintThumbnailDisc(ctx, { ...params, cssSize: safeSize, dpr }, radiusPx);
 }

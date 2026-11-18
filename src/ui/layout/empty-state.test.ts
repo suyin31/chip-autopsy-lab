@@ -54,15 +54,16 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(formatByteSize(6.8 * 1024 * 1024)).toBe('6.8 MB');
   });
 
-  it('renders §3.1 landing hero with "Drop the body.", primary "Open STDF file", 3 one-click demo cards, privacy footer, and Download demo files menu', () => {
+  it('renders the premium §6.1 landing: hero, one primary "Open the sample lot", secondary "Open file", hint, Sample lots cards, and footer', () => {
     const presets = listDemoPresets();
+    const loaded: string[] = [];
     const html = renderWithLocale(
       React.createElement(EmptyStateCard, {
         cause: 'first-run',
         presets,
         selectedPresetId: 'edge-ring-etch',
         onSelectPreset: () => undefined,
-        onLoadDemoLot: () => undefined,
+        onLoadDemoLot: (id) => loaded.push(id),
         onDownloadDemoLot: () => undefined,
         onSelectFile: () => undefined,
       }),
@@ -70,44 +71,60 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
 
     expect(html).toContain('Drop the body.');
     expect(html).toContain(
-      'Drop an STDF V4 wafer sort log anywhere on this page. It is parsed on this device and never uploaded.',
+      'Find out why a wafer lot lost yield. Drop an STDF test log and get the cause, linked to the dies.',
     );
-    expect(html).toContain('Open STDF file');
-    expect(html).toContain('.stdf, .std, or gzip');
+    expect(html).toContain('>Open the sample lot<');
+    expect(html).toContain('>Open file<');
+    expect(html).toContain(
+      'Or drop a .stdf, .std, or gzip file anywhere. Files stay on this device.',
+    );
+    expect(html).toContain('>Files stay on this device.<');
 
-    // Three one-click demo cards with §3.1 exact titles, descriptions, and meta
+    // A20: exactly one filled ink primary on the landing
+    expect(html.match(/data-testid="landing-open-sample-button"/g)).toHaveLength(1);
+    expect(html.match(/\bbg-ink\b/g)).toHaveLength(1);
+    expect(html).toContain('bg-fill-2');
+
+    // Sample cards with the premium §6.1 copy, meta, and aria labels
+    expect(html).toContain('>Sample lots<');
     expect(html).toContain('Edge-Ring Plasma Etch');
-    expect(html).toContain('Outer-ring IDDQ leakage after focus-ring erosion');
+    expect(html).toContain('Etch damage kills dies around the wafer edge.');
     expect(html).toContain('Robotic Handling Scratch');
-    expect(html).toContain('A transfer-blade scratch across wafers 5 to 22');
+    expect(html).toContain('A robot arm scratched a line across 18 wafers.');
     expect(html).toContain('Site 2 Probe Contact');
-    expect(html).toContain('Oxidized site 2 needles cause opens and retests');
+    expect(html).toContain('One worn tester needle fails good dies.');
     expect(html).toContain('25 wafers, 15,825 dies');
+    expect(html).toContain('aria-label="Open sample lot Edge-Ring Plasma Etch"');
+    expect(html).toContain('rounded-2xl bg-surface');
+    expect(html).toContain('shadow-card');
+    expect(html).toContain('before:shadow-card-hover');
 
-    // No legacy "Selected" radio state or separate "Load demo lot" button on first-run landing
+    // 152 px server-rendered disc with contact shadow and masked sheen; no R-series vignette or top light
+    expect(html).toContain('width:152px;height:152px');
+    expect(html).toContain('data-testid="landing-demo-wafer-contact-edge-ring-etch"');
+    expect(html).toContain('data-testid="landing-demo-wafer-sheen-edge-ring-etch"');
+    expect(html).not.toContain('var(--vignette)');
+    expect(html).not.toContain('var(--top-light)');
+
+    // No legacy radio state or "Load demo lot" button on the landing
     expect(html).not.toContain('role="radiogroup"');
     expect(html).not.toContain('>Load demo lot<');
 
-    // Accessible file input linkage & focus rings preserved
+    // Accessible file input linkage and ink focus rings
     expect(html).toContain('id="cal-file-picker"');
     expect(html).toContain('for="cal-file-picker"');
-    expect(html).toContain('focus-visible:outline-accent');
+    expect(html).toContain('focus-visible:outline-ink');
     expect(html).toContain(
       'accept=".stdf,.std,.stdf.gz,.gz,application/gzip,application/octet-stream"',
     );
 
-    // Footer privacy copy + Download demo files menu trigger
-    expect(html).toContain(
-      'Runs entirely in your browser. Raw STDF bytes never leave this device.',
-    );
-    expect(html).toContain('Download demo files');
+    // Footer line
+    expect(html).toContain('>Runs entirely in your browser.<');
+    expect(html).toContain('Download sample files');
 
-    // Restraint checks: zero drop-shadow utilities, zero bold >= 700 classes, softened demo thumbnail (no boxed bg-bg cutout, ~190px desktop wafer)
-    expect(html).not.toMatch(/\bshadow-(?!none\b)[a-z0-9]+\b/);
+    // Restraint: no weights >= 700, no ember on the landing chrome
     expect(html).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
-    expect(html).toContain('md:h-[190px]');
-    expect(html).toContain('md:w-[190px]');
-    expect(html).not.toContain('rounded-lg bg-bg');
+    expect(html).not.toMatch(/ember/);
   });
 
   it('maps all 7 §3.7 error codes cleanly and renders icon-free parse-failed hero above demo cards', () => {

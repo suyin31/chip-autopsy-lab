@@ -26,25 +26,22 @@ export const en = {
 
   // Landing
   'landing.headline': 'Drop the body.',
-  'landing.subline':
-    'Drop an STDF V4 wafer sort log anywhere on this page. It is parsed on this device and never uploaded.',
-  'landing.primary': 'Open STDF file',
-  'landing.formats': '.stdf, .std, or gzip',
-  'landing.demoHeading': 'Or open a demo lot',
-  'landing.privacy':
-    'Runs entirely in your browser. Raw STDF bytes never leave this device.',
-  'landing.downloadDemos': 'Download demo files',
-  'landing.demoMeta': '{wafers} wafers, {dies} dies',
+  'landing.subline': 'Find out why a wafer lot lost yield. Drop an STDF test log and get the cause, linked to the dies.',
+  'landing.primary': 'Open the sample lot',
+  'landing.secondary': 'Open file',
+  'landing.hint': 'Or drop a .stdf, .std, or gzip file anywhere. Files stay on this device.',
+  'landing.hintShort': 'Files stay on this device.',
+  'landing.demoHeading': 'Sample lots',
+  'landing.privacy': 'Runs entirely in your browser.',
+  'landing.downloadDemos': 'Download sample files',
+  'landing.cardMeta': '{wafers} wafers, {dies} dies',
+  'demo.edgeRing.description': 'Etch damage kills dies around the wafer edge.',
+  'demo.scratch.description': 'A robot arm scratched a line across 18 wafers.',
+  'demo.site2.description': 'One worn tester needle fails good dies.',
+  'demo.openAria': 'Open sample lot {title}',
   'demo.edgeRing.title': 'Edge-Ring Plasma Etch',
-  'demo.edgeRing.description':
-    'Outer-ring IDDQ leakage after focus-ring erosion',
   'demo.scratch.title': 'Robotic Handling Scratch',
-  'demo.scratch.description':
-    'A transfer-blade scratch across wafers 5 to 22',
   'demo.site2.title': 'Site 2 Probe Contact',
-  'demo.site2.description':
-    'Oxidized site 2 needles cause opens and retests',
-  'demo.openAria': 'Open demo lot {title}',
 
   // Drag overlay
   'drop.headline': 'Drop the body.',

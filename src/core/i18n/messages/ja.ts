@@ -29,22 +29,22 @@ export const ja = {
 
   // Landing
   'landing.headline': '遺体をここに。',
-  'landing.subline':
-    'STDF V4 ウェハテストログをページ上の任意の場所にドロップしてください。この端末内で解析され、送信されません。',
-  'landing.primary': 'STDF ファイルを開く',
-  'landing.formats': '.stdf、.std、または gzip',
-  'landing.demoHeading': 'またはデモロットを開く',
-  'landing.privacy':
-    'すべてブラウザ内で完結します。STDF の生データがこの端末から外部へ送信されることはありません。',
-  'landing.downloadDemos': 'デモファイルをダウンロード',
-  'landing.demoMeta': '{wafers} ウェハ、{dies} ダイ',
+  'landing.subline': 'ウェハロットの歩留まりが落ちた理由を調べます。STDF テストログをドロップすると、ダイに結び付いた原因がわかります。',
+  'landing.primary': 'サンプルロットを開く',
+  'landing.secondary': 'ファイルを開く',
+  'landing.hint': '.stdf、.std、gzip ファイルをどこにでもドロップできます。ファイルはこの端末から出ません。',
+  'landing.hintShort': 'ファイルはこの端末から出ません。',
+  'landing.demoHeading': 'サンプルロット',
+  'landing.privacy': 'すべてブラウザ内で動作します。',
+  'landing.downloadDemos': 'サンプルファイルをダウンロード',
+  'landing.cardMeta': '{wafers} ウェハ、{dies} ダイ',
+  'demo.edgeRing.description': 'エッチング損傷でウェハ外周のダイが不良になります。',
+  'demo.scratch.description': 'ロボットアームが 18 枚のウェハに線状の傷を付けました。',
+  'demo.site2.description': '摩耗した 1 本のテスタ針が良品ダイを不良にします。',
+  'demo.openAria': 'サンプルロット {title} を開く',
   'demo.edgeRing.title': 'Edge-Ring プラズマエッチング',
-  'demo.edgeRing.description': 'フォーカスリング摩耗による外周 IDDQ リーク',
   'demo.scratch.title': 'ロボット搬送スクラッチ',
-  'demo.scratch.description': 'ウェハ 5〜22 を横断する搬送ブレードのスクラッチ',
   'demo.site2.title': 'サイト 2 プローブ接触',
-  'demo.site2.description': 'サイト 2 プローブ針の酸化によるオープン不良と再測定',
-  'demo.openAria': 'デモロット {title} を開く',
 
   // Drag overlay
   'drop.headline': '遺体をここに。',

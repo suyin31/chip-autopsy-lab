@@ -29,22 +29,22 @@ export const ko = {
 
   // Landing
   'landing.headline': '시신을 여기에.',
-  'landing.subline':
-    '이 페이지 아무 곳에나 STDF V4 웨이퍼 소트 로그를 놓으세요. 이 기기에서만 파싱되며 절대 업로드되지 않습니다.',
-  'landing.primary': 'STDF 파일 열기',
-  'landing.formats': '.stdf, .std 또는 gzip',
-  'landing.demoHeading': '또는 데모 로트 열기',
-  'landing.privacy':
-    '전 과정이 브라우저에서 실행됩니다. 원본 STDF 데이터는 이 기기 밖으로 전송되지 않습니다.',
-  'landing.downloadDemos': '데모 파일 다운로드',
-  'landing.demoMeta': '웨이퍼 {wafers}장, 다이 {dies}개',
+  'landing.subline': '웨이퍼 로트의 수율이 떨어진 이유를 찾습니다. STDF 테스트 로그를 놓으면 다이와 연결된 원인을 보여 줍니다.',
+  'landing.primary': '샘플 로트 열기',
+  'landing.secondary': '파일 열기',
+  'landing.hint': '.stdf, .std 또는 gzip 파일을 아무 곳에나 놓아도 됩니다. 파일은 이 기기에만 남습니다.',
+  'landing.hintShort': '파일은 이 기기에만 남습니다.',
+  'landing.demoHeading': '샘플 로트',
+  'landing.privacy': '모든 과정이 브라우저에서 실행됩니다.',
+  'landing.downloadDemos': '샘플 파일 다운로드',
+  'landing.cardMeta': '웨이퍼 {wafers}장, 다이 {dies}개',
+  'demo.edgeRing.description': '식각 손상으로 웨이퍼 가장자리의 다이가 불량이 됩니다.',
+  'demo.scratch.description': '로봇 암이 웨이퍼 18장에 선 모양의 긁힘을 냈습니다.',
+  'demo.site2.description': '마모된 테스터 바늘 하나가 양품 다이를 불량으로 판정합니다.',
+  'demo.openAria': '샘플 로트 {title} 열기',
   'demo.edgeRing.title': 'Edge-Ring 플라즈마 식각',
-  'demo.edgeRing.description': '포커스 링 마모로 인한 외곽 링 IDDQ 누설',
   'demo.scratch.title': '로봇 반송 스크래치',
-  'demo.scratch.description': '웨이퍼 5~22번을 가로지르는 이송 블레이드 스크래치',
   'demo.site2.title': '사이트 2 프로브 접촉',
-  'demo.site2.description': '산화된 사이트 2 프로브 침으로 인한 오픈 불량 및 재측정',
-  'demo.openAria': '데모 로트 {title} 열기',
 
   // Drag overlay
   'drop.headline': '시신을 여기에.',
