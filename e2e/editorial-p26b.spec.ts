@@ -62,7 +62,7 @@ test.describe("P26b editorial accent (premium §12)", () => {
       const accent = document.querySelector('[data-testid="landing-headline"] [data-accent]')!;
       return {
         bg,
-        card: getComputedStyle(document.querySelector('[data-testid="demo-card-edge-ring-etch"]')!)
+        card: getComputedStyle(document.querySelector('[data-testid="landing-example-card"]')!)
           .backgroundColor,
         secondaryRatio: (hi! + 0.05) / (lo! + 0.05),
         headlineSize: Number.parseFloat(

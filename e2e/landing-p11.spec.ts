@@ -4,7 +4,8 @@ import { expect, type Page, test } from "@playwright/test";
 /**
  * Premium P11 landing (premium §6.1): hero, buttons, hint, sample cards with 152 / 140 / 120 /
  * 112 px discs, and the footer line at 1440, 1280, 1024, sm (800), and 390.
- * Accept: A14 (everything above the fold at 1440 x 900, nothing touches an edge) and A20
+ * Accept: A14 (nothing touches an edge; since premium §11.1 the sample cards and footer may sit
+ * below the 900 px fold) and A20
  * (exactly one filled `ink` button: "Open the sample lot").
  */
 
@@ -65,13 +66,18 @@ test.describe("P11 landing (premium §6.1)", () => {
       "landing-privacy",
       "landing-download-demos-trigger",
     ];
-    // premium §12.3 / §12.5: the larger headline and 72 px section gaps move the footer line
-    // below the 900 px fold; everything above it stays above the fold
-    const footerIds = new Set(["landing-privacy", "landing-download-demos-trigger"]);
+    // premium §11.1 (overrides A14): the hero wafer row sits between the hint and "Sample lots",
+    // so the sample cards and the footer line may move below the 900 px fold
+    const belowFoldIds = new Set([
+      "landing-sample-heading",
+      ...CARD_IDS.map((id) => `demo-card-${id}`),
+      "landing-privacy",
+      "landing-download-demos-trigger",
+    ]);
     for (const id of ids) {
       const b = await box(page, id);
       // A14: above the 900 px fold and at least 16 px from every viewport edge
-      if (!footerIds.has(id)) expect(b.y + b.height, id).toBeLessThanOrEqual(900 - 4);
+      if (!belowFoldIds.has(id)) expect(b.y + b.height, id).toBeLessThanOrEqual(900 - 4);
       expect(b.x, id).toBeGreaterThanOrEqual(16);
       expect(b.x + b.width, id).toBeLessThanOrEqual(1440 - 16);
     }
@@ -83,16 +89,17 @@ test.describe("P11 landing (premium §6.1)", () => {
     expect(Math.round(secondary.x - (primary.x + primary.width))).toBe(12);
     expect(Math.abs(primary.y - secondary.y)).toBeLessThan(1);
 
-    // Cards: 3-up row on the 12-column grid, 152 px discs centred 28 px below the card top
+    // Cards: 3-up row on the 12-column grid; §11.2 tiles hold the 152 px disc centred, 40 px inset
     const cards = await Promise.all(CARD_IDS.map((id) => box(page, `demo-card-${id}`)));
     for (const [i, id] of CARD_IDS.entries()) {
       const card = cards[i]!;
       expect(Math.abs(card.y - cards[0]!.y)).toBeLessThan(1);
-      expect(card.height).toBeGreaterThanOrEqual(288);
+      const tile = await box(page, `demo-tile-${id}`);
+      expect(Math.round(tile.height)).toBe(152 + 80);
       const wafer = await box(page, `landing-demo-wafer-${id}`);
       expect(Math.round(wafer.width)).toBe(152);
-      expect(Math.round(wafer.y - card.y)).toBe(28);
-      expect(Math.abs(wafer.x + 76 - (card.x + card.width / 2))).toBeLessThan(1);
+      expect(Math.round(wafer.y - tile.y)).toBe(40);
+      expect(Math.abs(wafer.x + 76 - (tile.x + tile.width / 2))).toBeLessThan(1);
     }
     expect(Math.round(cards[1]!.x - (cards[0]!.x + cards[0]!.width))).toBe(24);
     expect(Math.round(cards[0]!.x)).toBe(40);
@@ -101,7 +108,7 @@ test.describe("P11 landing (premium §6.1)", () => {
     const colours = await page.evaluate(() => ({
       body: getComputedStyle(document.body).backgroundColor,
       card: getComputedStyle(
-        document.querySelector('[data-testid="demo-card-edge-ring-etch"]')!,
+        document.querySelector('[data-testid="landing-example-card"]')!,
       ).backgroundColor,
       headline: getComputedStyle(
         document.querySelector('[data-testid="landing-headline"]')!,
@@ -141,13 +148,13 @@ test.describe("P11 landing (premium §6.1)", () => {
     await expect(page.getByTestId("wafer-stage")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("1280 x 800 and 1024 x 768: centred hero, 3-up cards, footer above the fold", async ({
+  test("1280 x 800 and 1024 x 768: centred hero, 3-up cards", async ({
     page,
   }) => {
     for (const vp of [
       // premium §12.3: clamp(56px, 6.4vw, 104px)
-      { width: 1280, height: 800, top: 116, wafer: 140, card: 272, font: "81.92px" },
-      { width: 1024, height: 768, top: 104, wafer: 120, card: 256, font: "65.536px" },
+      { width: 1280, height: 800, top: 116, wafer: 140, font: "81.92px" },
+      { width: 1024, height: 768, top: 104, wafer: 120, font: "65.536px" },
     ]) {
       await openLanding(page, vp.width, vp.height);
       const headline = await box(page, "landing-headline");
@@ -161,18 +168,17 @@ test.describe("P11 landing (premium §6.1)", () => {
       const cards = await Promise.all(CARD_IDS.map((id) => box(page, `demo-card-${id}`)));
       for (const [i, id] of CARD_IDS.entries()) {
         expect(Math.abs(cards[i]!.y - cards[0]!.y)).toBeLessThan(1);
-        expect(cards[i]!.height).toBeGreaterThanOrEqual(vp.card);
+        expect(Math.round((await box(page, `demo-tile-${id}`)).height)).toBe(vp.wafer + 80);
         expect(Math.round((await box(page, `landing-demo-wafer-${id}`)).width)).toBe(vp.wafer);
       }
-      // §12.5 72 px gaps: the cards stay above the fold; the footer line may sit below it
-      expect(cards[0]!.y + cards[0]!.height).toBeLessThanOrEqual(vp.height);
+      // premium §11.1: the hero row pushes the cards below the fold
       await page.screenshot({
         path: path.join(SHOTS, `p11-landing-${vp.width}-light.png`),
       });
     }
   });
 
-  test("sm 800: single column, left-aligned hero, stacked 160 px cards with a 112 px disc on the left", async ({
+  test("sm 800: single column, left-aligned hero, stacked full-width tiles with a centred 112 px disc", async ({
     page,
   }) => {
     await openLanding(page, 800, 1100);
@@ -188,16 +194,19 @@ test.describe("P11 landing (premium §6.1)", () => {
     for (const [i, id] of CARD_IDS.entries()) {
       const card = cards[i]!;
       if (i > 0) expect(card.y).toBeGreaterThan(cards[i - 1]!.y + cards[i - 1]!.height);
-      expect(Math.round(card.height)).toBe(160);
+      // premium §11.2: text below the tile at every breakpoint; the tile holds only the disc
+      const tile = await box(page, `demo-tile-${id}`);
+      expect(Math.round(tile.width)).toBe(640);
+      expect(Math.round(tile.height)).toBe(192);
       const wafer = await box(page, `landing-demo-wafer-${id}`);
       expect(Math.round(wafer.width)).toBe(112);
-      expect(Math.round(wafer.x - card.x)).toBe(24);
-      expect(Math.abs(wafer.y + 56 - (card.y + 80))).toBeLessThan(1);
+      expect(Math.abs(wafer.x + 56 - (tile.x + 320))).toBeLessThan(1);
+      expect(Math.round(wafer.y - tile.y)).toBe(40);
     }
     await page.screenshot({ path: path.join(SHOTS, "p11-landing-800-light.png"), fullPage: true });
   });
 
-  test("390 x 844: full-width buttons, short hint, first card and 46 px peek above the fold", async ({
+  test("390 x 844: full-width buttons, short hint, 300 px carousel cards with a 46 px peek", async ({
     page,
   }) => {
     await openLanding(page, 390, 844);
@@ -217,10 +226,10 @@ test.describe("P11 landing (premium §6.1)", () => {
     const card1 = await box(page, "demo-card-edge-ring-etch");
     const card2 = await box(page, "demo-card-handling-scratch");
     expect(Math.round(card1.width)).toBe(300);
-    expect(card1.height).toBeGreaterThanOrEqual(248);
-    expect(card1.y + card1.height).toBeLessThanOrEqual(844);
+    expect(Math.round(card2.x - (card1.x + card1.width))).toBe(12);
     expect(Math.round(390 - 16 - card2.x)).toBe(46);
-    for (const id of ["landing-hint", "landing-sample-heading", "landing-open-stdf-button"]) {
+    // premium §11.1: the hero wafer and result card push the cards below the fold
+    for (const id of ["landing-hint", "landing-open-stdf-button"]) {
       const b = await box(page, id);
       expect(b.y + b.height, id).toBeLessThanOrEqual(844);
     }

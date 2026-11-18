@@ -38,7 +38,12 @@ import {
 } from '@/ui/wafer-map/wafer-geometry';
 import { ErrorDetailsSheet } from './ErrorDetailsSheet';
 import {
+  buildLandingReticleTicks,
+  LANDING_EXAMPLE_EDGE_SHARE,
+  LANDING_HERO_WAFER_SIZE_DEFAULT,
+  LANDING_RETICLE_GAP_PX,
   LANDING_WAFER_SIZE_DEFAULT,
+  resolveLandingHeroWaferSize,
   resolveLandingWaferSize,
 } from './landing-layout';
 import { resolveParseErrorViewModel } from './parse-error-copy';
@@ -73,18 +78,25 @@ const DEMO_CARD_COPY_KEYS = {
   'edge-ring-etch': {
     title: 'demo.edgeRing.title',
     description: 'demo.edgeRing.description',
+    chip: 'demo.edgeRing.chip',
   },
   'handling-scratch': {
     title: 'demo.scratch.title',
     description: 'demo.scratch.description',
+    chip: 'demo.scratch.chip',
   },
   'site2-probe-contact': {
     title: 'demo.site2.title',
     description: 'demo.site2.description',
+    chip: 'demo.site2.chip',
   },
 } as const satisfies Record<
   DemoPresetId,
-  { readonly title: MessageKey; readonly description: MessageKey }
+  {
+    readonly title: MessageKey;
+    readonly description: MessageKey;
+    readonly chip: MessageKey;
+  }
 >;
 
 function subscribeViewportWidth(onChange: () => void): () => void {
@@ -92,12 +104,15 @@ function subscribeViewportWidth(onChange: () => void): () => void {
   return () => window.removeEventListener('resize', onChange);
 }
 
-/** Card wafer diameter for the current viewport (premium §6.1); 152 px on the server. */
-function useLandingWaferSize(): number {
+/** A viewport-dependent size (premium §6.1, §11.1); `fallback` on the server and first paint. */
+function useViewportSize(
+  resolve: (viewportWidth: number) => number,
+  fallback: number,
+): number {
   return React.useSyncExternalStore(
     subscribeViewportWidth,
-    () => resolveLandingWaferSize(window.innerWidth),
-    () => LANDING_WAFER_SIZE_DEFAULT,
+    () => resolve(window.innerWidth),
+    () => fallback,
   );
 }
 
@@ -110,8 +125,16 @@ function layerStyle(rect: StageLayerRect): React.CSSProperties {
   };
 }
 
-interface DemoWaferThumbnailProps {
+interface LandingWaferDiscProps {
   readonly presetId: DemoPresetId;
+  readonly size: number;
+  /** Test ID for a layer (`undefined` is the canvas). */
+  readonly testId: (part?: 'frame' | 'contact' | 'ambient' | 'halo' | 'sheen') => string;
+  /**
+   * Hero wafer (premium §11.1): full §5 disc material with the thin film and the stage shadows
+   * (light ambient + contact, dark halo). Card wafers keep the §5.3 thumbnail rules.
+   */
+  readonly hero?: boolean;
   readonly renderWorkerThumbnail?: (
     presetId: DemoPresetId,
     cssSize: number,
@@ -120,12 +143,14 @@ interface DemoWaferThumbnailProps {
   ) => Promise<ImageBitmap | null>;
 }
 
-function DemoWaferThumbnail({
+function LandingWaferDisc({
   presetId,
+  size,
+  testId,
+  hero = false,
   renderWorkerThumbnail,
-}: DemoWaferThumbnailProps): React.JSX.Element {
+}: LandingWaferDiscProps): React.JSX.Element {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
-  const size = useLandingWaferSize();
   const preview = React.useMemo(
     () => getDemoPresetPreview(presetId),
     [presetId],
@@ -156,9 +181,11 @@ function DemoWaferThumbnail({
       cssSize: size,
       dpr: dims.dpr,
       highContrast,
+      thinFilm: hero,
     });
 
-    if (!renderWorkerThumbnail) {
+    // The worker thumbnail mirrors the card rules (no thin film), so the hero stays on the main-thread paint
+    if (!renderWorkerThumbnail || hero) {
       return;
     }
     let cancelled = false;
@@ -202,7 +229,7 @@ function DemoWaferThumbnail({
     return () => {
       cancelled = true;
     };
-  }, [presetId, preview, renderWorkerThumbnail, highContrast, size]);
+  }, [presetId, preview, renderWorkerThumbnail, highContrast, size, hero]);
 
   const center = size / 2;
   const layers = computeStageDiscLayerRects(
@@ -212,33 +239,56 @@ function DemoWaferThumbnail({
   );
   const discMaskImage = buildWaferDiscMaskImage(preview.wafer.geometry.wfFlat);
 
-  // premium §6.1: 152 / 140 / 120 / 112 px disc with its contact shadow (light) and the
-  // §5.2 step 6 sheen at rest, masked to the notch-cut disc
+  // premium §6.1: 152 / 140 / 120 / 112 px card disc with its contact shadow (light); §11.1: the
+  // 320 / 280 / 240 / 220 px hero disc with the stage shadows (light ambient + contact, dark halo);
+  // both with the §5.2 step 6 sheen at rest, masked to the notch-cut disc
   return (
     <div
-      data-testid={`landing-demo-wafer-frame-${presetId}`}
+      data-testid={testId('frame')}
       style={{ width: `${size}px`, height: `${size}px` }}
       className="relative shrink-0"
     >
+      {hero ? (
+        <div
+          aria-hidden="true"
+          data-testid={testId('ambient')}
+          style={{
+            ...layerStyle(layers.ambient),
+            backgroundImage: WAFER_TOKENS.ambientShadow,
+          }}
+          className="pointer-events-none absolute dark:hidden"
+        />
+      ) : null}
       <div
         aria-hidden="true"
-        data-testid={`landing-demo-wafer-contact-${presetId}`}
+        data-testid={testId('contact')}
         style={{
           ...layerStyle(layers.contact),
           backgroundImage: WAFER_TOKENS.contactShadow,
         }}
         className="pointer-events-none absolute dark:hidden"
       />
+      {hero ? (
+        <div
+          aria-hidden="true"
+          data-testid={testId('halo')}
+          style={{
+            ...layerStyle(layers.halo),
+            backgroundImage: WAFER_TOKENS.halo,
+          }}
+          className="pointer-events-none absolute hidden dark:block"
+        />
+      ) : null}
       <canvas
         ref={canvasRef}
-        data-testid={`landing-demo-wafer-${presetId}`}
+        data-testid={testId()}
         aria-hidden="true"
         style={{ width: `${size}px`, height: `${size}px` }}
         className="pointer-events-none relative block select-none"
       />
       <div
         aria-hidden="true"
-        data-testid={`landing-demo-wafer-sheen-${presetId}`}
+        data-testid={testId('sheen')}
         style={{
           ...layerStyle(layers.sheen),
           maskImage: discMaskImage,
@@ -286,8 +336,13 @@ function DemoLotCardButton({
   const pressedRef = React.useRef(false);
   const descId = React.useId();
 
+  const size = useViewportSize(
+    resolveLandingWaferSize,
+    LANDING_WAFER_SIZE_DEFAULT,
+  );
   const keys = DEMO_CARD_COPY_KEYS[presetId];
   const title = t(keys.title);
+  const chip = t(keys.chip);
   const description = t(keys.description);
   const meta = t('landing.cardMeta', {
     wafers: formatInteger(DEMO_WAFER_COUNT),
@@ -339,32 +394,50 @@ function DemoLotCardButton({
       onPointerCancel={releasePress}
       onClick={() => onLoadDemoLot(presetId)}
       className={cn(
-        // premium §6.1 sample card: `surface`, `r-2xl`, `shadow-card`, no padding on the card;
-        // mobile 300 x 248 carousel item, sm full-width 160 row, 3-up 256 / 272 / 288 from 1024
-        'relative flex min-h-[248px] w-[300px] shrink-0 snap-start cursor-pointer flex-col items-center rounded-2xl bg-surface text-left shadow-card select-none',
-        'sm:min-h-[160px] sm:w-full sm:flex-row sm:items-center',
-        'lg:min-h-[256px] lg:flex-col lg:items-stretch xl:min-h-[272px] min-[90rem]:min-h-[288px]',
-        // §8.9 hover: lift -2 px and cross-fade a `shadow-card-hover` pseudo-element (240 ms in, 160 ms out)
-        "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:shadow-card-hover before:content-['']",
-        'transition-[translate] duration-[160ms] ease-[var(--ease-out)] before:transition-opacity before:duration-[160ms] before:ease-[var(--ease-out)]',
-        '[@media(hover:hover)]:enabled:hover:duration-[240ms] [@media(hover:hover)]:enabled:hover:before:opacity-100 [@media(hover:hover)]:enabled:hover:before:duration-[240ms]',
+        // premium §11.2 sample card: a `fill-1` tile holding only the disc, with the text below
+        // it on the page bg; mobile 300 px carousel item, sm full-width stack, 3-up from 1024
+        'group relative flex w-[300px] shrink-0 snap-start cursor-pointer flex-col text-left select-none sm:w-full',
+        // §8.9 hover lift -2 px (the tile cross-fades its `shadow-card`)
+        'transition-[translate] duration-[160ms] ease-[var(--ease-out)] [@media(hover:hover)]:enabled:hover:duration-[240ms]',
         '[@media(hover:hover)]:motion-safe:enabled:hover:-translate-y-0.5',
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink',
+        'focus-visible:outline-none',
         'disabled:cursor-not-allowed disabled:opacity-40',
       )}
     >
-      <div className="flex justify-center pt-7 sm:pt-0 sm:pl-6 lg:pt-7 lg:pl-0">
-        <DemoWaferThumbnail
+      <div
+        data-testid={`demo-tile-${presetId}`}
+        className={cn(
+          // `r-2xl`, no shadow at rest; `shadow-card` on hover through a pseudo-element's opacity
+          'relative flex w-full items-center justify-center rounded-2xl bg-fill-1 py-10',
+          "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:shadow-card before:content-['']",
+          'before:transition-opacity before:duration-[160ms] before:ease-[var(--ease-out)]',
+          '[@media(hover:hover)]:group-enabled:group-hover:before:opacity-100 [@media(hover:hover)]:group-enabled:group-hover:before:duration-[240ms]',
+          'group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ink',
+        )}
+      >
+        <LandingWaferDisc
           presetId={presetId}
+          size={size}
+          testId={(part) =>
+            part ? `landing-demo-wafer-${part}-${presetId}` : `landing-demo-wafer-${presetId}`
+          }
           {...(renderWorkerThumbnail !== undefined
             ? { renderWorkerThumbnail }
             : {})}
         />
+        {/* §11.2 pattern chip, bottom-left: `caption`, `fill-2`, pill, 24 h */}
+        <span
+          data-testid={`demo-chip-${presetId}`}
+          className="absolute bottom-4 left-4 inline-flex h-6 items-center rounded-pill bg-fill-2 px-2.5 type-caption text-text-secondary"
+        >
+          {chip}
+        </span>
       </div>
 
       <div
         id={descId}
-        className="flex w-full min-w-0 flex-col px-6 pt-6 pb-6 sm:flex-1 sm:py-6 lg:flex-none"
+        data-testid={`demo-caption-${presetId}`}
+        className="mt-4 flex w-full min-w-0 flex-col"
       >
         <span className="truncate type-headline text-text-primary">{title}</span>
         <span className="mt-1 truncate type-callout text-text-secondary lg:max-xl:line-clamp-2 lg:max-xl:whitespace-normal">
@@ -375,6 +448,197 @@ function DemoLotCardButton({
         </span>
       </div>
     </button>
+  );
+}
+
+const RETICLE_LABELS = [
+  { angleDeg: 0, text: '0°' },
+  { angleDeg: 90, text: '90°' },
+  { angleDeg: 180, text: '180°' },
+  { angleDeg: 270, text: '270°' },
+] as const;
+
+/** Label slots outside the reticle circle: 8 px gap + one 16 px mono line above / below, 40 px at the sides. */
+const RETICLE_LABEL_SLOT_Y = 24;
+const RETICLE_LABEL_SLOT_X = 40;
+const RETICLE_LABEL_GAP = 8;
+
+interface LandingHeroProps {
+  readonly disabled: boolean;
+  readonly onOpenSample: () => void;
+}
+
+/**
+ * Landing hero row (premium §11.1): the `edge-ring-etch` W01 wafer inside a probe-station
+ * reticle (hairline circle at D + 32, 72 ticks, 0° / 90° / 180° / 270° mono labels), and the
+ * "Example result" card to its right from 1024 (below it under 1024). The wafer and the card's
+ * text button both open the sample lot.
+ */
+function LandingHero({
+  disabled,
+  onOpenSample,
+}: LandingHeroProps): React.JSX.Element {
+  const { t, formatPercent } = useT();
+  const size = useViewportSize(
+    resolveLandingHeroWaferSize,
+    LANDING_HERO_WAFER_SIZE_DEFAULT,
+  );
+  const ticks = React.useMemo(() => buildLandingReticleTicks(), []);
+  const reticleD = size + LANDING_RETICLE_GAP_PX * 2;
+  const reticleR = reticleD / 2;
+  const frameW = reticleD + RETICLE_LABEL_SLOT_X * 2;
+  const frameH = reticleD + RETICLE_LABEL_SLOT_Y * 2;
+  const cx = frameW / 2;
+  const cy = frameH / 2;
+  const sampleLabel = t('landing.primary');
+  const patternName = 'Edge-Ring';
+  const [titleBefore = '', titleAfter = ''] = t('verdict.pattern', {
+    pattern: patternName,
+  }).split(patternName);
+
+  return (
+    <div
+      data-testid="landing-hero"
+      className="mt-14 flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-14"
+    >
+      <div
+        data-testid="landing-hero-frame"
+        style={{ width: `${frameW}px`, height: `${frameH}px` }}
+        className="relative shrink-0"
+      >
+        <svg
+          aria-hidden="true"
+          data-testid="landing-reticle"
+          width={frameW}
+          height={frameH}
+          viewBox={`0 0 ${frameW} ${frameH}`}
+          className="pointer-events-none absolute inset-0 overflow-visible"
+        >
+          <circle
+            cx={cx}
+            cy={cy}
+            r={reticleR - 0.5}
+            fill="none"
+            strokeWidth={1}
+            className="stroke-hairline"
+          />
+          {ticks.map((tick) => {
+            const a = (tick.angleDeg * Math.PI) / 180;
+            const sin = Math.sin(a);
+            const cos = Math.cos(a);
+            const outer = reticleR - 0.5;
+            const inner = outer - tick.lengthPx;
+            return (
+              <line
+                key={tick.angleDeg}
+                data-reticle-tick=""
+                x1={cx + sin * outer}
+                y1={cy - cos * outer}
+                x2={cx + sin * inner}
+                y2={cy - cos * inner}
+                strokeWidth={1}
+                className="stroke-hairline-strong"
+              />
+            );
+          })}
+        </svg>
+
+        {RETICLE_LABELS.map((label) => {
+          const offset = reticleR + RETICLE_LABEL_GAP;
+          const style: React.CSSProperties =
+            label.angleDeg === 0
+              ? { left: `${cx}px`, bottom: `${cy + offset}px`, transform: 'translateX(-50%)' }
+              : label.angleDeg === 180
+                ? { left: `${cx}px`, top: `${cy + offset}px`, transform: 'translateX(-50%)' }
+                : label.angleDeg === 90
+                  ? { left: `${cx + offset}px`, top: `${cy}px`, transform: 'translateY(-50%)' }
+                  : { right: `${cx + offset}px`, top: `${cy}px`, transform: 'translateY(-50%)' };
+          return (
+            <span
+              key={label.angleDeg}
+              aria-hidden="true"
+              data-testid={`landing-reticle-label-${label.angleDeg}`}
+              style={style}
+              className="pointer-events-none absolute type-mono-note whitespace-nowrap text-text-tertiary"
+            >
+              {label.text}
+            </span>
+          );
+        })}
+
+        <button
+          type="button"
+          data-testid="landing-hero-wafer"
+          aria-label={sampleLabel}
+          disabled={disabled}
+          onClick={onOpenSample}
+          style={{
+            left: `${cx - reticleR}px`,
+            top: `${cy - reticleR}px`,
+            width: `${reticleD}px`,
+            height: `${reticleD}px`,
+          }}
+          className={cn(
+            'absolute flex cursor-pointer items-center justify-center rounded-full bg-transparent',
+            'focus-visible:shadow-focus-ring focus-visible:outline-none',
+            'disabled:cursor-not-allowed',
+          )}
+        >
+          <LandingWaferDisc
+            presetId="edge-ring-etch"
+            size={size}
+            hero
+            testId={(part) =>
+              part ? `landing-hero-disc-${part}` : 'landing-hero-disc'
+            }
+          />
+        </button>
+      </div>
+
+      {/* §11.1 result card: `surface`, `r-2xl`, `shadow-card`, padding 24, width 280 */}
+      <div
+        data-testid="landing-example-card"
+        className="w-[280px] shrink-0 rounded-2xl bg-surface p-6 text-left shadow-card"
+      >
+        {/* §12.4 eyebrow: 6 px ember dot, then a mono 12/16 uppercase note */}
+        <p
+          data-testid="landing-example-eyebrow"
+          className="flex items-center gap-2 type-mono-note type-eyebrow text-text-tertiary"
+        >
+          <span
+            aria-hidden="true"
+            className="size-1.5 shrink-0 rounded-full bg-ember"
+          />
+          {t('landing.example.eyebrow')}
+        </p>
+        <p
+          data-testid="landing-example-title"
+          className="mt-3 type-title-2 text-ember-ink"
+        >
+          {titleBefore}
+          <Untranslated>{patternName}</Untranslated>
+          {titleAfter}
+        </p>
+        <p
+          data-testid="landing-example-fact"
+          className="mt-2 type-body text-text-secondary"
+        >
+          {t('landing.example.fact', {
+            percent: formatPercent(LANDING_EXAMPLE_EDGE_SHARE),
+          })}
+        </p>
+        <Button
+          variant="text"
+          data-testid="landing-example-action"
+          onClick={onOpenSample}
+          disabled={disabled}
+          className="mt-4"
+        >
+          {t('landing.example.action')}
+          <span aria-hidden="true">→</span>
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -607,6 +871,14 @@ export function EmptyStateCard({
           </p>
         </div>
       )}
+
+      {/* premium §11.1: hint line, 56 px, hero row, 72 px, "Sample lots" */}
+      {cause === 'first-run' ? (
+        <LandingHero
+          disabled={disabled}
+          onOpenSample={() => onLoadDemoLot('edge-ring-etch')}
+        />
+      ) : null}
 
       {/* premium §6.1 sample cards: mobile scroll-snap carousel (46 px peek), sm stacked rows, 3-up grid from 1024 */}
       {cause !== 'no-results' ? (

@@ -96,9 +96,29 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(html).toContain('One worn tester needle fails good dies.');
     expect(html).toContain('25 wafers, 15,825 dies');
     expect(html).toContain('aria-label="Open sample lot Edge-Ring Plasma Etch"');
-    expect(html).toContain('rounded-2xl bg-surface');
-    expect(html).toContain('shadow-card');
-    expect(html).toContain('before:shadow-card-hover');
+    // premium §11.2: a `fill-1` tile holding the disc and a pattern chip; text below it, outside
+    expect(html).toContain('data-testid="demo-tile-edge-ring-etch" class="relative flex w-full items-center justify-center rounded-2xl bg-fill-1');
+    expect(html).toContain('before:shadow-card');
+    expect(html).not.toContain('before:shadow-card-hover');
+    expect(html).toMatch(/data-testid="demo-chip-edge-ring-etch"[^>]*>Edge ring</);
+    expect(html).toMatch(/data-testid="demo-chip-handling-scratch"[^>]*>Scratch</);
+    expect(html).toMatch(/data-testid="demo-chip-site2-probe-contact"[^>]*>Probe site</);
+
+    // premium §11.1 hero: 320 px edge-ring-etch disc with stage shadows inside a 72-tick reticle,
+    // and the "Example result" card; the wafer button opens the sample lot
+    expect(html).toContain('data-testid="landing-hero-wafer" aria-label="Open the sample lot"');
+    expect(html.match(/data-reticle-tick=""/g)).toHaveLength(72);
+    for (const label of ['0°', '90°', '180°', '270°']) {
+      expect(html).toContain(`>${label}</span>`);
+    }
+    expect(html).toContain('data-testid="landing-hero-disc-ambient"');
+    expect(html).toContain('data-testid="landing-hero-disc-halo"');
+    expect(html).toContain('width:320px;height:320px');
+    expect(html).toContain('rounded-2xl bg-surface p-6 text-left shadow-card');
+    expect(html).toContain('Example result');
+    expect(html).toContain('<bdi translate="no">Edge-Ring</bdi> failure.');
+    expect(html).toContain('93.8% of fails sit in the outer 3 rings.');
+    expect(html).toContain('See how it was found<span aria-hidden="true">→</span>');
 
     // 152 px server-rendered disc with contact shadow and masked sheen; no R-series vignette or top light
     expect(html).toContain('width:152px;height:152px');
@@ -123,10 +143,10 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(html).toContain('>Runs entirely in your browser.<');
     expect(html).toContain('Download sample files');
 
-    // Restraint: no weights >= 700; the only ember chrome is the §12.4 eyebrow dot (the §12.2
-    // accent word takes ember-ink from `.type-accent`)
+    // Restraint: no weights >= 700; the only ember chrome is the §12.4 eyebrow dots and the §11.1
+    // example title (the §12.2 accent word takes ember-ink from `.type-accent`)
     expect(html).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
-    expect(html.match(/ember/g)).toEqual(['ember']);
+    expect(html.match(/[\w-]*ember[\w-]*/g)).toEqual(['bg-ember', 'text-ember-ink', 'bg-ember']);
     expect(html).toContain('data-testid="landing-eyebrow-dot" class="size-1.5 shrink-0 rounded-full bg-ember"');
     expect(html).toMatch(/data-testid="landing-sample-heading" class="[^"]*type-mono-note type-eyebrow/);
   });

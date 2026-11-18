@@ -1006,4 +1006,31 @@ describe('Premium P6 — die tiles and thumbnails (premium §5.3)', () => {
     expect(fail[0]!.w).toBeCloseTo(failSide, 9);
     expect(pass[0]!.w).toBeCloseTo(failSide * PASS_DIE_CELL_FRACTION, 9);
   });
+
+  it('the landing hero wafer (premium §11.1) paints the thin film; card wafers skip it', async () => {
+    const res = await ingestDemoPreset('edge-ring-etch');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
+    const { lot } = res;
+    const wafer = lot.wafers[0]!;
+    const mock = createMockCanvas2DContext();
+    let conicCalls = 0;
+    const ctx: Canvas2DContextLike = {
+      ...mock.ctx,
+      createConicGradient: () => {
+        conicCalls += 1;
+        return { addColorStop: () => undefined } as unknown as CanvasGradient;
+      },
+    };
+    paintLandingCardWafer(ctx, { wafer, dies: lot.dies, cssSize: 152, dpr: 1 });
+    expect(conicCalls).toBe(0);
+    paintLandingCardWafer(ctx, {
+      wafer,
+      dies: lot.dies,
+      cssSize: 320,
+      dpr: 1,
+      thinFilm: true,
+    });
+    expect(conicCalls).toBe(1);
+  });
 });

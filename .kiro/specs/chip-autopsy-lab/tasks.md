@@ -303,7 +303,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [ ] P26. Copy and i18n pass
   - Plain labels from §2.2, every key in §9.5 in all 5 locales with parity, `<bdi translate="no">` wrapping, overflow behaviours from §9.7 (premium §9).
   - Accept: A40, A26 (no exclamation marks).
-- [ ] P26a. Landing hero and sample tiles (inspiration deltas)
+- [x] P26a. Landing hero and sample tiles (inspiration deltas)
   - Hero wafer with probe-station reticle and example result card; sample cards as tiles with captions outside and pattern chips (premium §11.1, §11.2). Also apply §11.3 in P20, §11.4 in P25, §11.5 in P28 when those run.
   - Accept: A41, A42.
 - [x] P26b. Editorial accent pass

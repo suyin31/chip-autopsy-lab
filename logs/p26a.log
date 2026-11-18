@@ -1,0 +1,293 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=33
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=20
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=30
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=79
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the landing code.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=102
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=158
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=18
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=374
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=103
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=31
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=357
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=77
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=66
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=32
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=15
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=364
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Edit wafer-geometry to support the hero's thin film.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=184
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=54
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=16
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Add a unit test for the hero thin film.
+[tool] Replace in File
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=201
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=435
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=221
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=322
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Failed: Run Command
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Failed: Run Command
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=173
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=838
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1758
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=128
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=398
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=40
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now write the new e2e spec for A41/A42 before building.
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1119
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Passing. Let me look at the screenshots to check the visuals.
+[tool] Read File
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=73
+[tool] status: Completed
+Layout reads correctly. Now the existing landing and editorial specs.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=66
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+These failures all come from the intended §11 layout change. I'll update the old expectations to match.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1028
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the other specs that touch the landing.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=51
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=114
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+All pass. Now tick the task, log progress, and check the workspace.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=462
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=44
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+P26a is done: the landing now has the hero wafer with its probe-station reticle and an example result card, and the sample cards are tiles with their text outside and a pattern chip inside. Typecheck and lint are clean, `pnpm test` passes 299/299 (50 files), and every e2e spec I ran passes after a fresh build.
+
+**Hero (§11.1)**
+- **Wafer:** it uses the real `edge-ring-etch` W01 data at 320 / 280 / 240 / 220 px, with the full disc material including the thin film, the stage shadows (light) or halo (dark), and the sheen at rest.
+- **Reticle:** a hairline circle at D + 32, inward ticks, and mono "0°" / "90°" / "180°" / "270°" labels. The reticle circle is a button labelled "Open the sample lot".
+- **Example result card:** it sits right of the disc from 1024 px and below it under 1024. It shows the "Example result" eyebrow, "Edge-Ring failure." in `ember-ink`, "93.8% of fails sit in the outer 3 rings.", and a "See how it was found →" text button that opens the sample lot.
+- **Spacing:** hint line, 56 px, hero row, 72 px, "Sample lots". At 1440 x 900 the headline, the button and the whole disc are above the fold.
+
+**Sample tiles (§11.2):** each card is now a `fill-1` tile holding only the disc and a 24 px chip ("Edge ring", "Scratch", "Probe site"). On hover the tile gets `shadow-card` and keeps the existing lift. The name, description and meta sit 16 px below the tile on the page background.
+
+**i18n:** I added 6 keys in all 5 locales (now 233 keys, parity test updated). The title reuses the existing `verdict.pattern` key, with "Edge-Ring" wrapped in `<bdi translate="no">`.
+
+**Tests**
+- New unit tests cover the hero sizes, the 72 ticks, the hero thin film, and a check that the 93.8% matches the engine's edge-share stat.
+- New e2e spec `landing-p26a` covers A41 and A42 in light, dark, 800 px and 390 px (5/5).
+- I updated `landing-p11` and `editorial-p26b` because §11.1 lets the sample cards and footer move below the fold. The A45 "cards are white" check now looks at the result card, since sample tiles are no longer white.
+- No visual snapshots changed, so `--update-snapshots` wasn't needed.
+
+**Decisions** (also in `logs/progress.md`)
+- **Tick count:** §11.1 says a tick every 10° (36 ticks) but A41 counts 72, so I put a tick every 5°: 4 px, and 8 px at the 90° marks.
+- **Gaps premium.md doesn't give:** 56 px between the disc and the card in a row, 32 px when stacked.
+- **Arrow:** "→" is in the button text because §11.1 names it explicitly, even though the design rules otherwise forbid it. It is hidden from screen readers.
+- **Not yet done:** the sheen following the pointer on the hero and the cards waits for P32, which owns that effect. The hero button has no press scale.
+
+`logs/p26a.log`, `logs/p26a.out`, `logs/prompt-p26a.txt` and `logs/p26b-cont.out` show as changed but aren't my edits, so I left them alone.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=192
+

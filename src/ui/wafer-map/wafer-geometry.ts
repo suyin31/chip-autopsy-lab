@@ -1850,6 +1850,8 @@ export interface PaintWaferThumbnailParams {
   readonly dpr: number;
   /** `prefers-contrast: more`: pass tiles use `pass-tile-hc` (premium §5.3). */
   readonly highContrast?: boolean;
+  /** Paints the §5.2 step 3 thin film (landing hero wafer, premium §11.1); thumbnails skip it. */
+  readonly thinFilm?: boolean;
 }
 
 /**
@@ -1863,7 +1865,14 @@ function paintThumbnailDisc(
   params: PaintWaferThumbnailParams,
   radiusPx: number,
 ): void {
-  const { wafer, dies, cssSize, dpr, highContrast = false } = params;
+  const {
+    wafer,
+    dies,
+    cssSize,
+    dpr,
+    highContrast = false,
+    thinFilm = false,
+  } = params;
   const center = cssSize / 2;
 
   paintWaferDiscMaterial(ctx, {
@@ -1872,7 +1881,7 @@ function paintThumbnailDisc(
     waferRadiusPx: radiusPx,
     wfFlat: wafer.geometry.wfFlat,
     devicePixelCss: 1 / dpr,
-    skipThinFilm: true,
+    skipThinFilm: !thinFilm,
   });
 
   const waferRadiusUnits = computeWaferRadiusUnits(wafer, dies);
