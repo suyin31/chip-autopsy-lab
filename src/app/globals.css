@@ -6,8 +6,7 @@
 /*
  * Premium theme tokens (premium.md §3.2, §3.5, §3.7, §3.8, §7.9). Utilities read these
  * variables through @theme inline below. Values mirror THEME_TOKENS in src/ui/tokens/palette.ts.
- * Without a data-theme attribute, :root:not([data-theme]) keeps the legacy R-series dark values
- * for the names shared with the R-series (bg, material, hairline, text-*) until task P3 sets it.
+ * THEME_INIT_SCRIPT (src/ui/theme) sets data-theme before first paint (premium.md §3.1).
  */
 :root,
 :root[data-theme="dark"] {
@@ -92,12 +91,6 @@
   --elevation-popover: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.08), 0 24px 48px rgba(0, 0, 0, 0.12);
   --elevation-thumb: 0 0 0 0.5px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.10), 0 3px 8px rgba(0, 0, 0, 0.05);
   --elevation-chevron: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.10);
-}
-
-/* Legacy R-series values for shared names while no data-theme is set (redesign.md §2.1) */
-:root:not([data-theme]) {
-  --text-secondary: rgba(255, 255, 255, 0.56);
-  --text-tertiary: rgba(255, 255, 255, 0.48);
 }
 
 /* Reduced transparency: every material is opaque surface, no filter (premium.md §3.8) */

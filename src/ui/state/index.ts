@@ -21,3 +21,10 @@ export {
   flushPendingWaferCommits,
   registerPendingWaferCommit,
 } from './pending-wafer-commit';
+export {
+  createThemeStore,
+  type ThemeStoreInit,
+  type ThemeStoreState,
+  useResolvedTheme,
+  useThemeStore,
+} from './theme-store';

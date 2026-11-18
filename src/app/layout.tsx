@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { en } from '@/core/i18n';
 import { I18nProvider, LOCALE_INIT_SCRIPT } from '@/ui/i18n';
+import { THEME_INIT_SCRIPT, ThemeController } from '@/ui/theme';
 import './globals.css';
 
 const inter = localFont({
@@ -40,9 +41,9 @@ export const metadata: Metadata = {
   description: en['app.description'],
 };
 
+// theme-color and data-theme are written by THEME_INIT_SCRIPT and ThemeController (premium.md §3.1).
 export const viewport: Viewport = {
-  themeColor: '#000000',
-  colorScheme: 'dark',
+  colorScheme: 'light dark',
 };
 
 export default function RootLayout({
@@ -54,13 +55,14 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${geistMono.variable} dark`}
-      style={{ colorScheme: 'dark' }}
+      className={`${inter.variable} ${geistMono.variable}`}
     >
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: LOCALE_INIT_SCRIPT }} />
       </head>
       <body className="min-h-screen bg-bg text-text-primary antialiased">
+        <ThemeController />
         <I18nProvider>{children}</I18nProvider>
       </body>
     </html>

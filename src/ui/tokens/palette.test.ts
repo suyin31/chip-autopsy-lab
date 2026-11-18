@@ -306,10 +306,8 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
     expect(globalsCss).toContain('--color-surface-2: #1a1a1c;');
     expect(globalsCss).toContain('--color-surface-3: #242426;');
     expect(globalsCss).toContain('--color-separator: rgba(255, 255, 255, 0.08);');
-    // Without data-theme the legacy R-series text tiers stay in force until P3
-    expect(globalsCss).toMatch(
-      /:root:not\(\[data-theme\]\) \{\s*--text-secondary: rgba\(255, 255, 255, 0\.56\);\s*--text-tertiary: rgba\(255, 255, 255, 0\.48\);/,
-    );
+    // P3 always sets data-theme, so the legacy no-attribute text tiers are gone
+    expect(globalsCss).not.toContain(':root:not([data-theme])');
     expect(globalsCss).toContain('--color-accent: #d6e6ff;');
     expect(globalsCss).toContain('--color-accent-soft: rgba(214, 230, 255, 0.12);');
     expect(globalsCss).toContain('--color-failure: #ff6b2c;');
