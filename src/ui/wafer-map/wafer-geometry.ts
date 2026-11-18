@@ -1,13 +1,14 @@
 /**
- * Pure Wafer Map Geometry, WCR Orientation, Color Mapping, and Two-Layer
+ * Pure Wafer Map Geometry, WCR Orientation, Color Mapping, and Three-Layer
  * Canvas2D Painters (`src/ui/wafer-map/wafer-geometry.ts`).
  *
  * Kept free of React and browser global reads so every coordinate transform,
- * DPR backing-store calculation, 1 px street inset, fail micro-dot threshold,
- * wafer rim + V-notch path, O(1) pointer hit-test, and two-layer draw pass is
- * directly unit-testable in Node.
+ * DPR/supersampled backing-store calculation, §2.1 pass/fail geometry cue
+ * (72% 1px-radius pass square vs full-cell minus 1px street 1.5px-radius fail die),
+ * `#0B0B0C` silicon wafer disc + V-notch path, O(1) pointer hit-test, and
+ * base/fail/overlay draw passes are directly unit-testable in Node.
  *
- * Validates: Requirements 4.1, 4.2, 4.3, 4.4, 14.2, 15.4, 17.1
+ * Validates: Requirements 4.1, 4.2, 4.3, 4.4, 14.2, 15.4, 17.1 & redesign §2.1, §3.4, §4.7
  */
 
 import {
@@ -36,20 +37,35 @@ export const DEFAULT_VIEWPORT_TRANSFORM: ViewportTransform = {
   panY: 0,
 };
 
-/** `redesign.md` §2.1: `#000000` street border width around every die. */
+/** `redesign.md` §2.1: `#000000` street border width around every failing die. */
 export const WAFER_STREET_WIDTH_PX = 1 as const;
 
-/** `design.md` Resolved Decision: failing dies draw a center micro-dot when `diePitchPx >= 7`. */
-export const FAIL_MICRO_DOT_MIN_PITCH_PX = 7 as const;
+/** `redesign.md` §2.1: Pass dies render as a centred square at 72% of the cell with 1 px radius. */
+export const PASS_DIE_CELL_FRACTION = 0.72 as const;
+export const PASS_DIE_RADIUS_PX = 1 as const;
+
+/** `redesign.md` §2.1: Fail dies fill the cell minus the 1 px street with 1.5 px radius. */
+export const FAIL_DIE_RADIUS_PX = 1.5 as const;
+
+/** `redesign.md` §4.7: Supersampled base canvas cap per side (`devicePixelRatio x 2`, max `4096 px`). */
+export const MAX_SUPERSAMPLED_CANVAS_PX = 4096 as const;
 
 /** Extra radial margin (in die pitches) between outermost die corner and wafer bevel rim. */
 const WAFER_RIM_CLEARANCE_UNITS = 0.55;
 
-/** Subtle ice outer halo stroke paired with crisp `#D6E6FF` inner outline. */
+/** `redesign.md` §2.1: Silicon disc `1 px` ring (`rgba(255, 255, 255, 0.10)`). */
+export const WAFER_DISC_RING_STROKE = 'rgba(255, 255, 255, 0.10)' as const;
+
+/** Canvas evidence keyline (`#000000` 1px), ice halo, and hover reticle strokes (`redesign.md` §2.1). */
+export const OVERLAY_KEYLINE_STROKE = '#000000' as const;
 export const OVERLAY_HALO_STROKE = 'rgba(214, 230, 255, 0.28)' as const;
 export const OVERLAY_HOVER_STROKE = 'rgba(255, 255, 255, 0.92)' as const;
-export const WAFER_OUTLINE_STROKE = 'rgba(255, 255, 255, 0.14)' as const;
-export const WAFER_EXCLUSION_RING_STROKE = 'rgba(255, 255, 255, 0.04)' as const;
+
+/** Compatibility export kept for tests importing `FAIL_MICRO_DOT_MIN_PITCH_PX` / `shouldDrawFailMicroDot`. */
+export const FAIL_MICRO_DOT_MIN_PITCH_PX = 7 as const;
+export function shouldDrawFailMicroDot(diePitchPx: number): boolean {
+  return Number.isFinite(diePitchPx) && diePitchPx >= FAIL_MICRO_DOT_MIN_PITCH_PX;
+}
 
 export interface CanvasPixelDimensions {
   readonly cssWidth: number;
@@ -83,18 +99,54 @@ export function resolveCanvasPixelSize(
   };
 }
 
+/**
+ * Resolves supersampled (`devicePixelRatio x 2`) backing store dimensions for `BaseCanvas`,
+ * uniformly capped so neither side exceeds `4096 px` (`redesign.md` §4.7).
+ */
+export function resolveSupersampledCanvasSize(
+  cssWidth: number,
+  cssHeight: number,
+  devicePixelRatio: number,
+  supersampleFactor = 2,
+): CanvasPixelDimensions {
+  const safeCssW = Number.isFinite(cssWidth) && cssWidth > 0 ? cssWidth : 1;
+  const safeCssH = Number.isFinite(cssHeight) && cssHeight > 0 ? cssHeight : 1;
+  const baseDpr =
+    Number.isFinite(devicePixelRatio) && devicePixelRatio > 0
+      ? Math.min(4, devicePixelRatio)
+      : 1;
+  const desiredScale = baseDpr * Math.max(1, supersampleFactor);
+  const maxCssSide = Math.max(safeCssW, safeCssH);
+  const maxAllowedScale = MAX_SUPERSAMPLED_CANVAS_PX / maxCssSide;
+  const effectiveDpr = Math.max(0.5, Math.min(desiredScale, maxAllowedScale));
+
+  return {
+    cssWidth: safeCssW,
+    cssHeight: safeCssH,
+    dpr: effectiveDpr,
+    pixelWidth: Math.min(
+      MAX_SUPERSAMPLED_CANVAS_PX,
+      Math.max(1, Math.round(safeCssW * effectiveDpr)),
+    ),
+    pixelHeight: Math.min(
+      MAX_SUPERSAMPLED_CANVAS_PX,
+      Math.max(1, Math.round(safeCssH * effectiveDpr)),
+    ),
+  };
+}
+
 export interface WaferRenderLayout {
   readonly cssWidth: number;
   readonly cssHeight: number;
   readonly centerXCss: number;
   readonly centerYCss: number;
+  readonly fitWaferRadiusPx: number;
   readonly waferRadiusPx: number;
   readonly waferRadiusUnits: number;
   readonly diePitchPx: number;
   readonly streetPx: number;
   readonly dieSizePx: number;
-  readonly drawFailMicroDot: boolean;
-  readonly microDotSizePx: number;
+  readonly passDieSizePx: number;
   readonly gridCenterX: number;
   readonly gridCenterY: number;
   /** `+1` when positive X points right (`POS_X = 'R'`), `-1` when left (`POS_X = 'L'`). */
@@ -125,14 +177,6 @@ export interface WaferNotchGeometry {
 }
 
 /**
- * Returns whether failing dies should render their inner `#0A0A0B` center micro-dot
- * for WCAG 2.2 SC 1.4.1 / 1.4.11 non-color differentiation (`diePitchPx >= 7`).
- */
-export function shouldDrawFailMicroDot(diePitchPx: number): boolean {
-  return Number.isFinite(diePitchPx) && diePitchPx >= FAIL_MICRO_DOT_MIN_PITCH_PX;
-}
-
-/**
  * Computes the wafer's outer radius in die-pitch units so every valid die cell's
  * 4 corners sit cleanly inside the circular wafer boundary with realistic edge clearance.
  */
@@ -149,8 +193,8 @@ export function computeWaferRadiusUnits(
       if (dies.hasValidCoords[i] === 0) {
         continue;
       }
-      const dx = Math.abs(dies.x[i] - gridCenterX) + 0.5;
-      const dy = Math.abs(dies.y[i] - gridCenterY) + 0.5;
+      const dx = Math.abs(dies.x[i]! - gridCenterX) + 0.5;
+      const dy = Math.abs(dies.y[i]! - gridCenterY) + 0.5;
       const cornerDist = Math.hypot(dx, dy);
       if (cornerDist > maxCornerDist) {
         maxCornerDist = cornerDist;
@@ -168,8 +212,25 @@ export function computeWaferRadiusUnits(
 }
 
 /**
+ * Resolves stage-side margin so fit wafer diameter matches `redesign.md` §3.4:
+ * - Desktop (`minDim >= 656`, e.g. `783 x 720`): `minDim - 96` (`48 px` per side -> `624 Ø` at `720 px`)
+ * - Mobile (`minDim === 390`): `390 - 40 = 350 Ø` (`20 px` per side)
+ * - Smooth linear ramp between `390` and `656`
+ */
+export function resolveStageMarginPx(minDim: number): number {
+  if (minDim >= 656) {
+    return 48;
+  }
+  if (minDim <= 390) {
+    return Math.max(6, Math.round((minDim * 20) / 390));
+  }
+  const t = (minDim - 390) / (656 - 390);
+  return Math.round(20 + t * 28);
+}
+
+/**
  * Computes deterministic coordinate-to-canvas geometry respecting `WCR` orientation
- * (`POS_X`, `POS_Y`), `1 px` street insets, micro-dot rules, and `ViewportTransform`.
+ * (`POS_X`, `POS_Y`), `1 px` street insets, `72%` pass-die geometry cue, and `ViewportTransform`.
  */
 export function computeWaferRenderLayout(
   wafer: WaferSummaryMeta,
@@ -181,8 +242,8 @@ export function computeWaferRenderLayout(
   const safeW = Number.isFinite(cssWidth) && cssWidth > 0 ? cssWidth : 1;
   const safeH = Number.isFinite(cssHeight) && cssHeight > 0 ? cssHeight : 1;
   const minDim = Math.min(safeW, safeH);
-  const paddingCss = Math.max(6, Math.round(minDim * 0.02));
-  const baseRadiusPx = Math.max(12, minDim / 2 - paddingCss);
+  const paddingCss = resolveStageMarginPx(minDim);
+  const fitWaferRadiusPx = Math.max(12, minDim / 2 - paddingCss);
 
   const clampedScale =
     Number.isFinite(transform.scale) && transform.scale > 0
@@ -192,7 +253,7 @@ export function computeWaferRenderLayout(
   const panY = Number.isFinite(transform.panY) ? transform.panY : 0;
 
   const waferRadiusUnits = computeWaferRadiusUnits(wafer, dies);
-  const waferRadiusPx = baseRadiusPx * clampedScale;
+  const waferRadiusPx = fitWaferRadiusPx * clampedScale;
   const diePitchPx = waferRadiusPx / waferRadiusUnits;
 
   const streetPx =
@@ -200,11 +261,7 @@ export function computeWaferRenderLayout(
       ? WAFER_STREET_WIDTH_PX
       : Math.max(0, Math.min(WAFER_STREET_WIDTH_PX, diePitchPx * 0.2));
   const dieSizePx = Math.max(0.75, diePitchPx - streetPx);
-
-  const drawFailMicroDot = shouldDrawFailMicroDot(diePitchPx);
-  const microDotSizePx = drawFailMicroDot
-    ? Math.max(1.5, Math.min(4, Math.round(diePitchPx * 0.18 * 2) / 2))
-    : 0;
+  const passDieSizePx = Math.max(0.6, diePitchPx * PASS_DIE_CELL_FRACTION);
 
   const gridCenterX = (wafer.minX + wafer.maxX) / 2;
   const gridCenterY = (wafer.minY + wafer.maxY) / 2;
@@ -217,13 +274,13 @@ export function computeWaferRenderLayout(
     cssHeight: safeH,
     centerXCss: safeW / 2 + panX,
     centerYCss: safeH / 2 + panY,
+    fitWaferRadiusPx,
     waferRadiusPx,
     waferRadiusUnits,
     diePitchPx,
     streetPx,
     dieSizePx,
-    drawFailMicroDot,
-    microDotSizePx,
+    passDieSizePx,
     gridCenterX,
     gridCenterY,
     dirX,
@@ -232,8 +289,8 @@ export function computeWaferRenderLayout(
 }
 
 /**
- * Projects integer die coordinates `(x, y)` to a logical CSS-pixel die rectangle
- * surrounded by a `streetPx` (`1 px`) `#0A0A0B` street border.
+ * Projects integer die coordinates `(x, y)` to a logical CSS-pixel full die rectangle
+ * (cell minus `streetPx` = `1 px` street border).
  */
 export function dieCoordToCanvasRect(
   x: number,
@@ -383,7 +440,7 @@ export function buildFailBinRankMap(
     if (dies.finalPass[i] !== 0) {
       continue;
     }
-    const code = binArr[i];
+    const code = binArr[i]!;
     counts.set(code, (counts.get(code) ?? 0) + 1);
   }
   const sorted = Array.from(counts.entries()).sort((a, b) => {
@@ -392,7 +449,7 @@ export function buildFailBinRankMap(
   });
   const rankByCode = new Map<number, number>();
   for (let r = 0; r < sorted.length; r += 1) {
-    rankByCode.set(sorted[r][0], r);
+    rankByCode.set(sorted[r]![0], r);
   }
   return rankByCode;
 }
@@ -412,7 +469,7 @@ export function computeParametricRange(
   let max = Number.NEGATIVE_INFINITY;
   const vals = col.values;
   for (let i = 0; i < vals.length; i += 1) {
-    const v = vals[i];
+    const v = vals[i]!;
     if (!Number.isFinite(v)) {
       continue;
     }
@@ -434,7 +491,7 @@ export function resolveDieFillColor(
   parametricRange?: ParametricRange | null,
 ): string {
   if (colorMode === 'pass-fail') {
-    return resolvePassFailDieColor(dies.finalPass[dieIndex]);
+    return resolvePassFailDieColor(dies.finalPass[dieIndex]!);
   }
 
   if (colorMode === 'hbin' || colorMode === 'sbin') {
@@ -442,18 +499,18 @@ export function resolveDieFillColor(
       return COLOR_TOKENS.passDie;
     }
     const code =
-      colorMode === 'sbin' ? dies.sbin[dieIndex] : dies.hbin[dieIndex];
+      colorMode === 'sbin' ? dies.sbin[dieIndex]! : dies.hbin[dieIndex]!;
     const rank = failBinRankMap?.get(code) ?? 0;
     return getFailBinColor(rank);
   }
 
   // Parametric magma heatmap mode
   if (!parametricCol || !parametricRange) {
-    return COLOR_TOKENS.raised;
+    return COLOR_TOKENS.surface2;
   }
-  const val = parametricCol.values[dieIndex];
+  const val = parametricCol.values[dieIndex]!;
   if (!Number.isFinite(val)) {
-    return COLOR_TOKENS.raised;
+    return COLOR_TOKENS.surface2;
   }
   const span = parametricRange.max - parametricRange.min;
   const t = span > 0 ? (val - parametricRange.min) / span : 0.5;
@@ -461,8 +518,8 @@ export function resolveDieFillColor(
 }
 
 /**
- * Minimal structural subset of `CanvasRenderingContext2D` used by the base and
- * overlay painters so unit tests can verify exact draw calls without DOM globals.
+ * Minimal structural subset of `CanvasRenderingContext2D` used by the base, fail,
+ * and overlay painters so unit tests can verify exact draw calls without DOM globals.
  */
 export interface Canvas2DContextLike {
   fillStyle: string | CanvasGradient | CanvasPattern;
@@ -479,6 +536,13 @@ export interface Canvas2DContextLike {
   ): void;
   clearRect(x: number, y: number, w: number, h: number): void;
   fillRect(x: number, y: number, w: number, h: number): void;
+  roundRect?(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    radii?: number | readonly number[],
+  ): void;
   strokeRect(x: number, y: number, w: number, h: number): void;
   beginPath(): void;
   arc(
@@ -498,6 +562,23 @@ export interface Canvas2DContextLike {
   setLineDash(segments: number[]): void;
 }
 
+function drawDieRoundedRect(
+  ctx: Canvas2DContextLike,
+  x: number,
+  y: number,
+  size: number,
+  radius: number,
+): void {
+  if (typeof ctx.roundRect === 'function' && size >= 3.5 && radius > 0) {
+    const clampedR = Math.min(radius, size * 0.45);
+    ctx.beginPath();
+    ctx.roundRect(x, y, size, size, clampedR);
+    ctx.fill();
+    return;
+  }
+  ctx.fillRect(x, y, size, size);
+}
+
 export interface PaintWaferBaseParams {
   readonly lot: LotModel;
   readonly waferIndex: number;
@@ -509,13 +590,11 @@ export interface PaintWaferBaseParams {
 }
 
 /**
- * Draws the DPR-scaled base wafer map layer:
- * 1. Subtle wafer substrate circle + `WF_FLAT` V-notch + inner bevel guide
- * 2. Coordinate-bearing dies (`!== -32768`) with `1 px` `#000000` streets
- * 3. `#000000` center micro-dot on failing dies when `diePitchPx >= 7`
- *
- * Batches `Pass/Fail` mode into at most three `fillStyle` passes (`#63666C`,
- * `#FF6B2C`, `#000000` micro-dots) so `10,000` dies draw in `< 2 ms`.
+ * Draws the DPR/supersampled base wafer map layer (`redesign.md` §2.1, §4.7):
+ * 1. Silicon wafer disc (`#0B0B0C` fill + `1 px` `rgba(255,255,255,0.10)` ring) + `WF_FLAT` V-notch
+ * 2. Pass dies as centred `72%` squares with `1 px` radius (`#63666C`)
+ * 3. Fail dies filling the cell minus `1 px` street with `1.5 px` radius (`#FF6B2C` or bin palette)
+ * 4. Viewport culling so re-rastering at `scale > 2` draws `10,000` dies in `< 3 ms`.
  */
 export function paintWaferBaseLayer(
   ctx: Canvas2DContextLike,
@@ -531,7 +610,7 @@ export function paintWaferBaseLayer(
     return;
   }
 
-  // 1. Wafer boundary disc + subtle orientation V-notch
+  // 1. Silicon wafer disc (#0B0B0C) + 1 px ring (rgba(255,255,255,0.10)) + SEMI V-notch
   const notch = computeWaferNotchGeometry(
     layout.centerXCss,
     layout.centerYCss,
@@ -551,99 +630,80 @@ export function paintWaferBaseLayer(
   ctx.lineTo(notch.apexX, notch.apexY);
   ctx.closePath();
 
-  ctx.fillStyle = COLOR_TOKENS.waferStreet;
+  ctx.fillStyle = COLOR_TOKENS.waferDisc;
   ctx.fill();
   ctx.lineWidth = 1;
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = WAFER_OUTLINE_STROKE;
+  ctx.strokeStyle = WAFER_DISC_RING_STROKE;
   ctx.stroke();
-
-  if (layout.waferRadiusPx > 24) {
-    ctx.beginPath();
-    ctx.arc(
-      layout.centerXCss,
-      layout.centerYCss,
-      layout.waferRadiusPx - 3.5,
-      0,
-      Math.PI * 2,
-      false,
-    );
-    ctx.strokeStyle = WAFER_EXCLUSION_RING_STROKE;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
 
   const { dies } = lot;
   const start = wafer.dieStartIndex;
   const end = wafer.dieEndIndex;
-  const hasHidden = hiddenBins.size > 0;
+  const hasHidden =
+    hiddenBins.size > 0 && (colorMode === 'hbin' || colorMode === 'sbin');
 
-  // Fast batched Pass/Fail path (zero per-die string allocations)
+  const minCullX = -layout.diePitchPx;
+  const maxCullX = layout.cssWidth + layout.diePitchPx;
+  const minCullY = -layout.diePitchPx;
+  const maxCullY = layout.cssHeight + layout.diePitchPx;
+
+  const xArr = dies.x;
+  const yArr = dies.y;
+  const validArr = dies.hasValidCoords;
+  const passArr = dies.finalPass;
+  const passSize = layout.passDieSizePx;
+  const passHalf = passSize / 2;
+  const failSize = layout.dieSizePx;
+  const failHalf = failSize / 2;
+
   if (colorMode === 'pass-fail') {
-    const xArr = dies.x;
-    const yArr = dies.y;
-    const validArr = dies.hasValidCoords;
-    const passArr = dies.finalPass;
-    const sbinArr = dies.sbin;
-    const half = layout.dieSizePx / 2;
-    const dieSize = layout.dieSizePx;
-
-    // Pass 1: Passing dies (#63666C)
+    // Pass 1: Passing dies (#63666C), centred 72% square with 1 px radius
     ctx.fillStyle = COLOR_TOKENS.passDie;
     for (let i = start; i < end; i += 1) {
       if (validArr[i] === 0 || passArr[i] === 0) {
         continue;
       }
-      if (hasHidden && hiddenBins.has(sbinArr[i])) {
-        continue;
-      }
       const cx =
         layout.centerXCss +
-        (xArr[i] - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+        (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
       const cy =
         layout.centerYCss +
-        (yArr[i] - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
-      ctx.fillRect(cx - half, cy - half, dieSize, dieSize);
+        (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+      if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+        continue;
+      }
+      drawDieRoundedRect(
+        ctx,
+        cx - passHalf,
+        cy - passHalf,
+        passSize,
+        PASS_DIE_RADIUS_PX,
+      );
     }
 
-    // Pass 2: Failing dies (#FF6B2C)
+    // Pass 2: Failing dies (#FF6B2C), full cell minus 1 px street with 1.5 px radius
     ctx.fillStyle = COLOR_TOKENS.failure;
     for (let i = start; i < end; i += 1) {
       if (validArr[i] === 0 || passArr[i] !== 0) {
         continue;
       }
-      if (hasHidden && hiddenBins.has(sbinArr[i])) {
-        continue;
-      }
       const cx =
         layout.centerXCss +
-        (xArr[i] - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+        (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
       const cy =
         layout.centerYCss +
-        (yArr[i] - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
-      ctx.fillRect(cx - half, cy - half, dieSize, dieSize);
-    }
-
-    // Pass 3: Failing-die center micro-dots (#000000) when diePitchPx >= 7
-    if (layout.drawFailMicroDot && layout.microDotSizePx > 0) {
-      const dotSize = layout.microDotSizePx;
-      const dotHalf = dotSize / 2;
-      ctx.fillStyle = COLOR_TOKENS.waferStreet;
-      for (let i = start; i < end; i += 1) {
-        if (validArr[i] === 0 || passArr[i] !== 0) {
-          continue;
-        }
-        if (hasHidden && hiddenBins.has(sbinArr[i])) {
-          continue;
-        }
-        const cx =
-          layout.centerXCss +
-          (xArr[i] - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
-        const cy =
-          layout.centerYCss +
-          (yArr[i] - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
-        ctx.fillRect(cx - dotHalf, cy - dotHalf, dotSize, dotSize);
+        (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+      if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+        continue;
       }
+      drawDieRoundedRect(
+        ctx,
+        cx - failHalf,
+        cy - failHalf,
+        failSize,
+        FAIL_DIE_RADIUS_PX,
+      );
     }
     return;
   }
@@ -663,16 +723,31 @@ export function paintWaferBaseLayer(
     colorMode === 'parametric' ? computeParametricRange(paramCol) : null;
 
   for (let i = start; i < end; i += 1) {
-    if (dies.hasValidCoords[i] === 0) {
+    if (validArr[i] === 0) {
       continue;
     }
     if (hasHidden) {
-      const binCode = colorMode === 'hbin' ? dies.hbin[i] : dies.sbin[i];
+      const binCode = colorMode === 'hbin' ? dies.hbin[i]! : dies.sbin[i]!;
       if (hiddenBins.has(binCode)) {
         continue;
       }
     }
-    const rect = dieCoordToCanvasRect(dies.x[i], dies.y[i], layout);
+    const cx =
+      layout.centerXCss +
+      (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+    const cy =
+      layout.centerYCss +
+      (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+    if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+      continue;
+    }
+
+    const isPassBinMode =
+      (colorMode === 'hbin' || colorMode === 'sbin') && passArr[i] !== 0;
+    const size = isPassBinMode ? passSize : failSize;
+    const half = size / 2;
+    const radius = isPassBinMode ? PASS_DIE_RADIUS_PX : FAIL_DIE_RADIUS_PX;
+
     ctx.fillStyle = resolveDieFillColor(
       i,
       dies,
@@ -681,23 +756,85 @@ export function paintWaferBaseLayer(
       paramCol,
       paramRange,
     );
-    ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+    drawDieRoundedRect(ctx, cx - half, cy - half, size, radius);
+  }
+}
 
-    if (
-      colorMode !== 'parametric' &&
-      dies.finalPass[i] === 0 &&
-      layout.drawFailMicroDot &&
-      layout.microDotSizePx > 0
-    ) {
-      const dotHalf = layout.microDotSizePx / 2;
-      ctx.fillStyle = COLOR_TOKENS.waferStreet;
-      ctx.fillRect(
-        rect.centerX - dotHalf,
-        rect.centerY - dotHalf,
-        layout.microDotSizePx,
-        layout.microDotSizePx,
-      );
+export interface PaintWaferFailParams {
+  readonly lot: LotModel;
+  readonly waferIndex: number;
+  readonly layout: WaferRenderLayout;
+  readonly dpr: number;
+  readonly colorMode: WaferColorMode;
+  readonly hiddenBins: ReadonlySet<number>;
+}
+
+/**
+ * Draws failing dies only onto `FailCanvas` (`z: 2`), used by the probe-sweep
+ * completion fade (`redesign.md` §4.7, §5.1); at rest it is merged into `BaseCanvas` and hidden.
+ */
+export function paintWaferFailLayer(
+  ctx: Canvas2DContextLike,
+  params: PaintWaferFailParams,
+): void {
+  const { lot, waferIndex, layout, dpr, colorMode, hiddenBins } = params;
+  const wafer = lot.wafers[waferIndex];
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, layout.cssWidth, layout.cssHeight);
+
+  if (!wafer || colorMode === 'parametric') {
+    return;
+  }
+
+  const { dies } = lot;
+  const start = wafer.dieStartIndex;
+  const end = wafer.dieEndIndex;
+  const hasHidden =
+    hiddenBins.size > 0 && (colorMode === 'hbin' || colorMode === 'sbin');
+  const failRankMap =
+    colorMode === 'hbin'
+      ? buildFailBinRankMap(dies, 'HBIN')
+      : colorMode === 'sbin'
+        ? buildFailBinRankMap(dies, 'SBIN')
+        : undefined;
+
+  const failSize = layout.dieSizePx;
+  const failHalf = failSize / 2;
+  const minCullX = -layout.diePitchPx;
+  const maxCullX = layout.cssWidth + layout.diePitchPx;
+  const minCullY = -layout.diePitchPx;
+  const maxCullY = layout.cssHeight + layout.diePitchPx;
+
+  for (let i = start; i < end; i += 1) {
+    if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] !== 0) {
+      continue;
     }
+    if (hasHidden) {
+      const code = colorMode === 'hbin' ? dies.hbin[i]! : dies.sbin[i]!;
+      if (hiddenBins.has(code)) {
+        continue;
+      }
+    }
+    const cx =
+      layout.centerXCss +
+      (dies.x[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+    const cy =
+      layout.centerYCss +
+      (dies.y[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+    if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+      continue;
+    }
+    ctx.fillStyle =
+      colorMode === 'pass-fail'
+        ? COLOR_TOKENS.failure
+        : resolveDieFillColor(i, dies, colorMode, failRankMap);
+    drawDieRoundedRect(
+      ctx,
+      cx - failHalf,
+      cy - failHalf,
+      failSize,
+      FAIL_DIE_RADIUS_PX,
+    );
   }
 }
 
@@ -713,9 +850,9 @@ export interface PaintWaferOverlayParams {
 }
 
 /**
- * Draws the DPR-scaled overlay canvas (`#D6E6FF` selection / site / claim
- * outlines + outer glow, spatial brush bounds, and hovered die reticle)
- * WITHOUT touching or repainting `BaseCanvas`.
+ * Draws the DPR-scaled screen-space overlay canvas (`#000000` 1px outer keyline +
+ * `#D6E6FF` 1.5px evidence stroke + soft ice halo, spatial brush bounds, and hovered
+ * die reticle) WITHOUT touching or repainting `BaseCanvas`.
  */
 export function paintWaferOverlayLayer(
   ctx: Canvas2DContextLike,
@@ -744,13 +881,16 @@ export function paintWaferOverlayLayer(
   const start = wafer.dieStartIndex;
   const end = wafer.dieEndIndex;
 
-  // 1. Batched #D6E6FF evidence/selection outer glow + crisp inner outline (never a fill)
+  // 1. Batched #000000 keyline + #D6E6FF evidence outer glow + crisp inner outline (never a fill)
   if (overlayHighlightCount > 0 && overlayHighlightMask.length >= end) {
     const xArr = dies.x;
     const yArr = dies.y;
     const validArr = dies.hasValidCoords;
-    const half = layout.dieSizePx / 2;
-    const dieSize = layout.dieSizePx;
+    const passArr = dies.finalPass;
+    const minCullX = -layout.diePitchPx;
+    const maxCullX = layout.cssWidth + layout.diePitchPx;
+    const minCullY = -layout.diePitchPx;
+    const maxCullY = layout.cssHeight + layout.diePitchPx;
 
     let anyOnWafer = false;
     ctx.beginPath();
@@ -758,30 +898,43 @@ export function paintWaferOverlayLayer(
       if (overlayHighlightMask[i] === 0 || validArr[i] === 0) {
         continue;
       }
-      anyOnWafer = true;
       const cx =
         layout.centerXCss +
-        (xArr[i] - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+        (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
       const cy =
         layout.centerYCss +
-        (yArr[i] - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
-      ctx.rect(cx - half, cy - half, dieSize, dieSize);
+        (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+      if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+        continue;
+      }
+      anyOnWafer = true;
+      const size = passArr[i] !== 0 ? layout.passDieSizePx : layout.dieSizePx;
+      const half = size / 2;
+      ctx.rect(cx - half, cy - half, size, size);
     }
 
     if (anyOnWafer) {
       ctx.setLineDash([]);
       ctx.lineJoin = 'round';
+
+      // Soft outer ice halo
       ctx.strokeStyle = OVERLAY_HALO_STROKE;
-      ctx.lineWidth = Math.min(4, Math.max(2.5, layout.diePitchPx * 0.24));
+      ctx.lineWidth = Math.min(4.5, Math.max(2.75, layout.diePitchPx * 0.26));
       ctx.stroke();
 
+      // 1 px #000000 keyline separating ice #D6E6FF from orange #FF6B2C (>= 3:1 WCAG 2.2)
+      ctx.strokeStyle = OVERLAY_KEYLINE_STROKE;
+      ctx.lineWidth = layout.diePitchPx >= 6 ? 3 : 2.25;
+      ctx.stroke();
+
+      // Crisp 1.5 px #D6E6FF stroke
       ctx.strokeStyle = COLOR_TOKENS.accent;
       ctx.lineWidth = layout.diePitchPx >= 6 ? 1.5 : 1;
       ctx.stroke();
     }
   }
 
-  // 2. Active spatial brush rectangle (when brushed on this wafer or stacked)
+  // 2. Active spatial brush rectangle (1 px ice accent stroke)
   if (
     brush !== null &&
     (brush.scope === 'stacked' ||
@@ -789,11 +942,10 @@ export function paintWaferOverlayLayer(
       brush.waferIndex === waferIndex)
   ) {
     const bRect = projectBrushToCanvasRect(brush, layout);
-    ctx.setLineDash([4, 3]);
-    ctx.strokeStyle = COLOR_TOKENS.accent;
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(bRect.x, bRect.y, bRect.width, bRect.height);
     ctx.setLineDash([]);
+    ctx.strokeStyle = COLOR_TOKENS.accent;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bRect.x, bRect.y, bRect.width, bRect.height);
   }
 
   // 3. Hovered die crisp reticle on active wafer
@@ -803,20 +955,23 @@ export function paintWaferOverlayLayer(
     hoveredDieIndex < end &&
     dies.hasValidCoords[hoveredDieIndex] !== 0
   ) {
-    const hRect = dieCoordToCanvasRect(
-      dies.x[hoveredDieIndex],
-      dies.y[hoveredDieIndex],
-      layout,
-    );
+    const isPass = dies.finalPass[hoveredDieIndex] !== 0;
+    const size = isPass ? layout.passDieSizePx : layout.dieSizePx;
+    const cx =
+      layout.centerXCss +
+      (dies.x[hoveredDieIndex]! - layout.gridCenterX) *
+        layout.dirX *
+        layout.diePitchPx;
+    const cy =
+      layout.centerYCss +
+      (dies.y[hoveredDieIndex]! - layout.gridCenterY) *
+        layout.dirY *
+        layout.diePitchPx;
+    const half = size / 2;
     ctx.setLineDash([]);
     ctx.strokeStyle = OVERLAY_HOVER_STROKE;
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(
-      hRect.x - 0.5,
-      hRect.y - 0.5,
-      hRect.width + 1,
-      hRect.height + 1,
-    );
+    ctx.strokeRect(cx - half - 0.5, cy - half - 0.5, size + 1, size + 1);
   }
 }
 
@@ -828,11 +983,9 @@ export interface PaintWaferThumbnailParams {
 }
 
 /**
- * Draws a compact Pass/Fail wafer thumbnail (`~36-44 px` CSS) for the horizontal
- * lot strip using locked colour tokens (`#63666C` pass, `#FF6B2C` fail, `#000000`
- * substrate) and `WCR` orientation. Failing dies paint in a dedicated second pass
- * so repeating spatial signatures (edge rings, scratches, site checkerboards) remain
- * immediately scannable across 25+ wafers.
+ * Draws a compact Pass/Fail wafer thumbnail (`~36-48 px` CSS) for the horizontal
+ * lot strip using locked colour tokens (`#63666C` pass, `#FF6B2C` fail, `#0B0B0C`
+ * silicon substrate) and `WCR` orientation.
  */
 export function paintWaferThumbnail(
   ctx: Canvas2DContextLike,
@@ -874,11 +1027,11 @@ export function paintWaferThumbnail(
   );
   ctx.closePath();
 
-  ctx.fillStyle = COLOR_TOKENS.waferStreet;
+  ctx.fillStyle = COLOR_TOKENS.waferDisc;
   ctx.fill();
   ctx.lineWidth = 1;
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = WAFER_OUTLINE_STROKE;
+  ctx.strokeStyle = WAFER_DISC_RING_STROKE;
   ctx.stroke();
 
   const waferRadiusUnits = computeWaferRadiusUnits(wafer, dies);
@@ -896,15 +1049,15 @@ export function paintWaferThumbnail(
   const end = wafer.dieEndIndex;
 
   // Pass 1: Passing dies (#63666C)
-  const passSize = Math.max(0.95, diePitchPx * 0.94);
+  const passSize = Math.max(0.95, diePitchPx * 0.82);
   const passHalf = passSize / 2;
   ctx.fillStyle = COLOR_TOKENS.passDie;
   for (let i = start; i < end; i += 1) {
     if (validArr[i] === 0 || passArr[i] === 0) {
       continue;
     }
-    const cx = center + (xArr[i] - gridCenterX) * dirX * diePitchPx;
-    const cy = center + (yArr[i] - gridCenterY) * dirY * diePitchPx;
+    const cx = center + (xArr[i]! - gridCenterX) * dirX * diePitchPx;
+    const cy = center + (yArr[i]! - gridCenterY) * dirY * diePitchPx;
     ctx.fillRect(cx - passHalf, cy - passHalf, passSize, passSize);
   }
 
@@ -916,8 +1069,8 @@ export function paintWaferThumbnail(
     if (validArr[i] === 0 || passArr[i] !== 0) {
       continue;
     }
-    const cx = center + (xArr[i] - gridCenterX) * dirX * diePitchPx;
-    const cy = center + (yArr[i] - gridCenterY) * dirY * diePitchPx;
+    const cx = center + (xArr[i]! - gridCenterX) * dirX * diePitchPx;
+    const cy = center + (yArr[i]! - gridCenterY) * dirY * diePitchPx;
     ctx.fillRect(cx - failHalf, cy - failHalf, failSize, failSize);
   }
 }
@@ -962,7 +1115,7 @@ export function paintLandingCardWafer(
   ctx.fill();
   ctx.lineWidth = 1;
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+  ctx.strokeStyle = WAFER_DISC_RING_STROKE;
   ctx.stroke();
 
   const waferRadiusUnits = computeWaferRadiusUnits(wafer, dies);
@@ -980,15 +1133,15 @@ export function paintLandingCardWafer(
   const end = wafer.dieEndIndex;
 
   // Pass 1: Passing dies (#63666C) centred square at 72% of cell (§2.1)
-  const passSize = Math.max(1.2, diePitchPx * 0.72);
+  const passSize = Math.max(1.2, diePitchPx * PASS_DIE_CELL_FRACTION);
   const passHalf = passSize / 2;
   ctx.fillStyle = COLOR_TOKENS.passDie;
   for (let i = start; i < end; i += 1) {
     if (validArr[i] === 0 || passArr[i] === 0) {
       continue;
     }
-    const cx = center + (xArr[i] - gridCenterX) * dirX * diePitchPx;
-    const cy = center + (yArr[i] - gridCenterY) * dirY * diePitchPx;
+    const cx = center + (xArr[i]! - gridCenterX) * dirX * diePitchPx;
+    const cy = center + (yArr[i]! - gridCenterY) * dirY * diePitchPx;
     ctx.fillRect(cx - passHalf, cy - passHalf, passSize, passSize);
   }
 
@@ -1001,8 +1154,8 @@ export function paintLandingCardWafer(
     if (validArr[i] === 0 || passArr[i] !== 0) {
       continue;
     }
-    const cx = center + (xArr[i] - gridCenterX) * dirX * diePitchPx;
-    const cy = center + (yArr[i] - gridCenterY) * dirY * diePitchPx;
+    const cx = center + (xArr[i]! - gridCenterX) * dirX * diePitchPx;
+    const cy = center + (yArr[i]! - gridCenterY) * dirY * diePitchPx;
     ctx.fillRect(cx - failHalf, cy - failHalf, failSize, failSize);
   }
 }
