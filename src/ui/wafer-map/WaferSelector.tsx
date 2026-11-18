@@ -7,6 +7,7 @@ import type { ColumnarDies, WaferSummaryMeta } from '@/core/model';
 import { Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import { registerPendingWaferCommit } from '@/ui/state';
+import { usePrefersMoreContrast } from './use-prefers-more-contrast';
 import { paintWaferThumbnail, resolveCanvasPixelSize } from './wafer-geometry';
 
 export const WAFER_THUMB_BUTTON_PX = 48 as const;
@@ -112,6 +113,8 @@ export const WaferSelector = React.memo(function WaferSelector({
     liveActiveRef.current = safeActive;
   }
 
+  const highContrast = usePrefersMoreContrast();
+
   React.useEffect(() => {
     if (count === 0) {
       return;
@@ -150,6 +153,7 @@ export const WaferSelector = React.memo(function WaferSelector({
           dies,
           cssSize: dims.cssWidth,
           dpr: dims.dpr,
+          highContrast,
         });
       }
     };
@@ -212,7 +216,7 @@ export const WaferSelector = React.memo(function WaferSelector({
         }
       }
     };
-  }, [count, wafers, dies, dpr]);
+  }, [count, wafers, dies, dpr, highContrast]);
 
   const measureGeometry = React.useCallback((): void => {
     const listEl = listRef.current;

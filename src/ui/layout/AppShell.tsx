@@ -153,12 +153,13 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       presetId: DemoPresetId,
       cssSize: number,
       dpr: number,
+      highContrast?: boolean,
     ): Promise<ImageBitmap | null> => {
       const client = getWorkerClient();
       if (!client.renderDemoThumbnail) {
         return null;
       }
-      return client.renderDemoThumbnail(presetId, cssSize, dpr);
+      return client.renderDemoThumbnail(presetId, cssSize, dpr, highContrast);
     },
     [getWorkerClient],
   );

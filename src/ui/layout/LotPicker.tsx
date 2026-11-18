@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/ui/primitives';
 import { SPRING_TOKENS } from '@/ui/tokens';
+import { usePrefersMoreContrast } from '@/ui/wafer-map/use-prefers-more-contrast';
 import {
   paintWaferThumbnail,
   resolveCanvasPixelSize,
@@ -64,6 +65,7 @@ interface DemoThumbCanvasProps {
 function DemoThumbCanvas({ presetId }: DemoThumbCanvasProps): React.JSX.Element {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const preview = React.useMemo(() => getDemoPresetPreview(presetId), [presetId]);
+  const highContrast = usePrefersMoreContrast();
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -92,8 +94,9 @@ function DemoThumbCanvas({ presetId }: DemoThumbCanvasProps): React.JSX.Element 
       dies: preview.dies,
       cssSize: DEMO_THUMB_SIZE_PX,
       dpr: dims.dpr,
+      highContrast,
     });
-  }, [preview]);
+  }, [preview, highContrast]);
 
   return (
     <canvas

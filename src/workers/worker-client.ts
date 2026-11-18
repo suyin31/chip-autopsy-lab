@@ -100,6 +100,7 @@ export interface AutopsyWorkerClient {
     presetId: DemoPresetId,
     cssSize: number,
     dpr: number,
+    highContrast?: boolean,
   ): Promise<ImageBitmap | null>;
   resumeLargeFile(
     mode: ParseMode,
@@ -304,9 +305,15 @@ export function createAutopsyWorkerClient(
       presetId: DemoPresetId,
       cssSize: number,
       dpr: number,
+      highContrast?: boolean,
     ): Promise<ImageBitmap | null> {
       const workerRemote = ensureRemote();
-      return workerRemote.renderDemoThumbnail(presetId, cssSize, dpr);
+      return workerRemote.renderDemoThumbnail(
+        presetId,
+        cssSize,
+        dpr,
+        highContrast,
+      );
     },
 
     listDemoPresets(): readonly DemoPresetMeta[] {

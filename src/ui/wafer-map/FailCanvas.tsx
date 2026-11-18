@@ -146,6 +146,7 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
         dims.cssHeight,
         cur.lot.dies,
         vp,
+        resolvedDpr,
       );
 
       paintWaferFailLayer(ctx, {

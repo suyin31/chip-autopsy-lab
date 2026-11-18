@@ -178,6 +178,7 @@ export interface AutopsyWorkerApi {
     presetId: DemoPresetId,
     cssSize: number,
     dpr: number,
+    highContrast?: boolean,
   ): Promise<ImageBitmap | null>;
   resumeLargeFileParse(
     mode: ParseMode,
@@ -684,6 +685,7 @@ export function createAutopsyWorkerApi(options?: {
       presetId: DemoPresetId,
       cssSize: number,
       dpr: number,
+      highContrast?: boolean,
     ): Promise<ImageBitmap | null> {
       if (typeof OffscreenCanvas === 'undefined') {
         return null;
@@ -698,42 +700,83 @@ export function createAutopsyWorkerApi(options?: {
         return null;
       }
 
+      // Mirrors `paintLandingCardWafer` (src/ui/wafer-map/wafer-geometry.ts): premium §5.2 disc
+      // material without thin film or sheen, then the §5.3 thumbnail die tiles. Kept inline so the
+      // worker never imports from src/ui/.
       const preview = getDemoPresetPreview(presetId);
       const { wafer, dies } = preview;
       ctx.setTransform(safeDpr, 0, 0, safeDpr, 0, 0);
       ctx.clearRect(0, 0, safeCss, safeCss);
 
       const center = safeCss / 2;
-      const radiusPx = Math.max(8, center - 1.5);
-      const notchAngleRad = Math.PI / 2;
-      const depthPx = Math.max(4, Math.min(9, radiusPx * 0.032));
-      const halfOpeningPx = depthPx * 0.88;
-      const halfAngleRad = Math.min(
-        0.2,
-        Math.max(0.025, halfOpeningPx / Math.max(1, radiusPx)),
-      );
-      const apexRadius = Math.max(0, radiusPx - depthPx);
+      const r = Math.max(8, center - 1.5);
+      const d = r * 2;
+      const notchAngle =
+        wafer.geometry.wfFlat === 'U'
+          ? -Math.PI / 2
+          : wafer.geometry.wfFlat === 'L'
+            ? Math.PI
+            : wafer.geometry.wfFlat === 'R'
+              ? 0
+              : Math.PI / 2;
+      const halfAngle = Math.asin(Math.min(1, (0.03 * d) / 2 / r));
+      const apexR = r - 0.016 * d;
+      const traceOutline = (): void => {
+        ctx.beginPath();
+        ctx.arc(
+          center,
+          center,
+          r,
+          notchAngle + halfAngle,
+          notchAngle - halfAngle + Math.PI * 2,
+          false,
+        );
+        const apexX = center + Math.cos(notchAngle) * apexR;
+        const apexY = center + Math.sin(notchAngle) * apexR;
+        ctx.arcTo(
+          apexX,
+          apexY,
+          center + Math.cos(notchAngle + halfAngle) * r,
+          center + Math.sin(notchAngle + halfAngle) * r,
+          0.002 * d,
+        );
+        ctx.lineTo(
+          center + Math.cos(notchAngle + halfAngle) * r,
+          center + Math.sin(notchAngle + halfAngle) * r,
+        );
+        ctx.closePath();
+      };
 
-      ctx.beginPath();
-      ctx.arc(
-        center,
-        center,
-        radiusPx,
-        notchAngleRad + halfAngleRad,
-        notchAngleRad - halfAngleRad + Math.PI * 2,
-        false,
-      );
-      ctx.lineTo(
-        center + Math.cos(notchAngleRad) * apexRadius,
-        center + Math.sin(notchAngleRad) * apexRadius,
-      );
-      ctx.closePath();
-      ctx.fillStyle = '#0B0B0C';
+      ctx.save();
+      traceOutline();
+      const gx = center - 0.12 * d;
+      const gy = center - 0.2 * d;
+      const body = ctx.createRadialGradient(gx, gy, 0, gx, gy, 0.78 * d);
+      body.addColorStop(0, '#2B2D33');
+      body.addColorStop(0.55, '#1C1D21');
+      body.addColorStop(1, '#121316');
+      ctx.fillStyle = body;
       ctx.fill();
-      ctx.lineWidth = 1;
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+      ctx.clip();
+      ctx.beginPath();
+      ctx.arc(center, center, r * (1 - 2 * 0.026), 0, Math.PI * 2, false);
+      ctx.lineWidth = 1 / safeDpr;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
       ctx.stroke();
+      traceOutline();
+      const bevel = ctx.createLinearGradient(center, center - r, center, center + r);
+      bevel.addColorStop(0, 'rgba(255, 255, 255, 0.38)');
+      bevel.addColorStop(1, 'rgba(255, 255, 255, 0.06)');
+      ctx.strokeStyle = bevel;
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(center, center, Math.max(0, r - 1.5), 0, Math.PI * 2, false);
+      ctx.lineWidth = 1 / safeDpr;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.stroke();
+      ctx.restore();
 
       const gridCenterX = (wafer.minX + wafer.maxX) / 2;
       const gridCenterY = (wafer.minY + wafer.maxY) / 2;
@@ -745,30 +788,72 @@ export function createAutopsyWorkerApi(options?: {
         const dist = Math.hypot(dx, dy);
         if (dist > maxCornerDist) maxCornerDist = dist;
       }
-      const waferRadiusUnits = Math.max(1.5, maxCornerDist + 0.55);
-      const diePitchPx = radiusPx / waferRadiusUnits;
+      const waferRadiusUnits = Math.max(
+        1.5,
+        maxCornerDist + 0.55,
+        maxCornerDist / (1 - 2 * 0.026),
+      );
+      const p = r / waferRadiusUnits;
       const dirX = wafer.geometry.posX === 'L' ? -1 : 1;
       const dirY = wafer.geometry.posY === 'D' ? 1 : -1;
 
-      const passSize = Math.max(1.2, diePitchPx * 0.72);
-      const passHalf = passSize / 2;
-      ctx.fillStyle = '#63666C';
-      for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
-        if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] === 0) continue;
-        const cx = center + (dies.x[i]! - gridCenterX) * dirX * diePitchPx;
-        const cy = center + (dies.y[i]! - gridCenterY) * dirY * diePitchPx;
-        ctx.fillRect(cx - passHalf, cy - passHalf, passSize, passSize);
+      // premium §5.3: p < 3 omits pass tiles and draws fail dies at full cell with no street
+      const dense = p < 3;
+      const street = Math.max(1 / safeDpr, Math.round(0.1 * p));
+      const failSize = dense ? p : Math.max(0.75, p - street);
+      const failHalf = failSize / 2;
+      const failRadius = Math.min(2, Math.max(0.5, 0.12 * p));
+      const useRound = (size: number): boolean => size >= 3.5;
+
+      if (!dense) {
+        const passSize = failSize * 0.8;
+        const passHalf = passSize / 2;
+        const passRadius = Math.min(
+          Math.min(1.5, Math.max(0.5, 0.1 * p)),
+          passSize * 0.45,
+        );
+        ctx.fillStyle = highContrast
+          ? 'rgba(255, 255, 255, 0.34)'
+          : 'rgba(255, 255, 255, 0.06)';
+        ctx.beginPath();
+        for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
+          if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] === 0) continue;
+          const cx = center + (dies.x[i]! - gridCenterX) * dirX * p;
+          const cy = center + (dies.y[i]! - gridCenterY) * dirY * p;
+          if (useRound(passSize)) {
+            ctx.roundRect(cx - passHalf, cy - passHalf, passSize, passSize, passRadius);
+          } else {
+            ctx.rect(cx - passHalf, cy - passHalf, passSize, passSize);
+          }
+        }
+        ctx.fill();
       }
 
-      const streetPx = Math.min(1, diePitchPx * 0.18);
-      const failSize = Math.max(1.6, diePitchPx - streetPx);
-      const failHalf = failSize / 2;
+      const facets = !dense && p >= 10;
+      const failR = Math.min(failRadius, failSize * 0.45);
       ctx.fillStyle = '#FF6B2C';
+      ctx.beginPath();
       for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
         if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] !== 0) continue;
-        const cx = center + (dies.x[i]! - gridCenterX) * dirX * diePitchPx;
-        const cy = center + (dies.y[i]! - gridCenterY) * dirY * diePitchPx;
-        ctx.fillRect(cx - failHalf, cy - failHalf, failSize, failSize);
+        const cx = center + (dies.x[i]! - gridCenterX) * dirX * p;
+        const cy = center + (dies.y[i]! - gridCenterY) * dirY * p;
+        if (!dense && useRound(failSize)) {
+          ctx.roundRect(cx - failHalf, cy - failHalf, failSize, failSize, failR);
+        } else {
+          ctx.rect(cx - failHalf, cy - failHalf, failSize, failSize);
+        }
+      }
+      ctx.fill();
+      if (facets) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.beginPath();
+        for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
+          if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] !== 0) continue;
+          const cx = center + (dies.x[i]! - gridCenterX) * dirX * p;
+          const cy = center + (dies.y[i]! - gridCenterY) * dirY * p;
+          ctx.rect(cx - failHalf + failR, cy - failHalf, failSize - 2 * failR, 1);
+        }
+        ctx.fill();
       }
 
       const bitmap = offscreen.transferToImageBitmap();

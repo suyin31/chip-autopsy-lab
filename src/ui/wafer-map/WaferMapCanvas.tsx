@@ -70,6 +70,7 @@ import {
   hitTestWaferDie,
   projectBrushToCanvasRect,
 } from './wafer-geometry';
+import { usePrefersMoreContrast } from './use-prefers-more-contrast';
 
 export interface WaferMapCanvasProps {
   readonly lot: LotModel;
@@ -338,10 +339,12 @@ function WaferMapCanvasImpl({
             stageDims.height,
             lot.dies,
             DEFAULT_VIEWPORT_TRANSFORM,
+            dpr,
           )
         : null,
-    [wafer, stageDims.width, stageDims.height, lot.dies],
+    [wafer, stageDims.width, stageDims.height, lot.dies, dpr],
   );
+  const highContrast = usePrefersMoreContrast();
 
   const reducedMotionRef = React.useRef(prefersReduced);
   reducedMotionRef.current = prefersReduced;
@@ -2106,6 +2109,7 @@ function WaferMapCanvasImpl({
               getRasterCamera={getRasterCamera}
               dpr={dpr}
               layout={fitLayout}
+              highContrast={highContrast}
             />
             {/* Outgoing wafer crossfade layer (160 ms ease-out on click/step; 0 ms on key-repeat/reduced-motion, §5.8) */}
             <canvas

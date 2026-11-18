@@ -58,6 +58,8 @@ export interface BaseCanvasProps {
   readonly getRasterCamera?: () => CameraState;
   readonly dpr?: number;
   readonly layout?: WaferRenderLayout | null;
+  /** `prefers-contrast: more`: pass tiles use `pass-tile-hc` (premium §5.3). */
+  readonly highContrast?: boolean;
 }
 
 interface LastBasePaint {
@@ -69,6 +71,7 @@ interface LastBasePaint {
   readonly cssWidth: number;
   readonly cssHeight: number;
   readonly dpr: number | undefined;
+  readonly highContrast: boolean;
   readonly scale: number;
   readonly panX: number;
   readonly panY: number;
@@ -97,6 +100,7 @@ function areBaseCanvasPropsEqual(
     prev.cssWidth === next.cssWidth &&
     prev.cssHeight === next.cssHeight &&
     prev.dpr === next.dpr &&
+    prev.highContrast === next.highContrast &&
     prev.layout === next.layout &&
     prev.getRasterCamera === next.getRasterCamera &&
     sameTransform
@@ -106,8 +110,8 @@ function areBaseCanvasPropsEqual(
 /**
  * Supersampled (`devicePixelRatio x 2`, capped at `4096 px` per side, `redesign.md` §4.7)
  * Canvas2D base layer (`z: 1`) rendering the silicon disc material (premium §5.2: body
- * gradient, thin film, exclusion line, bevel, `WF_FLAT` V-notch), `72%` `1px`-radius pass squares (`#63666C`), and full-cell minus `1px`
- * street `1.5px`-radius fail dies (`#FF6B2C` or categorical fail palette).
+ * gradient, thin film, exclusion line, bevel, `WF_FLAT` V-notch) and the premium §5.3 die tiles:
+ * 80 % pass tiles and full-cell-minus-street fail dies with a top facet (`#FF6B2C` or bin palette).
  *
  * Also exposes `paintSubstrateOnly` + `paintSweepBatch` for the O(n) incremental
  * §5.1 probe-sweep reveal.
@@ -126,6 +130,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       getRasterCamera,
       dpr,
       layout,
+      highContrast = false,
     },
     ref,
   ): React.JSX.Element {
@@ -147,6 +152,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       safeCssHeight,
       dpr,
       layout,
+      highContrast,
     });
     latestInputsRef.current = {
       lot,
@@ -157,6 +163,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       safeCssHeight,
       dpr,
       layout,
+      highContrast,
     };
 
     /** Re-raster for a hidden-bin change; reassigned every render so it sees current props. */
@@ -223,6 +230,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
                 dims.cssHeight,
                 cur.lot.dies,
                 vp,
+                deviceDpr,
               );
 
         paintWaferBaseLayer(ctx, {
@@ -234,6 +242,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           colorMode: cur.colorMode,
           activeTestNum: cur.activeTestNum,
           hiddenBins: hiddenBinsRef.current,
+          highContrast: cur.highContrast,
         });
         lastPaintRef.current = {
           lot: cur.lot,
@@ -244,6 +253,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           cssWidth: cur.safeCssWidth,
           cssHeight: cur.safeCssHeight,
           dpr: cur.dpr,
+          highContrast: cur.highContrast,
           scale: vp.scale,
           panX: vp.panX,
           panY: vp.panY,
@@ -284,6 +294,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
                     dims.cssHeight,
                     cur.lot.dies,
                     DEFAULT_VIEWPORT_TRANSFORM,
+                    deviceDpr,
                   )
                 : null;
           if (!resolvedLayout) {
@@ -308,7 +319,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           if (!ready) {
             return;
           }
-          const { ctx, dims, cur } = ready;
+          const { ctx, dims, cur, deviceDpr } = ready;
           lastPaintRef.current = null;
           const wafer = cur.lot.wafers[cur.waferIndex];
           if (!wafer) {
@@ -325,6 +336,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
                   dims.cssHeight,
                   cur.lot.dies,
                   DEFAULT_VIEWPORT_TRANSFORM,
+                  deviceDpr,
                 );
           paintWaferSweepBatch(ctx, {
             lot: cur.lot,
@@ -333,6 +345,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
             probeOrder,
             startOrderIndex,
             endOrderIndex,
+            highContrast: cur.highContrast,
           });
         },
         setSweepSuppressAutoPaint(suppressed: boolean): void {
@@ -392,6 +405,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
         last.cssWidth === safeCssWidth &&
         last.cssHeight === safeCssHeight &&
         last.dpr === dpr &&
+        last.highContrast === highContrast &&
         last.scale === vp.scale &&
         last.panX === vp.panX &&
         last.panY === vp.panY &&
@@ -412,6 +426,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       getRasterCamera,
       dpr,
       layout,
+      highContrast,
       paintWithViewport,
       hiddenBinsRef,
     ]);

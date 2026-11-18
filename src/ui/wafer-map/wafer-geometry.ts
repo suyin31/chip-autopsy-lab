@@ -4,7 +4,7 @@
  *
  * Kept free of React and browser global reads so every coordinate transform,
  * DPR/supersampled backing-store calculation, §2.1 pass/fail geometry cue
- * (72% 1px-radius pass square vs full-cell minus 1px street 1.5px-radius fail die),
+ * (premium §5.3: 80 % pass tile vs full cell minus street fail die with facet),
  * premium §5.2 silicon disc material + V-notch path, O(1) pointer hit-test, and
  * base/fail/overlay draw passes are directly unit-testable in Node.
  *
@@ -38,15 +38,45 @@ export const DEFAULT_VIEWPORT_TRANSFORM: ViewportTransform = {
   panY: 0,
 };
 
-/** `redesign.md` §2.1: `#000000` street border width around every failing die. */
-export const WAFER_STREET_WIDTH_PX = 1 as const;
+/** `premium.md` §5.3: pass dies are centred squares at 80 % of the fail-die side. */
+export const PASS_DIE_CELL_FRACTION = 0.8 as const;
 
-/** `redesign.md` §2.1: Pass dies render as a centred square at 72% of the cell with 1 px radius. */
-export const PASS_DIE_CELL_FRACTION = 0.72 as const;
-export const PASS_DIE_RADIUS_PX = 1 as const;
+/** `premium.md` §5.3: thumbnails below this pitch omit pass tiles and draw fail dies at full cell. */
+export const THUMBNAIL_DENSE_PITCH_PX = 3 as const;
 
-/** `redesign.md` §2.1: Fail dies fill the cell minus the 1 px street with 1.5 px radius. */
-export const FAIL_DIE_RADIUS_PX = 1.5 as const;
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+/** `premium.md` §5.3: street `max(1 device px, round(0.10 p))` in CSS px. */
+export function computeDieStreetPx(diePitchPx: number, deviceDpr = 1): number {
+  const devicePx = 1 / (Number.isFinite(deviceDpr) && deviceDpr > 0 ? deviceDpr : 1);
+  const pitch = Number.isFinite(diePitchPx) && diePitchPx > 0 ? diePitchPx : 0;
+  return Math.max(devicePx, Math.round(0.1 * pitch));
+}
+
+/** `premium.md` §5.3: fail die corner radius `clamp(0.5, 0.12 p, 2)` px. */
+export function computeFailDieRadiusPx(diePitchPx: number): number {
+  return clampNumber(0.12 * diePitchPx, 0.5, 2);
+}
+
+/** `premium.md` §5.3: pass die corner radius `clamp(0.5, 0.10 p, 1.5)` px. */
+export function computePassDieRadiusPx(diePitchPx: number): number {
+  return clampNumber(0.1 * diePitchPx, 0.5, 1.5);
+}
+
+/** `premium.md` §5.3: fail facet is drawn only when the pitch is at least 10 css px. */
+export function shouldDrawFailFacet(diePitchPx: number): boolean {
+  return (
+    Number.isFinite(diePitchPx) &&
+    diePitchPx >= WAFER_TOKENS.failFacetMinPitchPx
+  );
+}
+
+/** `premium.md` §5.3: `pass-tile`, or `pass-tile-hc` under `prefers-contrast: more`. */
+export function resolvePassTileColor(highContrast = false): string {
+  return highContrast ? WAFER_TOKENS.passTileHc : WAFER_TOKENS.passTile;
+}
 
 /** `redesign.md` §4.7: Supersampled base canvas cap per side (`devicePixelRatio x 2`, max `4096 px`). */
 export const MAX_SUPERSAMPLED_CANVAS_PX = 4096 as const;
@@ -161,6 +191,10 @@ export interface WaferRenderLayout {
   readonly streetPx: number;
   readonly dieSizePx: number;
   readonly passDieSizePx: number;
+  /** Fail die corner radius (`clamp(0.5, 0.12 p, 2)`, premium §5.3). */
+  readonly failDieRadiusPx: number;
+  /** Pass die corner radius (`clamp(0.5, 0.10 p, 1.5)`, premium §5.3). */
+  readonly passDieRadiusPx: number;
   readonly gridCenterX: number;
   readonly gridCenterY: number;
   /** `+1` when positive X points right (`POS_X = 'R'`), `-1` when left (`POS_X = 'L'`). */
@@ -251,7 +285,8 @@ export function resolveStageMarginPx(minDim: number): number {
 
 /**
  * Computes deterministic coordinate-to-canvas geometry respecting `WCR` orientation
- * (`POS_X`, `POS_Y`), `1 px` street insets, `72%` pass-die geometry cue, and `ViewportTransform`.
+ * (`POS_X`, `POS_Y`), premium §5.3 street and radii, the 80 % pass-die cue, and `ViewportTransform`.
+ * `deviceDpr` sets the 1 device px street floor (defaults to 1).
  */
 export function computeWaferRenderLayout(
   wafer: WaferSummaryMeta,
@@ -259,6 +294,7 @@ export function computeWaferRenderLayout(
   cssHeight: number,
   dies?: ColumnarDies,
   transform: ViewportTransform = DEFAULT_VIEWPORT_TRANSFORM,
+  deviceDpr = 1,
 ): WaferRenderLayout {
   const safeW = Number.isFinite(cssWidth) && cssWidth > 0 ? cssWidth : 1;
   const safeH = Number.isFinite(cssHeight) && cssHeight > 0 ? cssHeight : 1;
@@ -277,12 +313,9 @@ export function computeWaferRenderLayout(
   const waferRadiusPx = fitWaferRadiusPx * clampedScale;
   const diePitchPx = waferRadiusPx / waferRadiusUnits;
 
-  const streetPx =
-    diePitchPx >= 3
-      ? WAFER_STREET_WIDTH_PX
-      : Math.max(0, Math.min(WAFER_STREET_WIDTH_PX, diePitchPx * 0.2));
+  const streetPx = computeDieStreetPx(diePitchPx, deviceDpr);
   const dieSizePx = Math.max(0.75, diePitchPx - streetPx);
-  const passDieSizePx = Math.max(0.6, diePitchPx * PASS_DIE_CELL_FRACTION);
+  const passDieSizePx = Math.max(0.6, dieSizePx * PASS_DIE_CELL_FRACTION);
 
   const gridCenterX = (wafer.minX + wafer.maxX) / 2;
   const gridCenterY = (wafer.minY + wafer.maxY) / 2;
@@ -302,6 +335,8 @@ export function computeWaferRenderLayout(
     streetPx,
     dieSizePx,
     passDieSizePx,
+    failDieRadiusPx: computeFailDieRadiusPx(diePitchPx),
+    passDieRadiusPx: computePassDieRadiusPx(diePitchPx),
     gridCenterX,
     gridCenterY,
     dirX,
@@ -311,7 +346,7 @@ export function computeWaferRenderLayout(
 
 /**
  * Projects integer die coordinates `(x, y)` to a logical CSS-pixel full die rectangle
- * (cell minus `streetPx` = `1 px` street border).
+ * (cell minus `streetPx`, premium §5.3).
  */
 export function dieCoordToCanvasRect(
   x: number,
@@ -461,6 +496,8 @@ export interface PaintWaferDiscMaterialParams {
   readonly wfFlat: 'U' | 'D' | 'L' | 'R' | ' ';
   /** CSS px width of one device pixel (`1 / devicePixelRatio`) for the hairline strokes. */
   readonly devicePixelCss: number;
+  /** Thumbnails skip the thin film (premium §5.3 thumbnail row). */
+  readonly skipThinFilm?: boolean;
 }
 
 /**
@@ -502,7 +539,7 @@ export function paintWaferDiscMaterial(
   ctx.clip?.();
 
   // 3. Thin-film iridescence (skipped without createConicGradient)
-  if (typeof ctx.createConicGradient === 'function') {
+  if (!params.skipThinFilm && typeof ctx.createConicGradient === 'function') {
     const film = ctx.createConicGradient((200 * Math.PI) / 180, cx, cy);
     film.addColorStop(0, WAFER_TOKENS.film[0]);
     film.addColorStop(0.25, WAFER_TOKENS.film[1]);
@@ -567,10 +604,15 @@ export function projectBrushToCanvasRect(
 }
 
 /**
- * Maps Pass/Fail state to the locked WCAG-verified wafer palette (`#63666C` pass, `#FF6B2C` fail).
+ * Maps Pass/Fail state to the disc die palette (premium §5.3: `pass-tile` texture, `fail-die` `#FF6B2C`).
  */
-export function resolvePassFailDieColor(finalPass: number): string {
-  return finalPass !== 0 ? COLOR_TOKENS.passDie : COLOR_TOKENS.failure;
+export function resolvePassFailDieColor(
+  finalPass: number,
+  highContrast = false,
+): string {
+  return finalPass !== 0
+    ? resolvePassTileColor(highContrast)
+    : COLOR_TOKENS.failure;
 }
 
 /**
@@ -657,14 +699,15 @@ export function resolveDieFillColor(
   failBinRankMap?: ReadonlyMap<number, number>,
   parametricCol?: ParametricTestColumn,
   parametricRange?: ParametricRange | null,
+  highContrast = false,
 ): string {
   if (colorMode === 'pass-fail') {
-    return resolvePassFailDieColor(dies.finalPass[dieIndex]!);
+    return resolvePassFailDieColor(dies.finalPass[dieIndex]!, highContrast);
   }
 
   if (colorMode === 'hbin' || colorMode === 'sbin') {
     if (dies.finalPass[dieIndex] !== 0) {
-      return COLOR_TOKENS.passDie;
+      return resolvePassTileColor(highContrast);
     }
     const code =
       colorMode === 'sbin' ? dies.sbin[dieIndex]! : dies.hbin[dieIndex]!;
@@ -792,6 +835,28 @@ function drawDieRoundedRect(
 }
 
 /**
+ * Fills the batched fail facets (premium §5.3): a 1 px line along each fail die's top edge,
+ * inset by the corner radius, in `fail-facet`. `facets` holds `[x, y, size]` triples.
+ */
+function paintFailFacets(
+  ctx: Canvas2DContextLike,
+  facets: readonly number[],
+  radius: number,
+): void {
+  if (facets.length === 0) {
+    return;
+  }
+  ctx.fillStyle = WAFER_TOKENS.failFacet;
+  ctx.beginPath();
+  for (let k = 0; k + 2 < facets.length; k += 3) {
+    const size = facets[k + 2]!;
+    const inset = Math.min(radius, size * 0.45);
+    ctx.rect(facets[k]! + inset, facets[k + 1]!, size - 2 * inset, 1);
+  }
+  ctx.fill();
+}
+
+/**
  * Clears the canvas and paints ONLY the silicon disc material (premium §5.2 steps 1-5),
  * used as frame 0 of the
  * incremental probe-sweep reveal (`redesign.md` §3.3, §5.1).
@@ -825,11 +890,13 @@ export interface PaintWaferSweepBatchParams {
   readonly probeOrder: Uint32Array;
   readonly startOrderIndex: number;
   readonly endOrderIndex: number;
+  /** `prefers-contrast: more`: pass tiles use `pass-tile-hc` (premium §5.3). */
+  readonly highContrast?: boolean;
 }
 
 /**
  * Incrementally draws newly revealed dies `probeOrder[startOrderIndex .. endOrderIndex)`
- * onto `BaseCanvas` in pass colour (`#63666C`, `72%` square, `1 px` radius) without clearing
+ * onto `BaseCanvas` as pass tiles (premium §5.3: 80 % square, `pass-tile`) without clearing
  * previously revealed dies (`redesign.md` §5.1: total O(n) across the sweep).
  */
 export function paintWaferSweepBatch(
@@ -845,14 +912,14 @@ export function paintWaferSweepBatch(
   }
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = COLOR_TOKENS.passDie;
+  ctx.fillStyle = resolvePassTileColor(params.highContrast);
 
   const { x: xArr, y: yArr, hasValidCoords: validArr } = lot.dies;
   const passSize = layout.passDieSizePx;
   const passHalf = passSize / 2;
   const useBatchedRoundRect =
     typeof ctx.roundRect === 'function' && passSize >= 3.5;
-  const clampedR = Math.min(PASS_DIE_RADIUS_PX, passSize * 0.45);
+  const clampedR = Math.min(layout.passDieRadiusPx, passSize * 0.45);
 
   if (useBatchedRoundRect) {
     ctx.beginPath();
@@ -891,13 +958,15 @@ export interface PaintWaferBaseParams {
   readonly hiddenBins: ReadonlySet<number>;
   /** Display `devicePixelRatio` (without supersampling) for 1-device-px hairlines; defaults to `dpr`. */
   readonly deviceDpr?: number;
+  /** `prefers-contrast: more`: pass tiles use `pass-tile-hc` (premium §5.3). */
+  readonly highContrast?: boolean;
 }
 
 /**
  * Draws the DPR/supersampled base wafer map layer (`redesign.md` §2.1, §4.7):
  * 1. Silicon disc material (premium §5.2 steps 1-5) with the `WF_FLAT` V-notch
- * 2. Pass dies as centred `72%` squares with `1 px` radius (`#63666C`)
- * 3. Fail dies filling the cell minus `1 px` street with `1.5 px` radius (`#FF6B2C` or bin palette)
+ * 2. Pass tiles as centred 80 % squares (`pass-tile`, `pass-tile-hc` under `prefers-contrast: more`)
+ * 3. Fail dies filling the cell minus the street with rounded corners and a top facet (premium §5.3)
  * 4. Viewport culling so re-rastering at `scale > 2` draws `10,000` dies in `< 3 ms`.
  */
 export function paintWaferBaseLayer(
@@ -913,6 +982,7 @@ export function paintWaferBaseLayer(
     colorMode,
     activeTestNum,
     hiddenBins,
+    highContrast = false,
   } = params;
   const wafer = lot.wafers[waferIndex];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -950,10 +1020,13 @@ export function paintWaferBaseLayer(
   const passHalf = passSize / 2;
   const failSize = layout.dieSizePx;
   const failHalf = failSize / 2;
+  const facets: number[] | null = shouldDrawFailFacet(layout.diePitchPx)
+    ? []
+    : null;
 
   if (colorMode === 'pass-fail') {
-    // Pass 1: Passing dies (#63666C), centred 72% square with 1 px radius (batched single fill)
-    ctx.fillStyle = COLOR_TOKENS.passDie;
+    // Pass 1: Pass tiles, centred 80 % square (batched single fill, premium §5.3)
+    ctx.fillStyle = resolvePassTileColor(highContrast);
     ctx.beginPath();
     let anyPassPath = false;
     for (let i = start; i < end; i += 1) {
@@ -975,7 +1048,7 @@ export function paintWaferBaseLayer(
           cx - passHalf,
           cy - passHalf,
           passSize,
-          PASS_DIE_RADIUS_PX,
+          layout.passDieRadiusPx,
         )
       ) {
         anyPassPath = true;
@@ -985,7 +1058,7 @@ export function paintWaferBaseLayer(
       ctx.fill();
     }
 
-    // Pass 2: Failing dies (#FF6B2C), full cell minus 1 px street with 1.5 px radius (batched single fill)
+    // Pass 2: Failing dies (#FF6B2C), full cell minus street (batched single fill, premium §5.3)
     ctx.fillStyle = COLOR_TOKENS.failure;
     ctx.beginPath();
     let anyFailPath = false;
@@ -1008,14 +1081,18 @@ export function paintWaferBaseLayer(
           cx - failHalf,
           cy - failHalf,
           failSize,
-          FAIL_DIE_RADIUS_PX,
+          layout.failDieRadiusPx,
         )
       ) {
         anyFailPath = true;
       }
+      facets?.push(cx - failHalf, cy - failHalf, failSize);
     }
     if (anyFailPath) {
       ctx.fill();
+    }
+    if (facets) {
+      paintFailFacets(ctx, facets, layout.failDieRadiusPx);
     }
     return;
   }
@@ -1058,7 +1135,9 @@ export function paintWaferBaseLayer(
       (colorMode === 'hbin' || colorMode === 'sbin') && passArr[i] !== 0;
     const size = isPassBinMode ? passSize : failSize;
     const half = size / 2;
-    const radius = isPassBinMode ? PASS_DIE_RADIUS_PX : FAIL_DIE_RADIUS_PX;
+    const radius = isPassBinMode
+      ? layout.passDieRadiusPx
+      : layout.failDieRadiusPx;
 
     ctx.fillStyle = resolveDieFillColor(
       i,
@@ -1067,8 +1146,15 @@ export function paintWaferBaseLayer(
       failRankMap,
       paramCol,
       paramRange,
+      highContrast,
     );
     drawDieRoundedRect(ctx, cx - half, cy - half, size, radius);
+    if (facets && colorMode !== 'parametric' && !isPassBinMode) {
+      facets.push(cx - half, cy - half, size);
+    }
+  }
+  if (facets) {
+    paintFailFacets(ctx, facets, layout.failDieRadiusPx);
   }
 }
 
@@ -1112,6 +1198,10 @@ export function paintWaferFailLayer(
 
   const failSize = layout.dieSizePx;
   const failHalf = failSize / 2;
+  const failRadius = layout.failDieRadiusPx;
+  const facets: number[] | null = shouldDrawFailFacet(layout.diePitchPx)
+    ? []
+    : null;
   const minCullX = -layout.diePitchPx;
   const maxCullX = layout.cssWidth + layout.diePitchPx;
   const minCullY = -layout.diePitchPx;
@@ -1140,14 +1230,18 @@ export function paintWaferFailLayer(
           cx - failHalf,
           cy - failHalf,
           failSize,
-          FAIL_DIE_RADIUS_PX,
+          failRadius,
         )
       ) {
         anyFailPath = true;
       }
+      facets?.push(cx - failHalf, cy - failHalf, failSize);
     }
     if (anyFailPath) {
       ctx.fill();
+    }
+    if (facets) {
+      paintFailFacets(ctx, facets, failRadius);
     }
     return;
   }
@@ -1177,8 +1271,12 @@ export function paintWaferFailLayer(
       cx - failHalf,
       cy - failHalf,
       failSize,
-      FAIL_DIE_RADIUS_PX,
+      failRadius,
     );
+    facets?.push(cx - failHalf, cy - failHalf, failSize);
+  }
+  if (facets) {
+    paintFailFacets(ctx, facets, failRadius);
   }
 }
 
@@ -1613,172 +1711,144 @@ export interface PaintWaferThumbnailParams {
   readonly dies: ColumnarDies;
   readonly cssSize: number;
   readonly dpr: number;
+  /** `prefers-contrast: more`: pass tiles use `pass-tile-hc` (premium §5.3). */
+  readonly highContrast?: boolean;
 }
 
 /**
- * Draws a compact Pass/Fail wafer thumbnail (`~36-48 px` CSS) for the horizontal
- * lot strip using locked colour tokens (`#63666C` pass, `#FF6B2C` fail, `#0B0B0C`
- * silicon substrate) and `WCR` orientation.
+ * Shared thumbnail disc (premium §5.3 thumbnail row): disc material at thumbnail size with the
+ * thin film (step 3) and sheen (step 6) skipped, then die tiles. When `p < 3` pass tiles are
+ * omitted (the disc body alone reads as silicon) and fail dies fill the full cell with no street;
+ * otherwise the main-wafer tile rules apply.
+ */
+function paintThumbnailDisc(
+  ctx: Canvas2DContextLike,
+  params: PaintWaferThumbnailParams,
+  radiusPx: number,
+): void {
+  const { wafer, dies, cssSize, dpr, highContrast = false } = params;
+  const center = cssSize / 2;
+
+  paintWaferDiscMaterial(ctx, {
+    centerXCss: center,
+    centerYCss: center,
+    waferRadiusPx: radiusPx,
+    wfFlat: wafer.geometry.wfFlat,
+    devicePixelCss: 1 / dpr,
+    skipThinFilm: true,
+  });
+
+  const waferRadiusUnits = computeWaferRadiusUnits(wafer, dies);
+  const diePitchPx = radiusPx / waferRadiusUnits;
+  const gridCenterX = (wafer.minX + wafer.maxX) / 2;
+  const gridCenterY = (wafer.minY + wafer.maxY) / 2;
+  const dirX: 1 | -1 = wafer.geometry.posX === 'L' ? -1 : 1;
+  const dirY: 1 | -1 = wafer.geometry.posY === 'D' ? 1 : -1;
+
+  const xArr = dies.x;
+  const yArr = dies.y;
+  const validArr = dies.hasValidCoords;
+  const passArr = dies.finalPass;
+  const start = wafer.dieStartIndex;
+  const end = wafer.dieEndIndex;
+
+  const dense = diePitchPx < THUMBNAIL_DENSE_PITCH_PX;
+  const failSize = dense
+    ? diePitchPx
+    : Math.max(0.75, diePitchPx - computeDieStreetPx(diePitchPx, dpr));
+  const failHalf = failSize / 2;
+  const failRadius = computeFailDieRadiusPx(diePitchPx);
+
+  // Pass tiles: omitted when p < 3; otherwise centred 80 % squares
+  if (!dense) {
+    const passSize = failSize * PASS_DIE_CELL_FRACTION;
+    const passHalf = passSize / 2;
+    const passRadius = computePassDieRadiusPx(diePitchPx);
+    ctx.fillStyle = resolvePassTileColor(highContrast);
+    ctx.beginPath();
+    let anyPassPath = false;
+    for (let i = start; i < end; i += 1) {
+      if (validArr[i] === 0 || passArr[i] === 0) {
+        continue;
+      }
+      const cx = center + (xArr[i]! - gridCenterX) * dirX * diePitchPx;
+      const cy = center + (yArr[i]! - gridCenterY) * dirY * diePitchPx;
+      if (
+        appendDieToPath(ctx, cx - passHalf, cy - passHalf, passSize, passRadius)
+      ) {
+        anyPassPath = true;
+      }
+    }
+    if (anyPassPath) {
+      ctx.fill();
+    }
+  }
+
+  // Fail dies: full cell with no street when p < 3; otherwise cell minus street
+  const facets: number[] | null =
+    !dense && shouldDrawFailFacet(diePitchPx) ? [] : null;
+  ctx.fillStyle = COLOR_TOKENS.failure;
+  ctx.beginPath();
+  let anyFailPath = false;
+  for (let i = start; i < end; i += 1) {
+    if (validArr[i] === 0 || passArr[i] !== 0) {
+      continue;
+    }
+    const cx = center + (xArr[i]! - gridCenterX) * dirX * diePitchPx;
+    const cy = center + (yArr[i]! - gridCenterY) * dirY * diePitchPx;
+    if (dense) {
+      ctx.fillRect(cx - failHalf, cy - failHalf, failSize, failSize);
+      continue;
+    }
+    if (
+      appendDieToPath(ctx, cx - failHalf, cy - failHalf, failSize, failRadius)
+    ) {
+      anyFailPath = true;
+    }
+    facets?.push(cx - failHalf, cy - failHalf, failSize);
+  }
+  if (anyFailPath) {
+    ctx.fill();
+  }
+  if (facets) {
+    paintFailFacets(ctx, facets, failRadius);
+  }
+}
+
+/**
+ * Draws a compact Pass/Fail wafer thumbnail (`~36-48 px` CSS) for the wafer strip and lot
+ * picker with the premium §5.3 thumbnail rules and `WCR` orientation.
  */
 export function paintWaferThumbnail(
   ctx: Canvas2DContextLike,
   params: PaintWaferThumbnailParams,
 ): void {
-  const { wafer, dies, cssSize, dpr } = params;
-  const safeSize = Number.isFinite(cssSize) && cssSize > 0 ? cssSize : 1;
+  const safeSize =
+    Number.isFinite(params.cssSize) && params.cssSize > 0 ? params.cssSize : 1;
+  const dpr = Number.isFinite(params.dpr) && params.dpr > 0 ? params.dpr : 1;
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, safeSize, safeSize);
 
-  const center = safeSize / 2;
-  const radiusPx = Math.max(4, center - 1.25);
-
-  let notchAngleRad = Math.PI / 2;
-  if (wafer.geometry.wfFlat === 'U') {
-    notchAngleRad = -Math.PI / 2;
-  } else if (wafer.geometry.wfFlat === 'L') {
-    notchAngleRad = Math.PI;
-  } else if (wafer.geometry.wfFlat === 'R') {
-    notchAngleRad = 0;
-  }
-  const depthPx = Math.max(1.8, Math.min(3.2, radiusPx * 0.11));
-  const halfAngleRad = 0.12;
-  const apexRadius = Math.max(0, radiusPx - depthPx);
-
-  ctx.beginPath();
-  ctx.arc(
-    center,
-    center,
-    radiusPx,
-    notchAngleRad + halfAngleRad,
-    notchAngleRad - halfAngleRad + Math.PI * 2,
-    false,
-  );
-  ctx.lineTo(
-    center + Math.cos(notchAngleRad) * apexRadius,
-    center + Math.sin(notchAngleRad) * apexRadius,
-  );
-  ctx.closePath();
-
-  ctx.fillStyle = COLOR_TOKENS.waferDisc;
-  ctx.fill();
-  ctx.lineWidth = 1;
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = WAFER_DISC_RING_STROKE;
-  ctx.stroke();
-
-  const waferRadiusUnits = computeWaferRadiusUnits(wafer, dies);
-  const diePitchPx = radiusPx / waferRadiusUnits;
-  const gridCenterX = (wafer.minX + wafer.maxX) / 2;
-  const gridCenterY = (wafer.minY + wafer.maxY) / 2;
-  const dirX: 1 | -1 = wafer.geometry.posX === 'L' ? -1 : 1;
-  const dirY: 1 | -1 = wafer.geometry.posY === 'D' ? 1 : -1;
-
-  const xArr = dies.x;
-  const yArr = dies.y;
-  const validArr = dies.hasValidCoords;
-  const passArr = dies.finalPass;
-  const start = wafer.dieStartIndex;
-  const end = wafer.dieEndIndex;
-
-  // Pass 1: Passing dies (#63666C)
-  const passSize = Math.max(0.95, diePitchPx * 0.82);
-  const passHalf = passSize / 2;
-  ctx.fillStyle = COLOR_TOKENS.passDie;
-  for (let i = start; i < end; i += 1) {
-    if (validArr[i] === 0 || passArr[i] === 0) {
-      continue;
-    }
-    const cx = center + (xArr[i]! - gridCenterX) * dirX * diePitchPx;
-    const cy = center + (yArr[i]! - gridCenterY) * dirY * diePitchPx;
-    ctx.fillRect(cx - passHalf, cy - passHalf, passSize, passSize);
-  }
-
-  // Pass 2: Failing dies (#FF6B2C) painted over pass cells for sub-2 px pattern legibility
-  const failSize = Math.max(1.15, diePitchPx * 1.04);
-  const failHalf = failSize / 2;
-  ctx.fillStyle = COLOR_TOKENS.failure;
-  for (let i = start; i < end; i += 1) {
-    if (validArr[i] === 0 || passArr[i] !== 0) {
-      continue;
-    }
-    const cx = center + (xArr[i]! - gridCenterX) * dirX * diePitchPx;
-    const cy = center + (yArr[i]! - gridCenterY) * dirY * diePitchPx;
-    ctx.fillRect(cx - failHalf, cy - failHalf, failSize, failSize);
-  }
+  const radiusPx = Math.max(4, safeSize / 2 - 1.25);
+  paintThumbnailDisc(ctx, { ...params, cssSize: safeSize, dpr }, radiusPx);
 }
 
 /**
- * Draws the `168 px` landing demo card wafer (`redesign.md` §3.1, §2.1):
- * - Silicon disc `#0B0B0C` fill + `1 px` `rgba(255, 255, 255, 0.10)` ring + SEMI V-notch
- * - Pass dies as centred `72%` `#63666C` squares; fail dies as full-cell minus `1 px` street in `#FF6B2C`
+ * Draws the landing demo card wafer with the premium §5.3 thumbnail rules (disc material
+ * without thin film or sheen, notch from `WF_FLAT`, die tiles).
  */
 export function paintLandingCardWafer(
   ctx: Canvas2DContextLike,
   params: PaintWaferThumbnailParams,
 ): void {
-  const { wafer, dies, cssSize, dpr } = params;
-  const safeSize = Number.isFinite(cssSize) && cssSize > 0 ? cssSize : 1;
+  const safeSize =
+    Number.isFinite(params.cssSize) && params.cssSize > 0 ? params.cssSize : 1;
+  const dpr = Number.isFinite(params.dpr) && params.dpr > 0 ? params.dpr : 1;
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, safeSize, safeSize);
 
-  const center = safeSize / 2;
-  const radiusPx = Math.max(8, center - 1.5);
-  const notch = computeWaferNotchGeometry(
-    center,
-    center,
-    radiusPx,
-    wafer.geometry.wfFlat,
-  );
-
-  traceWaferOutlinePath(ctx, center, center, radiusPx, notch);
-
-  ctx.fillStyle = COLOR_TOKENS.waferDisc;
-  ctx.fill();
-  ctx.lineWidth = 1;
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = WAFER_DISC_RING_STROKE;
-  ctx.stroke();
-
-  const waferRadiusUnits = computeWaferRadiusUnits(wafer, dies);
-  const diePitchPx = radiusPx / waferRadiusUnits;
-  const gridCenterX = (wafer.minX + wafer.maxX) / 2;
-  const gridCenterY = (wafer.minY + wafer.maxY) / 2;
-  const dirX: 1 | -1 = wafer.geometry.posX === 'L' ? -1 : 1;
-  const dirY: 1 | -1 = wafer.geometry.posY === 'D' ? 1 : -1;
-
-  const xArr = dies.x;
-  const yArr = dies.y;
-  const validArr = dies.hasValidCoords;
-  const passArr = dies.finalPass;
-  const start = wafer.dieStartIndex;
-  const end = wafer.dieEndIndex;
-
-  // Pass 1: Passing dies (#63666C) centred square at 72% of cell (§2.1)
-  const passSize = Math.max(1.2, diePitchPx * PASS_DIE_CELL_FRACTION);
-  const passHalf = passSize / 2;
-  ctx.fillStyle = COLOR_TOKENS.passDie;
-  for (let i = start; i < end; i += 1) {
-    if (validArr[i] === 0 || passArr[i] === 0) {
-      continue;
-    }
-    const cx = center + (xArr[i]! - gridCenterX) * dirX * diePitchPx;
-    const cy = center + (yArr[i]! - gridCenterY) * dirY * diePitchPx;
-    ctx.fillRect(cx - passHalf, cy - passHalf, passSize, passSize);
-  }
-
-  // Pass 2: Failing dies (#FF6B2C) filling cell minus 1 px street (§2.1)
-  const streetPx = Math.min(1, diePitchPx * 0.18);
-  const failSize = Math.max(1.6, diePitchPx - streetPx);
-  const failHalf = failSize / 2;
-  ctx.fillStyle = COLOR_TOKENS.failure;
-  for (let i = start; i < end; i += 1) {
-    if (validArr[i] === 0 || passArr[i] !== 0) {
-      continue;
-    }
-    const cx = center + (xArr[i]! - gridCenterX) * dirX * diePitchPx;
-    const cy = center + (yArr[i]! - gridCenterY) * dirY * diePitchPx;
-    ctx.fillRect(cx - failHalf, cy - failHalf, failSize, failSize);
-  }
+  const radiusPx = Math.max(8, safeSize / 2 - 1.5);
+  paintThumbnailDisc(ctx, { ...params, cssSize: safeSize, dpr }, radiusPx);
 }

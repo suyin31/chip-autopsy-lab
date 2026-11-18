@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/ui/primitives';
 import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
+import { usePrefersMoreContrast } from '@/ui/wafer-map/use-prefers-more-contrast';
 import {
   paintLandingCardWafer,
   resolveCanvasPixelSize,
@@ -45,6 +46,7 @@ export interface EmptyStateCardProps {
     presetId: DemoPresetId,
     cssSize: number,
     dpr: number,
+    highContrast?: boolean,
   ) => Promise<ImageBitmap | null>;
   readonly parseError?: {
     readonly error: ParseFatalError;
@@ -82,6 +84,7 @@ interface DemoWaferThumbnailProps {
     presetId: DemoPresetId,
     cssSize: number,
     dpr: number,
+    highContrast?: boolean,
   ) => Promise<ImageBitmap | null>;
 }
 
@@ -94,6 +97,7 @@ function DemoWaferThumbnail({
     () => getDemoPresetPreview(presetId),
     [presetId],
   );
+  const highContrast = usePrefersMoreContrast();
 
   React.useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -122,6 +126,7 @@ function DemoWaferThumbnail({
       dies: preview.dies,
       cssSize: LANDING_WAFER_DIAMETER_PX,
       dpr: dims.dpr,
+      highContrast,
     });
 
     if (!renderWorkerThumbnail) {
@@ -132,6 +137,7 @@ function DemoWaferThumbnail({
       presetId,
       LANDING_WAFER_DIAMETER_PX,
       dims.dpr,
+      highContrast,
     )
       .then((bitmap) => {
         if (!bitmap) {
@@ -167,7 +173,7 @@ function DemoWaferThumbnail({
     return () => {
       cancelled = true;
     };
-  }, [presetId, preview, renderWorkerThumbnail]);
+  }, [presetId, preview, renderWorkerThumbnail, highContrast]);
 
   return (
     <div className="relative flex h-[176px] w-full shrink-0 items-center justify-center overflow-hidden rounded-lg md:h-[196px]">
@@ -208,6 +214,7 @@ interface DemoLotCardButtonProps {
     presetId: DemoPresetId,
     cssSize: number,
     dpr: number,
+    highContrast?: boolean,
   ) => Promise<ImageBitmap | null>;
 }
 

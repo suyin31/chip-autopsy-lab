@@ -340,6 +340,7 @@ const OverlayCanvasImpl = React.forwardRef<
               dims.cssHeight,
               cur.lot.dies,
               vp,
+              dims.dpr,
             );
 
       paintWaferOverlayLayer(ctx, {

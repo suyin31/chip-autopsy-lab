@@ -12,35 +12,45 @@ import { I18nProvider } from '@/ui/i18n';
 import { deriveSelectionMasks } from '@/ui/state';
 import {
   COLOR_TOKENS,
+  compositeRgbaOverRgb,
+  parseHexColor,
+  parseRgbaString,
   SECONDARY_FAIL_BIN_PALETTE,
   WAFER_TOKENS,
+  wcagContrastRatio,
 } from '@/ui/tokens';
 import { ingestDemoPreset } from '@/workers';
 import { WaferMapCanvas } from './WaferMapCanvas';
 import {
   buildFailBinRankMap,
   type Canvas2DContextLike,
+  computeDieStreetPx,
+  computeFailDieRadiusPx,
   computeParametricRange,
+  computePassDieRadiusPx,
   computeWaferExclusionRadiusPx,
   computeWaferNotchGeometry,
+  computeWaferRadiusUnits,
   computeWaferRenderLayout,
   dieCoordToCanvasRect,
-  FAIL_DIE_RADIUS_PX,
   hitTestWaferDie,
   MAX_SUPERSAMPLED_CANVAS_PX,
   OVERLAY_HALO_STROKE,
+  paintLandingCardWafer,
   paintWaferBaseLayer,
   paintWaferDiscMaterial,
   paintWaferFailLayer,
   paintWaferOverlayLayer,
+  paintWaferSweepBatch,
   paintWaferThumbnail,
   PASS_DIE_CELL_FRACTION,
-  PASS_DIE_RADIUS_PX,
   resolveCanvasPixelSize,
   resolveDieFillColor,
   resolvePassFailDieColor,
+  resolvePassTileColor,
   resolveSupersampledCanvasSize,
-  WAFER_STREET_WIDTH_PX,
+  shouldDrawFailFacet,
+  THUMBNAIL_DENSE_PITCH_PX,
 } from './wafer-geometry';
 
 function buildWaferTestLot(wcr?: Partial<WaferGeometry>): LotModel {
@@ -310,7 +320,7 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(superCapped.pixelHeight).toBeLessThanOrEqual(MAX_SUPERSAMPLED_CANVAS_PX);
   });
 
-  it('hits §3.4 wafer diameters (624 px at 783x720 desktop, 350 px at 390x390 mobile) and keeps 1 px streets', () => {
+  it('hits §3.4 wafer diameters (624 px at 783x720 desktop, 350 px at 390x390 mobile) and keeps premium §5.3 streets', () => {
     const lot = buildWaferTestLot();
     const wafer = lot.wafers[0]!;
 
@@ -321,11 +331,13 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     const mobileLayout = computeWaferRenderLayout(wafer, 390, 390, lot.dies);
     expect(mobileLayout.waferRadiusPx * 2).toBe(350);
 
-    expect(desktopLayout.streetPx).toBe(WAFER_STREET_WIDTH_PX);
+    expect(desktopLayout.streetPx).toBe(
+      computeDieStreetPx(desktopLayout.diePitchPx),
+    );
     const rLeft = dieCoordToCanvasRect(0, 0, desktopLayout);
     const rRight = dieCoordToCanvasRect(1, 0, desktopLayout);
     const horizontalStreet = rRight.x - (rLeft.x + rLeft.width);
-    expect(horizontalStreet).toBeCloseTo(1, 6);
+    expect(horizontalStreet).toBeCloseTo(desktopLayout.streetPx, 6);
 
     // Every valid die's 4 corners lie strictly inside waferRadiusPx
     for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
@@ -398,7 +410,8 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
 
   it('maps Pass/Fail, dominant/secondary categorical fail bins, and parametric magma colors deterministically', () => {
     const lot = buildWaferTestLot();
-    expect(resolvePassFailDieColor(1)).toBe('#63666C');
+    expect(resolvePassFailDieColor(1)).toBe(WAFER_TOKENS.passTile);
+    expect(resolvePassFailDieColor(1, true)).toBe(WAFER_TOKENS.passTileHc);
     expect(resolvePassFailDieColor(0)).toBe('#FF6B2C');
 
     const sbinRanks = buildFailBinRankMap(lot.dies, 'SBIN');
@@ -406,7 +419,7 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(sbinRanks.get(7)).toBe(1);
 
     expect(resolveDieFillColor(0, lot.dies, 'sbin', sbinRanks)).toBe(
-      COLOR_TOKENS.passDie,
+      WAFER_TOKENS.passTile,
     );
     expect(resolveDieFillColor(1, lot.dies, 'sbin', sbinRanks)).toBe(
       COLOR_TOKENS.failure,
@@ -439,7 +452,7 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(lowHex).not.toBe(highHex);
   });
 
-  it('paints the premium §5.2 disc material, 72% 1px-radius pass squares vs full-cell 1.5px-radius fail dies (§2.1), FailCanvas layer, and isolated OverlayCanvas', () => {
+  it('paints the premium §5.2 disc material, §5.3 80% pass tiles vs full-cell-minus-street fail dies with facets, FailCanvas layer, and isolated OverlayCanvas', () => {
     const lot = buildWaferTestLot();
     const wafer = lot.wafers[0]!;
     const layout = computeWaferRenderLayout(wafer, 783, 720, lot.dies);
@@ -468,7 +481,7 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     ]);
 
     const passFills = baseMock.dieShapes.filter(
-      (r) => r.fillStyle === COLOR_TOKENS.passDie,
+      (r) => r.fillStyle === WAFER_TOKENS.passTile,
     );
     const failFills = baseMock.dieShapes.filter(
       (r) => r.fillStyle === COLOR_TOKENS.failure,
@@ -476,15 +489,28 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(passFills).toHaveLength(2);
     expect(failFills).toHaveLength(3);
 
-    // §2.1 non-color geometry cue: pass dies are 72% squares with 1 px radius; fail dies fill cell minus 1 px street with 1.5 px radius
+    // §5.3 geometry cue: pass tiles are 80% of the fail-die side; fail dies fill the cell minus the street
     expect(passFills[0]!.w).toBeCloseTo(
-      layout.diePitchPx * PASS_DIE_CELL_FRACTION,
+      layout.dieSizePx * PASS_DIE_CELL_FRACTION,
       4,
     );
-    expect(passFills[0]!.radius).toBeCloseTo(PASS_DIE_RADIUS_PX, 4);
-    expect(failFills[0]!.w).toBeCloseTo(layout.dieSizePx, 4);
-    expect(failFills[0]!.radius).toBeCloseTo(FAIL_DIE_RADIUS_PX, 4);
+    expect(passFills[0]!.radius).toBeCloseTo(
+      computePassDieRadiusPx(layout.diePitchPx),
+      4,
+    );
+    expect(failFills[0]!.w).toBeCloseTo(
+      layout.diePitchPx - layout.streetPx,
+      4,
+    );
+    expect(failFills[0]!.radius).toBeCloseTo(
+      computeFailDieRadiusPx(layout.diePitchPx),
+      4,
+    );
     expect(failFills[0]!.w).toBeGreaterThan(passFills[0]!.w);
+    // Fail facets: one batched path, one 1 px rect per fail die (pitch >= 10 px)
+    expect(layout.diePitchPx).toBeGreaterThanOrEqual(10);
+    expect(baseMock.rectCalls).toHaveLength(3);
+    expect(baseMock.pathFills).toContain(WAFER_TOKENS.failFacet);
 
     // Fail layer draws only failing dies
     paintWaferFailLayer(failMock.ctx, {
@@ -547,7 +573,7 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
 
     expect(thumbMock.getDrawPassCount()).toBe(1);
     const passFills = thumbMock.dieShapes.filter(
-      (r) => r.fillStyle === COLOR_TOKENS.passDie,
+      (r) => r.fillStyle === WAFER_TOKENS.passTile,
     );
     const failFills = thumbMock.dieShapes.filter(
       (r) => r.fillStyle === COLOR_TOKENS.failure,
@@ -764,4 +790,167 @@ describe('Premium P5 — disc material (premium §5.2 steps 1-5)', () => {
       }
     },
   );
+});
+
+describe('Premium P6 — die tiles and thumbnails (premium §5.3)', () => {
+  it('derives street and corner radii from the die pitch', () => {
+    // 1440 x 900 demo wafer pitch ~19.4 -> 2 px street
+    expect(computeDieStreetPx(19.4)).toBe(2);
+    expect(computeDieStreetPx(4, 2)).toBe(0.5);
+    expect(computeDieStreetPx(2)).toBe(1);
+    expect(computeDieStreetPx(80)).toBe(8);
+    expect(computeFailDieRadiusPx(2)).toBe(0.5);
+    expect(computeFailDieRadiusPx(10)).toBeCloseTo(1.2, 9);
+    expect(computeFailDieRadiusPx(40)).toBe(2);
+    expect(computePassDieRadiusPx(2)).toBe(0.5);
+    expect(computePassDieRadiusPx(10)).toBeCloseTo(1, 9);
+    expect(computePassDieRadiusPx(40)).toBe(1.5);
+    expect(shouldDrawFailFacet(9.99)).toBe(false);
+    expect(shouldDrawFailFacet(10)).toBe(true);
+  });
+
+  it('keeps pass tiles at 1.1-1.3:1 against the disc, fail dies >= 5:1 against both, and 3:1 under more contrast (A6, A13)', () => {
+    const disc = parseHexColor(WAFER_TOKENS.discMid);
+    const passTile = compositeRgbaOverRgb(
+      parseRgbaString(resolvePassTileColor(false)),
+      disc,
+    );
+    const passTileHc = compositeRgbaOverRgb(
+      parseRgbaString(resolvePassTileColor(true)),
+      disc,
+    );
+    const fail = parseHexColor(WAFER_TOKENS.failDie);
+    const passRatio = wcagContrastRatio(passTile, disc);
+    expect(passRatio).toBeGreaterThanOrEqual(1.1);
+    expect(passRatio).toBeLessThanOrEqual(1.3);
+    expect(wcagContrastRatio(fail, disc)).toBeGreaterThanOrEqual(5);
+    expect(wcagContrastRatio(fail, passTile)).toBeGreaterThanOrEqual(5);
+    expect(wcagContrastRatio(passTileHc, disc)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('paints pass tiles in pass-tile-hc when highContrast is set, including the probe-sweep batch', () => {
+    const lot = buildWaferTestLot();
+    const wafer = lot.wafers[0]!;
+    const layout = computeWaferRenderLayout(wafer, 783, 720, lot.dies);
+    const mock = createMockCanvas2DContext();
+    paintWaferBaseLayer(mock.ctx, {
+      lot,
+      waferIndex: 0,
+      layout,
+      dpr: 2,
+      colorMode: 'sbin',
+      activeTestNum: null,
+      hiddenBins: new Set(),
+      highContrast: true,
+    });
+    expect(
+      mock.dieShapes.filter((r) => r.fillStyle === WAFER_TOKENS.passTileHc),
+    ).toHaveLength(2);
+    // Bin modes still facet the fail dies in one batched path
+    expect(mock.rectCalls).toHaveLength(3);
+
+    const sweepMock = createMockCanvas2DContext();
+    const order = new Uint32Array([0, 1, 2, 3, 4]);
+    paintWaferSweepBatch(sweepMock.ctx, {
+      lot,
+      layout,
+      dpr: 2,
+      probeOrder: order,
+      startOrderIndex: 0,
+      endOrderIndex: order.length,
+      highContrast: true,
+    });
+    expect(
+      sweepMock.dieShapes.every((r) => r.fillStyle === WAFER_TOKENS.passTileHc),
+    ).toBe(true);
+  });
+
+  it('skips facets below a 10 px pitch', () => {
+    const lot = buildWaferTestLot();
+    const wafer = lot.wafers[0]!;
+    const layout = computeWaferRenderLayout(wafer, 40, 40, lot.dies);
+    expect(layout.diePitchPx).toBeLessThan(10);
+    const mock = createMockCanvas2DContext();
+    paintWaferBaseLayer(mock.ctx, {
+      lot,
+      waferIndex: 0,
+      layout,
+      dpr: 2,
+      colorMode: 'pass-fail',
+      activeTestNum: null,
+      hiddenBins: new Set(),
+    });
+    expect(mock.rectCalls).toHaveLength(0);
+    expect(mock.pathFills).not.toContain(WAFER_TOKENS.failFacet);
+  });
+
+  it('thumbnails below p = 3 omit pass tiles, draw fail dies at full cell, and skip the thin film', async () => {
+    const res = await ingestDemoPreset('edge-ring-etch');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
+    const { lot } = res;
+    const wafer = lot.wafers[0]!;
+    const mock = createMockCanvas2DContext();
+    let conicCalls = 0;
+    const ctx: Canvas2DContextLike = {
+      ...mock.ctx,
+      createConicGradient: () => {
+        conicCalls += 1;
+        return { addColorStop: () => undefined } as unknown as CanvasGradient;
+      },
+    };
+    paintWaferThumbnail(ctx, { wafer, dies: lot.dies, cssSize: 40, dpr: 2 });
+    expect(conicCalls).toBe(0);
+
+    const radiusPx = 40 / 2 - 1.25;
+    const pitch = radiusPx / computeWaferRadiusUnits(wafer, lot.dies);
+    expect(pitch).toBeLessThan(THUMBNAIL_DENSE_PITCH_PX);
+
+    const passShapes = mock.dieShapes.filter(
+      (r) =>
+        r.fillStyle === WAFER_TOKENS.passTile ||
+        r.fillStyle === WAFER_TOKENS.passTileHc,
+    );
+    expect(passShapes).toHaveLength(0);
+    const failShapes = mock.dieShapes.filter(
+      (r) => r.fillStyle === COLOR_TOKENS.failure,
+    );
+    let failCount = 0;
+    for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
+      if (lot.dies.hasValidCoords[i] !== 0 && lot.dies.finalPass[i] === 0) {
+        failCount += 1;
+      }
+    }
+    expect(failShapes).toHaveLength(failCount);
+    expect(failShapes[0]!.w).toBeCloseTo(pitch, 9);
+  });
+
+  it('landing-size thumbnails (p >= 3) keep 80% pass tiles and streets', async () => {
+    const res = await ingestDemoPreset('edge-ring-etch');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
+    const { lot } = res;
+    const wafer = lot.wafers[0]!;
+    const mock = createMockCanvas2DContext();
+    paintLandingCardWafer(mock.ctx, {
+      wafer,
+      dies: lot.dies,
+      cssSize: 152,
+      dpr: 2,
+      highContrast: true,
+    });
+    const pitch = (152 / 2 - 1.5) / computeWaferRadiusUnits(wafer, lot.dies);
+    expect(pitch).toBeGreaterThanOrEqual(THUMBNAIL_DENSE_PITCH_PX);
+    const pass = mock.dieShapes.filter(
+      (r) => r.fillStyle === WAFER_TOKENS.passTileHc,
+    );
+    const fail = mock.dieShapes.filter(
+      (r) => r.fillStyle === COLOR_TOKENS.failure,
+    );
+    expect(pass.length).toBeGreaterThan(0);
+    expect(fail.length).toBeGreaterThan(0);
+    const failSide = pitch - computeDieStreetPx(pitch, 2);
+    expect(fail[0]!.w).toBeCloseTo(failSide, 9);
+    expect(pass[0]!.w).toBeCloseTo(failSide * PASS_DIE_CELL_FRACTION, 9);
+  });
 });

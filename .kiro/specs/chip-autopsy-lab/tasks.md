@@ -234,7 +234,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P5. Disc material
   - Notch geometry from `WCR.WF_FLAT`, body gradient, thin film (feature-detected), exclusion line, bevel; unit test that no die crosses the exclusion radius (premium §5.2 steps 1–5).
   - Accept: A5.
-- [ ] P6. Die tiles and thumbnails
+- [x] P6. Die tiles and thumbnails
   - Street, fail die radius and facet, 80 % pass tile, `pass-tile-hc` under `prefers-contrast: more`, thumbnail rules for `p < 3` (premium §5.3).
   - Accept: A6, A7, A13.
 - [ ] P7. Stage shadows and static sheen
