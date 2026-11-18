@@ -876,6 +876,49 @@
       opacity: 0;
     }
   }
+
+  /* Term (premium §7.17): inline, inherits font and colour, dotted 1 px underline at 45 % of currentColor (80 % on hover / open) */
+  .term {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    text-align: inherit;
+    pointer-events: auto;
+    cursor: help;
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+    border-radius: var(--radius-xs);
+    transition-property: text-decoration-color;
+    transition-duration: 120ms;
+    transition-timing-function: var(--ease-out);
+  }
+
+  :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko)) .term {
+    text-underline-offset: 4px;
+  }
+
+  .term[data-state="open"] {
+    text-decoration-color: color-mix(in srgb, currentColor 80%, transparent);
+  }
+
+  @media (hover: hover) {
+    .term:hover {
+      text-decoration-color: color-mix(in srgb, currentColor 80%, transparent);
+    }
+  }
+
+  .term:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {

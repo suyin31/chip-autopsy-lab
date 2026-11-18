@@ -75,6 +75,8 @@ export interface RenderedStatFact {
   readonly captionText: string;
   /** Optional second caption line (premium §7.5, e.g. "81.5% on the first test"). */
   readonly captionSecondaryText: string | null;
+  /** Caption message key; the UI picks the caption's glossary terms from it (premium §2.2). */
+  readonly captionKey: StatCaptionKey;
   readonly evidence: StatEvidence;
   readonly emphasis: boolean;
   readonly numericValue: number;
@@ -529,6 +531,7 @@ export function renderStatFacts(
         : formatInteger(locale, stat.value),
     captionText: formatStatCaption(stat, locale),
     captionSecondaryText: formatStatSecondaryCaption(stat, locale),
+    captionKey: stat.captionKey,
     evidence: stat.evidence,
     emphasis: stat.emphasis,
     numericValue: stat.value,

@@ -65,7 +65,7 @@ describe('YieldSummaryPanel', () => {
     expect(count(html, 'data-testid="yield-wafer-row"')).toBe(5);
     expect(html).toContain('Yield by test site and wafer');
     expect(html).toContain('final yield');
-    expect(html).toContain('on the first test');
+    expect(html.replace(/<[^>]+>/g, '')).toContain('on the first test');
     expect(html).toContain('Show all 25 wafers');
     expect(html).toContain('aria-expanded="false"');
   });

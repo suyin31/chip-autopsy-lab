@@ -3,7 +3,9 @@
 import { animate, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import type { RenderedStatFact, RenderedStatFactTuple } from '@/core/report';
-import { useT } from '@/ui/i18n';
+import type { GlossaryTermId } from '@/core/i18n';
+import type { StatCaptionKey } from '@/core/report';
+import { GlossaryText, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
 import {
@@ -12,6 +14,18 @@ import {
   STAT_UPDATE_COUNTUP_MS,
   sampleStatCountUp,
 } from '@/ui/wafer-map/probe-sweep';
+
+/** "dies failed, of 15,825 tested" defines "Die" (premium §2.2). */
+export function resolveStatCaptionTerms(
+  captionKey: StatCaptionKey,
+): readonly GlossaryTermId[] {
+  return captionKey === 'stats.failingDies' ? DIE_TERMS : NO_TERMS;
+}
+
+const DIE_TERMS: readonly GlossaryTermId[] = ['die'];
+const NO_TERMS: readonly GlossaryTermId[] = [];
+/** The second line "81.5% on the first test" defines "First test" (premium §2.2). */
+const STAT_SECONDARY_CAPTION_TERMS: readonly GlossaryTermId[] = ['firstTest'];
 
 export interface StatRowProps {
   readonly stats: RenderedStatFactTuple;
@@ -278,14 +292,20 @@ export function StatRow({
                 data-testid="verdict-stat-caption"
                 className="line-clamp-2 block text-text-secondary transition-colors duration-120 ease-out group-hover/stat:text-text-primary lg:max-xl:line-clamp-3"
               >
-                {stat.captionText}
+                <GlossaryText
+                  text={stat.captionText}
+                  terms={resolveStatCaptionTerms(stat.captionKey)}
+                />
               </span>
               {stat.captionSecondaryText !== null ? (
                 <span
                   data-testid="verdict-stat-caption-secondary"
                   className="line-clamp-2 block text-text-tertiary tabular-nums"
                 >
-                  {stat.captionSecondaryText}
+                  <GlossaryText
+                    text={stat.captionSecondaryText}
+                    terms={STAT_SECONDARY_CAPTION_TERMS}
+                  />
                 </span>
               ) : null}
             </dt>

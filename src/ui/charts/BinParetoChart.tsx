@@ -6,7 +6,8 @@ import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { computeBinPareto } from '@/core/analytics';
 import type { BinMode, LotModel } from '@/core/model';
-import { Untranslated, useT } from '@/ui/i18n';
+import type { GlossaryTermId } from '@/core/i18n';
+import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import { Button } from '@/ui/primitives/button';
 import { SegmentedControl } from '@/ui/primitives/segmented-control';
@@ -23,6 +24,9 @@ import {
   resolveParetoMask,
   selectParetoRows,
 } from './bin-pareto-view';
+
+/** "Yield loss by bin" defines "Bin" (premium §2.2). */
+const CHART_LABEL_TERMS: readonly GlossaryTermId[] = ['bin'];
 
 export interface BinParetoChartProps {
   readonly lot: LotModel;
@@ -246,7 +250,9 @@ export function BinParetoChart({
           </p>
 
           <div className="mt-6 flex items-baseline justify-between gap-4 type-subhead text-text-tertiary">
-            <span id={chartLabelId}>{t('pareto.chartLabel')}</span>
+            <span id={chartLabelId}>
+              <GlossaryText text={t('pareto.chartLabel')} terms={CHART_LABEL_TERMS} />
+            </span>
             <span>{t('pareto.axisLabel')}</span>
           </div>
 

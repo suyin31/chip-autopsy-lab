@@ -8,7 +8,8 @@ import { useShallow } from 'zustand/react/shallow';
 import type { YieldMetrics, YieldSummary } from '@/core/analytics';
 import type { LotModel } from '@/core/model';
 import type { EngineFact } from '@/core/report';
-import { Untranslated, useT } from '@/ui/i18n';
+import type { GlossaryTermId } from '@/core/i18n';
+import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/primitives/cn';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
@@ -18,6 +19,12 @@ import {
   resolveYieldTakeaway,
   selectWaferRowIndices,
 } from './yield-summary-view';
+
+// Premium §2.2, §7.10: "on the first test", "retests", and "Test sites" define their terms
+const NO_TERMS: readonly GlossaryTermId[] = [];
+const FIRST_TEST_TERMS: readonly GlossaryTermId[] = ['firstTest'];
+const RETEST_TERMS: readonly GlossaryTermId[] = ['retest'];
+const TEST_SITE_TERMS: readonly GlossaryTermId[] = ['testSite'];
 
 export interface YieldSummaryPanelProps {
   readonly lot: LotModel;
@@ -228,16 +235,19 @@ export function YieldSummaryPanel({
           {
             id: 'final',
             label: t('yield.lot.final'),
+            terms: NO_TERMS,
             value: formatYield(overall.finalYield),
           },
           {
             id: 'first-pass',
             label: t('yield.lot.firstPass'),
+            terms: FIRST_TEST_TERMS,
             value: formatYield(overall.firstPassYield),
           },
           {
             id: 'retests',
             label: t('yield.lot.retests'),
+            terms: RETEST_TERMS,
             value: formatInteger(overall.retestExecutions),
           },
         ].map((stat) => (
@@ -246,7 +256,7 @@ export function YieldSummaryPanel({
             className="flex min-w-0 flex-col-reverse justify-end gap-1.5"
           >
             <dt className="type-subhead text-pretty text-text-secondary">
-              {stat.label}
+              <GlossaryText text={stat.label} terms={stat.terms} />
             </dt>
             <dd
               data-testid={`yield-lot-${stat.id}`}
@@ -261,7 +271,7 @@ export function YieldSummaryPanel({
       {bySite.length >= 2 ? (
         <div data-testid="yield-sites" className="mt-8">
           <h3 className="type-headline text-text-primary">
-            {t('yield.sites')}
+            <GlossaryText text={t('yield.sites')} terms={TEST_SITE_TERMS} />
           </h3>
           {columnHeader(t('yield.col.site'))}
           <ul className="-mx-3 flex flex-col">

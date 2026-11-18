@@ -9,6 +9,8 @@ export interface SegmentedControlOption<T extends string = string> {
   readonly value: T;
   readonly label: React.ReactNode;
   readonly ariaLabel?: string;
+  /** Id of the element describing the segment, such as a glossary `Term` label's definition (premium §5.6). */
+  readonly ariaDescribedBy?: string;
   readonly disabled?: boolean;
 }
 
@@ -167,6 +169,7 @@ export function SegmentedControl<T extends string = string>({
             role="radio"
             aria-checked={isActive}
             aria-label={option.ariaLabel}
+            aria-describedby={option.ariaDescribedBy}
             aria-disabled={isItemDisabled ? 'true' : undefined}
             disabled={isItemDisabled}
             tabIndex={isTabStop ? 0 : -1}

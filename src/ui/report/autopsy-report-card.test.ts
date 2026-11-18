@@ -240,7 +240,7 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       expect(cardHtml).toMatch(/data-testid="autopsy-headline-button"[^>]*><span data-accent="" class="type-accent">/);
       const takeaway =
         /<p data-testid="verdict-subline"[^>]*>(.*?)<\/p>/.exec(cardHtml)?.[1] ?? '';
-      expect(takeaway).toContain('Final yield is');
+      expect(takeaway.replace(/<[^>]+>/g, '')).toContain('Final yield is');
       expect(takeaway).not.toMatch(/[HS]BIN|IDDQ|VDD_|CONT_OPEN|!/);
 
       // Action row: one primary "Show on wafer" + the confidence chip (premium §6.2, §7.4, A20)
@@ -249,7 +249,9 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       expect(countPrimaryButtons(cardHtml)).toBe(1);
       expect(cardHtml).toContain('data-testid="confidence-pill"');
       expect(cardHtml).toContain('data-level="high"');
-      expect(cardHtml).toMatch(/High confidence, 0\.\d{2}/);
+      expect(cardHtml.replace(/<[^>]+>/g, '')).toMatch(/High confidence, 0\.\d{2}/);
+      // A21: "confidence" carries the dotted Term underline inside the chip
+      expect(cardHtml).toMatch(/data-testid="confidence-term"[^>]*class="term[^"]*">confidence</);
       expect(cardHtml).not.toMatch(/confidence, 0\.9[6-9]|confidence, 1\.00/);
       expect(cardHtml).not.toContain('Template · Offline');
       expect(cardHtml).not.toContain('AUTOPSY REPORT');
@@ -385,10 +387,11 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       );
     const before = render();
     expect(before).toContain('final yield');
+    expect(before.replace(/<[^>]+>/g, '')).toMatch(/8\d\.\d% on the first test/);
     expect(before).toMatch(
-      /data-testid="verdict-stat-caption-secondary"[^>]*>8\d\.\d% on the first test</,
+      /data-testid="verdict-stat-caption-secondary"[^>]*>8\d\.\d% on the <button[^>]*data-term-id="firstTest"[^>]*>first test</,
     );
-    expect(before).toContain('dies failed, of 15,825 tested');
+    expect(before.replace(/<[^>]+>/g, '')).toContain('dies failed, of 15,825 tested');
 
     const [edgeStat] = buildStatFacts({ lot });
     store.getState().toggleClaimHighlight({

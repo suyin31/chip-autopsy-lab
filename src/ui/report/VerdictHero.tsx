@@ -7,7 +7,10 @@ import { AccentWord } from '@/ui/primitives/accent-word';
 import { cn } from '@/ui/primitives/cn';
 import type { VerdictRiseBlockId } from '@/ui/wafer-map/probe-sweep';
 import { useT } from '@/ui/i18n/use-t';
+import { GlossaryText } from '@/ui/i18n/GlossaryText';
 import { renderWithUntranslatedTokens } from './render-untranslated';
+
+const TAKEAWAY_TERMS = ['yield'] as const;
 
 export interface VerdictHeroProps {
   readonly verdict: RenderedVerdictHero;
@@ -185,10 +188,13 @@ export function VerdictHero({
         data-testid="verdict-subline"
         className="verdict-takeaway mt-3 line-clamp-5 max-w-[520px] type-body text-pretty text-text-secondary sm:line-clamp-3 md:mt-4"
       >
-        {renderWithUntranslatedTokens(
-          verdict.subline,
-          verdict.untranslatedTokens,
-        )}
+        {/* Premium §7.3: the takeaway may hold one Term ("yield") */}
+        <GlossaryText
+          text={verdict.subline}
+          terms={TAKEAWAY_TERMS}
+          untranslatedTokens={verdict.untranslatedTokens}
+          max={1}
+        />
       </p>
     ) : null;
 

@@ -17,10 +17,19 @@ import type {
   RenderedHypothesisItem,
   ReportClaim,
 } from '@/core/report';
-import { useT } from '@/ui/i18n';
+import type { GlossaryTermId } from '@/core/i18n';
+import { GlossaryText, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
 import { renderWithUntranslatedTokens } from './render-untranslated';
+
+/** Terms allowed in the expanded engine sentence, in priority order (premium §7.6.4). */
+const ENGINE_SENTENCE_TERMS: readonly GlossaryTermId[] = [
+  'cpk',
+  'limits',
+  'testSite',
+  'bin',
+];
 
 /** At most 3 finding rows show at level 0; the rest sit behind "Show N more findings" (premium §7.6.1). */
 export const FINDINGS_VISIBLE_LIMIT = 3;
@@ -395,7 +404,11 @@ export function FindingsList({
                       data-testid="finding-engine-sentence"
                       className="line-clamp-3 type-callout text-text-secondary tabular-nums"
                     >
-                      {row.detailText}
+                      <GlossaryText
+                        text={row.detailText}
+                        terms={ENGINE_SENTENCE_TERMS}
+                        untranslatedTokens={row.untranslatedTokens}
+                      />
                     </p>
                     {row.checkNextSteps.length > 0 ? (
                       <div data-testid="finding-check-next" className="mt-3">

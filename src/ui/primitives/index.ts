@@ -66,3 +66,13 @@ export {
   TOOLTIP_SKIP_DELAY_WINDOW_MS,
   type TooltipProps,
 } from './tooltip';
+export {
+  computeTermPopoverPosition,
+  Term,
+  TERM_CLOSE_GRACE_MS,
+  TERM_CONTROL_HOVER_DELAY_MS,
+  TERM_HOVER_DELAY_MS,
+  type TermPopoverPosition,
+  type TermProps,
+  type TermRect,
+} from './term';

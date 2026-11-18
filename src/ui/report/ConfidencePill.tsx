@@ -4,7 +4,9 @@ import { Info } from 'lucide-react';
 import { animate, AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import { resolveGlossaryEntry, splitGlossaryTerms } from '@/core/i18n';
 import type { RenderedConfidenceInfo } from '@/core/report';
+import { useT } from '@/ui/i18n/use-t';
 import {
   type AnchoredMenuPosition,
   computeAnchoredMenuPosition,
@@ -38,6 +40,8 @@ export function ConfidencePill({
   className,
 }: ConfidencePillProps): React.JSX.Element {
   const [open, setOpen] = React.useState(defaultOpen);
+  const { locale } = useT();
+  const confidenceTerm = resolveGlossaryEntry(locale, 'confidence').term;
   const [mounted, setMounted] = React.useState(false);
   const [position, setPosition] = React.useState<AnchoredMenuPosition>({
     top: 0,
@@ -264,7 +268,28 @@ export function ConfidencePill({
           open && 'bg-fill-2 text-text-primary hover:bg-fill-2',
         )}
       >
-        <span className="tabular-nums">{confidence.label}</span>
+        <span className="tabular-nums">
+          {/* Premium §2.2, A21: "Confidence" carries the Term underline; the popover holds its definition */}
+          {splitGlossaryTerms(
+            confidence.label,
+            [{ id: 'confidence', term: confidenceTerm }],
+            1,
+          ).map((seg, idx) =>
+            seg.kind === 'term' ? (
+              <span
+                key={idx}
+                data-testid="confidence-term"
+                data-term-id={seg.id}
+                data-state={open ? 'open' : 'closed'}
+                className="term cursor-pointer"
+              >
+                {seg.value}
+              </span>
+            ) : (
+              <React.Fragment key={idx}>{seg.value}</React.Fragment>
+            ),
+          )}
+        </span>
         <Info
           className="size-3.5 shrink-0 text-text-tertiary transition-colors duration-[120ms] ease-[var(--ease-out)] group-hover:text-text-secondary"
           strokeWidth={1.75}

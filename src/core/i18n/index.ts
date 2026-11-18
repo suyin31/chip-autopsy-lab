@@ -1,5 +1,6 @@
 export * from './dictionary';
 export * from './format';
+export * from './glossary';
 export * from './locales';
 export { en } from './messages/en';
 export { ja } from './messages/ja';

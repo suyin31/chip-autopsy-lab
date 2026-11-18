@@ -129,6 +129,7 @@ describe('stat-facts core selector and localized formatter (redesign §3.4, §3.
       valueText: '93.8%',
       captionText: 'of failing dies are in the outer 3 rings',
       captionSecondaryText: null,
+      captionKey: 'stats.edgeShare',
       evidence: stats[0]!.evidence,
       emphasis: true,
       numericValue: stats[0]!.value,

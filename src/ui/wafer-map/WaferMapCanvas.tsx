@@ -6,6 +6,7 @@ import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { YieldMetrics } from '@/core/analytics';
+import { resolveGlossaryEntry } from '@/core/i18n';
 import {
   buildWaferProbeOrder,
   type LotModel,
@@ -15,6 +16,7 @@ import { Untranslated, useT } from '@/ui/i18n';
 import {
   Button,
   SegmentedControl,
+  Term,
   type SegmentedControlOption,
 } from '@/ui/primitives';
 import { cn } from '@/ui/primitives/cn';
@@ -274,7 +276,7 @@ function WaferMapCanvasImpl({
   store = useSelectionStore,
   className,
 }: WaferMapCanvasProps): React.JSX.Element {
-  const { t, tPlural, formatInteger } = useT();
+  const { t, tPlural, formatInteger, locale } = useT();
   const shouldReduceMotion = useReducedMotion();
   const prefersReduced = readPrefersReducedMotionSync(shouldReduceMotion);
   const stageRef = React.useRef<HTMLDivElement>(null);
@@ -1946,16 +1948,47 @@ function WaferMapCanvasImpl({
     [cancelCrossfadeImmediately, startWaferCrossfade, store],
   );
 
+  // Premium §5.6: "Hard bins" and "Soft bins" are Terms; the definition shows after 600 ms
+  const modeTermId = React.useId();
   const modeOptions = React.useMemo<
     readonly SegmentedControlOption<'pass-fail' | 'hbin' | 'sbin'>[]
-  >(
-    () => [
+  >(() => {
+    const hard = resolveGlossaryEntry(locale, 'hardBin');
+    const soft = resolveGlossaryEntry(locale, 'softBin');
+    return [
       { value: 'pass-fail', label: t('mode.passFail') },
-      { value: 'hbin', label: t('mode.hardBins') },
-      { value: 'sbin', label: t('mode.softBins') },
-    ],
-    [t],
-  );
+      {
+        value: 'hbin',
+        label: (
+          <Term
+            variant="label"
+            termId="hardBin"
+            descriptionId={`${modeTermId}-hard`}
+            term={hard.term}
+            definition={hard.definition}
+          >
+            {t('mode.hardBins')}
+          </Term>
+        ),
+        ariaDescribedBy: `${modeTermId}-hard`,
+      },
+      {
+        value: 'sbin',
+        label: (
+          <Term
+            variant="label"
+            termId="softBin"
+            descriptionId={`${modeTermId}-soft`}
+            term={soft.term}
+            definition={soft.definition}
+          >
+            {t('mode.softBins')}
+          </Term>
+        ),
+        ariaDescribedBy: `${modeTermId}-soft`,
+      },
+    ];
+  }, [locale, modeTermId, t]);
 
   const segmentedValue: 'pass-fail' | 'hbin' | 'sbin' =
     colorMode === 'hbin' || colorMode === 'sbin' ? colorMode : 'pass-fail';

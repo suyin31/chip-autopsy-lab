@@ -20,3 +20,4 @@ export {
   useT,
   type UseTReturn,
 } from './use-t';
+export { GlossaryText, type GlossaryTextProps } from './GlossaryText';
