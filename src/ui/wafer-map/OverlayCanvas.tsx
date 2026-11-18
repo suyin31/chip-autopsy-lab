@@ -247,6 +247,7 @@ const OverlayCanvasImpl = React.forwardRef<
     }
     const anim = animStateRef.current;
     wrapperEl.dataset.glowPhase = anim.phase;
+    wrapperEl.dataset.glowMode = anim.schedule?.mode ?? '';
     wrapperEl.dataset.scrimAlpha = anim.liveScrimAlpha.toFixed(3);
     let litCount = 0;
     for (let i = 0; i < anim.liveDieAlphas.length; i += 1) {

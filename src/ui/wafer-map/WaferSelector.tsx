@@ -71,6 +71,13 @@ export const WaferSelector = React.memo(function WaferSelector({
   const safeActive =
     count > 0 ? Math.min(Math.max(0, activeWaferIndex), count - 1) : 0;
 
+  const prevSafeActivePropRef = React.useRef(safeActive);
+  const liveActiveRef = React.useRef(safeActive);
+  if (prevSafeActivePropRef.current !== safeActive) {
+    prevSafeActivePropRef.current = safeActive;
+    liveActiveRef.current = safeActive;
+  }
+
   React.useEffect(() => {
     if (count === 0) {
       return;
@@ -199,6 +206,7 @@ export const WaferSelector = React.memo(function WaferSelector({
 
   const focusAndSelect = (nextIndex: number, isRepeat: boolean): void => {
     const clamped = Math.min(count - 1, Math.max(0, nextIndex));
+    liveActiveRef.current = clamped;
     lastSelectWasRepeatRef.current = isRepeat;
     onSelectWafer(clamped, {
       instant: isRepeat || Boolean(shouldReduceMotion),
@@ -208,33 +216,33 @@ export const WaferSelector = React.memo(function WaferSelector({
 
   const handleItemKeyDown = (
     event: React.KeyboardEvent<HTMLButtonElement>,
-    index: number,
   ): void => {
     if (typeof performance !== 'undefined') {
       event.currentTarget.dataset.ack = String(performance.now());
     }
     const repeat = event.repeat === true;
+    const baseIndex = liveActiveRef.current;
     switch (event.key) {
       case 'ArrowRight':
       case 'ArrowDown': {
         event.preventDefault();
-        focusAndSelect(Math.min(count - 1, index + 1), repeat);
+        focusAndSelect(Math.min(count - 1, baseIndex + 1), repeat);
         break;
       }
       case 'ArrowLeft':
       case 'ArrowUp': {
         event.preventDefault();
-        focusAndSelect(Math.max(0, index - 1), repeat);
+        focusAndSelect(Math.max(0, baseIndex - 1), repeat);
         break;
       }
       case 'PageDown': {
         event.preventDefault();
-        focusAndSelect(Math.min(count - 1, index + 5), repeat);
+        focusAndSelect(Math.min(count - 1, baseIndex + 5), repeat);
         break;
       }
       case 'PageUp': {
         event.preventDefault();
-        focusAndSelect(Math.max(0, index - 5), repeat);
+        focusAndSelect(Math.max(0, baseIndex - 5), repeat);
         break;
       }
       case 'Home': {
@@ -260,7 +268,7 @@ export const WaferSelector = React.memo(function WaferSelector({
       aria-label={t('strip.aria', { lotId })}
       data-testid="wafer-strip"
       className={cn(
-        'flex h-14 w-full flex-nowrap items-center gap-3 overflow-x-auto px-4 md:h-16 md:px-3',
+        'flex h-14 w-full flex-nowrap items-center gap-3 overflow-x-auto overflow-y-hidden px-4 md:h-16 md:px-3',
         '[scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         '[mask-image:linear-gradient(90deg,transparent,#000_24px,#000_calc(100%-24px),transparent)]',
         className,
@@ -300,12 +308,13 @@ export const WaferSelector = React.memo(function WaferSelector({
               }
             }}
             onClick={() => {
+              liveActiveRef.current = idx;
               lastSelectWasRepeatRef.current = false;
               onSelectWafer(idx, { instant: Boolean(shouldReduceMotion) });
             }}
-            onKeyDown={(e) => handleItemKeyDown(e, idx)}
+            onKeyDown={handleItemKeyDown}
             className={cn(
-              'group relative inline-flex h-14 w-12 shrink-0 [scroll-snap-align:center] cursor-pointer flex-col items-center justify-center gap-0.5 pt-1 rounded-xs select-none md:h-16 md:w-14',
+              'group relative inline-flex h-14 w-12 shrink-0 [scroll-snap-align:center] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xs select-none md:h-16 md:w-14',
               'transition-transform duration-[100ms] ease-[var(--ease-out)] active:scale-[0.94]',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
             )}
@@ -316,8 +325,8 @@ export const WaferSelector = React.memo(function WaferSelector({
                 'relative inline-flex h-10 w-10 items-center justify-center rounded-full transition-opacity duration-[120ms] ease-[var(--ease-out)] md:h-12 md:w-12',
                 isSelected
                   ? isZeroEvidenceDimmed
-                    ? 'opacity-40 ring-2 ring-accent ring-offset-2 ring-offset-bg'
-                    : 'opacity-100 ring-2 ring-accent ring-offset-2 ring-offset-bg'
+                    ? 'opacity-40 ring-2 ring-accent ring-offset-[3px] ring-offset-bg'
+                    : 'opacity-100 ring-2 ring-accent ring-offset-[3px] ring-offset-bg'
                   : isZeroEvidenceDimmed
                     ? 'opacity-40 hover:opacity-70 hover:ring-2 hover:ring-[var(--color-accent-soft)]'
                     : 'opacity-[0.72] hover:opacity-100 hover:ring-2 hover:ring-[var(--color-accent-soft)]',

@@ -180,8 +180,6 @@ export function WaferMapCanvas({
     rawBrush,
     rawClaimHighlight,
     rawClaimMask,
-    rawOverlayMask,
-    rawOverlayCount,
   } = useStore(
     store,
     useShallow((s) => ({
@@ -193,8 +191,6 @@ export function WaferMapCanvas({
       rawBrush: s.brush,
       rawClaimHighlight: s.claimHighlight,
       rawClaimMask: s.claimHighlightMask,
-      rawOverlayMask: s.overlayHighlightMask,
-      rawOverlayCount: s.overlayHighlightCount,
     })),
   );
 
@@ -212,8 +208,6 @@ export function WaferMapCanvas({
   const brush = isSynced ? rawBrush : null;
   const claimHighlight = isSynced ? rawClaimHighlight : null;
   const claimHighlightMask = isSynced ? rawClaimMask : null;
-  const overlayHighlightMask = isSynced ? rawOverlayMask : null;
-  const overlayHighlightCount = isSynced ? rawOverlayCount : 0;
 
   const wafer = lot.wafers[safeWaferIndex];
   const waferYield = byWaferYield[safeWaferIndex];
@@ -1631,22 +1625,26 @@ export function WaferMapCanvas({
   const evidenceSummary = React.useMemo(() => {
     if (
       claimHighlight === null ||
-      !overlayHighlightMask ||
-      overlayHighlightCount === 0 ||
+      !claimHighlightMask ||
+      claimHighlightMask.length < lot.dies.count ||
       !wafer
     ) {
       return null;
     }
+    let totalDies = 0;
     let wafersWithEvidence = 0;
     let hereCount = 0;
     for (let w = 0; w < lot.wafers.length; w += 1) {
       const wm = lot.wafers[w]!;
       let hasAny = false;
       for (let i = wm.dieStartIndex; i < wm.dieEndIndex; i += 1) {
-        if (overlayHighlightMask[i] !== 0 && lot.dies.hasValidCoords[i] !== 0) {
-          hasAny = true;
-          if (w === safeWaferIndex) {
-            hereCount += 1;
+        if (claimHighlightMask[i] !== 0) {
+          totalDies += 1;
+          if (lot.dies.hasValidCoords[i] !== 0) {
+            hasAny = true;
+            if (w === safeWaferIndex) {
+              hereCount += 1;
+            }
           }
         }
       }
@@ -1654,16 +1652,19 @@ export function WaferMapCanvas({
         wafersWithEvidence += 1;
       }
     }
+    if (totalDies === 0) {
+      return null;
+    }
     return {
-      totalDies: overlayHighlightCount,
+      totalDies,
       wafersWithEvidence: Math.max(1, wafersWithEvidence),
       hereCount,
     };
   }, [
     claimHighlight,
-    overlayHighlightMask,
-    overlayHighlightCount,
+    claimHighlightMask,
     wafer,
+    lot.dies.count,
     lot.wafers,
     lot.dies.hasValidCoords,
     safeWaferIndex,

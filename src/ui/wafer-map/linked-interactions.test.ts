@@ -163,14 +163,16 @@ describe('R7 linked-interactions — pure geometry, glow ordering, camera framin
     it('property: magnifier rectangle NEVER covers the hovered die across arbitrary stage sizes, zoom scales, and pointer positions', () => {
       fc.assert(
         fc.property(
-          fc.integer({ min: 240, max: 1440 }),
-          fc.integer({ min: 240, max: 960 }),
+          fc.integer({ min: 200, max: 1440 }),
+          fc.integer({ min: 200, max: 960 }),
+          fc.double({ min: -0.1, max: 1.1, noNaN: true }),
+          fc.double({ min: -0.1, max: 1.1, noNaN: true }),
           fc.double({ min: 0, max: 1, noNaN: true }),
           fc.double({ min: 0, max: 1, noNaN: true }),
-          fc.integer({ min: 4, max: 180 }),
+          fc.double({ min: 3, max: 240, noNaN: true }),
           fc.integer({ min: 140, max: 220 }),
           fc.integer({ min: 120, max: 280 }),
-          (stageW, stageH, rx, ry, dieSize, magW, magH) => {
+          (stageW, stageH, rx, ry, pxFrac, pyFrac, dieSize, magW, magH) => {
             const dieX = rx * Math.max(1, stageW - dieSize);
             const dieY = ry * Math.max(1, stageH - dieSize);
             const dieRect = {
@@ -179,8 +181,8 @@ describe('R7 linked-interactions — pure geometry, glow ordering, camera framin
               width: dieSize,
               height: dieSize,
             };
-            const pointerX = dieX + dieSize * 0.5;
-            const pointerY = dieY + dieSize * 0.5;
+            const pointerX = dieX + dieSize * pxFrac;
+            const pointerY = dieY + dieSize * pyFrac;
 
             const placed = computeMagnifierPlacement({
               pointerX,
@@ -199,9 +201,15 @@ describe('R7 linked-interactions — pure geometry, glow ordering, camera framin
               height: magH,
             };
             expect(rectsOverlap(magBox, dieRect)).toBe(false);
+            if (!placed.placedAboveStage) {
+              expect(placed.x).toBeGreaterThanOrEqual(8);
+              expect(placed.x + magW).toBeLessThanOrEqual(stageW - 8);
+              expect(placed.y).toBeGreaterThanOrEqual(8);
+              expect(placed.y + magH).toBeLessThanOrEqual(stageH - 8);
+            }
           },
         ),
-        { numRuns: 200 },
+        { numRuns: 300 },
       );
     });
   });

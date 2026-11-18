@@ -81,7 +81,7 @@ export function computeMagnifierPlacement(
   input: MagnifierPlacementInput,
 ): MagnifierPlacementResult {
   const offset = input.pointerOffsetPx ?? 16;
-  const margin = input.stageMarginPx ?? 8;
+  const margin = Math.max(0, input.stageMarginPx ?? 8);
   const magW = Math.max(1, input.magnifierWidth);
   const magH = Math.max(1, input.magnifierHeight);
   const stageW = Math.max(1, input.stageWidth);
@@ -144,37 +144,23 @@ export function computeMagnifierPlacement(
   ];
 
   for (const q of quadrants) {
-    if (isValidInStage(q.rawX, q.rawY)) {
-      return {
-        x: Math.round(q.rawX),
-        y: Math.round(q.rawY),
-        transformOrigin: q.origin,
-        placedAboveStage: false,
-      };
-    }
-    if (isValidInStage(q.altX, q.rawY)) {
-      return {
-        x: Math.round(q.altX),
-        y: Math.round(q.rawY),
-        transformOrigin: q.origin,
-        placedAboveStage: false,
-      };
-    }
-    if (isValidInStage(q.rawX, q.altY)) {
-      return {
-        x: Math.round(q.rawX),
-        y: Math.round(q.altY),
-        transformOrigin: q.origin,
-        placedAboveStage: false,
-      };
-    }
-    if (isValidInStage(q.altX, q.altY)) {
-      return {
-        x: Math.round(q.altX),
-        y: Math.round(q.altY),
-        transformOrigin: q.origin,
-        placedAboveStage: false,
-      };
+    const candidates: ReadonlyArray<readonly [number, number]> = [
+      [q.rawX, q.rawY],
+      [q.altX, q.rawY],
+      [q.rawX, q.altY],
+      [q.altX, q.altY],
+    ];
+    for (const [cx, cy] of candidates) {
+      const rx = Math.round(cx);
+      const ry = Math.round(cy);
+      if (isValidInStage(rx, ry)) {
+        return {
+          x: rx,
+          y: ry,
+          transformOrigin: q.origin,
+          placedAboveStage: false,
+        };
+      }
     }
   }
 

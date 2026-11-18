@@ -12,6 +12,7 @@ import {
 import { Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import {
+  EMPTY_HIDDEN_BINS,
   type SelectionStoreState,
   useSelectionStore,
   type WaferColorMode,
@@ -174,6 +175,7 @@ const HoverMagnifierImpl = React.forwardRef<
     rawHoveredDieIndex,
     rawColorMode,
     rawActiveTestNum,
+    rawHiddenBins,
     rawClaimCitedTestNum,
   } = useStore(
     store,
@@ -182,6 +184,7 @@ const HoverMagnifierImpl = React.forwardRef<
       rawHoveredDieIndex: s.hoveredDieIndex,
       rawColorMode: s.colorMode,
       rawActiveTestNum: s.activeTestNum,
+      rawHiddenBins: s.hiddenBins,
       rawClaimCitedTestNum: s.claimHighlight?.citedTestNums?.[0] ?? null,
     })),
   );
@@ -189,6 +192,7 @@ const HoverMagnifierImpl = React.forwardRef<
   const isSynced = storeLot === lot;
   const hoveredDieIndex = isSynced ? rawHoveredDieIndex : null;
   const colorMode: WaferColorMode = isSynced ? rawColorMode : 'pass-fail';
+  const hiddenBins = isSynced ? rawHiddenBins : EMPTY_HIDDEN_BINS;
   const preferredTestNum = isSynced
     ? (rawClaimCitedTestNum ?? rawActiveTestNum)
     : null;
@@ -205,6 +209,11 @@ const HoverMagnifierImpl = React.forwardRef<
   suppressedRef.current = gestureSuppressed;
 
   const pointerPosRef = React.useRef<{ x: number; y: number } | null>(null);
+  const lastPlacedRef = React.useRef<{
+    x: number;
+    y: number;
+    origin: string;
+  }>({ x: 0, y: 0, origin: 'bottom left' });
   const hideTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const posRafRef = React.useRef<number | null>(null);
   const lastValidDieRef = React.useRef<number | null>(null);
@@ -323,6 +332,11 @@ const HoverMagnifierImpl = React.forwardRef<
         stageHeight: cur.stageHeight,
       });
 
+      lastPlacedRef.current = {
+        x: placed.x,
+        y: placed.y,
+        origin: placed.transformOrigin,
+      };
       el.style.transform = `translate3d(${placed.x}px, ${placed.y}px, 0)`;
       el.style.transformOrigin = placed.transformOrigin;
       el.dataset.x = String(placed.x);
@@ -579,6 +593,7 @@ const HoverMagnifierImpl = React.forwardRef<
     lot,
     wafer,
     colorMode,
+    hiddenBins,
     stageWidth,
     stageHeight,
     dpr,
@@ -657,6 +672,22 @@ const HoverMagnifierImpl = React.forwardRef<
   ]);
 
   const isShown = visible && readout !== null;
+  const [domVisible, setDomVisible] = React.useState(false);
+
+  if (isShown && !domVisible) {
+    setDomVisible(true);
+  }
+
+  React.useEffect(() => {
+    if (isShown || !domVisible) {
+      return;
+    }
+    const timer = setTimeout(
+      () => setDomVisible(false),
+      shouldReduceMotion ? 20 : 130,
+    );
+    return () => clearTimeout(timer);
+  }, [isShown, domVisible, shouldReduceMotion]);
 
   return (
     <div
@@ -666,9 +697,9 @@ const HoverMagnifierImpl = React.forwardRef<
       data-pinned={pinnedDieIndex !== null ? 'true' : 'false'}
       aria-hidden={!isShown}
       style={{
-        transform: 'translate3d(0px, 0px, 0)',
-        transformOrigin: 'bottom left',
-        visibility: isShown ? 'visible' : 'hidden',
+        transform: `translate3d(${lastPlacedRef.current.x}px, ${lastPlacedRef.current.y}px, 0)`,
+        transformOrigin: lastPlacedRef.current.origin,
+        visibility: isShown || domVisible ? 'visible' : 'hidden',
       }}
       className="pointer-events-none absolute top-0 left-0 z-[var(--z-magnifier)] w-[184px] select-none"
     >
@@ -698,11 +729,11 @@ const HoverMagnifierImpl = React.forwardRef<
           className="hidden rounded-sm bg-bg md:block"
         />
 
-        {/* Readout: footnote labels in sans, mono-data values (§4.8, §6.8) */}
+        {/* Readout: footnote labels in sans, mono-data values, 18 px row height (§4.8, §6.8) */}
         {readout ? (
           <div
             data-testid="magnifier-readout"
-            className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-0.5 px-0.5"
+            className="grid auto-rows-[18px] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 px-0.5"
           >
             <span className="type-footnote leading-[18px] text-text-tertiary">
               {t('magnifier.coords')}

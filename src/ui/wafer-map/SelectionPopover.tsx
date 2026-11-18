@@ -52,6 +52,11 @@ export const SelectionPopover = React.forwardRef<
   const yieldValRef = React.useRef<HTMLSpanElement>(null);
   const topBinValRef = React.useRef<HTMLSpanElement>(null);
   const wasVisibleRef = React.useRef(false);
+  const lastPlacedRef = React.useRef<{
+    x: number;
+    y: number;
+    origin: string;
+  }>({ x: 0, y: 0, origin: 'top left' });
 
   const formatStatsStrings = React.useCallback(
     (stats: LiveBoxSelectStats) => {
@@ -71,6 +76,7 @@ export const SelectionPopover = React.forwardRef<
     ref,
     () => ({
       updateLiveFrame({ x, y, transformOrigin, stats, visible }): void {
+        lastPlacedRef.current = { x, y, origin: transformOrigin };
         const el = outerRef.current;
         const cardEl = cardRef.current;
         if (el) {
@@ -162,8 +168,8 @@ export const SelectionPopover = React.forwardRef<
       data-visible={committedShown ? 'true' : 'false'}
       aria-hidden={!committedShown}
       style={{
-        transform: 'translate3d(0px, 0px, 0)',
-        transformOrigin: 'top left',
+        transform: `translate3d(${lastPlacedRef.current.x}px, ${lastPlacedRef.current.y}px, 0)`,
+        transformOrigin: lastPlacedRef.current.origin,
         visibility: committedShown ? 'visible' : 'hidden',
       }}
       className={

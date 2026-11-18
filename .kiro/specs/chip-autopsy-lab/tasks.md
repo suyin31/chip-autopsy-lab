@@ -202,7 +202,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/redesign.md`. Each task is a <= 15-
 - [x] R6. Wafer stage layout, rendering, and camera
   - Loaded layout grid (§3.4), boxless stage with vignette and top light, pass/fail geometry cue, three canvases, camera controller (wheel, pinch, drag pan with inertia and rubber-band, double-click reset) on a CSS-transform wrapper with re-raster after settle.
   - Accept: wafer >= 560 px at 1440 x 900 and 350 px at 390 px; wheel zoom anchored at the cursor; flick pan coasts; double-click resets; no React render during drag; arrow-key die stepping still works.
-- [ ] R7. Linked interactions
+- [x] R7. Linked interactions
   - Hover magnifier (§4.8), finding select with scrim, ordered glow, and camera frame (§5.4), box select with live stats popover (§3.6, §5.7), wafer strip with scroll-snap, roving keyboard, crossfade, and evidence dots (§4.9, §5.8).
   - Accept: the edge-band finding lights ring dies clockwise within 600 ms and a second click clears; Shift+drag stats update during the drag; held ArrowRight swaps wafers instantly; magnifier placement never covers the hovered die (unit test).
 - [ ] R8. Reveal motion, reduced motion, and perf gate

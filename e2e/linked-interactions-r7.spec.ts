@@ -47,12 +47,13 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
     await edgeBandRow.click();
 
     await expect(edgeBandRow).toHaveAttribute('aria-pressed', 'true');
+    await expect(overlayWrapper).toHaveAttribute('data-glow-mode', 'polar-cw');
     await expect(page.getByTestId('stage-evidence-caption')).toBeVisible();
     expect(
       await page.getByTestId('wafer-strip-evidence-dot').count(),
     ).toBeGreaterThan(0);
 
-    // Wait until glow sequence reaches 'settled' and assert total settle elapsed <= 750 ms (600 ms animation + frame scheduling budget)
+    // Wait until glow sequence reaches 'settled' and assert total settle elapsed <= 780 ms (600 ms animation + frame scheduling budget)
     await expect(overlayWrapper).toHaveAttribute('data-glow-phase', 'settled', {
       timeout: 1_000,
     });
@@ -100,15 +101,21 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
     const midDragTitle1 =
       (await page.getByTestId('selection-popover-title').textContent()) ?? '';
 
-    // Drag wider: live stats must update dynamically during the same drag!
-    await page.mouse.move(startX + 220, startY + 190, { steps: 5 });
+    // Drag wider to include edge-ring failures: all 4 live stats update dynamically during the same drag!
+    await page.mouse.move(startX + 340, startY + 260, { steps: 6 });
     await expect(page.getByTestId('selection-popover-title')).not.toHaveText(
       midDragTitle1,
     );
     const midDragTitle2 =
       (await page.getByTestId('selection-popover-title').textContent()) ?? '';
     expect(midDragTitle2).toMatch(/^\d[\d,]*\s+dies$/);
+    await expect(page.getByTestId('selection-popover-failing')).toHaveText(
+      /^\d[\d,]*$/,
+    );
     await expect(page.getByTestId('selection-popover-yield')).toContainText('%');
+    await expect(page.getByTestId('selection-popover-top-bin')).toContainText(
+      'SBIN',
+    );
 
     const rendersDuringBoxDrag = Number(
       await stage.getAttribute('data-render-count'),
@@ -123,29 +130,25 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
     await expect(page.getByTestId('verdict-stat-row')).toContainText(
       'in selection',
     );
+    await expect(edgeBandRow).toContainText('in selection');
 
     await page.getByTestId('selection-popover-clear').click();
     await expect(popover).toHaveAttribute('data-visible', 'false');
 
-    // 4. Strip: held ArrowRight (`repeat: true`) swaps wafers instantly without crossfade (§4.9, §5.8)
-    const firstThumb = page
-      .getByTestId('wafer-strip')
-      .locator('[role="option"]')
-      .first();
+    // 4. Strip: held ArrowRight (`repeat: true`) through all 25 wafers swaps wafers instantly without crossfade (§4.9, §5.8)
+    const strip = page.getByTestId('wafer-strip');
+    const firstThumb = strip.locator('[role="option"]').first();
     await firstThumb.focus();
 
     const crossfadeDuringRepeat = await page.evaluate(() => {
-      const strip = document.querySelector('[data-testid="wafer-strip"]')!;
       const cf = document.querySelector<HTMLElement>(
         '[data-testid="wafer-crossfade-canvas"]',
       )!;
       const sawCrossfade: boolean[] = [];
 
-      for (let step = 0; step < 6; step += 1) {
-        const activeBtn = strip.querySelector<HTMLElement>(
-          '[role="option"][aria-selected="true"]',
-        )!;
-        activeBtn.dispatchEvent(
+      for (let step = 0; step < 24; step += 1) {
+        const target = document.activeElement as HTMLElement;
+        target.dispatchEvent(
           new KeyboardEvent('keydown', {
             key: 'ArrowRight',
             bubbles: true,
@@ -155,23 +158,29 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
         );
         sawCrossfade.push(cf.dataset.crossfading === 'true');
       }
-      const finalActive = strip.querySelector<HTMLElement>(
-        '[role="option"][aria-selected="true"]',
+      const focusedIndex = Number(
+        (document.activeElement as HTMLElement | null)?.dataset.waferIndex ?? -1,
       );
       return {
         sawCrossfade,
-        finalWaferIndex: Number(finalActive?.dataset.waferIndex ?? -1),
+        focusedIndex,
       };
     });
 
-    expect(crossfadeDuringRepeat.finalWaferIndex).toBe(6);
-    expect(crossfadeDuringRepeat.sawCrossfade).toEqual([
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-    ]);
+    expect(crossfadeDuringRepeat.focusedIndex).toBe(24);
+    expect(crossfadeDuringRepeat.sawCrossfade.every((v) => v === false)).toBe(
+      true,
+    );
+    await expect(
+      strip.locator('[role="option"][aria-selected="true"]'),
+    ).toHaveAttribute('data-wafer-index', '24');
+    await expect(stage).toHaveAttribute('aria-label', /W25/);
+
+    // Single non-repeat click back to W01 triggers crossfade and lands on W01
+    await firstThumb.click();
+    await expect(
+      strip.locator('[role="option"][aria-selected="true"]'),
+    ).toHaveAttribute('data-wafer-index', '0');
+    await expect(stage).toHaveAttribute('aria-label', /W01/);
   });
 });
