@@ -231,7 +231,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 
 **Wafer rendering**
 
-- [ ] P5. Disc material
+- [x] P5. Disc material
   - Notch geometry from `WCR.WF_FLAT`, body gradient, thin film (feature-detected), exclusion line, bevel; unit test that no die crosses the exclusion radius (premium §5.2 steps 1–5).
   - Accept: A5.
 - [ ] P6. Die tiles and thumbnails

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildLotModel, buildWaferProbeOrder } from '@/core/model';
 import { parseStdfBytes, PRR_PART_FLG, writeStdfBytes } from '@/core/stdf';
-import { COLOR_TOKENS } from '@/ui/tokens';
+import { COLOR_TOKENS, WAFER_TOKENS } from '@/ui/tokens';
 import {
   computeProbeSweepFraction,
   computeVerdictRiseSchedule,
@@ -248,7 +248,7 @@ describe('R8 reveal motion math & canvas probe-sweep painters (§5.1–§5.3)', 
       calls.some(
         (c) =>
           c.op === 'fill' &&
-          c.fillStyle?.toLowerCase() === COLOR_TOKENS.waferDisc.toLowerCase(),
+          c.fillStyle?.toLowerCase() === WAFER_TOKENS.discMid.toLowerCase(),
       ),
     ).toBe(true);
     expect(calls.filter((c) => c.op === 'roundRect')).toHaveLength(0);

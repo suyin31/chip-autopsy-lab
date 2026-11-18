@@ -5,7 +5,7 @@
  * Kept free of React and browser global reads so every coordinate transform,
  * DPR/supersampled backing-store calculation, §2.1 pass/fail geometry cue
  * (72% 1px-radius pass square vs full-cell minus 1px street 1.5px-radius fail die),
- * `#0B0B0C` silicon wafer disc + V-notch path, O(1) pointer hit-test, and
+ * premium §5.2 silicon disc material + V-notch path, O(1) pointer hit-test, and
  * base/fail/overlay draw passes are directly unit-testable in Node.
  *
  * Validates: Requirements 4.1, 4.2, 4.3, 4.4, 14.2, 15.4, 17.1 & redesign §2.1, §3.4, §4.7
@@ -23,6 +23,7 @@ import {
   COLOR_TOKENS,
   getFailBinColor,
   sampleMagmaHex,
+  WAFER_TOKENS,
 } from '@/ui/tokens';
 
 export interface ViewportTransform {
@@ -52,6 +53,19 @@ export const MAX_SUPERSAMPLED_CANVAS_PX = 4096 as const;
 
 /** Extra radial margin (in die pitches) between outermost die corner and wafer bevel rim. */
 const WAFER_RIM_CLEARANCE_UNITS = 0.55;
+
+/** `premium.md` §5.2 step 1: notch opening width, depth, and apex rounding as fractions of `D`. */
+export const WAFER_NOTCH_OPENING_D = 0.03 as const;
+export const WAFER_NOTCH_DEPTH_D = 0.016 as const;
+export const WAFER_NOTCH_APEX_RADIUS_D = 0.002 as const;
+
+/** `premium.md` §5.2 step 4: edge-exclusion ring sits at `R - 0.026 D`. */
+export const WAFER_EXCLUSION_INSET_D = 0.026 as const;
+
+/** Edge-exclusion radius in px for a disc of radius `waferRadiusPx` (`R - 0.026 D`). */
+export function computeWaferExclusionRadiusPx(waferRadiusPx: number): number {
+  return waferRadiusPx * (1 - 2 * WAFER_EXCLUSION_INSET_D);
+}
 
 /** `redesign.md` §2.1: Silicon disc `1 px` ring (`rgba(255, 255, 255, 0.10)`). */
 export const WAFER_DISC_RING_STROKE = 'rgba(255, 255, 255, 0.10)' as const;
@@ -174,6 +188,8 @@ export interface WaferNotchGeometry {
   readonly apexY: number;
   readonly shoulderEndX: number;
   readonly shoulderEndY: number;
+  /** Apex rounding radius (`0.002 D`, premium §5.2 step 1). */
+  readonly apexRoundRadiusPx: number;
 }
 
 /**
@@ -208,7 +224,12 @@ export function computeWaferRadiusUnits(
     maxCornerDist = Math.hypot(halfSpanX, halfSpanY);
   }
 
-  return Math.max(1.5, maxCornerDist + WAFER_RIM_CLEARANCE_UNITS);
+  // Every cell corner stays inside the `R - 0.026 D` edge-exclusion ring (premium §5.2 step 4)
+  return Math.max(
+    1.5,
+    maxCornerDist + WAFER_RIM_CLEARANCE_UNITS,
+    maxCornerDist / (1 - 2 * WAFER_EXCLUSION_INSET_D),
+  );
 }
 
 /**
@@ -348,7 +369,8 @@ export function hitTestWaferDie(
 
 /**
  * Computes SEMI orientation V-notch geometry on the wafer perimeter according to
- * `WCR.WF_FLAT` (`'D'` bottom default, `'U'` top, `'L'` left, `'R'` right).
+ * `WCR.WF_FLAT` (`'D'` bottom default, `'U'` top, `'L'` left, `'R'` right): opening width
+ * `0.030 D`, depth `0.016 D`, apex rounded with radius `0.002 D` (`premium.md` §5.2 step 1).
  */
 export function computeWaferNotchGeometry(
   centerXCss: number,
@@ -365,12 +387,10 @@ export function computeWaferNotchGeometry(
     notchAngleRad = 0;
   }
 
-  const depthPx = Math.max(4, Math.min(9, waferRadiusPx * 0.032));
-  const halfOpeningPx = depthPx * 0.88;
-  const halfAngleRad = Math.min(
-    0.2,
-    Math.max(0.025, halfOpeningPx / Math.max(1, waferRadiusPx)),
-  );
+  const safeRadiusPx = Math.max(0, waferRadiusPx);
+  const diameterPx = safeRadiusPx * 2;
+  const depthPx = diameterPx * WAFER_NOTCH_DEPTH_D;
+  const halfAngleRad = Math.asin(WAFER_NOTCH_OPENING_D); // half opening 0.015 D on radius 0.5 D
 
   const arcStartRad = notchAngleRad + halfAngleRad;
   const arcEndRad = notchAngleRad - halfAngleRad + Math.PI * 2;
@@ -395,7 +415,134 @@ export function computeWaferNotchGeometry(
     apexY,
     shoulderEndX,
     shoulderEndY,
+    apexRoundRadiusPx: diameterPx * WAFER_NOTCH_APEX_RADIUS_D,
   };
+}
+
+/**
+ * Traces the notch-cut disc outline (circle of radius `R` with the `WF_FLAT` V-notch and a
+ * rounded apex) as the current path. Every disc fill, veil, and stroke uses this path.
+ */
+export function traceWaferOutlinePath(
+  ctx: Canvas2DContextLike,
+  centerXCss: number,
+  centerYCss: number,
+  waferRadiusPx: number,
+  notch: WaferNotchGeometry,
+): void {
+  ctx.beginPath();
+  ctx.arc(
+    centerXCss,
+    centerYCss,
+    waferRadiusPx,
+    notch.arcStartRad,
+    notch.arcEndRad,
+    false,
+  );
+  if (typeof ctx.arcTo === 'function' && notch.apexRoundRadiusPx > 0) {
+    ctx.arcTo(
+      notch.apexX,
+      notch.apexY,
+      notch.shoulderStartX,
+      notch.shoulderStartY,
+      notch.apexRoundRadiusPx,
+    );
+    ctx.lineTo(notch.shoulderStartX, notch.shoulderStartY);
+  } else {
+    ctx.lineTo(notch.apexX, notch.apexY);
+  }
+  ctx.closePath();
+}
+
+export interface PaintWaferDiscMaterialParams {
+  readonly centerXCss: number;
+  readonly centerYCss: number;
+  readonly waferRadiusPx: number;
+  readonly wfFlat: 'U' | 'D' | 'L' | 'R' | ' ';
+  /** CSS px width of one device pixel (`1 / devicePixelRatio`) for the hairline strokes. */
+  readonly devicePixelCss: number;
+}
+
+/**
+ * Paints the silicon disc material (`premium.md` §5.2 steps 1-5): notch-cut outline, radial
+ * body gradient, feature-detected conic thin film (`screen`), edge-exclusion line, and the
+ * outer gradient plus inner bevel strokes. Steps after the body clip to the outline path.
+ */
+export function paintWaferDiscMaterial(
+  ctx: Canvas2DContextLike,
+  params: PaintWaferDiscMaterialParams,
+): void {
+  const { centerXCss: cx, centerYCss: cy, waferRadiusPx: r, wfFlat } = params;
+  if (!(r > 0)) {
+    return;
+  }
+  const d = r * 2;
+  const hairline =
+    Number.isFinite(params.devicePixelCss) && params.devicePixelCss > 0
+      ? params.devicePixelCss
+      : 1;
+  const notch = computeWaferNotchGeometry(cx, cy, r, wfFlat);
+
+  ctx.save?.();
+
+  // 1-2. Outline path and radial body gradient (light catch upper-left)
+  traceWaferOutlinePath(ctx, cx, cy, r, notch);
+  if (typeof ctx.createRadialGradient === 'function') {
+    const gx = cx - 0.12 * d;
+    const gy = cy - 0.2 * d;
+    const body = ctx.createRadialGradient(gx, gy, 0, gx, gy, 0.78 * d);
+    body.addColorStop(WAFER_TOKENS.discStops[0], WAFER_TOKENS.discHi);
+    body.addColorStop(WAFER_TOKENS.discStops[1], WAFER_TOKENS.discMid);
+    body.addColorStop(WAFER_TOKENS.discStops[2], WAFER_TOKENS.discLo);
+    ctx.fillStyle = body;
+  } else {
+    ctx.fillStyle = WAFER_TOKENS.discMid;
+  }
+  ctx.fill();
+  ctx.clip?.();
+
+  // 3. Thin-film iridescence (skipped without createConicGradient)
+  if (typeof ctx.createConicGradient === 'function') {
+    const film = ctx.createConicGradient((200 * Math.PI) / 180, cx, cy);
+    film.addColorStop(0, WAFER_TOKENS.film[0]);
+    film.addColorStop(0.25, WAFER_TOKENS.film[1]);
+    film.addColorStop(0.5, WAFER_TOKENS.film[2]);
+    film.addColorStop(0.75, WAFER_TOKENS.film[3]);
+    film.addColorStop(1, WAFER_TOKENS.film[0]);
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = film;
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // 4. Edge-exclusion line, 1 device px at R - 0.026 D
+  ctx.beginPath();
+  ctx.arc(cx, cy, computeWaferExclusionRadiusPx(r), 0, Math.PI * 2, false);
+  ctx.lineWidth = hairline;
+  ctx.strokeStyle = WAFER_TOKENS.exclusionLine;
+  ctx.stroke();
+
+  // 5. Bevel: 1.5 css px outer stroke (vertical gradient), then 1 device px inner stroke at R - 1.5
+  traceWaferOutlinePath(ctx, cx, cy, r, notch);
+  if (typeof ctx.createLinearGradient === 'function') {
+    const bevel = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
+    bevel.addColorStop(0, WAFER_TOKENS.bevelTop);
+    bevel.addColorStop(1, WAFER_TOKENS.bevelBottom);
+    ctx.strokeStyle = bevel;
+  } else {
+    ctx.strokeStyle = WAFER_TOKENS.bevelBottom;
+  }
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, Math.max(0, r - 1.5), 0, Math.PI * 2, false);
+  ctx.lineWidth = hairline;
+  ctx.strokeStyle = WAFER_TOKENS.bevelInner;
+  ctx.stroke();
+
+  ctx.restore?.();
 }
 
 /**
@@ -583,6 +730,25 @@ export interface Canvas2DContextLike {
   stroke(): void;
   rect(x: number, y: number, w: number, h: number): void;
   setLineDash(segments: number[]): void;
+  save?(): void;
+  restore?(): void;
+  clip?(): void;
+  arcTo?(x1: number, y1: number, x2: number, y2: number, radius: number): void;
+  createRadialGradient?(
+    x0: number,
+    y0: number,
+    r0: number,
+    x1: number,
+    y1: number,
+    r1: number,
+  ): CanvasGradient;
+  createLinearGradient?(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+  ): CanvasGradient;
+  createConicGradient?(startAngle: number, x: number, y: number): CanvasGradient;
   drawImage?(
     image: CanvasImageSource,
     dx: number,
@@ -626,8 +792,8 @@ function drawDieRoundedRect(
 }
 
 /**
- * Clears the canvas and paints ONLY the silicon wafer disc (`#0B0B0C` fill +
- * `1 px` `rgba(255,255,255,0.10)` ring + SEMI V-notch), used as frame 0 of the
+ * Clears the canvas and paints ONLY the silicon disc material (premium §5.2 steps 1-5),
+ * used as frame 0 of the
  * incremental probe-sweep reveal (`redesign.md` §3.3, §5.1).
  */
 export function paintWaferSubstrateOnly(
@@ -635,6 +801,7 @@ export function paintWaferSubstrateOnly(
   wafer: WaferSummaryMeta | undefined,
   layout: WaferRenderLayout,
   dpr: number,
+  deviceDpr?: number,
 ): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, layout.cssWidth, layout.cssHeight);
@@ -642,31 +809,13 @@ export function paintWaferSubstrateOnly(
     return;
   }
 
-  const notch = computeWaferNotchGeometry(
-    layout.centerXCss,
-    layout.centerYCss,
-    layout.waferRadiusPx,
-    wafer.geometry.wfFlat,
-  );
-
-  ctx.beginPath();
-  ctx.arc(
-    layout.centerXCss,
-    layout.centerYCss,
-    layout.waferRadiusPx,
-    notch.arcStartRad,
-    notch.arcEndRad,
-    false,
-  );
-  ctx.lineTo(notch.apexX, notch.apexY);
-  ctx.closePath();
-
-  ctx.fillStyle = COLOR_TOKENS.waferDisc;
-  ctx.fill();
-  ctx.lineWidth = 1;
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = WAFER_DISC_RING_STROKE;
-  ctx.stroke();
+  paintWaferDiscMaterial(ctx, {
+    centerXCss: layout.centerXCss,
+    centerYCss: layout.centerYCss,
+    waferRadiusPx: layout.waferRadiusPx,
+    wfFlat: wafer.geometry.wfFlat,
+    devicePixelCss: 1 / (deviceDpr ?? dpr),
+  });
 }
 
 export interface PaintWaferSweepBatchParams {
@@ -740,11 +889,13 @@ export interface PaintWaferBaseParams {
   readonly colorMode: WaferColorMode;
   readonly activeTestNum: number | null;
   readonly hiddenBins: ReadonlySet<number>;
+  /** Display `devicePixelRatio` (without supersampling) for 1-device-px hairlines; defaults to `dpr`. */
+  readonly deviceDpr?: number;
 }
 
 /**
  * Draws the DPR/supersampled base wafer map layer (`redesign.md` §2.1, §4.7):
- * 1. Silicon wafer disc (`#0B0B0C` fill + `1 px` `rgba(255,255,255,0.10)` ring) + `WF_FLAT` V-notch
+ * 1. Silicon disc material (premium §5.2 steps 1-5) with the `WF_FLAT` V-notch
  * 2. Pass dies as centred `72%` squares with `1 px` radius (`#63666C`)
  * 3. Fail dies filling the cell minus `1 px` street with `1.5 px` radius (`#FF6B2C` or bin palette)
  * 4. Viewport culling so re-rastering at `scale > 2` draws `10,000` dies in `< 3 ms`.
@@ -753,8 +904,16 @@ export function paintWaferBaseLayer(
   ctx: Canvas2DContextLike,
   params: PaintWaferBaseParams,
 ): void {
-  const { lot, waferIndex, layout, dpr, colorMode, activeTestNum, hiddenBins } =
-    params;
+  const {
+    lot,
+    waferIndex,
+    layout,
+    dpr,
+    deviceDpr,
+    colorMode,
+    activeTestNum,
+    hiddenBins,
+  } = params;
   const wafer = lot.wafers[waferIndex];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, layout.cssWidth, layout.cssHeight);
@@ -763,32 +922,14 @@ export function paintWaferBaseLayer(
     return;
   }
 
-  // 1. Silicon wafer disc (#0B0B0C) + 1 px ring (rgba(255,255,255,0.10)) + SEMI V-notch
-  const notch = computeWaferNotchGeometry(
-    layout.centerXCss,
-    layout.centerYCss,
-    layout.waferRadiusPx,
-    wafer.geometry.wfFlat,
-  );
-
-  ctx.beginPath();
-  ctx.arc(
-    layout.centerXCss,
-    layout.centerYCss,
-    layout.waferRadiusPx,
-    notch.arcStartRad,
-    notch.arcEndRad,
-    false,
-  );
-  ctx.lineTo(notch.apexX, notch.apexY);
-  ctx.closePath();
-
-  ctx.fillStyle = COLOR_TOKENS.waferDisc;
-  ctx.fill();
-  ctx.lineWidth = 1;
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = WAFER_DISC_RING_STROKE;
-  ctx.stroke();
+  // 1. Silicon disc material with the WF_FLAT notch (premium §5.2 steps 1-5)
+  paintWaferDiscMaterial(ctx, {
+    centerXCss: layout.centerXCss,
+    centerYCss: layout.centerYCss,
+    waferRadiusPx: layout.waferRadiusPx,
+    wfFlat: wafer.geometry.wfFlat,
+    devicePixelCss: 1 / (deviceDpr ?? dpr),
+  });
 
   const { dies } = lot;
   const start = wafer.dieStartIndex;
@@ -1173,17 +1314,13 @@ export function paintWaferOverlayLayer(
       layout.waferRadiusPx,
       wafer.geometry.wfFlat,
     );
-    ctx.beginPath();
-    ctx.arc(
+    traceWaferOutlinePath(
+      ctx,
       layout.centerXCss,
       layout.centerYCss,
       layout.waferRadiusPx,
-      notch.arcStartRad,
-      notch.arcEndRad,
-      false,
+      notch,
     );
-    ctx.lineTo(notch.apexX, notch.apexY);
-    ctx.closePath();
     ctx.fillStyle = `rgba(0, 0, 0, ${glowOverride.scrimAlpha.toFixed(4)})`;
     ctx.fill();
 
@@ -1595,17 +1732,7 @@ export function paintLandingCardWafer(
     wafer.geometry.wfFlat,
   );
 
-  ctx.beginPath();
-  ctx.arc(
-    center,
-    center,
-    radiusPx,
-    notch.arcStartRad,
-    notch.arcEndRad,
-    false,
-  );
-  ctx.lineTo(notch.apexX, notch.apexY);
-  ctx.closePath();
+  traceWaferOutlinePath(ctx, center, center, radiusPx, notch);
 
   ctx.fillStyle = COLOR_TOKENS.waferDisc;
   ctx.fill();

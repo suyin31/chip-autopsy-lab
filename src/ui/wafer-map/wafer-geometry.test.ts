@@ -10,13 +10,18 @@ import {
 import { parseStdfBytes, type StdfWriteLotSpec, writeStdfBytes } from '@/core/stdf';
 import { I18nProvider } from '@/ui/i18n';
 import { deriveSelectionMasks } from '@/ui/state';
-import { COLOR_TOKENS, SECONDARY_FAIL_BIN_PALETTE } from '@/ui/tokens';
+import {
+  COLOR_TOKENS,
+  SECONDARY_FAIL_BIN_PALETTE,
+  WAFER_TOKENS,
+} from '@/ui/tokens';
 import { ingestDemoPreset } from '@/workers';
 import { WaferMapCanvas } from './WaferMapCanvas';
 import {
   buildFailBinRankMap,
   type Canvas2DContextLike,
   computeParametricRange,
+  computeWaferExclusionRadiusPx,
   computeWaferNotchGeometry,
   computeWaferRenderLayout,
   dieCoordToCanvasRect,
@@ -25,6 +30,7 @@ import {
   MAX_SUPERSAMPLED_CANVAS_PX,
   OVERLAY_HALO_STROKE,
   paintWaferBaseLayer,
+  paintWaferDiscMaterial,
   paintWaferFailLayer,
   paintWaferOverlayLayer,
   paintWaferThumbnail,
@@ -34,7 +40,6 @@ import {
   resolveDieFillColor,
   resolvePassFailDieColor,
   resolveSupersampledCanvasSize,
-  WAFER_DISC_RING_STROKE,
   WAFER_STREET_WIDTH_PX,
 } from './wafer-geometry';
 
@@ -434,7 +439,7 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(lowHex).not.toBe(highHex);
   });
 
-  it('paints #0B0B0C wafer disc, 72% 1px-radius pass squares vs full-cell 1.5px-radius fail dies (§2.1), FailCanvas layer, and isolated OverlayCanvas', () => {
+  it('paints the premium §5.2 disc material, 72% 1px-radius pass squares vs full-cell 1.5px-radius fail dies (§2.1), FailCanvas layer, and isolated OverlayCanvas', () => {
     const lot = buildWaferTestLot();
     const wafer = lot.wafers[0]!;
     const layout = computeWaferRenderLayout(wafer, 783, 720, lot.dies);
@@ -454,10 +459,13 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     });
 
     expect(baseMock.getDrawPassCount()).toBe(1);
-    expect(baseMock.pathFills).toContain(COLOR_TOKENS.waferDisc);
-    expect(baseMock.strokes.map((s) => s.strokeStyle)).toContain(
-      WAFER_DISC_RING_STROKE,
-    );
+    // Without gradient support the body falls back to `disc-mid` and the bevel to `bevel-bottom`
+    expect(baseMock.pathFills).toContain(WAFER_TOKENS.discMid);
+    expect(baseMock.strokes.map((s) => s.strokeStyle)).toEqual([
+      WAFER_TOKENS.exclusionLine,
+      WAFER_TOKENS.bevelBottom,
+      WAFER_TOKENS.bevelInner,
+    ]);
 
     const passFills = baseMock.dieShapes.filter(
       (r) => r.fillStyle === COLOR_TOKENS.passDie,
@@ -586,4 +594,174 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(html).toContain('wafer-strip-mask');
     expect(html).not.toContain('hidden text-text-tertiary md:inline');
   });
+});
+
+describe('Premium P5 — disc material (premium §5.2 steps 1-5)', () => {
+  it('sizes the WF_FLAT notch at 0.030 D opening, 0.016 D depth, and 0.002 D apex radius', () => {
+    const r = 300;
+    const d = r * 2;
+    for (const flat of ['D', 'U', 'L', 'R', ' '] as const) {
+      const notch = computeWaferNotchGeometry(400, 400, r, flat);
+      expect(Math.hypot(notch.apexX - 400, notch.apexY - 400)).toBeCloseTo(
+        r - 0.016 * d,
+        6,
+      );
+      expect(
+        Math.hypot(
+          notch.shoulderStartX - notch.shoulderEndX,
+          notch.shoulderStartY - notch.shoulderEndY,
+        ),
+      ).toBeCloseTo(0.03 * d, 6);
+      expect(notch.apexRoundRadiusPx).toBeCloseTo(0.002 * d, 6);
+    }
+    expect(computeWaferNotchGeometry(400, 400, r, ' ').apexY).toBeGreaterThan(
+      400,
+    );
+  });
+
+  it('paints body gradient, screen thin film, exclusion line, and bevel strokes clipped to the outline', () => {
+    const ops: string[] = [];
+    const gradients: Array<{
+      kind: string;
+      args: number[];
+      stops: Array<[number, string]>;
+    }> = [];
+    const makeGradient = (kind: string, args: number[]): CanvasGradient => {
+      const entry = { kind, args, stops: [] as Array<[number, string]> };
+      gradients.push(entry);
+      return {
+        addColorStop(offset: number, color: string) {
+          entry.stops.push([offset, color]);
+        },
+      } as CanvasGradient;
+    };
+    const strokes: Array<{ style: unknown; width: number; op: string }> = [];
+    const fills: Array<{ style: unknown; op: string }> = [];
+    const ctx: Canvas2DContextLike = {
+      fillStyle: '#000000',
+      strokeStyle: '#000000',
+      lineWidth: 1,
+      lineJoin: 'miter',
+      globalCompositeOperation: 'source-over',
+      setTransform: () => undefined,
+      clearRect: () => undefined,
+      fillRect: () => undefined,
+      strokeRect: () => undefined,
+      beginPath: () => ops.push('beginPath'),
+      arc: () => ops.push('arc'),
+      arcTo: () => ops.push('arcTo'),
+      moveTo: () => undefined,
+      lineTo: () => ops.push('lineTo'),
+      closePath: () => ops.push('closePath'),
+      fill() {
+        ops.push('fill');
+        fills.push({
+          style: this.fillStyle,
+          op: String(this.globalCompositeOperation),
+        });
+      },
+      stroke() {
+        ops.push('stroke');
+        strokes.push({
+          style: this.strokeStyle,
+          width: this.lineWidth,
+          op: String(this.globalCompositeOperation),
+        });
+      },
+      rect: () => undefined,
+      setLineDash: () => undefined,
+      save: () => ops.push('save'),
+      restore: () => ops.push('restore'),
+      clip: () => ops.push('clip'),
+      createRadialGradient: (...args: number[]) => makeGradient('radial', args),
+      createLinearGradient: (...args: number[]) => makeGradient('linear', args),
+      createConicGradient: (...args: number[]) => makeGradient('conic', args),
+    };
+
+    paintWaferDiscMaterial(ctx, {
+      centerXCss: 360,
+      centerYCss: 360,
+      waferRadiusPx: 300,
+      wfFlat: 'D',
+      devicePixelCss: 0.5,
+    });
+
+    const [radial, conic, linear] = gradients;
+    expect(radial?.kind).toBe('radial');
+    expect(radial?.args).toEqual([288, 240, 0, 288, 240, 468]);
+    expect(radial?.stops).toEqual([
+      [0, WAFER_TOKENS.discHi],
+      [0.55, WAFER_TOKENS.discMid],
+      [1, WAFER_TOKENS.discLo],
+    ]);
+    expect(conic?.kind).toBe('conic');
+    expect(conic?.args[0]).toBeCloseTo((200 * Math.PI) / 180, 9);
+    expect(conic?.stops.map((s) => s[0])).toEqual([0, 0.25, 0.5, 0.75, 1]);
+    expect(conic?.stops[4]?.[1]).toBe(WAFER_TOKENS.film[0]);
+    expect(linear?.args).toEqual([360, 60, 360, 660]);
+    expect(linear?.stops).toEqual([
+      [0, WAFER_TOKENS.bevelTop],
+      [1, WAFER_TOKENS.bevelBottom],
+    ]);
+
+    expect(fills.map((f) => f.op)).toEqual(['source-over', 'screen']);
+    expect(ctx.globalCompositeOperation).toBe('source-over');
+    expect(strokes.map((s) => s.width)).toEqual([0.5, 1.5, 0.5]);
+    expect(strokes[0]?.style).toBe(WAFER_TOKENS.exclusionLine);
+    expect(typeof strokes[1]?.style).toBe('object');
+    expect(strokes[2]?.style).toBe(WAFER_TOKENS.bevelInner);
+    expect(ops.indexOf('arcTo')).toBeGreaterThan(-1);
+    expect(ops[0]).toBe('save');
+    expect(ops.indexOf('clip')).toBe(ops.indexOf('fill') + 1);
+    expect(ops.at(-1)).toBe('restore');
+
+    // Without createConicGradient the thin film is skipped
+    gradients.length = 0;
+    fills.length = 0;
+    paintWaferDiscMaterial(
+      { ...ctx, createConicGradient: undefined },
+      {
+        centerXCss: 360,
+        centerYCss: 360,
+        waferRadiusPx: 300,
+        wfFlat: 'D',
+        devicePixelCss: 1,
+      },
+    );
+    expect(gradients.map((g) => g.kind)).toEqual(['radial', 'linear']);
+    expect(fills).toHaveLength(1);
+  });
+
+  it.each(['edge-ring-etch', 'handling-scratch', 'site2-probe-contact'] as const)(
+    'keeps every %s die inside the R - 0.026 D edge-exclusion line',
+    async (preset) => {
+      const res = await ingestDemoPreset(preset);
+      expect(res.kind).toBe('ok');
+      if (res.kind !== 'ok') return;
+      const { lot } = res;
+      for (const wafer of lot.wafers) {
+        for (const [w, h] of [
+          [783, 720],
+          [390, 390],
+          [152, 152],
+        ] as const) {
+          const layout = computeWaferRenderLayout(wafer, w, h, lot.dies);
+          const exclusionR = computeWaferExclusionRadiusPx(layout.waferRadiusPx);
+          for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
+            if (lot.dies.hasValidCoords[i] === 0) continue;
+            const rect = dieCoordToCanvasRect(
+              lot.dies.x[i]!,
+              lot.dies.y[i]!,
+              layout,
+            );
+            // Farthest corner of the full cell (fail dies are the larger tile)
+            const half = layout.diePitchPx / 2;
+            const dx = Math.abs(rect.centerX - layout.centerXCss) + half;
+            const dy = Math.abs(rect.centerY - layout.centerYCss) + half;
+            expect(Math.hypot(dx, dy)).toBeLessThanOrEqual(exclusionR + 1e-9);
+          }
+        }
+      }
+    },
+  );
 });

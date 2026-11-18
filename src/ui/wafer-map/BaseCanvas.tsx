@@ -105,8 +105,8 @@ function areBaseCanvasPropsEqual(
 
 /**
  * Supersampled (`devicePixelRatio x 2`, capped at `4096 px` per side, `redesign.md` §4.7)
- * Canvas2D base layer (`z: 1`) rendering silicon wafer substrate (`#0B0B0C` + `1 px` ring +
- * `WF_FLAT` V-notch), `72%` `1px`-radius pass squares (`#63666C`), and full-cell minus `1px`
+ * Canvas2D base layer (`z: 1`) rendering the silicon disc material (premium §5.2: body
+ * gradient, thin film, exclusion line, bevel, `WF_FLAT` V-notch), `72%` `1px`-radius pass squares (`#63666C`), and full-cell minus `1px`
  * street `1.5px`-radius fail dies (`#FF6B2C` or categorical fail palette).
  *
  * Also exposes `paintSubstrateOnly` + `paintSweepBatch` for the O(n) incremental
@@ -191,7 +191,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       if (canvas.height !== dims.pixelHeight) {
         canvas.height = dims.pixelHeight;
       }
-      return { ctx, dims, cur };
+      return { ctx, dims, cur, deviceDpr: resolvedDpr };
     }, []);
 
     const paintWithViewport = React.useCallback(
@@ -200,7 +200,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
         if (!ready) {
           return;
         }
-        const { ctx, dims, cur } = ready;
+        const { ctx, dims, cur, deviceDpr } = ready;
         const wafer = cur.lot.wafers[cur.waferIndex];
         if (!wafer) {
           lastPaintRef.current = null;
@@ -230,6 +230,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           waferIndex: cur.waferIndex,
           layout: resolvedLayout,
           dpr: dims.dpr,
+          deviceDpr,
           colorMode: cur.colorMode,
           activeTestNum: cur.activeTestNum,
           hiddenBins: hiddenBinsRef.current,
@@ -268,7 +269,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           if (!ready) {
             return;
           }
-          const { ctx, dims, cur } = ready;
+          const { ctx, dims, cur, deviceDpr } = ready;
           lastPaintRef.current = null;
           const wafer = cur.lot.wafers[cur.waferIndex];
           const resolvedLayout =
@@ -290,7 +291,13 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
             ctx.clearRect(0, 0, dims.cssWidth, dims.cssHeight);
             return;
           }
-          paintWaferSubstrateOnly(ctx, wafer, resolvedLayout, dims.dpr);
+          paintWaferSubstrateOnly(
+            ctx,
+            wafer,
+            resolvedLayout,
+            dims.dpr,
+            deviceDpr,
+          );
         },
         paintSweepBatch(
           probeOrder: Uint32Array,
