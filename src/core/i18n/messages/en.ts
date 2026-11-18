@@ -1,0 +1,214 @@
+/**
+ * English source-of-truth message table (`src/core/i18n/messages/en.ts`).
+ *
+ * Follows `.kiro/specs/chip-autopsy-lab/redesign.md` §6.8 verbatim.
+ */
+
+export const en = {
+  // App + nav
+  'app.title': 'Chip Autopsy Lab',
+  'app.description':
+    'Find out why a wafer lot lost yield. STDF V4 analysis that runs in your browser.',
+  'nav.wordmark': 'Chip Autopsy Lab',
+  'nav.wordmarkShort': 'Autopsy Lab',
+  'nav.openStdf': 'Open STDF',
+  'nav.openStdfAria': 'Open an STDF file',
+  'nav.languageAria': 'Change language',
+  'nav.home': 'Back to start',
+
+  // Lot picker
+  'lotPicker.triggerAria': 'Choose lot, current lot {lotId}',
+  'lotPicker.demoSection': 'Demo lots',
+  'lotPicker.recentSection': 'Recent',
+  'lotPicker.openFile': 'Open STDF file…',
+  'lotPicker.yield': 'Yield {yield}',
+  'lotPicker.current': 'Current lot',
+
+  // Landing
+  'landing.headline': 'Drop the body.',
+  'landing.subline':
+    'Drop an STDF V4 wafer sort log anywhere on this page. It is parsed on this device and never uploaded.',
+  'landing.primary': 'Open STDF file',
+  'landing.formats': '.stdf, .std, or gzip',
+  'landing.demoHeading': 'Or open a demo lot',
+  'landing.privacy':
+    'Runs entirely in your browser. Raw STDF bytes never leave this device.',
+  'landing.downloadDemos': 'Download demo files',
+  'landing.demoMeta': '{wafers} wafers, {dies} dies',
+  'demo.edgeRing.title': 'Edge-Ring Plasma Etch',
+  'demo.edgeRing.description':
+    'Outer-ring IDDQ leakage after focus-ring erosion',
+  'demo.scratch.title': 'Robotic Handling Scratch',
+  'demo.scratch.description':
+    'A transfer-blade scratch across wafers 5 to 22',
+  'demo.site2.title': 'Site 2 Probe Contact',
+  'demo.site2.description':
+    'Oxidized site 2 needles cause opens and retests',
+  'demo.openAria': 'Open demo lot {title}',
+
+  // Drag overlay
+  'drop.headline': 'Drop the body.',
+  'drop.subline': 'Release to open. STDF, STD, or gzip.',
+  'drop.notFile': 'Only files can be opened here.',
+
+  // Loading
+  'loading.readingRecords': 'Reading records',
+  'loading.readingWafer': 'Reading wafer {current} of {total}',
+  'loading.bytes': '{done} of {total}',
+  'loading.skipHint': 'Press any key to skip the animation.',
+  'loading.progressAria': 'Parsing {percent}',
+
+  // Verdict
+  'verdict.prefix': 'Cause of death:',
+  'verdict.pattern': '{pattern} failure.',
+  'verdict.site': 'test site {site} contact failure.',
+  'verdict.random': 'random defects, no spatial signature.',
+  'verdict.healthy': 'No cause of death. Yield is {yield}.',
+  'verdict.subline':
+    'Yield {yield} across {wafers} wafers. Most loss in {bin}.',
+  'verdict.causeAria': 'Show the dies behind this verdict',
+  'verdict.confidence': 'Confidence {value}',
+  'verdict.methodTitle': 'How this verdict was made',
+  'verdict.methodTemplate':
+    'Every number comes from the on-device analysis engine. The text is the built-in template.',
+  'verdict.methodLlm':
+    'Every number comes from the on-device analysis engine. An AI model rephrased the text and every sentence cites an engine fact.',
+
+  // Stats
+  'stats.edgeShare': 'of fails sit in the outer {rings} rings',
+  'stats.scratchShare': 'of fails on the scratch path',
+  'stats.siteRate': 'fail rate on site {site} vs {other} elsewhere',
+  'stats.finalYield': 'final yield, {firstPass} first pass',
+  'stats.failingDies': 'failing dies of {tested} tested',
+  'stats.inSelection': '{caption} in selection',
+
+  // Findings
+  'findings.heading': 'Findings',
+  'findings.dieCount.one': '{count} die',
+  'findings.dieCount.other': '{count} dies',
+  'findings.inSelection': '{count} of {total} in selection',
+  'findings.clear': 'Clear',
+  'findings.possibleCauses': 'Possible causes',
+  'findings.checkNext': 'Check next: {step}',
+  'findings.edgeBand.headline': '{share} of fails are in the edge band',
+  'findings.edgeBand.sub':
+    '{edgeRate} edge fail rate vs {interiorRate} interior, on {wafers} of {total} wafers',
+  'findings.scratch.headline': 'A scratch crosses {wafers} wafers',
+  'findings.scratch.sub': '{dies} dies on one path, {share} of fails',
+  'findings.dominantBin.headline': '{bin} leads the loss',
+  'findings.dominantBin.sub': '{dies} dies, {share} of fails',
+  'findings.secondaryBin.headline': '{bin} adds {share} of fails',
+  'findings.secondaryBin.sub': '{dies} dies on {wafers} wafers',
+  'findings.capability.headline': 'Test {test} has Cpk {cpk}',
+  'findings.capability.sub': 'Mean {mean} against limits {lo} to {hi}',
+  'findings.site.headline': 'Site {site} fails {ratio} times more often',
+  'findings.site.sub':
+    '{rate} fail rate on site {site} vs {other} on the other sites, {retests} retests',
+  'findings.excursion.headline': 'Wafer {wafer} dropped to {yield}',
+  'findings.excursion.sub': '{delta} below the lot median',
+  'findings.lotYield.headline': 'Final yield {yield}',
+  'findings.lotYield.sub': '{firstPass} first pass, {retests} retested dies',
+  'hypothesis.etchUniformity': 'Deposition or etch uniformity',
+  'hypothesis.etchUniformity.check':
+    'Compare chamber logs for the edge zone and check focus-ring hours.',
+  'hypothesis.mechanical': 'Mechanical handling',
+  'hypothesis.mechanical.check':
+    'Inspect transfer-blade alignment for the affected slots.',
+  'hypothesis.probeCard': 'Probe card or tester site, not process',
+  'hypothesis.probeCard.check':
+    'Clean or replace the site {site} needles and re-probe a sample.',
+  'hypothesis.random': 'Random particle defects',
+  'hypothesis.random.check':
+    'Review particle counts and defect inspection for the lot.',
+
+  // Wafer stage
+  'stage.aria': 'Wafer {wafer}, {dies} dies, {fails} failing',
+  'stage.roleDescription': 'wafer map',
+  'stage.mode.passFail': 'Pass/Fail',
+  'stage.mode.hbin': 'HBIN',
+  'stage.mode.sbin': 'SBIN',
+  'stage.tool.pan': 'Pan',
+  'stage.tool.select': 'Select',
+  'stage.legend.pass': 'Pass {count}',
+  'stage.legend.fail': 'Fail {count}',
+  'stage.legend.more': '+{count} more',
+  'stage.legend.toggleAria': 'Show or hide {bin}',
+  'stage.zoomReset': 'Reset zoom',
+  'stage.evidenceCaption':
+    '{dies} dies on {wafers} wafers, {here} on this wafer',
+
+  // Magnifier
+  'magnifier.coords': 'X, Y',
+  'magnifier.site': 'Site',
+  'magnifier.bin': 'Bin',
+  'magnifier.hbin': 'HBIN',
+  'magnifier.outOfLimits': 'out of limits',
+  'magnifier.retested': 'Retested',
+  'magnifier.retestedValue': 'Yes, {count} passes',
+  'magnifier.notch': 'Notch',
+  'magnifier.notchValue': "{clock} o'clock",
+
+  // Selection popover
+  'selection.dies.one': '{count} die',
+  'selection.dies.other': '{count} dies',
+  'selection.failing': 'Failing',
+  'selection.yield': 'Yield',
+  'selection.topBin': 'Top bin',
+  'selection.none': 'None',
+  'selection.clear': 'Clear',
+  'selection.zoom': 'Zoom to selection',
+
+  // Strip
+  'strip.aria': 'Wafers in lot {lotId}',
+  'strip.itemAria': 'Wafer {wafer}, yield {yield}',
+
+  // Errors
+  'error.notStdf.title': "This file isn't an STDF log.",
+  'error.notStdf.body':
+    'The first record must be FAR (0, 10). This file starts with bytes {hex}.',
+  'error.version.title': "This STDF version isn't supported.",
+  'error.version.body':
+    'FAR reports STDF_VER {version}. Chip Autopsy Lab reads STDF V4.',
+  'error.vax.title': "DEC VAX byte order isn't supported.",
+  'error.vax.body':
+    'FAR.CPU_TYPE is 0. Re-export the log with CPU_TYPE 1 or 2.',
+  'error.truncated.title': 'The file ends in the middle of a record.',
+  'error.truncated.body':
+    'Record {recType} at byte {offset} needs {need} bytes, but only {have} remain. Wafers before it were read.',
+  'error.gzip.title': "The gzip stream couldn't be decompressed.",
+  'error.gzip.body':
+    'The file starts with gzip bytes 1F 8B but the stream is corrupt at byte {offset}.',
+  'error.empty.title': 'The file is empty.',
+  'error.empty.body': 'Choose a file that contains STDF records.',
+  'error.noParts.title': 'No tested dies found.',
+  'error.noParts.body':
+    'The log has no PRR records, so there is nothing to map.',
+  'error.openAnother': 'Open another file',
+  'error.loadDemo': 'Load demo lot',
+  'error.showDetails': 'Show details',
+  'error.detailsTitle': 'Details',
+
+  // Bins-only
+  'binsOnly.sheetTitle': 'This file is {size}.',
+  'binsOnly.sheetBody':
+    'Parsing every test result may take about {seconds}. Bins-only mode skips parametric results and keeps the wafer maps, bins, and yield.',
+  'binsOnly.useBinsOnly': 'Use bins-only',
+  'binsOnly.parseAll': 'Parse everything',
+  'binsOnly.notice': 'Bins-only mode. Parametric findings are hidden.',
+
+  // Toasts
+  'toast.loaded': 'Loaded {wafers} wafers in {duration}.',
+  'toast.skippedRecords': 'Skipped {count} unrecognized records.',
+  'toast.downloaded': 'Downloaded {fileName}.',
+  'toast.binsOnly': 'Bins-only mode is on.',
+  'toast.dismiss': 'Dismiss',
+
+  // Language
+  'language.changed': 'Language changed to {language}.',
+  'language.menuTitle': 'Language',
+
+  // Shortcuts / a11y
+  'shortcut.open': 'Open file',
+  'a11y.skipToVerdict': 'Skip to verdict',
+  'a11y.failingDiesTable': 'Failing dies on wafer {wafer}',
+} as const;

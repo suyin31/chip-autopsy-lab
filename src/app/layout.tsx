@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
+import { en } from '@/core/i18n';
+import { I18nProvider, LOCALE_INIT_SCRIPT } from '@/ui/i18n';
 import './globals.css';
 
 const inter = localFont({
@@ -34,9 +36,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Chip Autopsy Lab',
-  description:
-    'Local-first STDF V4 wafer failure analysis workbench with linked die, bin, site, and parametric evidence.',
+  title: en['app.title'],
+  description: en['app.description'],
 };
 
 export const viewport: Viewport = {
@@ -52,11 +53,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${inter.variable} ${geistMono.variable} dark`}
       style={{ colorScheme: 'dark' }}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: LOCALE_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-screen bg-bg text-text-primary antialiased">
-        {children}
+        <I18nProvider>{children}</I18nProvider>
       </body>
     </html>
   );

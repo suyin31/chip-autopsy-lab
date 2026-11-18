@@ -1,0 +1,289 @@
+import { describe, expect, it } from 'vitest';
+import {
+  createBoundFormatters,
+  DEFAULT_LOCALE,
+  DICTIONARIES,
+  en,
+  extractPlaceholders,
+  formatDecimal2,
+  formatDuration,
+  formatFileSize,
+  formatInteger,
+  formatLocalizedParametricValue,
+  formatMegabytes,
+  formatPercent,
+  getDictionary,
+  getLocaleFormatters,
+  isSupportedLocale,
+  ja,
+  ko,
+  LOCALE_NATIVE_NAMES,
+  LOCALE_SHORT_LABELS,
+  LOCALE_STORAGE_KEY,
+  type Locale,
+  type MessageKey,
+  matchLocale,
+  nativeName,
+  pluralKey,
+  resolveInitialLocale,
+  SUPPORTED_LOCALES,
+  t,
+  tPlural,
+  zhCN,
+  zhTW,
+} from './index';
+
+describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R2)', () => {
+  it('exposes the 5 supported locales, native language names, and short trigger labels', () => {
+    expect(DEFAULT_LOCALE).toBe('en');
+    expect(LOCALE_STORAGE_KEY).toBe('cal.locale');
+    expect(SUPPORTED_LOCALES).toEqual(['en', 'zh-CN', 'zh-TW', 'ja', 'ko']);
+    expect(LOCALE_NATIVE_NAMES).toEqual({
+      en: 'English',
+      'zh-CN': '简体中文',
+      'zh-TW': '繁體中文',
+      ja: '日本語',
+      ko: '한국어',
+    });
+    expect(nativeName).toBe(LOCALE_NATIVE_NAMES);
+    expect(LOCALE_SHORT_LABELS).toEqual({
+      en: 'EN',
+      'zh-CN': '简',
+      'zh-TW': '繁',
+      ja: '日',
+      ko: '한',
+    });
+
+    for (const loc of SUPPORTED_LOCALES) {
+      expect(isSupportedLocale(loc)).toBe(true);
+    }
+    expect(isSupportedLocale('fr')).toBe(false);
+    expect(isSupportedLocale('')).toBe(false);
+    expect(isSupportedLocale(null)).toBe(false);
+    expect(isSupportedLocale(undefined)).toBe(false);
+  });
+
+  it('maps BCP-47 candidates via matchLocale according to redesign §6.4', () => {
+    // Explicit R2 acceptance gates
+    expect(matchLocale(['zh-HK'])).toBe('zh-TW');
+    expect(matchLocale(['zh'])).toBe('zh-CN');
+    expect(matchLocale(['fr'])).toBe('en');
+
+    // Traditional Chinese variants -> zh-TW
+    expect(matchLocale(['zh-TW'])).toBe('zh-TW');
+    expect(matchLocale(['zh-MO'])).toBe('zh-TW');
+    expect(matchLocale(['zh-Hant'])).toBe('zh-TW');
+    expect(matchLocale(['zh-Hant-HK'])).toBe('zh-TW');
+    expect(matchLocale(['zh-Hant-TW'])).toBe('zh-TW');
+    expect(matchLocale(['zh_HK'])).toBe('zh-TW');
+
+    // Simplified Chinese & other zh* -> zh-CN
+    expect(matchLocale(['zh-CN'])).toBe('zh-CN');
+    expect(matchLocale(['zh-SG'])).toBe('zh-CN');
+    expect(matchLocale(['zh-Hans'])).toBe('zh-CN');
+    expect(matchLocale(['zh-Hans-CN'])).toBe('zh-CN');
+    expect(matchLocale(['zh-Hans-HK'])).toBe('zh-CN');
+
+    // Japanese, Korean, English
+    expect(matchLocale(['ja'])).toBe('ja');
+    expect(matchLocale(['ja-JP'])).toBe('ja');
+    expect(matchLocale(['ko'])).toBe('ko');
+    expect(matchLocale(['ko-KR'])).toBe('ko');
+    expect(matchLocale(['en'])).toBe('en');
+    expect(matchLocale(['en-GB'])).toBe('en');
+    expect(matchLocale(['en-US'])).toBe('en');
+
+    // Ordered navigator.languages negotiation (first supported match wins)
+    expect(matchLocale(['fr-FR', 'de-DE', 'ja-JP', 'en-US'])).toBe('ja');
+    expect(matchLocale(['en-US', 'ja-JP'])).toBe('en');
+    expect(matchLocale(['es-ES', 'zh-HK', 'zh-CN'])).toBe('zh-TW');
+
+    // Single string convenience + empty/malformed fallbacks
+    expect(matchLocale('zh-HK')).toBe('zh-TW');
+    expect(matchLocale([])).toBe('en');
+    expect(matchLocale(['', '   ', 'zhx-XX'])).toBe('en');
+    expect(matchLocale(null)).toBe('en');
+    expect(matchLocale(undefined)).toBe('en');
+  });
+
+  it('resolves initial locale with localStorage precedence over navigator.languages (§6.4)', () => {
+    expect(
+      resolveInitialLocale({
+        storedLocale: 'ko',
+        navigatorLanguages: ['en-US', 'ja-JP'],
+      }),
+    ).toBe('ko');
+
+    expect(
+      resolveInitialLocale({
+        storedLocale: 'unsupported-locale',
+        navigatorLanguages: ['zh-HK', 'en-US'],
+      }),
+    ).toBe('zh-TW');
+
+    expect(
+      resolveInitialLocale({
+        storedLocale: null,
+        navigatorLanguages: ['fr-FR'],
+      }),
+    ).toBe('en');
+
+    expect(resolveInitialLocale({})).toBe('en');
+  });
+
+  it('maintains exact key parity and placeholder parity across all 5 locales', () => {
+    expect(DICTIONARIES.en).toBe(en);
+    expect(DICTIONARIES['zh-CN']).toBe(zhCN);
+    expect(DICTIONARIES['zh-TW']).toBe(zhTW);
+    expect(DICTIONARIES.ja).toBe(ja);
+    expect(DICTIONARIES.ko).toBe(ko);
+
+    const enKeys = Object.keys(en).sort() as MessageKey[];
+    expect(enKeys.length).toBe(150);
+
+    for (const locale of SUPPORTED_LOCALES) {
+      const dict = getDictionary(locale);
+      const localeKeys = Object.keys(dict).sort();
+      expect(localeKeys, `key set mismatch in ${locale}`).toEqual(enKeys);
+
+      for (const key of enKeys) {
+        const enValue = en[key];
+        const localizedValue = dict[key];
+        expect(
+          typeof localizedValue === 'string' && localizedValue.trim().length > 0,
+          `empty translation for ${locale}:${key}`,
+        ).toBe(true);
+
+        // No accidental fullwidth braces or unbalanced ASCII braces
+        expect(
+          localizedValue,
+          `fullwidth brace in ${locale}:${key}`,
+        ).not.toMatch(/[｛｝]/);
+        const stripped = localizedValue.replace(/\{[a-zA-Z0-9_]+\}/g, '');
+        expect(
+          stripped,
+          `unbalanced brace in ${locale}:${key}`,
+        ).not.toMatch(/[{}]/);
+
+        // Identical placeholder set to English source of truth
+        const expectedPlaceholders = extractPlaceholders(enValue);
+        const actualPlaceholders = extractPlaceholders(localizedValue);
+        expect(
+          actualPlaceholders,
+          `placeholder mismatch in ${locale}:${key}`,
+        ).toEqual(expectedPlaceholders);
+      }
+    }
+  });
+
+  it('preserves untranslated technical tokens (§6.6), CJK plural parity (§6.3), and deadpan Halloween copy (§7)', () => {
+    const cjkLocales: readonly Locale[] = ['zh-CN', 'zh-TW', 'ja', 'ko'];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      const dict = getDictionary(locale);
+      expect(dict['app.title']).toBe('Chip Autopsy Lab');
+      expect(dict['nav.wordmark']).toBe('Chip Autopsy Lab');
+      expect(dict['stage.mode.hbin']).toBe('HBIN');
+      expect(dict['stage.mode.sbin']).toBe('SBIN');
+      expect(dict['magnifier.hbin']).toBe('HBIN');
+      expect(dict['error.notStdf.body']).toContain('FAR (0, 10)');
+      expect(dict['error.version.body']).toContain('STDF_VER');
+      expect(dict['error.version.body']).toContain('Chip Autopsy Lab');
+      expect(dict['error.vax.body']).toContain('FAR.CPU_TYPE');
+      expect(dict['error.vax.body']).toContain('CPU_TYPE');
+      expect(dict['error.gzip.body']).toContain('1F 8B');
+      expect(dict['error.noParts.body']).toContain('PRR');
+      expect(dict['findings.capability.headline']).toContain('Cpk');
+    }
+
+    for (const locale of cjkLocales) {
+      const dict = getDictionary(locale);
+      expect(dict['findings.dieCount.one']).toBe(dict['findings.dieCount.other']);
+      expect(dict['selection.dies.one']).toBe(dict['selection.dies.other']);
+    }
+
+    // §7 exact deadpan examples
+    expect(t('en', 'landing.headline')).toBe('Drop the body.');
+    expect(t('zh-CN', 'landing.headline')).toBe('把遗体放这里。');
+    expect(t('ja', 'landing.headline')).toBe('遺体をここに。');
+  });
+
+  it('interpolates parameters deterministically, escapes $-replacement hazards, and resolves plural forms', () => {
+    expect(
+      t('en', 'verdict.subline', {
+        yield: '82.8%',
+        wafers: '25',
+        bin: 'SBIN 7 IDDQ_EDGE_LEAK',
+      }),
+    ).toBe('Yield 82.8% across 25 wafers. Most loss in SBIN 7 IDDQ_EDGE_LEAK.');
+
+    // Dollar-sign patterns in untrusted file or bin names must not trigger RegExp replacement tokens
+    expect(
+      t('en', 'toast.downloaded', { fileName: 'lot_$&_$1.stdf' }),
+    ).toBe('Downloaded lot_$&_$1.stdf.');
+
+    // Plural resolution
+    expect(pluralKey('en', 'findings.dieCount', 1)).toBe('findings.dieCount.one');
+    expect(pluralKey('en', 'findings.dieCount', 0)).toBe('findings.dieCount.other');
+    expect(pluralKey('en', 'findings.dieCount', 2)).toBe('findings.dieCount.other');
+    expect(pluralKey('ja', 'findings.dieCount', 1)).toBe('findings.dieCount.other');
+
+    expect(tPlural('en', 'findings.dieCount', 1)).toBe('1 die');
+    expect(tPlural('en', 'findings.dieCount', 0)).toBe('0 dies');
+    expect(tPlural('en', 'findings.dieCount', 2552)).toBe('2,552 dies');
+    expect(tPlural('en', 'selection.dies', 148, { count: '148' })).toBe('148 dies');
+
+    for (const locale of SUPPORTED_LOCALES) {
+      const first = t(locale, 'findings.edgeBand.sub', {
+        edgeRate: formatPercent(locale, 0.464),
+        interiorRate: formatPercent(locale, 0.016),
+        wafers: formatInteger(locale, 25),
+        total: formatInteger(locale, 25),
+      });
+      const second = t(locale, 'findings.edgeBand.sub', {
+        edgeRate: formatPercent(locale, 0.464),
+        interiorRate: formatPercent(locale, 0.016),
+        wafers: formatInteger(locale, 25),
+        total: formatInteger(locale, 25),
+      });
+      expect(first).toBe(second);
+    }
+  });
+
+  it('caches Intl formatters per locale and formats integers, percents, scores, durations, MB, and SI values (§6.5)', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      expect(getLocaleFormatters(locale)).toBe(getLocaleFormatters(locale));
+      expect(formatInteger(locale, 15825)).toBe('15,825');
+      expect(formatPercent(locale, 0.828)).toBe('82.8%');
+      expect(formatDecimal2(locale, 0.95)).toBe('0.95');
+      expect(formatDecimal2(locale, 0.14)).toBe('0.14');
+      expect(
+        formatLocalizedParametricValue(locale, 10.22e-6, 'A', 6),
+      ).toBe('10.22 uA');
+      expect(
+        formatLocalizedParametricValue(locale, 1.25, 'V', 3),
+      ).toBe('1,250.00 mV');
+    }
+
+    expect(formatInteger('en', Number.NaN)).toBe('0');
+    expect(formatInteger('en', -0)).toBe('0');
+    expect(formatPercent('en', Number.NaN)).toBe('0.0%');
+    expect(formatDecimal2('en', Number.NaN)).toBe('0.00');
+
+    expect(formatDuration('en', 0.8)).toBe('0.8s');
+    expect(formatDuration('zh-CN', 0.8)).toBe('0.8秒');
+    expect(formatDuration('ko', 0.8)).toBe('0.8초');
+
+    expect(formatMegabytes('en', 4.2)).toBe('4.2 MB');
+    expect(formatFileSize('en', 312 * 1024 * 1024)).toBe('312 MB');
+
+    const bound = createBoundFormatters('en');
+    expect(bound.integer(2721)).toBe('2,721');
+    expect(bound.percent(0.938)).toBe('93.8%');
+    expect(bound.decimal2(1.33)).toBe('1.33');
+    expect(bound.duration(1.2)).toBe('1.2s');
+    expect(bound.megabytes(9.8)).toBe('9.8 MB');
+    expect(bound.fileSize(4.2 * 1024 * 1024)).toBe('4.2 MB');
+    expect(bound.parametric(14.2e-6, 'A', 6)).toBe('14.20 uA');
+  });
+});
