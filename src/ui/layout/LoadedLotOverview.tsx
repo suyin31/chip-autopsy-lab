@@ -20,6 +20,7 @@ import { AutopsyReportCard } from '@/ui/report';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import { WaferMapCanvas } from '@/ui/wafer-map';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
+import { BinsOnlyNotice } from './BinsOnlyNotice';
 
 export interface LoadedLotOverviewProps {
   readonly data: AutopsyWorkerLoadedPayload;
@@ -30,6 +31,7 @@ export interface LoadedLotOverviewProps {
   readonly onDownloadDemoLot?: (presetId: DemoPresetId) => void;
   readonly downloadingPresetId?: DemoPresetId | null;
   readonly onSelectFile?: (file: File) => void;
+  readonly onParseEverything?: () => void;
   /** Optional isolated Zustand store instance for deterministic component tests. */
   readonly store?: StoreApi<SelectionStoreState>;
 }
@@ -47,6 +49,7 @@ export interface LoadedLotOverviewProps {
  */
 export function LoadedLotOverview({
   data,
+  onParseEverything,
   store = useSelectionStore,
 }: LoadedLotOverviewProps): React.JSX.Element {
   const { lot, yieldSummary, siteAnomalies, facts, verdict, report } = data;
@@ -99,25 +102,6 @@ export function LoadedLotOverview({
 
   return (
     <div className="flex flex-col gap-4">
-      {lot.parseMode === 'bins-only' ? (
-        <div
-          role="status"
-          data-testid="bins-only-notice"
-          className="flex flex-wrap items-center justify-between gap-2 rounded-panel border border-hairline bg-panel px-4 py-2.5 text-[13px] text-text-secondary"
-        >
-          <span>
-            <span className="font-medium text-text-primary">
-              Bins-only mode active:
-            </span>{' '}
-            Parametric records (PTR, MPR, FTR) were skipped above 200 MB. Wafer
-            map, bin Pareto inputs, yield, and spatial diagnosis remain intact.
-          </span>
-          <span className="font-mono text-[12px] text-text-tertiary tabular-nums">
-            {formatGroupedInt(data.skippedRecordCount)} records skipped
-          </span>
-        </div>
-      ) : null}
-
       {/* Hero row: >=1280px side-by-side (verdict left ~44%, wafer map + lot strip right ~56%); <1280px stacked verdict-first */}
       <div
         data-testid="verdict-wafer-hero-grid"
@@ -129,6 +113,15 @@ export function LoadedLotOverview({
           verdict={verdict}
           facts={facts}
           store={store}
+          binsOnlyNotice={
+            lot.parseMode === 'bins-only' ? (
+              <BinsOnlyNotice
+                {...(onParseEverything !== undefined
+                  ? { onParseEverything }
+                  : {})}
+              />
+            ) : undefined
+          }
         />
 
         <Card aria-label="Wafer Map and Lot Strip">

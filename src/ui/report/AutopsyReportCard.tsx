@@ -30,6 +30,8 @@ export interface AutopsyReportCardProps {
   readonly store?: StoreApi<SelectionStoreState>;
   /** Initial open state for the hedged hypotheses disclosure (`false` / collapsed by default). */
   readonly defaultHypothesesOpen?: boolean;
+  /** Optional post-load bins-only notice rendered directly beneath the confidence pill (§3.8). */
+  readonly binsOnlyNotice?: React.ReactNode;
 }
 
 export interface ClaimWaferTargetResolution {
@@ -369,6 +371,7 @@ export function AutopsyReportCard({
   facts,
   store = useSelectionStore,
   defaultHypothesesOpen = false,
+  binsOnlyNotice,
 }: AutopsyReportCardProps): React.JSX.Element {
   const [hypothesesOpen, setHypothesesOpen] = React.useState<boolean>(
     defaultHypothesesOpen,
@@ -395,9 +398,18 @@ export function AutopsyReportCard({
     return map;
   }, [facts]);
 
-  const { evidenceClaims, hypotheses } = React.useMemo(
+  const { evidenceClaims: allEvidenceClaims, hypotheses } = React.useMemo(
     () => partitionClaimsAndHypotheses(report, factsById),
     [report, factsById],
+  );
+
+  // §3.8 Moment 2: Parametric findings rows are not rendered in bins-only mode
+  const evidenceClaims = React.useMemo(
+    () =>
+      lot.parseMode === 'bins-only'
+        ? allEvidenceClaims.filter((item) => item.claim.citedTestNums.length === 0)
+        : allEvidenceClaims,
+    [allEvidenceClaims, lot.parseMode],
   );
 
   const hasFailures = React.useMemo(() => {
@@ -520,6 +532,8 @@ export function AutopsyReportCard({
             Click a finding to light its dies
           </span>
         </div>
+
+        {binsOnlyNotice ? <div>{binsOnlyNotice}</div> : null}
 
         <ClaimInlineButton
           claim={report.causeOfDeathHeadline}

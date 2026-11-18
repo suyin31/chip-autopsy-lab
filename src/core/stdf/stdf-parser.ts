@@ -35,6 +35,7 @@ import {
   type ParsedWcrRecord,
   type ParsedWirRecord,
   type ParsedWrrRecord,
+  formatHexBytes,
   type ParseFatalError,
   type ParseOptions,
   type ParseWarning,
@@ -53,6 +54,7 @@ import {
   STDF_RECORD_CODES,
   STDF_RECORD_HEADER_BYTES,
   STDF_V4_VERSION,
+  type TruncatedRecordDiagnostic,
   type WaferAxisPosX,
   type WaferAxisPosY,
   type WaferFlatOrientation,
@@ -927,6 +929,8 @@ export function parseStdfBytes(
     };
   }
 
+  const firstBytesHex = formatHexBytes(rawOrDecompressed, 16);
+
   if (totalBytes < 6) {
     return {
       ok: false,
@@ -934,6 +938,7 @@ export function parseStdfBytes(
         code: 'MISSING_FAR_HEADER',
         message: `Input buffer (${totalBytes} bytes) is shorter than the 6-byte STDF V4 FAR header.`,
         byteOffset: 0,
+        firstBytesHex,
       },
     };
   }
@@ -950,6 +955,7 @@ export function parseStdfBytes(
         code: 'MISSING_FAR_HEADER',
         message: `Expected initial FAR (0, 10) record at byte 0, found (${initialTyp}, ${initialSub}).`,
         byteOffset: 0,
+        firstBytesHex,
       },
     };
   }
@@ -961,6 +967,7 @@ export function parseStdfBytes(
         code: 'MISSING_FAR_HEADER',
         message: 'Malformed FAR REC_LEN (0) at byte 0.',
         byteOffset: 0,
+        firstBytesHex,
       },
     };
   }
@@ -976,6 +983,7 @@ export function parseStdfBytes(
         message:
           'DEC VAX byte order (FAR.CPU_TYPE = 0) is unsupported; expected big-endian (1) or little-endian (2).',
         byteOffset: 4,
+        firstBytesHex,
       },
     };
   }
@@ -988,6 +996,7 @@ export function parseStdfBytes(
         code: 'MISSING_FAR_HEADER',
         message: `Unsupported FAR.CPU_TYPE (${cpuType}) at byte 4; expected 1 (big-endian) or 2 (little-endian).`,
         byteOffset: 4,
+        firstBytesHex,
       },
     };
   }
@@ -1009,6 +1018,7 @@ export function parseStdfBytes(
         code: 'MISSING_FAR_HEADER',
         message: `Malformed FAR REC_LEN (${farRecLen}) at byte 0.`,
         byteOffset: 0,
+        firstBytesHex,
       },
     };
   }
@@ -1020,6 +1030,8 @@ export function parseStdfBytes(
         code: 'UNSUPPORTED_STDF_VERSION',
         message: `Unsupported STDF version ${stdfVer} at byte 5; only STDF V4 is supported.`,
         byteOffset: 5,
+        stdfVersion: stdfVer,
+        firstBytesHex,
       },
     };
   }
@@ -1124,14 +1136,41 @@ export function parseStdfBytes(
 
   const binsOnly = options.mode === 'bins-only';
 
+  const formatRecDisplayName = (typ: number, sub: number): string => {
+    for (const [name, code] of Object.entries(STDF_RECORD_CODES)) {
+      if (code.recTyp === typ && code.recSub === sub) {
+        return `${name} (${typ}, ${sub})`;
+      }
+    }
+    return `(${typ}, ${sub})`;
+  };
+
+  let lastTruncatedRecord: TruncatedRecordDiagnostic | undefined;
+
   while (offset < totalBytes) {
     if (offset + STDF_RECORD_HEADER_BYTES > totalBytes) {
+      const recTyp = offset + 2 < totalBytes ? rawOrDecompressed[offset + 2]! : 0;
+      const recSub = offset + 3 < totalBytes ? rawOrDecompressed[offset + 3]! : 0;
+      const truncatedRecord: TruncatedRecordDiagnostic = {
+        recName:
+          offset + 3 < totalBytes
+            ? formatRecDisplayName(recTyp, recSub)
+            : 'HEADER',
+        recTyp,
+        recSub,
+        byteOffset: offset,
+        needBytes: STDF_RECORD_HEADER_BYTES,
+        haveBytes: totalBytes - offset,
+      };
+      lastTruncatedRecord = truncatedRecord;
       warnings.push({
         code: 'TRUNCATED_TAIL_RECORD',
         byteOffset: offset,
-        recTyp: offset + 2 < totalBytes ? rawOrDecompressed[offset + 2]! : 0,
-        recSub: offset + 3 < totalBytes ? rawOrDecompressed[offset + 3]! : 0,
+        recTyp,
+        recSub,
         detail: `Truncated 4-byte STDF record header at byte offset ${offset} (${totalBytes - offset} trailing bytes).`,
+        firstBytesHex,
+        truncatedRecord,
       });
       break;
     }
@@ -1143,12 +1182,23 @@ export function parseStdfBytes(
     const recordEnd = recordStart + recLen;
 
     if (recordEnd > totalBytes) {
+      const truncatedRecord: TruncatedRecordDiagnostic = {
+        recName: formatRecDisplayName(recTyp, recSub),
+        recTyp,
+        recSub,
+        byteOffset: offset,
+        needBytes: STDF_RECORD_HEADER_BYTES + recLen,
+        haveBytes: totalBytes - offset,
+      };
+      lastTruncatedRecord = truncatedRecord;
       warnings.push({
         code: 'TRUNCATED_TAIL_RECORD',
         byteOffset: offset,
         recTyp,
         recSub,
         detail: `Truncated record (${recTyp}, ${recSub}) at byte offset ${offset}: REC_LEN=${recLen} extends past buffer length ${totalBytes}.`,
+        firstBytesHex,
+        truncatedRecord,
       });
       break;
     }
@@ -1449,7 +1499,11 @@ export function parseStdfBytes(
       error: {
         code: 'ZERO_VALID_PRR',
         message: 'STDF V4 stream contains zero valid PRR part result records.',
-        byteOffset: offset,
+        byteOffset: lastTruncatedRecord?.byteOffset ?? offset,
+        firstBytesHex,
+        ...(lastTruncatedRecord !== undefined
+          ? { truncatedRecord: lastTruncatedRecord }
+          : {}),
       },
     };
   }

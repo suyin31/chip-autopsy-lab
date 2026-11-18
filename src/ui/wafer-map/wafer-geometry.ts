@@ -921,3 +921,88 @@ export function paintWaferThumbnail(
     ctx.fillRect(cx - failHalf, cy - failHalf, failSize, failSize);
   }
 }
+
+/**
+ * Draws the `168 px` landing demo card wafer (`redesign.md` §3.1, §2.1):
+ * - Silicon disc `#0B0B0C` fill + `1 px` `rgba(255, 255, 255, 0.10)` ring + SEMI V-notch
+ * - Pass dies as centred `72%` `#63666C` squares; fail dies as full-cell minus `1 px` street in `#FF6B2C`
+ */
+export function paintLandingCardWafer(
+  ctx: Canvas2DContextLike,
+  params: PaintWaferThumbnailParams,
+): void {
+  const { wafer, dies, cssSize, dpr } = params;
+  const safeSize = Number.isFinite(cssSize) && cssSize > 0 ? cssSize : 1;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, safeSize, safeSize);
+
+  const center = safeSize / 2;
+  const radiusPx = Math.max(8, center - 1.5);
+  const notch = computeWaferNotchGeometry(
+    center,
+    center,
+    radiusPx,
+    wafer.geometry.wfFlat,
+  );
+
+  ctx.beginPath();
+  ctx.arc(
+    center,
+    center,
+    radiusPx,
+    notch.arcStartRad,
+    notch.arcEndRad,
+    false,
+  );
+  ctx.lineTo(notch.apexX, notch.apexY);
+  ctx.closePath();
+
+  ctx.fillStyle = COLOR_TOKENS.waferDisc;
+  ctx.fill();
+  ctx.lineWidth = 1;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+  ctx.stroke();
+
+  const waferRadiusUnits = computeWaferRadiusUnits(wafer, dies);
+  const diePitchPx = radiusPx / waferRadiusUnits;
+  const gridCenterX = (wafer.minX + wafer.maxX) / 2;
+  const gridCenterY = (wafer.minY + wafer.maxY) / 2;
+  const dirX: 1 | -1 = wafer.geometry.posX === 'L' ? -1 : 1;
+  const dirY: 1 | -1 = wafer.geometry.posY === 'D' ? 1 : -1;
+
+  const xArr = dies.x;
+  const yArr = dies.y;
+  const validArr = dies.hasValidCoords;
+  const passArr = dies.finalPass;
+  const start = wafer.dieStartIndex;
+  const end = wafer.dieEndIndex;
+
+  // Pass 1: Passing dies (#63666C) centred square at 72% of cell (§2.1)
+  const passSize = Math.max(1.2, diePitchPx * 0.72);
+  const passHalf = passSize / 2;
+  ctx.fillStyle = COLOR_TOKENS.passDie;
+  for (let i = start; i < end; i += 1) {
+    if (validArr[i] === 0 || passArr[i] === 0) {
+      continue;
+    }
+    const cx = center + (xArr[i] - gridCenterX) * dirX * diePitchPx;
+    const cy = center + (yArr[i] - gridCenterY) * dirY * diePitchPx;
+    ctx.fillRect(cx - passHalf, cy - passHalf, passSize, passSize);
+  }
+
+  // Pass 2: Failing dies (#FF6B2C) filling cell minus 1 px street (§2.1)
+  const streetPx = Math.min(1, diePitchPx * 0.18);
+  const failSize = Math.max(1.6, diePitchPx - streetPx);
+  const failHalf = failSize / 2;
+  ctx.fillStyle = COLOR_TOKENS.failure;
+  for (let i = start; i < end; i += 1) {
+    if (validArr[i] === 0 || passArr[i] !== 0) {
+      continue;
+    }
+    const cx = center + (xArr[i] - gridCenterX) * dirX * diePitchPx;
+    const cy = center + (yArr[i] - gridCenterY) * dirY * diePitchPx;
+    ctx.fillRect(cx - failHalf, cy - failHalf, failSize, failSize);
+  }
+}

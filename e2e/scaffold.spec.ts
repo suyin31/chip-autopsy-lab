@@ -44,8 +44,8 @@ test('NavBar R3 acceptance: 52px desktop / 48px mobile, language reload persiste
   await page.getByRole('menuitemradio', { name: 'English' }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
-  // Load demo lot so LotPicker is visible, then verify Tab order and 2px ice focus rings
-  await page.getByRole('button', { name: 'Load demo lot' }).click();
+  // Load demo lot via one-click card so LotPicker is visible, then verify Tab order and 2px ice focus rings
+  await page.getByTestId('demo-card-edge-ring-etch').click();
   await expect(page.getByTestId('lot-picker-trigger')).toBeVisible({
     timeout: 5_000,
   });

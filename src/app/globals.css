@@ -500,10 +500,29 @@
   box-shadow: var(--shadow-ring-strong);
 }
 
+.sheet-scrim-surface {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(var(--blur-heavy));
+  -webkit-backdrop-filter: blur(var(--blur-heavy));
+}
+
+.drag-overlay-surface {
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(var(--blur-heavy));
+  -webkit-backdrop-filter: blur(var(--blur-heavy));
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .surface-material,
   .surface-overlay {
     background-color: var(--color-surface-2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .sheet-scrim-surface,
+  .drag-overlay-surface {
+    background-color: rgba(0, 0, 0, 0.88);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }

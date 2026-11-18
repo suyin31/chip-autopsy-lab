@@ -1,12 +1,28 @@
 export { AppShell, type AppShellProps } from './AppShell';
 export {
+  BinsOnlyNotice,
+  type BinsOnlyNoticeProps,
+} from './BinsOnlyNotice';
+export {
+  BinsOnlySheet,
+  type BinsOnlySheetProps,
+} from './BinsOnlySheet';
+export {
   EmptyStateCard,
   type EmptyStateCardProps,
   type EmptyStateCause,
 } from './EmptyStateCard';
 export {
+  ErrorDetailsSheet,
+  type ErrorDetailsSheetProps,
+} from './ErrorDetailsSheet';
+export {
+  bindWindowFileDropListeners,
+  type DragItemKind,
   FullWindowDropZone,
   type FullWindowDropZoneProps,
+  type WindowDropEventLike,
+  type WindowDropEventTarget,
 } from './FullWindowDropZone';
 export {
   IngestProgressPanel,
@@ -39,3 +55,11 @@ export {
   NavBar,
   type NavBarProps,
 } from './NavBar';
+export {
+  estimateFullParseSeconds,
+  type ParseErrorUiCode,
+  type ParseErrorViewModel,
+  resolveParseErrorViewModel,
+  resolveTruncatedWarningToastModel,
+  type TruncatedWarningToastModel,
+} from './parse-error-copy';

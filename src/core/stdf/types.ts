@@ -82,10 +82,22 @@ export type ParseFatalCode =
   | 'UNSUPPORTED_CPU_TYPE_VAX'
   | 'ZERO_VALID_PRR';
 
+export interface TruncatedRecordDiagnostic {
+  readonly recName: string;
+  readonly recTyp: number;
+  readonly recSub: number;
+  readonly byteOffset: number;
+  readonly needBytes: number;
+  readonly haveBytes: number;
+}
+
 export interface ParseFatalError {
   readonly code: ParseFatalCode;
   readonly message: string;
   readonly byteOffset?: number;
+  readonly firstBytesHex?: string;
+  readonly stdfVersion?: number;
+  readonly truncatedRecord?: TruncatedRecordDiagnostic;
 }
 
 export type ParseWarningCode =
@@ -104,6 +116,23 @@ export interface ParseWarning {
   readonly recTyp: number;
   readonly recSub: number;
   readonly detail: string;
+  readonly firstBytesHex?: string;
+  readonly truncatedRecord?: TruncatedRecordDiagnostic;
+}
+
+/**
+ * Formats the first `maxBytes` of `bytes` as uppercase 2-digit hex pairs separated by spaces.
+ */
+export function formatHexBytes(bytes: Uint8Array, maxBytes = 16): string {
+  const count = Math.min(bytes.byteLength, Math.max(0, maxBytes));
+  if (count === 0) {
+    return '';
+  }
+  const parts: string[] = new Array<string>(count);
+  for (let i = 0; i < count; i += 1) {
+    parts[i] = bytes[i]!.toString(16).toUpperCase().padStart(2, '0');
+  }
+  return parts.join(' ');
 }
 
 export interface PtrDefaultContext {

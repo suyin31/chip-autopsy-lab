@@ -47,4 +47,5 @@ export {
   type SegmentedControlProps,
   type SegmentedKeyStepResult,
 } from './segmented-control';
+export { ModalSheet, type ModalSheetProps } from './sheet';
 export { ClinicalToaster } from './toaster';

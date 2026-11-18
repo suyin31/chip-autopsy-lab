@@ -26,6 +26,7 @@ import {
   type DemoPresetMeta,
   generateDemoStdfBytes,
   getDemoPresetMeta,
+  getDemoPresetPreview,
   listDemoPresets,
 } from '@/core/demo';
 import { buildLotModel, type LotModel } from '@/core/model';
@@ -167,6 +168,11 @@ export interface AutopsyWorkerApi {
     presetId: DemoPresetId,
     seed?: number,
   ): Promise<WorkerExportDemoResult>;
+  renderDemoThumbnail(
+    presetId: DemoPresetId,
+    cssSize: number,
+    dpr: number,
+  ): Promise<ImageBitmap | null>;
   resumeLargeFileParse(
     mode: ParseMode,
     onProgress?: WorkerProgressCallback,
@@ -655,6 +661,101 @@ export function createAutopsyWorkerApi(options?: {
         return Comlink.transfer(result, [exactBuffer]);
       }
       return result;
+    },
+
+    async renderDemoThumbnail(
+      presetId: DemoPresetId,
+      cssSize: number,
+      dpr: number,
+    ): Promise<ImageBitmap | null> {
+      if (typeof OffscreenCanvas === 'undefined') {
+        return null;
+      }
+      const safeCss = Number.isFinite(cssSize) && cssSize > 0 ? cssSize : 168;
+      const safeDpr =
+        Number.isFinite(dpr) && dpr > 0 ? Math.min(4, dpr) : 1;
+      const pixelSize = Math.max(1, Math.round(safeCss * safeDpr));
+      const offscreen = new OffscreenCanvas(pixelSize, pixelSize);
+      const ctx = offscreen.getContext('2d');
+      if (!ctx) {
+        return null;
+      }
+
+      const preview = getDemoPresetPreview(presetId);
+      const { wafer, dies } = preview;
+      ctx.setTransform(safeDpr, 0, 0, safeDpr, 0, 0);
+      ctx.clearRect(0, 0, safeCss, safeCss);
+
+      const center = safeCss / 2;
+      const radiusPx = Math.max(8, center - 1.5);
+      const notchAngleRad = Math.PI / 2;
+      const depthPx = Math.max(4, Math.min(9, radiusPx * 0.032));
+      const halfOpeningPx = depthPx * 0.88;
+      const halfAngleRad = Math.min(
+        0.2,
+        Math.max(0.025, halfOpeningPx / Math.max(1, radiusPx)),
+      );
+      const apexRadius = Math.max(0, radiusPx - depthPx);
+
+      ctx.beginPath();
+      ctx.arc(
+        center,
+        center,
+        radiusPx,
+        notchAngleRad + halfAngleRad,
+        notchAngleRad - halfAngleRad + Math.PI * 2,
+        false,
+      );
+      ctx.lineTo(
+        center + Math.cos(notchAngleRad) * apexRadius,
+        center + Math.sin(notchAngleRad) * apexRadius,
+      );
+      ctx.closePath();
+      ctx.fillStyle = '#0B0B0C';
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+      ctx.stroke();
+
+      const gridCenterX = (wafer.minX + wafer.maxX) / 2;
+      const gridCenterY = (wafer.minY + wafer.maxY) / 2;
+      let maxCornerDist = 0;
+      for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
+        if (dies.hasValidCoords[i] === 0) continue;
+        const dx = Math.abs(dies.x[i]! - gridCenterX) + 0.5;
+        const dy = Math.abs(dies.y[i]! - gridCenterY) + 0.5;
+        const dist = Math.hypot(dx, dy);
+        if (dist > maxCornerDist) maxCornerDist = dist;
+      }
+      const waferRadiusUnits = Math.max(1.5, maxCornerDist + 0.55);
+      const diePitchPx = radiusPx / waferRadiusUnits;
+      const dirX = wafer.geometry.posX === 'L' ? -1 : 1;
+      const dirY = wafer.geometry.posY === 'D' ? 1 : -1;
+
+      const passSize = Math.max(1.2, diePitchPx * 0.72);
+      const passHalf = passSize / 2;
+      ctx.fillStyle = '#63666C';
+      for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
+        if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] === 0) continue;
+        const cx = center + (dies.x[i]! - gridCenterX) * dirX * diePitchPx;
+        const cy = center + (dies.y[i]! - gridCenterY) * dirY * diePitchPx;
+        ctx.fillRect(cx - passHalf, cy - passHalf, passSize, passSize);
+      }
+
+      const streetPx = Math.min(1, diePitchPx * 0.18);
+      const failSize = Math.max(1.6, diePitchPx - streetPx);
+      const failHalf = failSize / 2;
+      ctx.fillStyle = '#FF6B2C';
+      for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
+        if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] !== 0) continue;
+        const cx = center + (dies.x[i]! - gridCenterX) * dirX * diePitchPx;
+        const cy = center + (dies.y[i]! - gridCenterY) * dirY * diePitchPx;
+        ctx.fillRect(cx - failHalf, cy - failHalf, failSize, failSize);
+      }
+
+      const bitmap = offscreen.transferToImageBitmap();
+      return enableTransfer ? Comlink.transfer(bitmap, [bitmap]) : bitmap;
     },
 
     getDemoPresets(): readonly DemoPresetMeta[] {

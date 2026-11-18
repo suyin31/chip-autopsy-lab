@@ -59,18 +59,11 @@ test.describe('Vertical slice checkpoint (Task 8)', () => {
 
       await page.goto('/');
 
-      // Select the requested demo preset in the first-run empty state
-      const presetRadio = page.getByRole('radio', {
-        name: new RegExp(preset.presetId),
-      });
-      await expect(presetRadio).toBeVisible();
-      await presetRadio.click();
-      await expect(presetRadio).toHaveAttribute('aria-checked', 'true');
-
-      // Click "Load demo lot" and assert verdict headline renders within 3 s
-      const loadButton = page.getByRole('button', { name: 'Load demo lot' });
+      // One click on the demo preset card loads the lot and renders the verdict within 3 s (§3.1)
+      const demoCard = page.getByTestId(`demo-card-${preset.presetId}`);
+      await expect(demoCard).toBeVisible();
       const loadStartMs = Date.now();
-      await loadButton.click();
+      await demoCard.click();
 
       const headlineButton = page.getByTestId('autopsy-headline-button');
       await expect(headlineButton).toBeVisible({ timeout: 3_000 });

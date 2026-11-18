@@ -8,7 +8,11 @@
  * Validates: Requirements 1.3, 2.2, 2.5
  */
 
-import { DEFAULT_MAX_UNCOMPRESSED_BYTES, type ParseFatalError } from './types';
+import {
+  DEFAULT_MAX_UNCOMPRESSED_BYTES,
+  formatHexBytes,
+  type ParseFatalError,
+} from './types';
 
 export const GZIP_MAGIC_BYTE_0 = 0x1f as const;
 export const GZIP_MAGIC_BYTE_1 = 0x8b as const;
@@ -40,12 +44,14 @@ export async function decompressGzipStreamWithCeiling(
   ceilingBytes: number = DEFAULT_MAX_UNCOMPRESSED_BYTES,
 ): Promise<GzipDecompressResult> {
   if (!hasGzipMagicBytes(input)) {
+    const firstBytesHex = formatHexBytes(input, 16);
     return {
       kind: 'error',
       error: {
         code: 'GZIP_DECOMPRESS_FAILED',
         message: 'Input stream does not begin with gzip magic bytes (0x1F 0x8B).',
         byteOffset: 0,
+        ...(firstBytesHex.length > 0 ? { firstBytesHex } : {}),
       },
     };
   }
@@ -90,12 +96,14 @@ export async function decompressGzipStreamWithCeiling(
   } catch (err) {
     await reader.cancel().catch(() => undefined);
     const detail = err instanceof Error ? err.message : String(err);
+    const firstBytesHex = formatHexBytes(input, 16);
     return {
       kind: 'error',
       error: {
         code: 'GZIP_DECOMPRESS_FAILED',
         message: `Gzip decompression failed: ${detail}`,
         byteOffset: Math.min(sourceOffset, input.byteLength),
+        ...(firstBytesHex.length > 0 ? { firstBytesHex } : {}),
       },
     };
   }

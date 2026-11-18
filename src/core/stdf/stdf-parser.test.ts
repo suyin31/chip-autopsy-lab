@@ -960,4 +960,49 @@ describe('parseStdfBytes & gzip helpers (Requirements 1.3, 1.5-1.10, 2.1-2.5)', 
       }),
     ]);
   });
+
+  it('attaches firstBytesHex, stdfVersion, and truncatedRecord diagnostics for R4 error states (§3.7)', async () => {
+    const pngBytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+      0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+      0xaa, 0xbb,
+    ]);
+    const pngRes = parseStdfBytes(pngBytes, { mode: 'full' });
+    expect(pngRes.ok).toBe(false);
+    if (!pngRes.ok) {
+      expect(pngRes.error.code).toBe('MISSING_FAR_HEADER');
+      expect(pngRes.error.firstBytesHex).toBe(
+        '89 50 4E 47 0D 0A 1A 0A 00 00 00 0D 49 48 44 52',
+      );
+    }
+
+    const v3Bytes = new Uint8Array([0x02, 0x00, 0x00, 0x0a, 0x02, 0x03]);
+    const v3Res = parseStdfBytes(v3Bytes, { mode: 'full' });
+    expect(v3Res.ok).toBe(false);
+    if (!v3Res.ok) {
+      expect(v3Res.error.code).toBe('UNSUPPORTED_STDF_VERSION');
+      expect(v3Res.error.stdfVersion).toBe(3);
+      expect(v3Res.error.firstBytesHex).toBe('02 00 00 0A 02 03');
+    }
+
+    const validBytes = writeStdfBytes(makeMinimalLotSpec('little'));
+    const truncatedBeforeAnyPrr = validBytes.subarray(0, 14);
+    const truncFatal = parseStdfBytes(truncatedBeforeAnyPrr, { mode: 'full' });
+    expect(truncFatal.ok).toBe(false);
+    if (!truncFatal.ok) {
+      expect(truncFatal.error.code).toBe('ZERO_VALID_PRR');
+      expect(truncFatal.error.truncatedRecord).toBeDefined();
+      expect(truncFatal.error.truncatedRecord?.needBytes).toBeGreaterThan(
+        truncFatal.error.truncatedRecord?.haveBytes ?? 0,
+      );
+    }
+
+    const badGz = new Uint8Array([0x1f, 0x8b, 0x08, 0x00, 0xde, 0xad]);
+    const gzRes = await decompressGzipStreamWithCeiling(badGz, 1024);
+    expect(gzRes.kind).toBe('error');
+    if (gzRes.kind === 'error') {
+      expect(gzRes.error.code).toBe('GZIP_DECOMPRESS_FAILED');
+      expect(gzRes.error.firstBytesHex).toBe('1F 8B 08 00 DE AD');
+    }
+  });
 });
