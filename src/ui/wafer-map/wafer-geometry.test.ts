@@ -35,7 +35,6 @@ import {
   dieCoordToCanvasRect,
   hitTestWaferDie,
   MAX_SUPERSAMPLED_CANVAS_PX,
-  OVERLAY_HALO_STROKE,
   paintLandingCardWafer,
   paintWaferBaseLayer,
   paintWaferDiscMaterial,
@@ -548,15 +547,39 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
 
     expect(baseMock.getDrawPassCount()).toBe(1);
     expect(overlayMock.getDrawPassCount()).toBe(1);
-    expect(overlayMock.dieShapes).toHaveLength(0);
-    expect(overlayMock.rectCalls).toHaveLength(2);
-    expect(overlayMock.strokes.map((s) => s.strokeStyle)).toContain(
-      OVERLAY_HALO_STROKE,
-    );
-    expect(overlayMock.strokes.map((s) => s.strokeStyle)).toContain(
-      COLOR_TOKENS.accent,
-    );
-    expect(overlayMock.strokeRects).toHaveLength(1);
+    // Premium §5.4: a filter highlight is evidence: dim-veil, punched dies, rims, no ice accent
+    const wafer0 = lot.wafers[0]!;
+    let site2OnWafer = 0;
+    for (let i = wafer0.dieStartIndex; i < wafer0.dieEndIndex; i += 1) {
+      if (
+        site2Masks.overlayHighlightMask[i] !== 0 &&
+        lot.dies.hasValidCoords[i] !== 0
+      ) {
+        site2OnWafer += 1;
+      }
+    }
+    expect(site2OnWafer).toBeGreaterThan(0);
+    expect(overlayMock.pathFills).toContain(WAFER_TOKENS.dimVeil);
+    const punched = overlayMock.dieShapes.filter((d) => d.fillStyle === '#000000');
+    expect(punched).toHaveLength(site2OnWafer);
+    expect(punched[0]!.w).toBeCloseTo(layout.dieSizePx, 4);
+    const strokeStyles = overlayMock.strokes.map((s) => s.strokeStyle);
+    expect(
+      strokeStyles.some(
+        (c) => c === WAFER_TOKENS.evidenceRim || c === WAFER_TOKENS.evidencePassRim,
+      ),
+    ).toBe(true);
+    expect(strokeStyles).not.toContain(COLOR_TOKENS.accent);
+    // Hover: 1 px dark keyline outside, 1.5 px white inside
+    expect(overlayMock.strokes).toContainEqual({
+      strokeStyle: WAFER_TOKENS.hoverStroke.outer,
+      lineWidth: 1,
+    });
+    expect(overlayMock.strokes).toContainEqual({
+      strokeStyle: WAFER_TOKENS.hoverStroke.inner,
+      lineWidth: 1.5,
+    });
+    expect(overlayMock.strokeRects).toHaveLength(0);
   });
 
   it('paints compact Pass/Fail wafer thumbnails using locked tokens and skipping missing-coord dies', () => {

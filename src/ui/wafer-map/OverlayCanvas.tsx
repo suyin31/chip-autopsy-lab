@@ -37,6 +37,8 @@ export interface OverlayCanvasHandle {
   paintForCamera(camera: CameraState): void;
   setLiveBrushScreenRect(rect: ScreenBox | null): void;
   setProbeHeadDieIndex(dieIndex: number | null): void;
+  /** Draws `pinned-stroke` on the pinned die (premium §5.4), or clears it with `null`. */
+  setPinnedDieIndex(dieIndex: number | null): void;
   /**
    * Repaints the overlay for `waferIndex` before React commits it (§5.8 keyboard wafer
    * stepping): clears hover and settles any active finding glow on the new wafer at once.
@@ -95,7 +97,7 @@ function createIdleAnimatorState(waferIndex: number): GlowAnimatorState {
 /**
  * DPR-scaled screen-space Canvas2D overlay layer (`z: 3`, `pointer-events: none`, `redesign.md` §4.7, §5.4, §5.7).
  *
- * - Drives the §5.4 finding `dim-scrim` (`0 -> 0.62` in `200 ms`, punched out at evidence dies),
+ * - Drives the premium §5.4 `dim-veil` (progress `0 -> 1` in `200 ms`, punched out at evidence dies),
  *   ordered glow sequence (`polar-cw` / `principal-axis` / `centroid-distance`, `<= 600 ms` total),
  *   `160 ms` clear fade, and mid-animation finding retargeting in a self-terminating rAF loop.
  * - Exposes `setLiveBrushScreenRect` and `paintForCamera` so `Shift+drag` box selection and
@@ -124,6 +126,7 @@ const OverlayCanvasImpl = React.forwardRef<
   const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
   const liveBrushRectRef = React.useRef<ScreenBox | null>(null);
   const probeHeadDieIndexRef = React.useRef<number | null>(null);
+  const pinnedDieIndexRef = React.useRef<number | null>(null);
   const animStateRef = React.useRef<GlowAnimatorState>(
     createIdleAnimatorState(waferIndex),
   );
@@ -137,6 +140,7 @@ const OverlayCanvasImpl = React.forwardRef<
     rawOverlayCount,
     rawHoveredDieIndex,
     rawBrush,
+    rawHasNonBrushFilter,
   } = useStore(
     store,
     useShallow((s) => ({
@@ -147,6 +151,10 @@ const OverlayCanvasImpl = React.forwardRef<
       rawOverlayCount: s.overlayHighlightCount,
       rawHoveredDieIndex: s.hoveredDieIndex,
       rawBrush: s.brush,
+      rawHasNonBrushFilter:
+        s.binFilter !== null ||
+        s.siteFilter !== null ||
+        (s.dslFilter?.dieClauses.length ?? 0) > 0,
     })),
   );
 
@@ -157,6 +165,9 @@ const OverlayCanvasImpl = React.forwardRef<
   const overlayHighlightCount = isSynced ? rawOverlayCount : 0;
   const hoveredDieIndex = isSynced ? rawHoveredDieIndex : null;
   const brush = isSynced ? rawBrush : null;
+  // A box selection alone gets the selection rect only, never the evidence veil (premium §5.4)
+  const highlightIsSelectionOnly =
+    isSynced && rawBrush !== null && !rawHasNonBrushFilter;
 
   const safeCssWidth = Math.max(1, Math.round(cssWidth));
   const safeCssHeight = Math.max(1, Math.round(cssHeight));
@@ -181,6 +192,7 @@ const OverlayCanvasImpl = React.forwardRef<
     overlayHighlightCount,
     hoveredDieIndex,
     brush,
+    highlightIsSelectionOnly,
   });
   latestRef.current = {
     lot,
@@ -197,6 +209,7 @@ const OverlayCanvasImpl = React.forwardRef<
     overlayHighlightCount,
     hoveredDieIndex,
     brush,
+    highlightIsSelectionOnly,
   };
 
   const lotHighlightStats = React.useMemo(() => {
@@ -351,7 +364,9 @@ const OverlayCanvasImpl = React.forwardRef<
         overlayHighlightMask: cur.overlayHighlightMask,
         overlayHighlightCount: cur.overlayHighlightCount,
         hoveredDieIndex: cur.hoveredDieIndex,
+        pinnedDieIndex: pinnedDieIndexRef.current,
         brush: cur.brush,
+        highlightIsSelectionOnly: cur.highlightIsSelectionOnly,
         glowOverride: buildCurrentGlowOverride(),
         liveBrushScreenRect: liveBrushRectRef.current,
         probeHeadDieIndex: probeHeadDieIndexRef.current,
@@ -601,7 +616,8 @@ const OverlayCanvasImpl = React.forwardRef<
           cur.brush === null &&
           animStateRef.current.phase === 'idle' &&
           liveBrushRectRef.current === null &&
-          probeHeadDieIndexRef.current === null
+          probeHeadDieIndexRef.current === null &&
+          pinnedDieIndexRef.current === null
         ) {
           return;
         }
@@ -624,6 +640,17 @@ const OverlayCanvasImpl = React.forwardRef<
           return;
         }
         probeHeadDieIndexRef.current = dieIndex;
+        paintCurrentNow();
+      },
+      setPinnedDieIndex(dieIndex: number | null): void {
+        if (pinnedDieIndexRef.current === dieIndex) {
+          return;
+        }
+        pinnedDieIndexRef.current = dieIndex;
+        const wrapperEl = wrapperRef.current;
+        if (wrapperEl) {
+          wrapperEl.dataset.pinnedDie = dieIndex !== null ? String(dieIndex) : '';
+        }
         paintCurrentNow();
       },
       previewWafer(waferIndex: number): void {
@@ -698,6 +725,7 @@ const OverlayCanvasImpl = React.forwardRef<
     overlayHighlightCount,
     hoveredDieIndex,
     brush,
+    highlightIsSelectionOnly,
     paintCurrentNow,
   ]);
 
@@ -714,6 +742,7 @@ const OverlayCanvasImpl = React.forwardRef<
         waferHighlightStats.waferOuterBandCount
       }
       data-glow-phase="idle"
+      data-pinned-die=""
       data-scrim-alpha="0.000"
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-[var(--z-canvas-overlay)]"

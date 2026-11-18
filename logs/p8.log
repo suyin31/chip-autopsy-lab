@@ -1,0 +1,296 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=51
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=114
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=79
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=28
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=83
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=79
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=442
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=85
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=72
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=141
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=97
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=117
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=155
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=72
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=359
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=134
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=63
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=28
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now add the token and write the new overlay painter.
+[tool] Replace in File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=55
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=77
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=2657
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=210
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=502
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=234
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=185
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now update the tests. First the report-card test.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=67
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=202
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=370
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=60
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1658
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=67
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=216
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=66
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=249
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1102
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=54
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=61
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=42
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=236
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=327
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=161
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=83
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=346
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=79
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=74
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=78
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=265
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+P8 is finished: the overlay canvas now draws the premium §5.4 die states, and A9 passes in a new e2e test. Typecheck and lint are clean, and `pnpm test` passes 268/268 across 45 files. P8 is ticked in `tasks.md` and the entry is in `logs/progress.md`.
+
+**What the overlay draws now** (`paintWaferOverlayLayer` in `wafer-geometry.ts`):
+- **Veil:** `dim-veil` over the disc, using its own 0.78 alpha. The evidence dies are cut out of it with one `destination-out` pass.
+- **Bloom:** a soft ember glow under evidence fail dies only. It is drawn once, cached, and added with `lighter` at 0.6. The die itself is cut out of the glow, so evidence dies keep their exact `#FF6B2C`.
+- **Rims:** `evidence-rim` 1 px inside evidence fail dies, and a new token `evidencePassRim` (white at 0.55) inside evidence pass tiles.
+- **Strokes:** `hover-stroke` and `pinned-stroke` follow the die's corner radius. A pinned die that is also hovered shows only the pinned stroke.
+- **Selection rect:** the token stroke and fill with a 4 px radius.
+
+**Behaviour changes to know about:**
+- **Pinned die:** `HoverMagnifier` now reports pin changes through a new `onPinnedDieChange` prop. The overlay draws the pinned die and sets a new `data-pinned-die` attribute.
+- **Veil value:** `DIM_SCRIM_MAX_ALPHA` went from 0.62 to 1, because it now measures how far the veil has faded in. `data-scrim-alpha` therefore settles at `1.000`, and I updated the unit tests and the r7 e2e spec to match.
+- **Removed:** the old ice-blue evidence strokes and the `OVERLAY_*` constants.
+
+**Decisions where premium.md is silent** (also logged):
+- A bin, site, or Cmd-K filter highlight with no finding active shows the settled evidence look. A box selection on its own gets only the selection rect, as §5.4 says for a selected region.
+- Rims and strokes stay at fixed screen pixels, while the glow scales with zoom.
+- I left the probe light alone because it belongs to the §8.1 task.
+
+**One spec gap:** the specular sheen added in P7 lightens lit dies under it by up to about 24 per colour channel. So the A9 test requires exact `#FF6B2C` only on dies away from the sheen.
+
+**E2E:** the new `overlay-states-p8` spec covers A9 and Enter/Escape pinning. It passed after a fresh build, along with `die-tiles-p6`, `stage-shadows-p7`, `wafer-stage-r6`, and `vertical-slice`. No snapshots changed. `linked-interactions-r7` hit its known settle-time flake once (849 ms against 780 ms) and passed when rerun.
+
+The new unit tests are in `overlay-die-states.test.ts`, and the evidence screenshot is saved at `logs/shots/p8-evidence.png`.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=180
+

@@ -240,7 +240,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P7. Stage shadows and static sheen
   - Ambient and contact shadow (light), halo (dark) inside the camera wrapper; sheen layer with the SVG notch mask at its rest position; hidden under reduced transparency (premium §5.1, §5.2 step 6, §3.3).
   - Accept: A8.
-- [ ] P8. Overlay die states
+- [x] P8. Overlay die states
   - `dim-veil` with punched evidence mask, evidence rim and pre-rendered bloom sprite, hover and pinned strokes, selection rect (premium §5.4).
   - Accept: A9 (static state, no animation yet).
 - [ ] P9. Wafer strip

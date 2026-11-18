@@ -240,6 +240,8 @@ export const WAFER_TOKENS = {
   dimVeil: 'rgba(18, 19, 22, 0.78)',
   evidenceRim: 'rgba(255, 255, 255, 0.90)',
   evidenceRimWidthPx: 1,
+  /** 1 px rim inside an evidence pass tile (premium §5.4). */
+  evidencePassRim: 'rgba(255, 255, 255, 0.55)',
   evidenceBloom: {
     color: '#FF6B2C',
     alpha: 0.35,

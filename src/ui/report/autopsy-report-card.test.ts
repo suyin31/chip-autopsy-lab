@@ -10,12 +10,11 @@ import { parseStdfBytes, PRR_PART_FLG, writeStdfBytes } from '@/core/stdf';
 import { I18nProvider } from '@/ui/i18n';
 import { BinsOnlyNotice, LoadedLotOverview } from '@/ui/layout';
 import { createSelectionStore, type SelectionStoreState } from '@/ui/state';
-import { COLOR_TOKENS } from '@/ui/tokens';
+import { COLOR_TOKENS, WAFER_TOKENS } from '@/ui/tokens';
 import {
   type Canvas2DContextLike,
   computeWaferRenderLayout,
   DEFAULT_VIEWPORT_TRANSFORM,
-  OVERLAY_HALO_STROKE,
   OverlayCanvas,
   paintWaferOverlayLayer,
 } from '@/ui/wafer-map';
@@ -319,7 +318,7 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
     );
     expect(activeHeadlineHtml).toContain('aria-pressed="true"');
 
-    // OverlayCanvas paint helper lights up the cited dies on Wafer 0 in #D6E6FF + outer halo
+    // OverlayCanvas paint helper rims the cited dies on Wafer 0 with `evidence-rim` (premium §5.4)
     const wafer0 = lot.wafers[afterFirstClick.activeWaferIndex]!;
     const layout = computeWaferRenderLayout(
       wafer0,
@@ -339,18 +338,18 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       hoveredDieIndex: null,
       brush: null,
     });
+    const rimStrokes = ops.filter(
+      (o) =>
+        (o.op === 'stroke' || o.op === 'strokeRect') &&
+        o.strokeStyle === WAFER_TOKENS.evidenceRim,
+    );
     const accentStrokes = ops.filter(
       (o) =>
         (o.op === 'stroke' || o.op === 'strokeRect') &&
         o.strokeStyle?.toLowerCase() === COLOR_TOKENS.accent.toLowerCase(),
     );
-    const haloStrokes = ops.filter(
-      (o) =>
-        (o.op === 'stroke' || o.op === 'strokeRect') &&
-        o.strokeStyle === OVERLAY_HALO_STROKE,
-    );
-    expect(accentStrokes.length).toBeGreaterThanOrEqual(1);
-    expect(haloStrokes.length).toBeGreaterThanOrEqual(1);
+    expect(rimStrokes.length).toBeGreaterThanOrEqual(1);
+    expect(accentStrokes).toHaveLength(0);
     expect(getRectCount()).toBeGreaterThan(40);
 
     const overlayHtml = renderToStaticMarkup(

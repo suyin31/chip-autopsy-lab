@@ -366,7 +366,8 @@ export function computePopoverPlacement(
 
 export type GlowOrderMode = 'polar-cw' | 'principal-axis' | 'centroid-distance';
 
-export const DIM_SCRIM_MAX_ALPHA = 0.62 as const;
+/** Veil progress at rest (premium §8.3: `dim-veil` alpha 0 -> 1; the token carries its own 0.78). */
+export const DIM_SCRIM_MAX_ALPHA = 1 as const;
 export const SCRIM_ENTER_DURATION_MS = 200 as const;
 export const GLOW_STAGGER_WINDOW_MS = 420 as const;
 export const GLOW_DIE_FADE_DURATION_MS = 180 as const;

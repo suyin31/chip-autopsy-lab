@@ -287,6 +287,12 @@ function WaferMapCanvasImpl({
   const failCanvasRef = React.useRef<FailCanvasHandle>(null);
   const overlayCanvasRef = React.useRef<OverlayCanvasHandle>(null);
   const magnifierRef = React.useRef<HoverMagnifierHandle>(null);
+  const handlePinnedDieChange = React.useCallback(
+    (dieIndex: number | null): void => {
+      overlayCanvasRef.current?.setPinnedDieIndex(dieIndex);
+    },
+    [],
+  );
   const selectionPopoverRef = React.useRef<SelectionPopoverHandle>(null);
   const renderCountRef = React.useRef(0);
   renderCountRef.current += 1;
@@ -2328,6 +2334,7 @@ function WaferMapCanvasImpl({
           getCamera={getCamera}
           getRasterCamera={getRasterCamera}
           store={store}
+          onPinnedDieChange={handlePinnedDieChange}
         />
 
         {/* Box-Select Live & Committed Stats Popover (z: 30, §3.6, §4.14, §5.7) */}

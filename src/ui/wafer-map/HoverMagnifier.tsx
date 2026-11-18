@@ -65,6 +65,8 @@ export interface HoverMagnifierProps {
   readonly getCamera: () => CameraState;
   readonly getRasterCamera: () => CameraState;
   readonly store?: StoreApi<SelectionStoreState>;
+  /** Called after the pinned die changes, so the overlay can draw `pinned-stroke` (premium §5.4). */
+  readonly onPinnedDieChange?: (dieIndex: number | null) => void;
 }
 
 function resolveNotchClock(wfFlat: 'U' | 'D' | 'L' | 'R' | ' '): number {
@@ -162,6 +164,7 @@ const HoverMagnifierImpl = React.forwardRef<
     getCamera,
     getRasterCamera,
     store = useSelectionStore,
+    onPinnedDieChange,
   },
   ref,
 ): React.JSX.Element {
@@ -224,6 +227,12 @@ const HoverMagnifierImpl = React.forwardRef<
   React.useEffect(() => {
     setPinnedDieIndex(null);
   }, [lot, waferIndex]);
+
+  const onPinnedDieChangeRef = React.useRef(onPinnedDieChange);
+  onPinnedDieChangeRef.current = onPinnedDieChange;
+  React.useEffect(() => {
+    onPinnedDieChangeRef.current?.(pinnedDieIndex);
+  }, [pinnedDieIndex]);
 
   const activeDieIndex = pinnedDieIndex ?? hoveredDieIndex;
   const wafer = lot.wafers[waferIndex];

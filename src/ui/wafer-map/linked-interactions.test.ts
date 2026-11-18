@@ -257,20 +257,20 @@ describe('R7 linked-interactions — pure geometry, glow ordering, camera framin
       // At t = 100 ms: 12 o'clock is lit, 9 o'clock hasn't started yet
       const midFrame = evaluateGlowSequenceFrame(schedule, 100, false);
       expect(midFrame.scrimAlpha).toBeGreaterThan(0);
-      expect(midFrame.scrimAlpha).toBeLessThanOrEqual(0.62);
+      expect(midFrame.scrimAlpha).toBeLessThan(1);
       expect(midFrame.dieAlphas[0]).toBeGreaterThan(0.5);
       expect(midFrame.dieAlphas[3]).toBe(0);
       expect(midFrame.settled).toBe(false);
 
-      // At t = 600 ms: all dies have finished (alpha === 1) and scrim === 0.62
+      // At t = 600 ms: all dies have finished (alpha === 1) and the veil is fully in (premium §8.3)
       const doneFrame = evaluateGlowSequenceFrame(schedule, 600, false);
-      expect(doneFrame.scrimAlpha).toBeCloseTo(0.62, 4);
+      expect(doneFrame.scrimAlpha).toBeCloseTo(1, 4);
       expect(Array.from(doneFrame.dieAlphas)).toEqual([1, 1, 1, 1]);
       expect(doneFrame.settled).toBe(true);
 
       // Reduced motion jumps to settled immediately at t = 0
       const reducedFrame = evaluateGlowSequenceFrame(schedule, 0, true);
-      expect(reducedFrame.scrimAlpha).toBeCloseTo(0.62, 4);
+      expect(reducedFrame.scrimAlpha).toBeCloseTo(1, 4);
       expect(Array.from(reducedFrame.dieAlphas)).toEqual([1, 1, 1, 1]);
       expect(reducedFrame.settled).toBe(true);
       expect(layout.waferRadiusPx).toBeGreaterThan(0);

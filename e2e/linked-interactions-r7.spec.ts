@@ -39,7 +39,7 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
       magBox.y + magBox.height > dieProbeBox.y;
     expect(overlapsHoveredDie).toBe(false);
 
-    // 2. Edge-band finding lights ring dies clockwise within 600 ms, dims non-evidence dies (0.62), shows evidence dots, and clears on second click (§3.5, §5.4)
+    // 2. Edge-band finding lights ring dies clockwise within 600 ms, dims non-evidence dies under the dim-veil, shows evidence dots, and clears on second click (§3.5, §5.4)
     const edgeBandRow = page.getByTestId('autopsy-body-claim-button').first();
     await expect(edgeBandRow).toContainText('of fails are in the edge band');
 
@@ -62,7 +62,7 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
       clickStartMs,
     );
     expect(settleElapsedMs).toBeLessThanOrEqual(780);
-    await expect(overlayWrapper).toHaveAttribute('data-scrim-alpha', '0.620');
+    await expect(overlayWrapper).toHaveAttribute('data-scrim-alpha', '1.000');
     const waferHighlightCount = Number(
       await overlayWrapper.getAttribute('data-wafer-highlight-count'),
     );
