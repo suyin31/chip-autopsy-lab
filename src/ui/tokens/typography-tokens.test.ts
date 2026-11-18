@@ -103,7 +103,7 @@ describe("type styles (premium.md §4.2)", () => {
     });
     expect(TYPOGRAPHY_DESKTOP_STEPS_PX).toEqual({
       displayL: { 1280: 44, 1024: 36 },
-      stat: { 1024: 32 },
+      stat: { 1280: 36, 1024: 32 },
     });
   });
 

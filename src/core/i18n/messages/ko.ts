@@ -38,6 +38,7 @@ export const ko = {
   'landing.privacy': '모든 과정이 브라우저에서 실행됩니다.',
   'landing.downloadDemos': '샘플 파일 다운로드',
   'landing.cardMeta': '웨이퍼 {wafers}장, 다이 {dies}개',
+  'report.footer': '모든 과정이 브라우저에서 실행됩니다. STDF 원본 데이터는 이 기기를 벗어나지 않습니다.',
   'demo.edgeRing.description': '식각 손상으로 웨이퍼 가장자리의 다이가 불량이 됩니다.',
   'demo.scratch.description': '로봇 암이 웨이퍼 18장에 선 모양의 긁힘을 냈습니다.',
   'demo.site2.description': '마모된 테스터 바늘 하나가 양품 다이를 불량으로 판정합니다.',

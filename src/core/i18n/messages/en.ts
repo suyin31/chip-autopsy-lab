@@ -35,6 +35,7 @@ export const en = {
   'landing.privacy': 'Runs entirely in your browser.',
   'landing.downloadDemos': 'Download sample files',
   'landing.cardMeta': '{wafers} wafers, {dies} dies',
+  'report.footer': 'Runs entirely in your browser. Raw STDF bytes never leave this device.',
   'demo.edgeRing.description': 'Etch damage kills dies around the wafer edge.',
   'demo.scratch.description': 'A robot arm scratched a line across 18 wafers.',
   'demo.site2.description': 'One worn tester needle fails good dies.',

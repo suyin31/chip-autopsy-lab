@@ -187,14 +187,26 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
         }),
       );
 
-      // Verdict column precedes wafer map in DOM; 783fr stage (left) / 553fr verdict (right) desktop split (§3.4)
+      // Verdict column precedes wafer map in DOM; premium §6.2 12-column split: sticky stage cols 1-7, verdict cols 8-12
       const heroGridIdx = html.indexOf('data-testid="verdict-wafer-hero-grid"');
       const reportIdx = html.indexOf('data-testid="autopsy-report-card"');
       const waferIdx = html.indexOf('data-testid="wafer-base-canvas"');
       expect(heroGridIdx).toBeGreaterThanOrEqual(0);
       expect(reportIdx).toBeGreaterThan(heroGridIdx);
       expect(waferIdx).toBeGreaterThan(reportIdx);
-      expect(html).toContain('xl:grid-cols-[minmax(0,783fr)_minmax(0,553fr)]');
+      expect(html).toContain('xl:grid-cols-12');
+      expect(html).toContain('xl:sticky xl:top-[52px]');
+      expect(html).toContain('xl:h-[calc(100dvh-52px)] xl:min-h-[640px] xl:pt-5 xl:pb-4');
+      expect(html).toContain('xl:col-span-5 xl:col-start-8');
+      expect(html).toContain('xl:pt-[72px] min-[90rem]:pt-[84px]');
+      expect(html).not.toContain('xl:overflow-y-auto');
+      // Block 9 footer line closes the verdict column
+      expect(html).toContain(
+        '>Runs entirely in your browser. Raw STDF bytes never leave this device.<',
+      );
+      expect(html.indexOf('data-testid="verdict-footer"')).toBeGreaterThan(
+        html.indexOf('data-testid="yield-summary"'),
+      );
 
       // Isolated verdict column markup check
       const cardHtml = renderToStaticMarkup(

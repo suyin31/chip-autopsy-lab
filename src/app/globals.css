@@ -350,6 +350,8 @@
 @media (max-width: 1439px) {
   :root {
     --size-display-l: 44px;
+    /* Premium §6.2: stat number 36 at 1280 x 800 */
+    --size-stat: 36px;
   }
 }
 

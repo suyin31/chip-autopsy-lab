@@ -646,16 +646,13 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
           isLandingOrError
             ? 'pt-0'
             : workspace.status === 'ready'
-              ? 'pt-5 pb-12 xl:h-[calc(100dvh-52px)] xl:min-h-[768px] xl:overflow-hidden xl:py-6'
+              ? 'pt-5 pb-12 xl:py-0'
               : 'py-4 md:py-6',
         )}
       >
         <section
           aria-label="Autopsy Report Workspace"
-          className={cn(
-            'flex-1',
-            workspace.status === 'ready' && 'xl:min-h-0',
-          )}
+          className="flex-1"
         >
           {workspace.status === 'empty' ? (
             <EmptyStateCard

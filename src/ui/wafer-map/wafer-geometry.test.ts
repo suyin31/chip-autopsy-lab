@@ -45,6 +45,7 @@ import {
   PASS_DIE_CELL_FRACTION,
   resolveCanvasPixelSize,
   resolveDieFillColor,
+  resolveFitWaferDiameterPx,
   resolvePassFailDieColor,
   resolvePassTileColor,
   resolveSupersampledCanvasSize,
@@ -319,13 +320,18 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(superCapped.pixelHeight).toBeLessThanOrEqual(MAX_SUPERSAMPLED_CANVAS_PX);
   });
 
-  it('hits §3.4 wafer diameters (624 px at 783x720 desktop, 350 px at 390x390 mobile) and keeps premium §5.3 streets', () => {
+  it('hits premium §6.2 wafer diameters (596 at 783x644, 496 at 690x544, 350 at 390x390) and keeps premium §5.3 streets', () => {
     const lot = buildWaferTestLot();
     const wafer = lot.wafers[0]!;
 
-    const desktopLayout = computeWaferRenderLayout(wafer, 783, 720, lot.dies);
-    expect(desktopLayout.waferRadiusPx * 2).toBe(624);
-    expect(desktopLayout.waferRadiusPx * 2).toBeGreaterThanOrEqual(560);
+    const desktopLayout = computeWaferRenderLayout(wafer, 783, 644, lot.dies);
+    expect(desktopLayout.waferRadiusPx * 2).toBe(596);
+    expect(
+      computeWaferRenderLayout(wafer, 690, 544, lot.dies).waferRadiusPx * 2,
+    ).toBe(496);
+    // D = clamp(320, min(areaW - 96, areaH - 48), 680)
+    expect(resolveFitWaferDiameterPx(1200, 1000)).toBe(680);
+    expect(resolveFitWaferDiameterPx(540, 512)).toBe(444);
 
     const mobileLayout = computeWaferRenderLayout(wafer, 390, 390, lot.dies);
     expect(mobileLayout.waferRadiusPx * 2).toBe(350);

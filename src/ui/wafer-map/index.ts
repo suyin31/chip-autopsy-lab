@@ -171,6 +171,7 @@ export {
   resolveDieFillColor,
   resolvePassFailDieColor,
   resolvePassTileColor,
+  resolveFitWaferDiameterPx,
   resolveStageMarginPx,
   resolveSupersampledCanvasSize,
   shouldDrawFailFacet,

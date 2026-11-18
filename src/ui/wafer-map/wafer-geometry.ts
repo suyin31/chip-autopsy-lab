@@ -279,6 +279,25 @@ export function resolveStageMarginPx(minDim: number): number {
 }
 
 /**
+ * Fit wafer diameter for a stage of `cssWidth x cssHeight` CSS px:
+ * - Desktop wafer area (non-square, premium §6.2): `D = clamp(320, min(areaW - 96, areaH - 48), 680)`
+ *   (`783 x 644` -> 596 at 1440 x 900, `690 x 544` -> 496 at 1280 x 800).
+ * - Square stages (mobile and sm) and areas too small for the 320 px floor keep the
+ *   `resolveStageMarginPx` ramp (`390 x 390` -> 350).
+ */
+export function resolveFitWaferDiameterPx(
+  cssWidth: number,
+  cssHeight: number,
+): number {
+  const minDim = Math.min(cssWidth, cssHeight);
+  const areaFit = Math.min(cssWidth - 96, cssHeight - 48);
+  if (Math.abs(cssWidth - cssHeight) > 1 && areaFit >= 320) {
+    return Math.min(680, areaFit);
+  }
+  return minDim - 2 * resolveStageMarginPx(minDim);
+}
+
+/**
  * Computes deterministic coordinate-to-canvas geometry respecting `WCR` orientation
  * (`POS_X`, `POS_Y`), premium §5.3 street and radii, the 80 % pass-die cue, and `ViewportTransform`.
  * `deviceDpr` sets the 1 device px street floor (defaults to 1).
@@ -293,9 +312,10 @@ export function computeWaferRenderLayout(
 ): WaferRenderLayout {
   const safeW = Number.isFinite(cssWidth) && cssWidth > 0 ? cssWidth : 1;
   const safeH = Number.isFinite(cssHeight) && cssHeight > 0 ? cssHeight : 1;
-  const minDim = Math.min(safeW, safeH);
-  const paddingCss = resolveStageMarginPx(minDim);
-  const fitWaferRadiusPx = Math.max(12, minDim / 2 - paddingCss);
+  const fitWaferRadiusPx = Math.max(
+    12,
+    resolveFitWaferDiameterPx(safeW, safeH) / 2,
+  );
 
   const clampedScale =
     Number.isFinite(transform.scale) && transform.scale > 0

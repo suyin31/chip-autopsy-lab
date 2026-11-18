@@ -38,6 +38,7 @@ export const ja = {
   'landing.privacy': 'すべてブラウザ内で動作します。',
   'landing.downloadDemos': 'サンプルファイルをダウンロード',
   'landing.cardMeta': '{wafers} ウェハ、{dies} ダイ',
+  'report.footer': 'すべてブラウザ内で動作します。STDF の生データがこのデバイスの外に出ることはありません。',
   'demo.edgeRing.description': 'エッチング損傷でウェハ外周のダイが不良になります。',
   'demo.scratch.description': 'ロボットアームが 18 枚のウェハに線状の傷を付けました。',
   'demo.site2.description': '摩耗した 1 本のテスタ針が良品ダイを不良にします。',

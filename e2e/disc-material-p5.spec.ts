@@ -97,8 +97,8 @@ test("A5: disc gradient, 6 o'clock notch, and top-lit bevel at 1440", async ({
     };
   });
 
-  // Interim floor: P10's header and control row shrink the disc to 538 px; P12 sizes D to 596 (A15)
-  expect(m.diameterCss).toBeGreaterThanOrEqual(530);
+  // Premium §6.2 sizes D to 596 at 1440 x 900 (A15)
+  expect(m.diameterCss).toBeGreaterThanOrEqual(594);
   expect(m.upperLeft - m.lowerRight).toBeGreaterThanOrEqual(6);
   expect(m.notchAlpha).toBe(0);
   expect(m.topMirrorAlpha).toBe(255);

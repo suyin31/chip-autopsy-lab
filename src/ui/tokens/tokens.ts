@@ -274,10 +274,10 @@ export const TYPOGRAPHY_TOKENS = {
   },
 } as const satisfies Record<string, ResponsiveTypeToken>;
 
-/** Desktop steps below 1440 px (`premium.md` §4.2): applied at max-width 1439 / 1279 px. */
+/** Desktop steps below 1440 px (`premium.md` §4.2, stat 36 at 1280 from §6.2): applied at max-width 1439 / 1279 px. */
 export const TYPOGRAPHY_DESKTOP_STEPS_PX = {
   displayL: { 1280: 44, 1024: 36 },
-  stat: { 1024: 32 },
+  stat: { 1280: 36, 1024: 32 },
 } as const;
 
 /** Desktop (>= 1440 px) pixel sizes indexed by role (`premium.md` §4.2). */

@@ -2156,8 +2156,8 @@ function WaferMapCanvasImpl({
       </div>
 
       {/* Unclipped floating anchor wrapper so magnifier/popover can place above stage edge (§4.8) */}
-      <div className="relative flex w-full flex-col xl:min-h-[600px] xl:flex-1">
-        {/* Boxless Wafer Stage (§3.4: 783x720 desktop / 390x390 mobile; §4.7 role="application") */}
+      <div className="relative flex w-full flex-col xl:min-h-0 xl:flex-1">
+        {/* Boxless Wafer Stage (premium §6.2: flex-1 wafer area, 783 x 644 at 1440 x 900; 390 x 390 mobile; §4.7 role="application") */}
         <div
           ref={stageRef}
           role="application"
@@ -2187,7 +2187,7 @@ function WaferMapCanvasImpl({
             stageTool === 'select'
               ? 'cursor-crosshair'
               : 'cursor-default data-[zoomed=true]:cursor-grab data-[zoomed=true]:active:cursor-grabbing',
-            'md:mx-auto md:h-auto md:aspect-square md:max-w-[680px] xl:mx-0 xl:aspect-auto xl:min-h-[600px] xl:max-w-none xl:flex-1',
+            'md:mx-auto md:h-auto md:aspect-square md:max-w-[680px] xl:mx-0 xl:aspect-auto xl:min-h-0 xl:max-w-none xl:flex-1',
             // Premium §7.7: keyboard-only 2 px ink ring with 28 px corners, inset 8 px from the wafer area
             'focus-visible:outline-none',
             "focus-visible:after:pointer-events-none focus-visible:after:absolute focus-visible:after:inset-2 focus-visible:after:z-[var(--z-stage-hud)] focus-visible:after:rounded-3xl focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ink focus-visible:after:content-['']",
@@ -2425,7 +2425,7 @@ function WaferMapCanvasImpl({
         dpr={dpr}
         onSelectWafer={handleSelectWafer}
         onPreviewWafer={handlePreviewWafer}
-        className="mt-3 xl:mt-4"
+        className="mt-3"
       />
     </div>
   );

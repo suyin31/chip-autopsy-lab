@@ -7,6 +7,7 @@ import type { DemoPresetId, DemoPresetMeta } from '@/core/demo';
 import { sanitizeReportProseText } from '@/core/report';
 import { BinParetoChart, YieldSummaryPanel } from '@/ui/charts';
 import { formatGroupedInt } from '@/ui/format';
+import { useT } from '@/ui/i18n';
 import { AutopsyReportCard } from '@/ui/report';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
@@ -35,8 +36,10 @@ export interface LoadedLotOverviewProps {
  * Loaded Verdict & Wafer Stage Workspace (`src/ui/layout/LoadedLotOverview.tsx`, `redesign.md` §3.4, §5.1–§5.3):
  * - Coordinates the once-per-session §5.1 probe sweep with the §5.2 Verdict rise-in (triggered when
  *   the sweep reaches `85%`, or immediately on skip / subsequent lot load / `prefers-reduced-motion`).
- * - Desktop (`>= 1280px`, `1440 x 900`): `783fr` boxless Wafer Stage + `64 px` Strip on columns 1–7,
- *   `24 px` gutter, `553fr` Verdict Column on columns 8–12.
+ * - Desktop (`>= 1280px`, premium §6.2): 12-column grid with a `24 px` gutter. The sticky stage
+ *   column (cols 1–7, `top: 52px`, `calc(100dvh - 52px)` tall, min 640, padding 20 / 16) holds the
+ *   header, flex-1 wafer area, control row, and strip; the verdict column (cols 8–12) scrolls with
+ *   the page and ends with the privacy footer line (96 above, 64 below).
  * - Mobile (`390 x 844`): single column with Verdict + Stats first, full-bleed `390 x 456` Stage +
  *   Strip second, and Findings list third.
  */
@@ -46,6 +49,7 @@ export function LoadedLotOverview({
   store = useSelectionStore,
 }: LoadedLotOverviewProps): React.JSX.Element {
   const { lot, probeOrderByWafer, yieldSummary, facts, verdict, report } = data;
+  const { t } = useT();
   const shouldReduceMotion = useReducedMotion();
   const prefersReduced = readPrefersReducedMotionSync(shouldReduceMotion);
 
@@ -96,7 +100,7 @@ export function LoadedLotOverview({
   return (
     <div
       data-testid="verdict-wafer-hero-grid"
-      className="flex w-full flex-col xl:grid xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,783fr)_minmax(0,553fr)] xl:gap-6"
+      className="flex w-full flex-col xl:grid xl:grid-cols-12 xl:items-start xl:gap-x-6"
     >
       <AutopsyReportCard
         lot={lot}
@@ -115,11 +119,17 @@ export function LoadedLotOverview({
               yieldSummary={yieldSummary}
               facts={facts}
               store={store}
-              className="mt-12"
+              className="mt-12 xl:mt-24"
             />
+            <p
+              data-testid="verdict-footer"
+              className="mt-12 type-subhead text-text-tertiary xl:mt-24"
+            >
+              {t('report.footer')}
+            </p>
           </>
         }
-        className="xl:col-start-2 xl:row-start-1 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:[scrollbar-gutter:stable]"
+        className="xl:col-span-5 xl:col-start-8 xl:row-start-1"
         binsOnlyNotice={
           lot.parseMode === 'bins-only' ? (
             <BinsOnlyNotice
@@ -131,7 +141,10 @@ export function LoadedLotOverview({
         }
       />
 
-      <div className="order-2 -mx-4 mt-6 w-[calc(100%+2rem)] md:mx-0 md:w-full xl:order-none xl:col-start-1 xl:row-start-1 xl:mt-0 xl:h-full xl:min-h-0">
+      <div
+        data-testid="stage-column"
+        className="order-2 -mx-4 mt-6 w-[calc(100%+2rem)] md:mx-0 md:w-full xl:sticky xl:top-[52px] xl:order-none xl:col-span-7 xl:col-start-1 xl:row-start-1 xl:mt-0 xl:h-[calc(100dvh-52px)] xl:min-h-[640px] xl:pt-5 xl:pb-4"
+      >
         <WaferMapCanvas
           lot={lot}
           byWaferYield={yieldSummary.byWafer}

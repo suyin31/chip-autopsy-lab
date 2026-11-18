@@ -50,8 +50,8 @@ function countDiesInSelection(
  *   + trailing tabular die count (replaced by `"Clear"` when selected).
  * - Selected row (`surface-2`, `aria-pressed="true"`, `aria-expanded="true"`) expands via
  *   Motion `layout` (`spring-ui`) to show the full sentence and optional `"Check next: …"` lines.
- * - `"Possible causes"` disclosure row rotates its chevron `90°` on open to reveal the 3 hedged
- *   hypotheses (`headline` + check-next sub-line).
+ * - `"Possible causes"` disclosure (a sibling block `16 px` below the list, premium §6.2) rotates its
+ *   chevron `90°` on open to reveal the 3 hedged hypotheses (`headline` + check-next sub-line).
  */
 export function FindingsList({
   heading,
@@ -97,7 +97,7 @@ export function FindingsList({
     <div data-testid="verdict-findings-section" className={className}>
       <h2 className="type-headline text-text-primary">{heading}</h2>
 
-      <ul data-testid="verdict-findings-list" className="mt-2 flex flex-col">
+      <ul data-testid="verdict-findings-list" className="mt-2 flex flex-col xl:mt-3">
         {findings.map((row, idx) => {
           const isSelected = activeClaimId === row.claimId;
           const isPressed = pressedRowKey === row.claimId;
@@ -236,94 +236,88 @@ export function FindingsList({
             </motion.li>
           );
         })}
+      </ul>
 
-        {hypotheses.length > 0 ? (
-          <motion.li
-            key="possible-causes"
-            layout="position"
-            transition={layoutTransition}
-            data-active={hypothesesOpen ? 'true' : undefined}
-            data-pressed={
-              pressedRowKey === 'possible-causes' ? 'true' : undefined
-            }
-            className="finding-list-item list-none"
+      {/* Premium §6.2 block 6: the "Possible causes" disclosure sits 16 px below the findings */}
+      {hypotheses.length > 0 ? (
+        <motion.div
+          layout="position"
+          transition={layoutTransition}
+          data-testid="possible-causes-block"
+          data-active={hypothesesOpen ? 'true' : undefined}
+          data-pressed={
+            pressedRowKey === 'possible-causes' ? 'true' : undefined
+          }
+          className="mt-4"
+        >
+          <div
+            className={cn(
+              'rounded-lg transition-[background-color,transform] duration-120 ease-out',
+              pressedRowKey === 'possible-causes'
+                ? 'bg-surface-3 scale-[0.99]'
+                : hypothesesOpen
+                  ? 'bg-surface-1'
+                  : 'bg-transparent hover:bg-surface-1',
+            )}
           >
-            {findings.length > 0 ? (
-              <div
-                aria-hidden="true"
-                className="finding-row-separator mx-4 h-px bg-separator transition-opacity duration-120 ease-out"
-              />
-            ) : null}
-
-            <div
+            <button
+              type="button"
+              data-testid="autopsy-hypotheses-toggle"
+              aria-expanded={hypothesesOpen}
+              aria-controls={hypothesesPanelId}
+              onPointerDown={(e) =>
+                handleRowPointerDown('possible-causes', e)
+              }
+              onPointerUp={clearPressedRow}
+              onPointerLeave={clearPressedRow}
+              onPointerCancel={clearPressedRow}
+              onClick={() => setHypothesesOpen((prev) => !prev)}
               className={cn(
-                'rounded-lg transition-[background-color,transform] duration-120 ease-out',
-                pressedRowKey === 'possible-causes'
-                  ? 'bg-surface-3 scale-[0.99]'
-                  : hypothesesOpen
-                    ? 'bg-surface-1'
-                    : 'bg-transparent hover:bg-surface-1',
+                'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 rounded-lg border-0 bg-transparent px-4 py-[14px] text-left',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
               )}
             >
-              <button
-                type="button"
-                data-testid="autopsy-hypotheses-toggle"
-                aria-expanded={hypothesesOpen}
-                aria-controls={hypothesesPanelId}
-                onPointerDown={(e) =>
-                  handleRowPointerDown('possible-causes', e)
-                }
-                onPointerUp={clearPressedRow}
-                onPointerLeave={clearPressedRow}
-                onPointerCancel={clearPressedRow}
-                onClick={() => setHypothesesOpen((prev) => !prev)}
+              <span className="block type-headline text-text-primary md:truncate">
+                {possibleCausesHeading}
+              </span>
+
+              <ChevronRight
+                aria-hidden="true"
+                strokeWidth={1.75}
                 className={cn(
-                  'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 rounded-lg border-0 bg-transparent px-4 py-[14px] text-left',
-                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                  'size-4 shrink-0 text-text-tertiary transition-transform duration-160 ease-out',
+                  hypothesesOpen && 'rotate-90',
                 )}
-              >
-                <span className="block type-headline text-text-primary md:truncate">
-                  {possibleCausesHeading}
-                </span>
+              />
+            </button>
 
-                <ChevronRight
-                  aria-hidden="true"
-                  strokeWidth={1.75}
-                  className={cn(
-                    'size-4 shrink-0 text-text-tertiary transition-transform duration-160 ease-out',
-                    hypothesesOpen && 'rotate-90',
-                  )}
-                />
-              </button>
-
-              <div
-                id={hypothesesPanelId}
-                role="region"
-                aria-label={possibleCausesHeading}
-                hidden={!hypothesesOpen}
-                className={
-                  hypothesesOpen
-                    ? '-mt-0.5 flex flex-col gap-3 px-4 pb-4'
-                    : 'hidden'
-                }
-              >
-                {hypothesesOpen
-                  ? hypotheses.map((item) => (
-                      <div key={item.id} data-testid="hypothesis-item">
-                        <p className="type-row-title text-text-primary">
-                          {item.headline}
-                        </p>
-                        <p className="mt-0.5 type-callout text-text-secondary">
-                          {item.checkText}
-                        </p>
-                      </div>
-                    ))
-                  : null}
-              </div>
+            <div
+              id={hypothesesPanelId}
+              role="region"
+              aria-label={possibleCausesHeading}
+              hidden={!hypothesesOpen}
+              className={
+                hypothesesOpen
+                  ? '-mt-0.5 flex flex-col gap-3 px-4 pb-4'
+                  : 'hidden'
+              }
+            >
+              {hypothesesOpen
+                ? hypotheses.map((item) => (
+                    <div key={item.id} data-testid="hypothesis-item">
+                      <p className="type-row-title text-text-primary">
+                        {item.headline}
+                      </p>
+                      <p className="mt-0.5 type-callout text-text-secondary">
+                        {item.checkText}
+                      </p>
+                    </div>
+                  ))
+                : null}
             </div>
-          </motion.li>
-        ) : null}
-      </ul>
+          </div>
+        </motion.div>
+      ) : null}
     </div>
   );
 }

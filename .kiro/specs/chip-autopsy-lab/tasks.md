@@ -255,7 +255,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P11. Landing
   - Hero, buttons, hint, sample cards with 152 px discs, footer, at 1440, 1280, 1024, sm, and 390 (premium §6.1).
   - Accept: A14, A20 (landing).
-- [ ] P12. Loaded view, desktop
+- [x] P12. Loaded view, desktop
   - Sticky stage column, verdict column blocks 1–9 with the §6.2 spacing at 1440 and 1280 (premium §6.2).
   - Accept: A15, A16, A19.
 - [ ] P13. Loaded view, tablet and mobile

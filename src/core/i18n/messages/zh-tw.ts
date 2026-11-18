@@ -37,6 +37,7 @@ export const zhTW = {
   'landing.privacy': '全程在瀏覽器中執行。',
   'landing.downloadDemos': '下載範例檔案',
   'landing.cardMeta': '{wafers} 片晶圓，{dies} 顆晶粒',
+  'report.footer': '全程在瀏覽器中執行。STDF 原始資料不會離開此裝置。',
   'demo.edgeRing.description': '蝕刻損傷使晶圓邊緣一圈的晶粒失效。',
   'demo.scratch.description': '機械手臂在 18 片晶圓上劃出一道刮痕。',
   'demo.site2.description': '一根磨損的測試探針讓良品晶粒判為失效。',

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () => {
-  test('renders >= 530 px boxless wafer at 1440x900, cursor wheel zoom, flick coast, dblclick reset, 0 React renders during drag, and arrow-key die stepping', async ({
+  test('renders a 596 px boxless wafer at 1440x900, cursor wheel zoom, flick coast, dblclick reset, 0 React renders during drag, and arrow-key die stepping', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -11,7 +11,7 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
     const stage = page.getByTestId('wafer-stage');
     await expect(stage).toBeVisible({ timeout: 3_000 });
 
-    // 1. Layout & boxless wafer diameter check at 1440x900 (>= 560 px, no page scroll, stage left of verdict)
+    // 1. Layout & boxless wafer diameter check at 1440x900 (596 px, page-scrolling verdict column, stage left of verdict)
     const desktopMetrics = await page.evaluate(() => {
       const stageEl = document.querySelector<HTMLElement>(
         '[data-testid="wafer-stage"]',
@@ -45,12 +45,13 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
       };
     });
 
-    // Premium P10 moved the header and control row out of the stage (§5.5, §5.6); P12 sizes D to 596 (§6.2, A15)
-    expect(desktopMetrics.waferDiameter).toBeGreaterThanOrEqual(530);
+    // Premium §6.2 sizes D to 596 at 1440 x 900 (A15)
+    expect(desktopMetrics.waferDiameter).toBeGreaterThanOrEqual(594);
     expect(desktopMetrics.stageLeft).toBeLessThan(desktopMetrics.verdictLeft);
     expect(desktopMetrics.verdictWidth).toBe(553);
     expect(desktopMetrics.stageBorders).toEqual(['0px', '0px', '0px', '0px']);
-    expect(desktopMetrics.docScrollOverflow).toBeLessThanOrEqual(1);
+    // Premium §6.2: the verdict column scrolls with the page while the stage column is sticky
+    expect(desktopMetrics.docScrollOverflow).toBeGreaterThan(0);
 
     // 2. Wheel zoom anchored at cursor + control-row zoom value updates without React re-render
     const stageBox = (await stage.boundingBox())!;

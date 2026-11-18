@@ -54,7 +54,7 @@ export interface AutopsyReportCardProps {
   /**
    * When true (inside `LoadedLotOverview`), splits mobile (`< 1280px`) visual order via
    * `max-xl:contents` so the Wafer Stage + Strip sit between `StatRow` and `FindingsList`
-   * on mobile (`redesign.md` §3.4) while staying a single scrollable `553 px` column on desktop.
+   * on mobile (`redesign.md` §3.4) while staying one page-scrolling column on desktop (premium §6.2).
    */
   readonly splitForMobileStage?: boolean;
   /** Optional quiet block rendered below the Findings list (the Bin Pareto, Requirement 6). */
@@ -501,7 +501,8 @@ export function AutopsyReportCard({
       data-testid="autopsy-report-card"
       data-verdict-scroll="true"
       className={cn(
-        'flex w-full flex-col xl:pt-14',
+        // Premium §6.2: column padding-top 72 at 1280, 84 at 1440 (verdict cap height meets the disc top)
+        'flex w-full flex-col xl:pt-[72px] min-[90rem]:pt-[84px]',
         splitForMobileStage && 'max-xl:contents',
         className,
       )}
@@ -532,7 +533,7 @@ export function AutopsyReportCard({
 
         <motion.div
           {...buildRiseMotionProps('confidence')}
-          className="mt-3 md:mt-5"
+          className="mt-3 md:mt-5 xl:mt-6"
         >
           <ConfidencePill
             confidence={rendered.confidence}
@@ -578,7 +579,7 @@ export function AutopsyReportCard({
         <div
           data-testid="verdict-below-findings"
           className={cn(
-            'mt-10 pb-6 md:mt-12',
+            'mt-10 pb-6 md:mt-12 xl:mt-24 xl:pb-16',
             splitForMobileStage && 'order-4 xl:order-none',
           )}
         >
