@@ -1,0 +1,245 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Read P21 task text and progress log
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=41
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Locate premium sections and acceptance items
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read premium §7.9-7.10, §6.2, §9.5
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read skill and list charts files
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=44
+[tool] status: Completed
+[tool] Read view helpers, tests, i18n
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=73
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Find i18n dictionaries for yield keys
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=35
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Show yield keys in all locales
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=49
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check facts, icons, primitives, e2e
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=164
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Inspect site-anomaly fact and A19 test
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Inspect formatters and metric type
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=100
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read formatter definitions and metric helpers
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Look for existing separator patterns
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=146
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read finding separator CSS and usage
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check Term component and panel usage
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=76
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read panel placement and view test header
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Add takeaway resolver; read view tests
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=337
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Add view tests and run them
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=283
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Find usages of keys to rename
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=118
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check other consumers of yield keys
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now update all 5 dictionaries.
+[tool] Update yield keys in all 5 locales
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=619
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Compare locale sentence tone
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=42
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Match the ja polite form.
+[tool] Use polite form in Japanese takeaways
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check weight utility and Button props
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=193
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Rewrite YieldSummaryPanel per premium §7.10
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1950
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Fix takeaway label and import order
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=157
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Replace in File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=192
+[tool] status: Pending
+[tool] status: Completed
+[tool] Update panel unit tests and run
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=374
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Bump key count and rerun tests
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Update task11 e2e; read pareto-p20 spec
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=79
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=925
+[tool] status: Pending
+[tool] status: Completed
+[tool] Fix narrow test; check Playwright server config
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=132
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Needs a fresh build. Run typecheck and lint first, then build.
+[tool] Run typecheck and lint
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=28
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Build production bundle for e2e
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run the P21 and task 11 e2e specs
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=32
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Screenshot panel for visual check
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=168
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=13
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run unit suite and related e2e specs
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=80
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run full unit test suite
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run related e2e specs
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Find other tests touching the panel
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=61
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Those are core module matches (file name `yield-summary`), all in the passing unit suite. Now tick the task and log.
+[tool] Tick P21 and append progress log
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=354
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Confirm workspace changes
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=18
+[tool] status: Completed
+I've restyled the yield summary panel to match premium §7.10, and P21 is ticked in `tasks.md`. The site-scoping and wafer-scoping behaviour is unchanged. Typecheck and lint are clean and `pnpm test` passes 305/305. After a fresh build, these e2e specs pass:
+- `yield-summary-p21` (new): A33 in light and dark, plus the narrow-viewport column rule.
+- `yield-summary-task11`: updated for the new copy.
+- `loaded-desktop-p12` (A19), `loaded-responsive-p13`, `pareto-p20` and `typography-p4`.
+
+No snapshots changed.
+
+**What the panel looks like now** (`src/ui/charts/YieldSummaryPanel.tsx`):
+- It is a section card like "Where the yield went", titled "Yield by test site and wafer".
+- A one-sentence takeaway sits under the title. On `site2-probe-contact` it reads "Site 1:2 yields 59.4%, 37.6 points below the other sites." That sentence uses the engine's site-anomaly numbers. Otherwise it shows how much retests recovered: "Retests recovered 1.3 points of yield." on `edge-ring-etch`.
+- Three lot numbers follow: "final yield", "on the first test" and "retests".
+- "Test sites" and "Wafers" are tables with Site/Wafer, First test, Final and Retests columns. Rows are 44 px toggle buttons with the hover, pressed and selected fills from the spec, and a selected row shows its final value at weight 590. Thin inset dividers separate the rows and disappear next to a hovered, pressed or selected row; that CSS is in `globals.css`.
+- The flagged site shows a small warning icon and "Lowest yield" in grey, with no orange or red.
+- Missing yields show an en dash. Below 400 px wide the Retests column hides.
+- The wafer list still shows the 5 lowest-yield wafers, with a "Show all 25 wafers" text button.
+
+**Copy:** the yield keys now follow §9.5 in all 5 locales. "First pass" became "First test", and the dictionaries grew from 236 to 242 keys, with the parity test updated to match. A new `resolveYieldTakeaway` helper in `yield-summary-view.ts` picks the takeaway sentence and has its own unit tests.
+
+**Decisions where premium.md is silent** (recorded in `logs/progress.md`):
+- The takeaway calls the site "Site 1:2", the same label the rows use, rather than the spec example's "Site 2".
+- Points show one decimal place.
+- A lot with no retests and no flagged site shows no takeaway sentence.
+- The icon sits 4 px from its text, and the toggle sits 16 px below the rows, as in the Pareto card.
+
+The glossary pop-ups on "on the first test" and "retests" aren't wired yet, because that component arrives in P24.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=180
+

@@ -36,7 +36,7 @@ test.describe('Task 11 - yield summary and site scoping', () => {
     const anomalyRow = page.locator('[data-testid="yield-site-row"][data-anomaly="true"]');
     await expect(anomalyRow).toHaveCount(1);
     await expect(anomalyRow).toHaveAttribute('data-site-label', '1:2');
-    await expect(anomalyRow).toContainText('Lower than the other sites');
+    await expect(anomalyRow).toContainText('Lowest yield');
 
     const overlay = page.getByTestId('wafer-overlay-wrapper');
     const paretoRows = page.getByTestId('bin-pareto-rows');

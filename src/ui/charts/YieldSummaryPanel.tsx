@@ -1,5 +1,6 @@
 'use client';
 
+import { TriangleAlert } from 'lucide-react';
 import * as React from 'react';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
@@ -8,11 +9,13 @@ import type { YieldMetrics, YieldSummary } from '@/core/analytics';
 import type { LotModel } from '@/core/model';
 import type { EngineFact } from '@/core/report';
 import { Untranslated, useT } from '@/ui/i18n';
+import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/primitives/cn';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
   isWaferTableCollapsible,
   resolveAnomalousSiteIndices,
+  resolveYieldTakeaway,
   selectWaferRowIndices,
 } from './yield-summary-view';
 
@@ -28,20 +31,27 @@ export interface YieldSummaryPanelProps {
 
 const NO_VALUE = '\u2013';
 
-/** Name column, then First pass, Final, and Retests. Shared by header and rows so they align. */
+/**
+ * Name column, then First test, Final, and Retests (premium §7.10). Shared by header and rows so
+ * they align. Viewports narrower than 400 px drop the Retests column.
+ */
 const ROW_GRID =
-  'grid grid-cols-[minmax(0,1fr)_4.25rem_4.25rem_3.5rem] items-baseline gap-x-3';
+  'grid grid-cols-[minmax(0,1fr)_72px_72px_56px] items-center gap-3 max-[400px]:grid-cols-[minmax(0,1fr)_72px_72px]';
+const RETESTS_CELL = 'max-[400px]:hidden';
 
 /**
- * Quiet yield summary (`src/ui/charts/YieldSummaryPanel.tsx`, Requirement 7.3 to 7.5), below
- * "Yield loss by bin" in the verdict column.
+ * "Yield by test site and wafer" (premium §7.10), below "Where the yield went" in the verdict
+ * column.
  *
- * - Lot: first-pass yield, final yield, and retest count as three numbers.
- * - Test sites and wafers: borderless rows with first-pass yield, final yield, and retests.
- *   A row is a toggle that scopes the selection store to the dies on that site or wafer, so the
- *   wafer map, Pareto, and selection stats follow. A wafer click also shows that wafer.
- * - The wafer table collapses to the lowest-yield wafers, with a disclosure for the rest.
- * - A site the engine flagged as an anomaly says so in words, never by colour alone.
+ * - `surface` section card (`r-2xl`, `shadow-card`, padding 24, 16 on mobile): `title-2` title, a
+ *   one-sentence takeaway (the flagged site's drop, or the points retests recovered), then the lot
+ *   final yield, first-test yield, and retest count as three `stat-s` numbers.
+ * - "Test sites" and "Wafers" tables: 44 px rows with first-test yield, final yield, and retests,
+ *   split by inset hairlines. A row is a toggle that scopes the selection store to the dies on
+ *   that site or wafer, so the wafer map, Pareto, and selection stats follow. A wafer click also
+ *   shows that wafer.
+ * - The wafer table collapses to the 5 lowest-yield wafers, with a disclosure for the rest.
+ * - A site the engine flagged says "Lowest yield" in words, in grey, never by colour alone.
  */
 export function YieldSummaryPanel({
   lot,
@@ -50,7 +60,7 @@ export function YieldSummaryPanel({
   store = useSelectionStore,
   className,
 }: YieldSummaryPanelProps): React.JSX.Element {
-  const { t, formatInteger, formatPercent } = useT();
+  const { locale, t, formatInteger, formatPercent } = useT();
   const headingId = React.useId();
   const wafersListId = React.useId();
 
@@ -74,13 +84,25 @@ export function YieldSummaryPanel({
     () => resolveAnomalousSiteIndices(lot, facts),
     [lot, facts],
   );
+  const takeaway = React.useMemo(
+    () => resolveYieldTakeaway(lot, overall, facts),
+    [lot, overall, facts],
+  );
 
   const waferRowIndices = React.useMemo(
     () => selectWaferRowIndices(byWafer, expanded, (i) => i === activeWafer),
     [byWafer, expanded, activeWafer],
   );
   const collapsible = isWaferTableCollapsible(byWafer.length);
-  const showingLowest = collapsible && !expanded;
+
+  const pointsFormat = React.useMemo(
+    () =>
+      new Intl.NumberFormat(locale, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }),
+    [locale],
+  );
 
   const formatYield = React.useCallback(
     (ratio: number | null): string =>
@@ -101,23 +123,60 @@ export function YieldSummaryPanel({
     [store],
   );
 
-  const columnHeaders = (
-    <>
+  const takeawayText =
+    takeaway === null
+      ? null
+      : takeaway.kind === 'site'
+        ? t('yield.takeaway.site', {
+            site: takeaway.siteLabel,
+            yield: formatPercent(takeaway.yieldRatio),
+            points: pointsFormat.format(takeaway.points),
+          })
+        : t('yield.takeaway.retests', {
+            points: pointsFormat.format(takeaway.points),
+          });
+
+  const columnHeader = (nameLabel: string): React.ReactNode => (
+    <div
+      aria-hidden="true"
+      className={cn(ROW_GRID, 'mt-2 type-subhead text-text-tertiary')}
+    >
+      <span className="min-w-0 truncate">{nameLabel}</span>
       <span className="text-right">{t('yield.col.firstPass')}</span>
       <span className="text-right">{t('yield.col.final')}</span>
-      <span className="text-right">{t('yield.col.retests')}</span>
-    </>
+      <span className={cn('text-right', RETESTS_CELL)}>
+        {t('yield.col.retests')}
+      </span>
+    </div>
   );
 
-  const renderValues = (m: YieldMetrics): React.ReactNode => (
+  const renderYield = (
+    ratio: number | null,
+    tone: string,
+  ): React.ReactNode =>
+    ratio === null ? (
+      <span className="text-right type-callout text-text-tertiary">
+        {NO_VALUE}
+      </span>
+    ) : (
+      <span className={cn('text-right type-callout tabular-nums', tone)}>
+        {formatPercent(ratio)}
+      </span>
+    );
+
+  const renderValues = (m: YieldMetrics, pressed: boolean): React.ReactNode => (
     <>
-      <span className="text-right type-callout tabular-nums text-text-secondary">
-        {formatYield(m.firstPassYield)}
-      </span>
-      <span className="text-right type-callout tabular-nums text-text-primary">
-        {formatYield(m.finalYield)}
-      </span>
-      <span className="text-right type-callout tabular-nums text-text-secondary">
+      {renderYield(m.firstPassYield, 'text-text-secondary')}
+      {renderYield(
+        m.finalYield,
+        cn('text-text-primary', pressed && 'font-[590]'),
+      )}
+      <span
+        className={cn(
+          'text-right type-callout tabular-nums text-text-secondary',
+          RETESTS_CELL,
+        )}
+      >
         {formatInteger(m.retestExecutions)}
       </span>
     </>
@@ -126,50 +185,72 @@ export function YieldSummaryPanel({
   const rowClass = (pressed: boolean): string =>
     cn(
       ROW_GRID,
-      'w-full cursor-pointer appearance-none rounded-lg border-0 px-4 py-2.5 text-left transition-[background-color] duration-120 ease-out',
-      'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-      pressed ? 'bg-surface-2' : 'bg-transparent hover:bg-surface-1',
+      'h-11 w-full origin-center cursor-pointer appearance-none rounded-md border-0 px-3 text-left',
+      'transition-[background-color,scale] duration-120 ease-out active:scale-[0.985] active:bg-fill-2 motion-reduce:active:scale-100',
+      'focus-visible:shadow-focus-ring focus-visible:outline-none',
+      pressed ? 'bg-fill-2' : 'bg-transparent hover:bg-fill-1',
     );
+
+  const separator = (
+    <div
+      aria-hidden="true"
+      className="yield-row-separator mx-3 h-px bg-hairline transition-opacity duration-120 ease-out"
+    />
+  );
 
   return (
     <section
       aria-labelledby={headingId}
       data-testid="yield-summary"
-      className={className}
+      className={cn('rounded-2xl bg-surface p-4 shadow-card sm:p-6', className)}
     >
-      <h2 id={headingId} className="type-headline text-text-primary">
-        {t('yield.heading')}
+      <h2
+        id={headingId}
+        className="type-title-2 text-balance text-text-primary"
+      >
+        {t('yield.title')}
       </h2>
+
+      {takeawayText !== null ? (
+        <p
+          data-testid="yield-takeaway"
+          className="mt-2 line-clamp-2 max-w-[520px] type-body text-pretty text-text-secondary"
+        >
+          {takeawayText}
+        </p>
+      ) : null}
 
       <dl
         data-testid="yield-lot-stats"
-        className="mt-4 grid grid-cols-3 gap-3 px-4 md:gap-6"
+        className="mt-6 grid grid-cols-3 gap-6"
       >
         {[
           {
             id: 'final',
-            label: t('yield.col.final'),
+            label: t('yield.lot.final'),
             value: formatYield(overall.finalYield),
           },
           {
             id: 'first-pass',
-            label: t('yield.col.firstPass'),
+            label: t('yield.lot.firstPass'),
             value: formatYield(overall.firstPassYield),
           },
           {
             id: 'retests',
-            label: t('yield.col.retests'),
+            label: t('yield.lot.retests'),
             value: formatInteger(overall.retestExecutions),
           },
         ].map((stat) => (
           <div
             key={stat.id}
-            className="flex min-w-0 flex-col-reverse justify-end gap-1"
+            className="flex min-w-0 flex-col-reverse justify-end gap-1.5"
           >
-            <dt className="type-subhead text-text-secondary">{stat.label}</dt>
+            <dt className="type-subhead text-pretty text-text-secondary">
+              {stat.label}
+            </dt>
             <dd
               data-testid={`yield-lot-${stat.id}`}
-              className="type-title-3 text-text-primary tabular-nums"
+              className="type-stat-s text-text-primary tabular-nums"
             >
               {stat.value}
             </dd>
@@ -178,19 +259,12 @@ export function YieldSummaryPanel({
       </dl>
 
       {bySite.length >= 2 ? (
-        <div data-testid="yield-sites" className="mt-6">
-          <div
-            className={cn(
-              ROW_GRID,
-              'px-4 pb-1 type-subhead text-text-tertiary',
-            )}
-          >
-            <h3 className="min-w-0 truncate font-[inherit]">
-              {t('yield.sites')}
-            </h3>
-            {columnHeaders}
-          </div>
-          <ul className="flex flex-col">
+        <div data-testid="yield-sites" className="mt-8">
+          <h3 className="type-headline text-text-primary">
+            {t('yield.sites')}
+          </h3>
+          {columnHeader(t('yield.col.site'))}
+          <ul className="-mx-3 flex flex-col">
             {bySite.map((metrics, index) => {
               const site = lot.sites[index];
               if (site === undefined) {
@@ -201,7 +275,12 @@ export function YieldSummaryPanel({
               const noteId = `${headingId}-site-${index}-note`;
               const siteName = t('yield.siteLabel', { site: site.label });
               return (
-                <li key={site.siteIndex} className="list-none">
+                <li
+                  key={site.siteIndex}
+                  data-active={pressed ? 'true' : undefined}
+                  className="yield-list-item list-none"
+                >
+                  {index > 0 ? separator : null}
                   <button
                     type="button"
                     data-testid="yield-site-row"
@@ -218,21 +297,27 @@ export function YieldSummaryPanel({
                     onClick={() => handleSite(index)}
                     className={rowClass(pressed)}
                   >
-                    <span className="min-w-0">
-                      <span className="block truncate type-callout text-text-primary">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 truncate type-callout text-text-primary">
                         {siteName}
                       </span>
                       {isAnomaly ? (
                         <span
                           id={noteId}
                           data-testid="yield-site-anomaly"
-                          className="block type-subhead text-text-secondary"
+                          className="inline-flex min-w-0 shrink items-center gap-1 type-subhead text-text-secondary"
                         >
-                          {t('yield.siteLow')}
+                          <TriangleAlert
+                            aria-hidden="true"
+                            size={14}
+                            strokeWidth={1.75}
+                            className="shrink-0"
+                          />
+                          <span className="truncate">{t('yield.lowest')}</span>
                         </span>
                       ) : null}
                     </span>
-                    {renderValues(metrics)}
+                    {renderValues(metrics, pressed)}
                   </button>
                 </li>
               );
@@ -241,20 +326,13 @@ export function YieldSummaryPanel({
         </div>
       ) : null}
 
-      <div data-testid="yield-wafers" className="mt-6">
-        <div
-          className={cn(
-            ROW_GRID,
-            'px-4 pb-1 type-subhead text-text-tertiary',
-          )}
-        >
-          <h3 className="min-w-0 truncate font-[inherit]">
-            {showingLowest ? t('yield.wafersLowest') : t('yield.wafers')}
-          </h3>
-          {columnHeaders}
-        </div>
-        <ul id={wafersListId} className="flex flex-col">
-          {waferRowIndices.map((index) => {
+      <div data-testid="yield-wafers" className="mt-8">
+        <h3 className="type-headline text-text-primary">
+          {t('yield.wafers')}
+        </h3>
+        {columnHeader(t('yield.col.wafer'))}
+        <ul id={wafersListId} className="-mx-3 flex flex-col">
+          {waferRowIndices.map((index, position) => {
             const wafer = lot.wafers[index];
             const metrics = byWafer[index];
             if (wafer === undefined || metrics === undefined) {
@@ -262,7 +340,12 @@ export function YieldSummaryPanel({
             }
             const pressed = activeWafer === index;
             return (
-              <li key={wafer.waferIndex} className="list-none">
+              <li
+                key={wafer.waferIndex}
+                data-active={pressed ? 'true' : undefined}
+                className="yield-list-item list-none"
+              >
+                {position > 0 ? separator : null}
                 <button
                   type="button"
                   data-testid="yield-wafer-row"
@@ -279,27 +362,27 @@ export function YieldSummaryPanel({
                   <span className="min-w-0 truncate type-callout text-text-primary">
                     <Untranslated className="font-mono-id">{wafer.waferId}</Untranslated>
                   </span>
-                  {renderValues(metrics)}
+                  {renderValues(metrics, pressed)}
                 </button>
               </li>
             );
           })}
         </ul>
         {collapsible ? (
-          <button
-            type="button"
+          <Button
+            variant="text"
             data-testid="yield-wafers-toggle"
             aria-expanded={expanded}
             aria-controls={wafersListId}
             onClick={() => setExpanded((v) => !v)}
-            className="mt-1 cursor-pointer rounded-lg px-4 py-2 type-control text-text-secondary transition-colors duration-120 ease-out hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="mt-4"
           >
             {expanded
               ? t('yield.showFewer')
-              : t('yield.showAllWafers', {
+              : t('yield.showAll', {
                   count: formatInteger(byWafer.length),
                 })}
-          </button>
+          </Button>
         ) : null}
       </div>
     </section>

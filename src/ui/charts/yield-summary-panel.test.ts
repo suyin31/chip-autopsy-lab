@@ -63,7 +63,9 @@ describe('YieldSummaryPanel', () => {
       res.lot.sites.length,
     );
     expect(count(html, 'data-testid="yield-wafer-row"')).toBe(5);
-    expect(html).toContain('Lowest yield wafers');
+    expect(html).toContain('Yield by test site and wafer');
+    expect(html).toContain('final yield');
+    expect(html).toContain('on the first test');
     expect(html).toContain('Show all 25 wafers');
     expect(html).toContain('aria-expanded="false"');
   });
@@ -75,13 +77,20 @@ describe('YieldSummaryPanel', () => {
     const html = render(res, store);
     expect(count(html, 'data-anomaly="true"')).toBe(1);
     expect(count(html, 'data-testid="yield-site-anomaly"')).toBe(1);
-    expect(html).toContain('Lower than the other sites');
+    expect(html).toContain('Lowest yield');
     expect(html).toMatch(/data-site-label="1:2"[^>]*data-anomaly="true"/);
+    // The anomaly and the takeaway are grey words: no ember or red anywhere in the panel
+    expect(html).not.toMatch(/ember|danger|red-/);
+    expect(html).toMatch(
+      /data-testid="yield-takeaway"[^>]*>Site 1:2 yields \d+\.\d%, \d+\.\d points below the other sites\.</,
+    );
 
     const clean = await load('edge-ring-etch');
     const cleanStore = createClientTestStore();
     cleanStore.getState().setLot(clean.lot);
-    expect(render(clean, cleanStore)).not.toContain('data-anomaly');
+    const cleanHtml = render(clean, cleanStore);
+    expect(cleanHtml).not.toContain('data-anomaly');
+    expect(cleanHtml).not.toContain('points below');
   });
 
   it('reflects the site and wafer scope as pressed rows and keeps a scoped wafer visible', async () => {
@@ -94,6 +103,9 @@ describe('YieldSummaryPanel', () => {
     expect(html).toMatch(/data-site-index="1"[^>]*aria-pressed="true"/);
     expect(html).toMatch(/data-site-index="0"[^>]*aria-pressed="false"/);
     expect(html).toMatch(/data-wafer-index="22"[^>]*aria-pressed="true"/);
+    // Selected rows sit on fill-2 with a 590 final value and no separator next to them
+    expect(html).toMatch(/<li data-active="true" class="yield-list-item[^"]*"><div aria-hidden="true" class="yield-row-separator/);
+    expect(html).toContain('font-[590]');
     expect(count(html, 'data-testid="yield-wafer-row"')).toBeGreaterThanOrEqual(5);
   });
 
@@ -110,10 +122,11 @@ describe('YieldSummaryPanel', () => {
       if (locale !== 'en') {
         for (const english of [
           'Test sites',
-          'Lowest yield wafers',
-          'First pass',
+          'Yield by test site and wafer',
+          'First test',
           'Retests',
-          'Lower than the other sites',
+          'Lowest yield',
+          'points below',
           'Show all',
         ]) {
           expect(html, `${locale} leaks "${english}"`).not.toContain(english);

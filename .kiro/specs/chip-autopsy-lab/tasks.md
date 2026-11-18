@@ -285,7 +285,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P20. "Where the yield went"
   - Section card, takeaway, bar rows with `bar-neutral`, selected state linked to the store, show-all, empty state (premium §7.9).
   - Accept: A32, A43 (also apply premium §11.3).
-- [ ] P21. Yield summary panel
+- [x] P21. Yield summary panel
   - Restyle `src/ui/charts/YieldSummaryPanel.tsx`: section card, takeaway, lot numbers, site and wafer rows, anomaly label, narrow-viewport column rule; keep current store behaviour and tests (premium §7.10).
   - Accept: A33, A19.
 - [ ] P22. Toasts, selection popover, sheets

@@ -68,3 +68,65 @@ export function resolveAnomalousSiteIndices(
   }
   return out;
 }
+
+/** The panel's one-sentence takeaway (premium §7.10 step 2). */
+export type YieldTakeaway =
+  | {
+      readonly kind: 'site';
+      /** `LotModel.sites[].label`, e.g. `"1:2"`. */
+      readonly siteLabel: string;
+      /** Engine first-pass yield of the flagged site, as a ratio. */
+      readonly yieldRatio: number;
+      /** Engine first-pass yield drop against the other sites, in percentage points. */
+      readonly points: number;
+    }
+  | {
+      readonly kind: 'retests';
+      /** Final minus first-pass lot yield, in percentage points. */
+      readonly points: number;
+    };
+
+/**
+ * A lot with a flagged site states the site's yield and its drop from the engine's first
+ * `site-anomaly` fact. Otherwise the takeaway states how many points retests recovered. Lots
+ * without retests or without both yields have no takeaway.
+ */
+export function resolveYieldTakeaway(
+  lot: LotModel,
+  overall: YieldMetrics,
+  facts: readonly EngineFact[] | undefined,
+): YieldTakeaway | null {
+  const anomaly = facts?.find(
+    (f) => f.kind === 'site-anomaly' && f.siteRef !== undefined,
+  );
+  if (anomaly?.siteRef !== undefined) {
+    const { headNum, siteNum } = anomaly.siteRef;
+    const site = lot.sites.find(
+      (s) => s.headNum === headNum && s.siteNum === siteNum,
+    );
+    const yieldPct = anomaly.metrics.find(
+      (m) => m.key === 'firstPassYieldPct',
+    )?.numericValue;
+    const drop = anomaly.metrics.find((m) => m.key === 'yieldDropPp')
+      ?.numericValue;
+    if (site !== undefined && yieldPct !== undefined && drop !== undefined) {
+      return {
+        kind: 'site',
+        siteLabel: site.label,
+        yieldRatio: yieldPct / 100,
+        points: drop,
+      };
+    }
+  }
+  if (
+    overall.retestExecutions > 0 &&
+    overall.finalYield !== null &&
+    overall.firstPassYield !== null
+  ) {
+    return {
+      kind: 'retests',
+      points: Math.max(0, (overall.finalYield - overall.firstPassYield) * 100),
+    };
+  }
+  return null;
+}

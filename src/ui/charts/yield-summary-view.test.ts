@@ -9,6 +9,7 @@ import { parseStdfBytes } from '@/core/stdf/stdf-parser';
 import {
   isWaferTableCollapsible,
   resolveAnomalousSiteIndices,
+  resolveYieldTakeaway,
   selectWaferRowIndices,
   YIELD_COLLAPSED_WAFER_COUNT,
 } from './yield-summary-view';
@@ -89,5 +90,40 @@ describe('resolveAnomalousSiteIndices', () => {
     const lot = loadLot('edge-ring-etch');
     expect(resolveAnomalousSiteIndices(lot, buildEngineFacts(lot)).size).toBe(0);
     expect(resolveAnomalousSiteIndices(lot, undefined).size).toBe(0);
+  });
+});
+
+describe('resolveYieldTakeaway', () => {
+  it('states the flagged site yield and drop from the site-anomaly fact', () => {
+    const lot = loadLot('site2-probe-contact');
+    const facts = buildEngineFacts(lot);
+    const takeaway = resolveYieldTakeaway(lot, computeYieldSummary(lot).overall, facts);
+    expect(takeaway?.kind).toBe('site');
+    if (takeaway?.kind !== 'site') return;
+    expect(takeaway.siteLabel).toBe('1:2');
+    const fact = facts.find((f) => f.kind === 'site-anomaly')!;
+    const metric = (key: string) => fact.metrics.find((m) => m.key === key)!.numericValue;
+    expect(takeaway.yieldRatio * 100).toBeCloseTo(metric('firstPassYieldPct'), 9);
+    expect(takeaway.points).toBe(metric('yieldDropPp'));
+    expect(takeaway.points).toBeGreaterThan(0);
+  });
+
+  it('states the points retests recovered when no site is flagged', () => {
+    const lot = loadLot('edge-ring-etch');
+    const { overall } = computeYieldSummary(lot);
+    const takeaway = resolveYieldTakeaway(lot, overall, buildEngineFacts(lot));
+    if (overall.retestExecutions === 0) {
+      expect(takeaway).toBeNull();
+      return;
+    }
+    expect(takeaway).toEqual({
+      kind: 'retests',
+      points: Math.max(0, (overall.finalYield! - overall.firstPassYield!) * 100),
+    });
+  });
+
+  it('has no takeaway for a lot without retests or a flagged site', () => {
+    const lot = loadLot('edge-ring-etch');
+    expect(resolveYieldTakeaway(lot, metrics(0.9), undefined)).toBeNull();
   });
 });

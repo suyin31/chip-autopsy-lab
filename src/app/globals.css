@@ -861,6 +861,21 @@
       opacity: 0;
     }
   }
+
+  /* Yield summary rows: the inset hairline hides next to a hovered, pressed, or selected row (premium §7.10) */
+  .yield-list-item[data-active="true"] > .yield-row-separator,
+  .yield-list-item[data-active="true"] + .yield-list-item > .yield-row-separator,
+  .yield-list-item:has(> button:active) > .yield-row-separator,
+  .yield-list-item:has(> button:active) + .yield-list-item > .yield-row-separator {
+    opacity: 0;
+  }
+
+  @media (hover: hover) {
+    .yield-list-item:hover > .yield-row-separator,
+    .yield-list-item:hover + .yield-list-item > .yield-row-separator {
+      opacity: 0;
+    }
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
