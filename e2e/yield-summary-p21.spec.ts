@@ -63,10 +63,12 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(card.padding).toBe('24px');
       if (scheme === 'light') expect(card.shadow).not.toBe('none');
 
-      // 3 lot numbers with captions, not buttons
+      // 3 lot numbers with captions, not buttons (only glossary Terms in the captions, P24)
       const stats = page.getByTestId('yield-lot-stats');
       await expect(stats.locator('dd')).toHaveCount(3);
-      await expect(stats.locator('button')).toHaveCount(0);
+      await expect(stats.locator('button:not(.term)')).toHaveCount(0);
+      await expect(stats.locator('dt [data-term-id="firstTest"]')).toHaveText('first test');
+      await expect(stats.locator('dt [data-term-id="retest"]')).toHaveText('retests');
       await expect(stats).toContainText('final yield');
       await expect(stats).toContainText('on the first test');
       await expect(stats).toContainText('retests');

@@ -294,7 +294,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P23. Magnifier
   - Inter readout with 4 rows, status first, loupe radius and rim, touch pinned readout (premium §7.15, §5.9).
   - Accept: A10.
-- [ ] P24. Term and glossary
+- [x] P24. Term and glossary
   - `Term` component and popover, all `glossary.*` keys in 5 locales, Terms placed per §2.2 (premium §2.3, §7.17, §9.5).
   - Accept: A21, A22.
 - [ ] P25. Coach marks

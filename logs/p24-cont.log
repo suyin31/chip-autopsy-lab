@@ -1,0 +1,161 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=33
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=31
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=33
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the spec sections.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=32
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=31
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=20
+[tool] status: Completed
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=59
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=92
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=58
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=24
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=44
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=44
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=31
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Intended DOM change: the captions now hold `Term` buttons. Updating the assertion to exclude them.
+[tool] Replace in File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=123
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the remaining relevant specs (stage, responsive, magnifier, landing with lot tooltip, typography, vertical slice).
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=54
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=65
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Everything is in place. Ticking the task and logging.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=300
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=37
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+P24 (Term and glossary) is finished and ticked in `tasks.md`. The previous session had already committed almost all of it, so the only fix this session was one e2e test. Typecheck and lint are clean, and `pnpm test` passes 322/322 across 53 files.
+
+**What was already there (from `git diff HEAD~1`):**
+- **`Term` component** (`src/ui/primitives/term.tsx`): a word with a dotted underline that opens a definition popover. It waits 300 ms on hover (600 ms inside a control) and opens at once on keyboard focus. A tap toggles it, and Esc closes it.
+- **`GlossaryText`:** places at most 2 terms per sentence and never puts one on a bin code or test name.
+- **Glossary keys:** all `glossary.*` keys exist in all 5 locales, 274 keys each.
+- **Placement per §2.2:** the terms sit on Hard bins and Soft bins, confidence, yield in the takeaway, die and first test in the stat captions, and Cpk in expanded findings. They also sit on Bin in the Pareto chart label and on Test site, First test and Retests in the yield panel. The lot picker tooltip shows the Lot definition.
+
+**What I fixed:** `e2e/yield-summary-p21.spec.ts` asserted that the lot stat captions contain no buttons. That broke because the captions now hold Term buttons. The assertion now ignores Term buttons and checks the "first test" and "retests" terms directly.
+
+**E2E, after a fresh build:**
+- `glossary-p24` (A21 and A22) passes in light and dark.
+- The A22 hover check failed once while two test workers ran in parallel. It requires the popover within 300–400 ms, a tight window under load. Run alone it passed 4 of 4 times.
+- The 17 other related specs pass. These include the verdict, findings, stats, Pareto, yield, primitives, nav, stage, magnifier and editorial specs.
+- No visual snapshots changed. The editorial test rewrote its evidence screenshot `logs/shots/p26b-loaded-1440-light.png`, which now shows the underlines, and I kept it.
+
+**Decision, noted in `logs/progress.md`:** the WM-811K pattern definitions exist but nothing renders them yet. §2.2 doesn't place a pattern term, and §7.17 forbids one on the class name in the verdict headline.
+
+I left the untracked `logs/p24-cont.*` files and the modified `logs/p24.out` and `logs/prompt-p24.txt` alone. They look like this run's own logs.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=155
+
