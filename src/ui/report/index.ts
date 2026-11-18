@@ -6,8 +6,8 @@ export {
   resolveClaimWaferTarget,
   toggleReportClaimInStore,
 } from './AutopsyReportCard';
-export {
-  ClaimInlineButton,
-  type ClaimInlineButtonProps,
-} from './ClaimInlineButton';
-export { NarrationBadge, type NarrationBadgeProps } from './NarrationBadge';
+export { ConfidencePill, type ConfidencePillProps } from './ConfidencePill';
+export { FindingsList, type FindingsListProps } from './FindingsList';
+export { renderWithUntranslatedTokens } from './render-untranslated';
+export { StatRow, type StatRowProps } from './StatRow';
+export { VerdictHero, type VerdictHeroProps } from './VerdictHero';

@@ -3,35 +3,45 @@
 import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
+import type { YieldSummary } from '@/core/analytics';
 import type { LotModel } from '@/core/model';
 import {
+  analyzeLotForReport,
   type AutopsyReport,
   type AutopsyVerdictDecision,
+  buildStatFacts,
   type EngineFact,
-  formatConfidenceBadgeLabel,
+  renderReport,
+  renderStatFacts,
   type ReportClaim,
 } from '@/core/report';
-import { Badge, Card, CardContent, CardHeader } from '@/ui/primitives';
-import { formatGroupedInt } from '@/ui/format';
+import { useT } from '@/ui/i18n';
+import { cn } from '@/ui/primitives/cn';
 import {
   type ClaimHighlightState,
   type SelectionStoreState,
   useSelectionStore,
 } from '@/ui/state';
-import { ClaimInlineButton } from './ClaimInlineButton';
-import { NarrationBadge } from './NarrationBadge';
+import { ConfidencePill } from './ConfidencePill';
+import { FindingsList } from './FindingsList';
+import { StatRow } from './StatRow';
+import { VerdictHero } from './VerdictHero';
 
 export interface AutopsyReportCardProps {
   readonly lot: LotModel;
   readonly report: AutopsyReport;
   readonly verdict?: AutopsyVerdictDecision;
   readonly facts?: readonly EngineFact[];
+  readonly yieldSummary?: YieldSummary;
   /** Optional isolated Zustand store instance for deterministic component tests. */
   readonly store?: StoreApi<SelectionStoreState>;
-  /** Initial open state for the hedged hypotheses disclosure (`false` / collapsed by default). */
+  /** Initial open state for the `"Possible causes"` disclosure (`false` / collapsed by default). */
   readonly defaultHypothesesOpen?: boolean;
+  /** Initial open state for the `ConfidencePill` method popover (`false` by default). */
+  readonly defaultConfidenceOpen?: boolean;
   /** Optional post-load bins-only notice rendered directly beneath the confidence pill (§3.8). */
   readonly binsOnlyNotice?: React.ReactNode;
+  readonly className?: string;
 }
 
 export interface ClaimWaferTargetResolution {
@@ -197,196 +207,40 @@ export function toggleReportClaimInStore(
   store.getState().toggleClaimHighlight(payload);
 }
 
-interface VisibleEvidenceClaimItem {
-  readonly claim: ReportClaim;
-  readonly displayText: string;
-}
-
-interface DisclosedHypothesisItem {
-  readonly key: string;
-  readonly mechanismText: string;
-  readonly checkNextText: string | null;
-  readonly combinedDisplayText: string;
-  readonly linkedClaim?: ReportClaim;
-}
-
-function splitHypothesisClauses(rawText: string): {
-  readonly mechanismText: string;
-  readonly checkNextText: string | null;
-  readonly combinedDisplayText: string;
-} {
-  const marker = ' Check next:';
-  const idx = rawText.indexOf(marker);
-  if (idx < 0) {
-    const clean = rawText.trim();
-    return {
-      mechanismText: clean,
-      checkNextText: null,
-      combinedDisplayText: clean,
-    };
-  }
-  const mechanismText = rawText.slice(0, idx).trim();
-  const checkNextText = rawText.slice(idx + 1).trim();
-  return {
-    mechanismText,
-    checkNextText,
-    combinedDisplayText: `${mechanismText} ${checkNextText}`,
-  };
-}
-
-function partitionClaimsAndHypotheses(
-  report: AutopsyReport,
-  factsById: ReadonlyMap<string, EngineFact>,
-): {
-  readonly evidenceClaims: readonly VisibleEvidenceClaimItem[];
-  readonly hypotheses: readonly DisclosedHypothesisItem[];
-} {
-  const evidenceClaims: VisibleEvidenceClaimItem[] = [];
-  const hypotheses: DisclosedHypothesisItem[] = [];
-  const seenHypothesisStrings = new Set<string>();
-
-  for (const claim of report.bodyClaims) {
-    if (
-      claim.claimId === 'claim:root-cause-hypothesis' ||
-      claim.text.startsWith('Candidate mechanism:')
-    ) {
-      const { mechanismText, checkNextText, combinedDisplayText } =
-        splitHypothesisClauses(claim.text);
-      seenHypothesisStrings.add(claim.text.trim());
-      hypotheses.push({
-        key: claim.claimId,
-        mechanismText,
-        checkNextText,
-        combinedDisplayText,
-        linkedClaim: claim,
-      });
-
-      // Surface secondary hedged candidate mechanisms attached to the cited EngineFact
-      for (const factId of claim.citedFactIds) {
-        const fact = factsById.get(factId);
-        if (!fact?.hypotheses) {
-          continue;
-        }
-        for (let hIdx = 0; hIdx < fact.hypotheses.length; hIdx += 1) {
-          const extraRaw = fact.hypotheses[hIdx]!.trim();
-          if (seenHypothesisStrings.has(extraRaw)) {
-            continue;
-          }
-          seenHypothesisStrings.add(extraRaw);
-          const extraSplit = splitHypothesisClauses(extraRaw);
-          hypotheses.push({
-            key: `${factId}:hyp-${hIdx}`,
-            mechanismText: extraSplit.mechanismText,
-            checkNextText: extraSplit.checkNextText,
-            combinedDisplayText: extraSplit.combinedDisplayText,
-          });
-        }
-      }
-      continue;
-    }
-
-    const candMarker = ' Candidate mechanism:';
-    const splitPos = claim.text.indexOf(candMarker);
-    if (splitPos > 0) {
-      const quantitativePrefix = claim.text.slice(0, splitPos).trim();
-      const hypothesisTail = claim.text.slice(splitPos + 1).trim();
-      evidenceClaims.push({
-        claim,
-        displayText: quantitativePrefix,
-      });
-      if (!seenHypothesisStrings.has(hypothesisTail)) {
-        seenHypothesisStrings.add(hypothesisTail);
-        const splitTail = splitHypothesisClauses(hypothesisTail);
-        hypotheses.push({
-          key: `${claim.claimId}:hypothesis`,
-          mechanismText: splitTail.mechanismText,
-          checkNextText: splitTail.checkNextText,
-          combinedDisplayText: splitTail.combinedDisplayText,
-          linkedClaim: claim,
-        });
-      }
-      continue;
-    }
-
-    evidenceClaims.push({
-      claim,
-      displayText: claim.text,
-    });
-  }
-
-  return { evidenceClaims, hypotheses };
-}
-
-function extractHeadlineConfidenceBadge(
-  headlineText: string,
-  verdict: AutopsyVerdictDecision | undefined,
-  factsById: ReadonlyMap<string, EngineFact>,
-  headlineFactIds: readonly string[],
-): string {
-  if (verdict !== undefined) {
-    return formatConfidenceBadgeLabel(verdict.confidence);
-  }
-  for (const factId of headlineFactIds) {
-    const fact = factsById.get(factId);
-    const confMetric = fact?.metrics.find((m) => m.key === 'confidence');
-    if (confMetric) {
-      return formatConfidenceBadgeLabel(confMetric.numericValue);
-    }
-  }
-  const match = /\(confidence (\d\.\d{2})\)/.exec(headlineText);
-  return formatConfidenceBadgeLabel(match ? Number(match[1]) : 0.95);
-}
-
-function resolveSingleWaferBadgeLabel(
-  claim: ReportClaim,
-  lot: LotModel,
-  factsById: ReadonlyMap<string, EngineFact>,
-): string | null {
-  const res = resolveClaimWaferTarget(claim, lot, 0, factsById);
-  if (!res.isSingleWaferClaim || res.targetWaferIndex === undefined) {
-    return null;
-  }
-  const wf = lot.wafers[res.targetWaferIndex];
-  return wf ? `Wafer ${wf.waferId}` : null;
-}
-
 /**
- * Verdict-first **Autopsy Report** card rendered at the top of the loaded workspace
- * (`src/ui/report/AutopsyReportCard.tsx`).
- *
- * - Leads with the Requirement 10.1 cause-of-death headline, heuristic confidence score,
- *   and 2–4 quantitative evidence claims grounded in `EngineFact`s.
- * - Collapses hedged engineering root-cause hypotheses and `"Check next:"` verification
- *   steps by default behind an accessible disclosure button (`aria-expanded`).
- * - Clicking any claim or the headline writes its cited die set (`resolvedDieIndices`)
- *   to `SelectionStore` (and selects the relevant wafer when wafer-specific), lighting
- *   those dies on `OverlayCanvas` in `#D6E6FF`; clicking the active claim again clears.
- *
- * Validates: Requirements 2.4, 9.3, 10.1, 10.3, 10.4, 10.5, 14.2, 14.3, 17.1–17.4
+ * Verdict Column (`src/ui/report/AutopsyReportCard.tsx`, `redesign.md` §3.4, §3.5, §3.8, §4.3–§4.6):
+ * Composes `VerdictHero`, `ConfidencePill` (absorbing `NarrationBadge`), `StatRow` (3 big-number stats),
+ * and `FindingsList` (borderless rows + `"Possible causes"` disclosure) with zero box borders,
+ * zero monospace, and zero uppercase labels.
  */
 export function AutopsyReportCard({
   lot,
   report,
   verdict,
   facts,
+  yieldSummary,
   store = useSelectionStore,
   defaultHypothesesOpen = false,
+  defaultConfidenceOpen = false,
   binsOnlyNotice,
+  className,
 }: AutopsyReportCardProps): React.JSX.Element {
-  const [hypothesesOpen, setHypothesesOpen] = React.useState<boolean>(
-    defaultHypothesesOpen,
-  );
-  const hypothesesPanelId = React.useId();
+  const { locale, t, tPlural } = useT();
 
-  const { storeLot, activeClaimId } = useStore(
-    store,
-    useShallow((s) => ({
-      storeLot: s.lot,
-      activeClaimId: s.claimHighlight?.claimId ?? null,
-    })),
-  );
+  const { storeLot, activeClaimId, hasActiveFilter, selectedDieMask } =
+    useStore(
+      store,
+      useShallow((s) => ({
+        storeLot: s.lot,
+        activeClaimId: s.claimHighlight?.claimId ?? null,
+        hasActiveFilter: s.hasActiveFilter,
+        selectedDieMask: s.selectedDieMask,
+      })),
+    );
 
   const effectiveActiveClaimId = storeLot === lot ? activeClaimId : null;
+  const effectiveSelectionMask =
+    storeLot === lot && hasActiveFilter ? selectedDieMask : null;
 
   const factsById = React.useMemo(() => {
     const map = new Map<string, EngineFact>();
@@ -398,44 +252,36 @@ export function AutopsyReportCard({
     return map;
   }, [facts]);
 
-  const { evidenceClaims: allEvidenceClaims, hypotheses } = React.useMemo(
-    () => partitionClaimsAndHypotheses(report, factsById),
-    [report, factsById],
+  const rendered = React.useMemo(
+    () => renderReport(report, locale),
+    [report, locale],
   );
 
   // §3.8 Moment 2: Parametric findings rows are not rendered in bins-only mode
-  const evidenceClaims = React.useMemo(
+  const visibleFindings = React.useMemo(
     () =>
       lot.parseMode === 'bins-only'
-        ? allEvidenceClaims.filter((item) => item.claim.citedTestNums.length === 0)
-        : allEvidenceClaims,
-    [allEvidenceClaims, lot.parseMode],
+        ? rendered.findings.filter(
+            (item) =>
+              item.claim.citedTestNums.length === 0 &&
+              item.claim.messageKey !== 'findings.capability.headline',
+          )
+        : rendered.findings,
+    [rendered.findings, lot.parseMode],
   );
 
-  const hasFailures = React.useMemo(() => {
-    if (verdict !== undefined) {
-      return verdict.totalFailDies > 0;
-    }
-    return !report.causeOfDeathHeadline.text.startsWith(
-      'Cause of death: No failure pattern detected',
-    );
-  }, [verdict, report.causeOfDeathHeadline.text]);
+  const analysis = React.useMemo(() => analyzeLotForReport(lot), [lot]);
 
-  const confidenceBadgeText = React.useMemo(
-    () =>
-      extractHeadlineConfidenceBadge(
-        report.causeOfDeathHeadline.text,
-        verdict,
-        factsById,
-        report.causeOfDeathHeadline.citedFactIds,
-      ),
-    [
-      report.causeOfDeathHeadline.text,
-      report.causeOfDeathHeadline.citedFactIds,
-      verdict,
-      factsById,
-    ],
-  );
+  const renderedStats = React.useMemo(() => {
+    const statFacts = buildStatFacts({
+      lot,
+      analysis,
+      ...(verdict !== undefined ? { verdict } : {}),
+      ...(yieldSummary !== undefined ? { yieldSummary } : {}),
+      selectionMask: effectiveSelectionMask,
+    });
+    return renderStatFacts(statFacts, locale);
+  }, [lot, analysis, verdict, yieldSummary, effectiveSelectionMask, locale]);
 
   const handleToggleClaim = React.useCallback(
     (claim: ReportClaim): void => {
@@ -444,64 +290,55 @@ export function AutopsyReportCard({
     [store, lot, factsById],
   );
 
-  const headlineWaferLabel = React.useMemo(
-    () =>
-      resolveSingleWaferBadgeLabel(
-        report.causeOfDeathHeadline,
-        lot,
-        factsById,
-      ),
-    [report.causeOfDeathHeadline, lot, factsById],
-  );
-
-  const waferLabelByClaimId = React.useMemo(() => {
-    const map = new Map<string, string | null>();
-    for (const { claim } of evidenceClaims) {
-      map.set(claim.claimId, resolveSingleWaferBadgeLabel(claim, lot, factsById));
+  // §3.5: Pressing Escape clears the active finding when no overlay/popover consumed Escape
+  React.useEffect(() => {
+    if (!effectiveActiveClaimId) {
+      return;
     }
-    for (const item of hypotheses) {
-      if (item.linkedClaim && !map.has(item.linkedClaim.claimId)) {
-        map.set(
-          item.linkedClaim.claimId,
-          resolveSingleWaferBadgeLabel(item.linkedClaim, lot, factsById),
-        );
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        const current = store.getState();
+        if (current.lot === lot && current.claimHighlight !== null) {
+          current.setClaimHighlight(null);
+        }
       }
-    }
-    return map;
-  }, [evidenceClaims, hypotheses, lot, factsById]);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [effectiveActiveClaimId, lot, store]);
 
   const liveAnnouncement = React.useMemo(() => {
-    const headlineText = report.causeOfDeathHeadline.text;
+    const fullHeadline = rendered.verdict.fullHeadline;
     if (!effectiveActiveClaimId) {
-      return headlineText;
+      return fullHeadline;
     }
-    const activeClaim =
-      report.causeOfDeathHeadline.claimId === effectiveActiveClaimId
-        ? report.causeOfDeathHeadline
-        : report.bodyClaims.find((c) => c.claimId === effectiveActiveClaimId);
-    if (!activeClaim) {
-      return `${headlineText} Highlighted finding: ${effectiveActiveClaimId}.`;
+    if (effectiveActiveClaimId === report.causeOfDeathHeadline.claimId) {
+      const dieCountLabel = tPlural(
+        'findings.dieCount',
+        report.causeOfDeathHeadline.resolvedDieIndices.length,
+      );
+      return `${fullHeadline} (${dieCountLabel})`;
     }
-    const dieCount = activeClaim.resolvedDieIndices.length;
-    const dieNoun = dieCount === 1 ? 'die' : 'dies';
-    const waferSuffix =
-      activeClaim === report.causeOfDeathHeadline
-        ? headlineWaferLabel
-        : (waferLabelByClaimId.get(activeClaim.claimId) ?? null);
-    return `${headlineText} Selected finding (${activeClaim.claimId}): ${formatGroupedInt(dieCount)} cited ${dieNoun} highlighted${waferSuffix ? ` on ${waferSuffix}` : ' on wafer map'}.`;
+    const matchedFinding = visibleFindings.find(
+      (f) => f.claimId === effectiveActiveClaimId,
+    );
+    if (matchedFinding) {
+      return `${matchedFinding.headline} (${matchedFinding.dieCountLabel})`;
+    }
+    return fullHeadline;
   }, [
-    report.causeOfDeathHeadline,
-    report.bodyClaims,
+    rendered.verdict.fullHeadline,
     effectiveActiveClaimId,
-    headlineWaferLabel,
-    waferLabelByClaimId,
+    report.causeOfDeathHeadline,
+    visibleFindings,
+    tPlural,
   ]);
 
   return (
-    <Card
-      aria-label="Autopsy Report"
+    <section
+      aria-label={rendered.findingsHeading}
       data-testid="autopsy-report-card"
-      className="border-hairline bg-panel"
+      className={cn('flex w-full flex-col pt-1 xl:pt-14', className)}
     >
       <div
         data-testid="autopsy-live-region"
@@ -512,138 +349,38 @@ export function AutopsyReportCard({
         {liveAnnouncement}
       </div>
 
-      <CardHeader className="gap-2.5 p-5 pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-mono text-[12px] tracking-wider text-text-tertiary uppercase">
-              Autopsy Report
-            </h2>
-            <NarrationBadge source={report.source} />
-            <Badge
-              variant="neutral"
-              aria-label={`Confidence ${confidenceBadgeText}`}
-              title="Deterministic heuristic feature score (uncalibrated [0, 1] scale, capped at 0.95)"
-            >
-              {confidenceBadgeText}
-            </Badge>
-          </div>
+      <VerdictHero
+        verdict={rendered.verdict}
+        headlineClaim={report.causeOfDeathHeadline}
+        causeAria={t('verdict.causeAria')}
+        isActive={
+          effectiveActiveClaimId === report.causeOfDeathHeadline.claimId
+        }
+        onToggleClaim={handleToggleClaim}
+      />
 
-          <span className="font-mono text-[12px] text-text-tertiary">
-            Click a finding to light its dies
-          </span>
-        </div>
+      <ConfidencePill
+        confidence={rendered.confidence}
+        defaultOpen={defaultConfidenceOpen}
+        className="mt-3 md:mt-5"
+      />
 
-        {binsOnlyNotice ? <div>{binsOnlyNotice}</div> : null}
+      {binsOnlyNotice ? <div className="mt-3">{binsOnlyNotice}</div> : null}
 
-        <ClaimInlineButton
-          claim={report.causeOfDeathHeadline}
-          variant="headline"
-          hasFailures={hasFailures}
-          targetWaferLabel={headlineWaferLabel}
-          isActive={
-            effectiveActiveClaimId === report.causeOfDeathHeadline.claimId
-          }
-          onToggle={handleToggleClaim}
-        />
-      </CardHeader>
+      <StatRow stats={renderedStats} className="mt-6 md:mt-10" />
 
-      <CardContent className="flex flex-col gap-2.5 px-5 pt-0 pb-5">
-        {/* 2–4 quantitative evidence claims grounded in deterministic EngineFacts */}
-        <div
-          role="group"
-          aria-label="Diagnostic evidence claims"
-          className="flex flex-col gap-2"
-        >
-          {evidenceClaims.map(({ claim, displayText }) => (
-            <ClaimInlineButton
-              key={claim.claimId}
-              claim={claim}
-              displayText={displayText}
-              variant="body"
-              targetWaferLabel={waferLabelByClaimId.get(claim.claimId) ?? null}
-              isActive={effectiveActiveClaimId === claim.claimId}
-              onToggle={handleToggleClaim}
-            />
-          ))}
-        </div>
-
-        {/* Hedged engineering root-cause hypotheses & check-next steps (collapsed by default) */}
-        {hypotheses.length > 0 ? (
-          <div className="mt-0.5 border-t border-hairline pt-2.5">
-            <button
-              type="button"
-              data-testid="autopsy-hypotheses-toggle"
-              aria-expanded={hypothesesOpen}
-              aria-controls={hypothesesPanelId}
-              onClick={() => setHypothesesOpen((prev) => !prev)}
-              className="inline-flex w-full cursor-pointer items-center justify-between gap-3 rounded-control border border-transparent px-2.5 py-1.5 text-left text-[13px] text-text-secondary transition-[transform,opacity] duration-150 ease-[var(--ease-clinical)] hover:bg-raised hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              <span className="inline-flex items-center gap-2">
-                <span
-                  aria-hidden="true"
-                  className="font-mono text-[12px] text-text-tertiary"
-                >
-                  {hypothesesOpen ? '▾' : '▸'}
-                </span>
-                <span>Candidate root-cause hypotheses &amp; check-next steps</span>
-              </span>
-              <Badge variant="neutral">
-                {hypotheses.length}{' '}
-                {hypotheses.length === 1 ? 'hypothesis' : 'hypotheses'}
-              </Badge>
-            </button>
-
-            <div
-              id={hypothesesPanelId}
-              role="region"
-              aria-label="Candidate root-cause hypotheses"
-              hidden={!hypothesesOpen}
-              className={hypothesesOpen ? 'mt-2.5 flex flex-col gap-2' : 'hidden'}
-            >
-              {hypothesesOpen
-                ? hypotheses.map((item) => {
-                    if (
-                      item.linkedClaim &&
-                      item.linkedClaim.claimId === 'claim:root-cause-hypothesis'
-                    ) {
-                      return (
-                        <div key={item.key} className="flex flex-col gap-1">
-                          <ClaimInlineButton
-                            claim={item.linkedClaim}
-                            displayText={item.combinedDisplayText}
-                            variant="body"
-                            targetWaferLabel={
-                              waferLabelByClaimId.get(item.linkedClaim.claimId) ??
-                              null
-                            }
-                            isActive={
-                              effectiveActiveClaimId === item.linkedClaim.claimId
-                            }
-                            onToggle={handleToggleClaim}
-                          />
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div
-                        key={item.key}
-                        className="rounded-control border border-hairline bg-raised/40 px-3.5 py-2.5 text-[14px] leading-relaxed"
-                      >
-                        <p className="text-text-secondary">{item.mechanismText}</p>
-                        {item.checkNextText ? (
-                          <p className="mt-1 text-text-primary">
-                            {item.checkNextText}
-                          </p>
-                        ) : null}
-                      </div>
-                    );
-                  })
-                : null}
-            </div>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+      <FindingsList
+        heading={rendered.findingsHeading}
+        clearLabel={rendered.clearLabel}
+        possibleCausesHeading={rendered.possibleCausesHeading}
+        findings={visibleFindings}
+        hypotheses={rendered.hypotheses}
+        activeClaimId={effectiveActiveClaimId}
+        selectionMask={effectiveSelectionMask}
+        defaultHypothesesOpen={defaultHypothesesOpen}
+        onToggleClaim={handleToggleClaim}
+        className="mt-8 md:mt-12"
+      />
+    </section>
   );
 }

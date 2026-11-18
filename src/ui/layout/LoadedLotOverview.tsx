@@ -102,16 +102,17 @@ export function LoadedLotOverview({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Hero row: >=1280px side-by-side (verdict left ~44%, wafer map + lot strip right ~56%); <1280px stacked verdict-first */}
+      {/* Hero row: >=1280px side-by-side (verdict 553fr, wafer stage 783fr at 1440px per redesign §3.4); <1280px stacked verdict-first */}
       <div
         data-testid="verdict-wafer-hero-grid"
-        className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,44fr)_minmax(0,56fr)]"
+        className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,553fr)_minmax(0,783fr)]"
       >
         <AutopsyReportCard
           lot={lot}
           report={report}
           verdict={verdict}
           facts={facts}
+          yieldSummary={yieldSummary}
           store={store}
           binsOnlyNotice={
             lot.parseMode === 'bins-only' ? (

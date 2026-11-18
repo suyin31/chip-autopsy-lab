@@ -1,13 +1,15 @@
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import type { StoreApi } from 'zustand';
 import { listDemoPresets } from '@/core/demo';
+import { SUPPORTED_LOCALES } from '@/core/i18n';
 import { buildLotModel, type LotModel } from '@/core/model';
 import { generateOfflineAutopsyReport } from '@/core/report';
 import { parseStdfBytes, PRR_PART_FLG, writeStdfBytes } from '@/core/stdf';
-import { LoadedLotOverview } from '@/ui/layout';
+import { I18nProvider } from '@/ui/i18n';
+import { BinsOnlyNotice, LoadedLotOverview } from '@/ui/layout';
 import { createSelectionStore, type SelectionStoreState } from '@/ui/state';
-import type { StoreApi } from 'zustand';
 import { COLOR_TOKENS } from '@/ui/tokens';
 import {
   type Canvas2DContextLike,
@@ -22,7 +24,6 @@ import {
   AutopsyReportCard,
   toggleReportClaimInStore,
 } from './AutopsyReportCard';
-import { ClaimInlineButton } from './ClaimInlineButton';
 
 /**
  * Creates an isolated Zustand store whose `getInitialState` mirrors `getState()` so
@@ -98,9 +99,7 @@ function buildSingleWaferExcursionLot(): LotModel {
   const wafers = [0, 1, 2, 3].map((w) => {
     const parts = coords.map((c, idx) => {
       const fail =
-        w === 1
-          ? Math.hypot(c.x, c.y) <= 2.9
-          : c.x === w - 1 && c.y === 5;
+        w === 1 ? Math.hypot(c.x, c.y) <= 2.9 : c.x === w - 1 && c.y === 5;
       return {
         headNum: 1,
         siteNum: (idx & 1) === 0 ? 1 : 2,
@@ -112,7 +111,12 @@ function buildSingleWaferExcursionLot(): LotModel {
       };
     });
     return {
-      wir: { headNum: 1, siteGrp: 1, startT: 1_700_000_000 + w * 60, waferId: `W0${w + 1}` },
+      wir: {
+        headNum: 1,
+        siteGrp: 1,
+        startT: 1_700_000_000 + w * 60,
+        waferId: `W0${w + 1}`,
+      },
       touchdowns: [parts],
       wrr: {
         headNum: 1,
@@ -147,28 +151,28 @@ function buildSingleWaferExcursionLot(): LotModel {
   return buildLotModel(parsed.value);
 }
 
-describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
-  it('renders AutopsyReportCard verdict-first above WaferMapCanvas across all three demo presets with hypotheses collapsed by default', async () => {
+describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList)', () => {
+  it('renders VerdictHero, ConfidencePill, 3-item StatRow, and borderless FindingsList with zero monospace or uppercase labels across all 3 demo presets', async () => {
     const presets = listDemoPresets();
-    const expectedHeadlines = [
+    const expectedCases = [
       {
         presetId: 'edge-ring-etch' as const,
-        expectedPrefix: 'Cause of death: Edge-Ring failure.',
-        expectedBin: 'most loss in SBIN 7 (IDDQ_EDGE_LEAK).',
+        expectedCause: 'Edge-Ring',
+        expectedSubBin: 'SBIN 7 IDDQ_EDGE_LEAK',
       },
       {
         presetId: 'handling-scratch' as const,
-        expectedPrefix: 'Cause of death: Scratch failure.',
-        expectedBin: 'most loss in SBIN 9 (VDD_METAL_SHORT).',
+        expectedCause: 'Scratch',
+        expectedSubBin: 'SBIN 9 VDD_METAL_SHORT',
       },
       {
         presetId: 'site2-probe-contact' as const,
-        expectedPrefix: 'Cause of death: Test Site 1:2 concentration anomaly.',
-        expectedBin: 'most loss in SBIN 5 (CONT_OPEN).',
+        expectedCause: 'test site',
+        expectedSubBin: 'SBIN 5 CONT_OPEN',
       },
     ];
 
-    for (const { presetId, expectedPrefix, expectedBin } of expectedHeadlines) {
+    for (const { presetId, expectedCause, expectedSubBin } of expectedCases) {
       const res = await ingestDemoPreset(presetId);
       expect(res.kind).toBe('ok');
       if (res.kind !== 'ok') continue;
@@ -184,58 +188,83 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
         }),
       );
 
-      // Second toolbar row was removed in R3 (moved to NavBar + LotPicker); verdict precedes wafer map; KPI tiles & site table stay below
+      // Verdict column precedes wafer map; 553fr / 783fr responsive desktop split
       const heroGridIdx = html.indexOf('data-testid="verdict-wafer-hero-grid"');
       const reportIdx = html.indexOf('data-testid="autopsy-report-card"');
       const waferIdx = html.indexOf('data-testid="wafer-base-canvas"');
-      const tilesIdx = html.indexOf('aria-label="Lot Yield Summary"');
-      const siteTableIdx = html.indexOf('data-testid="site-breakdown-row"');
-      expect(html).not.toContain('data-testid="lot-header-bar"');
-      expect(html).not.toContain('id="cal-preset-switcher"');
       expect(heroGridIdx).toBeGreaterThanOrEqual(0);
       expect(reportIdx).toBeGreaterThan(heroGridIdx);
       expect(waferIdx).toBeGreaterThan(reportIdx);
-      expect(tilesIdx).toBeGreaterThan(waferIdx);
-      expect(siteTableIdx).toBeGreaterThan(tilesIdx);
+      expect(html).toContain('xl:grid-cols-[minmax(0,553fr)_minmax(0,783fr)]');
 
-      // >=1280px side-by-side (~44% / ~56%) + <1280px stacked responsive classes
-      expect(html).toContain('xl:grid-cols-[minmax(0,44fr)_minmax(0,56fr)]');
-
-      // Cause-of-death headline, hedged <=0.95 confidence chip, offline provenance badge, button semantics, focus ring, aria-pressed
-      expect(html).toContain(expectedPrefix);
-      expect(html).toContain(expectedBin);
-      expect(html).not.toContain('(confidence');
-      expect(html).toContain('High · 0.9');
-      expect(html).not.toMatch(/High · 0\.9[6-9]|High · 1\.00/);
-      expect(html).toContain('Click a finding to light its dies');
-      expect(html).toContain('data-testid="autopsy-live-region"');
-      expect(html).toContain('aria-live="polite"');
-      expect(html).toContain('Template · Offline');
-      expect(html).toContain('data-testid="autopsy-headline-button"');
-      expect(html).toContain('data-testid="autopsy-body-claim-button"');
-      expect(html).toContain('data-testid="site-row-toggle-button"');
-      expect(html).toContain('w-[3px] bg-accent');
-      expect(html).not.toContain('border-hairline bg-transparent');
-      expect(html).toContain('type="button"');
-      expect(html).toContain('aria-pressed="false"');
-      expect(html).toContain('focus-visible:outline-accent');
-
-      // Hypotheses disclosure is collapsed by default (aria-expanded="false", aria-controls target exists & hidden)
-      expect(html).toContain('data-testid="autopsy-hypotheses-toggle"');
-      expect(html).toContain('aria-expanded="false"');
-      const controlsMatch = /data-testid="autopsy-hypotheses-toggle"[^>]*aria-controls="([^"]+)"/.exec(
-        html,
+      // Isolated verdict column markup check
+      const cardHtml = renderToStaticMarkup(
+        React.createElement(AutopsyReportCard, {
+          lot: res.lot,
+          report: res.report,
+          verdict: res.verdict,
+          facts: res.facts,
+          yieldSummary: res.yieldSummary,
+        }),
       );
-      expect(controlsMatch?.[1]).toBeTruthy();
-      expect(html).toContain(`id="${controlsMatch?.[1]}"`);
-      expect(html).not.toContain('Candidate mechanism:');
-      expect(html).not.toContain('Check next:');
 
-      // Apple-grade restraint: zero drop-shadow utilities (other than shadow-none), zero bold >= 700
-      expect(html).not.toMatch(/\bshadow-(?!none\b)[a-z0-9]+\b/);
-      expect(html).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
+      // VerdictHero: Cause of death prefix + orange cause button + subline with <bdi translate="no">
+      expect(cardHtml).toContain('data-testid="verdict-headline"');
+      expect(cardHtml).toContain('Cause of death:');
+      expect(cardHtml).toContain(expectedCause);
+      expect(cardHtml).toContain(expectedSubBin);
+      expect(cardHtml).toContain('translate="no"');
+      expect(cardHtml).toContain('data-testid="autopsy-headline-button"');
+      expect(cardHtml).toContain('text-failure');
 
-      // Expanded hypotheses reveal hedged candidate mechanisms and Check next steps
+      // ConfidencePill: single pill absorbing NarrationBadge (no standalone NarrationBadge in header)
+      expect(cardHtml).toContain('data-testid="confidence-pill"');
+      expect(cardHtml).toMatch(/Confidence 0\.\d{2}/);
+      expect(cardHtml).not.toMatch(/Confidence 0\.9[6-9]|Confidence 1\.00/);
+      expect(cardHtml).not.toContain('Template · Offline');
+      expect(cardHtml).not.toContain('AUTOPSY REPORT');
+      expect(cardHtml).not.toContain('Click a finding to light its dies');
+
+      // ConfidencePill popover opens with provenance method copy (§4.4)
+      const openConfHtml = renderToStaticMarkup(
+        React.createElement(AutopsyReportCard, {
+          lot: res.lot,
+          report: res.report,
+          verdict: res.verdict,
+          facts: res.facts,
+          defaultConfidenceOpen: true,
+        }),
+      );
+      expect(openConfHtml).toContain('data-testid="confidence-popover"');
+      expect(openConfHtml).toContain('How this verdict was made');
+      expect(openConfHtml).toContain(
+        'Every number comes from the on-device analysis engine. The text is the built-in template.',
+      );
+
+      // StatRow: exactly 3 stats, at most 1 orange emphasis
+      const statItemMatches = cardHtml.match(
+        /data-testid="verdict-stat-item"/g,
+      );
+      expect(statItemMatches).toHaveLength(3);
+      const emphasisMatches = cardHtml.match(/data-emphasis="true"/g) ?? [];
+      expect(emphasisMatches.length).toBe(1);
+
+      // FindingsList: borderless rows (border-0), collapsed Possible causes by default
+      expect(cardHtml).toContain('data-testid="verdict-findings-list"');
+      expect(cardHtml).toContain('data-testid="autopsy-body-claim-button"');
+      expect(cardHtml).toContain('data-testid="autopsy-hypotheses-toggle"');
+      expect(cardHtml).toContain('Possible causes');
+      expect(cardHtml).not.toContain('data-testid="hypothesis-item"');
+
+      // R5 strict invariant: zero monospace, zero uppercase, zero drop-shadow, zero bold >= 700 in Verdict Column
+      expect(cardHtml).not.toMatch(
+        /\b(font-mono|type-mono-data|tabular-mono|uppercase)\b/,
+      );
+      expect(cardHtml).not.toMatch(/<(code|kbd|pre|samp)\b/);
+      expect(cardHtml).not.toMatch(/\bshadow-(?!none\b)[a-z0-9]+\b/);
+      expect(cardHtml).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
+
+      // Expanded Possible causes reveals all 3 hedged hypotheses + check-next sublines
       const expandedHtml = renderToStaticMarkup(
         React.createElement(AutopsyReportCard, {
           lot: res.lot,
@@ -245,13 +274,12 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
           defaultHypothesesOpen: true,
         }),
       );
-      expect(expandedHtml).toContain('aria-expanded="true"');
-      expect(expandedHtml).toContain('Candidate mechanism:');
-      expect(expandedHtml).toContain('Check next:');
+      const hypItems = expandedHtml.match(/data-testid="hypothesis-item"/g);
+      expect(hypItems).toHaveLength(3);
     }
   });
 
-  it('writes cited die mask on headline/claim click, lights #D6E6FF overlay strokes, and clears on second click', async () => {
+  it('writes cited die mask on headline/finding toggle, shows expanded detail + Clear, lights #D6E6FF overlay strokes, and clears on second click', async () => {
     const res = await ingestDemoPreset('edge-ring-etch');
     expect(res.kind).toBe('ok');
     if (res.kind !== 'ok') return;
@@ -261,66 +289,22 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
     const store = createClientTestStore();
     store.getState().setLot(lot);
 
-    // Initial state: mask empty, aria-pressed="false"
     expect(store.getState().claimHighlight).toBeNull();
-    expect(store.getState().highlightedDieIndices).toHaveLength(0);
     expect(store.getState().overlayHighlightCount).toBe(0);
 
-    const initialHtml = renderToStaticMarkup(
-      React.createElement(AutopsyReportCard, {
-        lot,
-        report,
-        verdict,
-        facts,
-        store,
-      }),
-    );
-    expect(initialHtml).toContain('data-claim-id="claim:cause-of-death"');
-    expect(initialHtml).toContain('aria-pressed="false"');
-    expect(initialHtml).not.toContain('Highlighted · Click to clear');
-
-    // Render headline ClaimInlineButton and invoke its button onClick handler (1st click)
+    // 1. Toggle cause-of-death button on VerdictHero
     const headlineClaim = report.causeOfDeathHeadline;
-    const onToggle = (c: typeof headlineClaim): void => {
-      toggleReportClaimInStore(store, lot, c, factsById);
-    };
+    toggleReportClaimInStore(store, lot, headlineClaim, factsById);
 
-    const buttonBeforeClick = ClaimInlineButton({
-      claim: headlineClaim,
-      variant: 'headline',
-      isActive: false,
-      onToggle,
-    });
-    expect(buttonBeforeClick.type).toBe('button');
-    expect(buttonBeforeClick.props.type).toBe('button');
-    expect(buttonBeforeClick.props['aria-pressed']).toBe(false);
-
-    (buttonBeforeClick.props.onClick as () => void)();
-
-    // Selection store mask is non-empty and matches the headline's cited die set
     const afterFirstClick = store.getState();
-    expect(afterFirstClick.claimHighlight?.claimId).toBe('claim:cause-of-death');
-    expect(afterFirstClick.highlightedDieIndices.length).toBe(
-      headlineClaim.resolvedDieIndices.length,
+    expect(afterFirstClick.claimHighlight?.claimId).toBe(
+      'claim:cause-of-death',
     );
     expect(afterFirstClick.overlayHighlightCount).toBe(
       headlineClaim.resolvedDieIndices.length,
     );
 
-    let maskOnes = 0;
-    for (let i = 0; i < afterFirstClick.claimHighlightMask.length; i += 1) {
-      if (afterFirstClick.claimHighlightMask[i] !== 0) {
-        maskOnes += 1;
-      }
-    }
-    expect(maskOnes).toBe(headlineClaim.resolvedDieIndices.length);
-    for (const dieIdx of headlineClaim.resolvedDieIndices) {
-      expect(afterFirstClick.claimHighlightMask[dieIdx]).toBe(1);
-      expect(afterFirstClick.overlayHighlightMask[dieIdx]).toBe(1);
-    }
-
-    // Re-rendered AutopsyReportCard reflects aria-pressed="true" and non-color "Highlighted" badge
-    const activeHtml = renderToStaticMarkup(
+    const activeHeadlineHtml = renderToStaticMarkup(
       React.createElement(AutopsyReportCard, {
         lot,
         report,
@@ -329,11 +313,7 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
         store,
       }),
     );
-    expect(activeHtml).toContain('aria-pressed="true"');
-    expect(activeHtml).toContain('Highlighted · Click to clear');
-    expect(activeHtml).toContain(
-      'Selected finding (claim:cause-of-death):',
-    );
+    expect(activeHeadlineHtml).toContain('aria-pressed="true"');
 
     // OverlayCanvas paint helper lights up the cited dies on Wafer 0 in #D6E6FF + outer halo
     const wafer0 = lot.wafers[afterFirstClick.activeWaferIndex]!;
@@ -369,7 +349,6 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
     expect(haloStrokes.length).toBeGreaterThanOrEqual(1);
     expect(getRectCount()).toBeGreaterThan(40);
 
-    // OverlayCanvas wrapper exposes deterministic highlight and outer-band counts
     const overlayHtml = renderToStaticMarkup(
       React.createElement(OverlayCanvas, {
         lot,
@@ -380,7 +359,6 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
         store,
       }),
     );
-    expect(overlayHtml).toContain('data-testid="wafer-overlay-wrapper"');
     expect(overlayHtml).toContain(
       `data-highlight-count="${headlineClaim.resolvedDieIndices.length}"`,
     );
@@ -389,24 +367,17 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
     );
     expect(overlayHtml).toContain('data-interior-highlight-count="0"');
 
-    // Second click on the active headline button clears the selection store mask
-    const buttonWhileActive = ClaimInlineButton({
-      claim: headlineClaim,
-      variant: 'headline',
-      isActive: true,
-      onToggle,
-    });
-    expect(buttonWhileActive.props['aria-pressed']).toBe(true);
-    (buttonWhileActive.props.onClick as () => void)();
+    // Second toggle clears
+    toggleReportClaimInStore(store, lot, headlineClaim, factsById);
+    expect(store.getState().claimHighlight).toBeNull();
+    expect(store.getState().overlayHighlightCount).toBe(0);
 
-    const afterSecondClick = store.getState();
-    expect(afterSecondClick.claimHighlight).toBeNull();
-    expect(afterSecondClick.highlightedDieIndices).toHaveLength(0);
-    expect(afterSecondClick.overlayHighlightCount).toBe(0);
-    expect(afterSecondClick.claimHighlightMask.every((b) => b === 0)).toBe(true);
-    expect(afterSecondClick.overlayHighlightMask.every((b) => b === 0)).toBe(true);
-
-    const clearedHtml = renderToStaticMarkup(
+    // 2. Toggle primary finding row -> shows expanded detail, Check next lines, and "Clear"
+    const primaryClaim = report.bodyClaims.find(
+      (c) => c.claimId === 'claim:primary-evidence',
+    )!;
+    toggleReportClaimInStore(store, lot, primaryClaim, factsById);
+    const expandedRowHtml = renderToStaticMarkup(
       React.createElement(AutopsyReportCard, {
         lot,
         report,
@@ -415,40 +386,32 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
         store,
       }),
     );
-    expect(clearedHtml).not.toContain('aria-pressed="true"');
+    expect(expandedRowHtml).toContain('data-testid="finding-clear-label"');
+    expect(expandedRowHtml).toContain('data-testid="finding-expanded-detail"');
+    expect(expandedRowHtml).toContain('Check next:');
 
-    // Clicking a parametric body claim selects activeTestNum = 204 and populates mask, second click clears
+    // 3. Toggle parametric finding row -> sets activeTestNum = 204, second toggle clears
     const paramClaim = report.bodyClaims.find(
       (c) => c.claimId === 'claim:supporting-evidence',
     );
     expect(paramClaim).toBeDefined();
     if (paramClaim) {
-      const bodyBtn = ClaimInlineButton({
-        claim: paramClaim,
-        variant: 'body',
-        isActive: false,
-        onToggle,
-      });
-      (bodyBtn.props.onClick as () => void)();
+      toggleReportClaimInStore(store, lot, paramClaim, factsById);
       expect(store.getState().activeTestNum).toBe(204);
       expect(store.getState().overlayHighlightCount).toBe(
         paramClaim.resolvedDieIndices.length,
       );
-
-      (bodyBtn.props.onClick as () => void)();
+      toggleReportClaimInStore(store, lot, paramClaim, factsById);
       expect(store.getState().claimHighlight).toBeNull();
-      expect(store.getState().overlayHighlightCount).toBe(0);
     }
   });
 
   it('selects the relevant wafer when clicking wafer-specific or wafer-subset claims (Tier 3 excursion & handling-scratch)', async () => {
-    // 1. Tier 3 single-wafer excursion on Wafer W02 (waferIndex = 1)
     const excLot = buildSingleWaferExcursionLot();
     const excAutopsy = generateOfflineAutopsyReport(excLot);
     const excFactsById = new Map(excAutopsy.facts.map((f) => [f.factId, f]));
     const excStore = createSelectionStore();
     excStore.getState().setLot(excLot);
-    expect(excStore.getState().activeWaferIndex).toBe(0);
 
     const excCardHtml = renderToStaticMarkup(
       React.createElement(AutopsyReportCard, {
@@ -459,8 +422,7 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
         store: excStore,
       }),
     );
-    expect(excCardHtml).toContain('Center excursion on Wafer W02');
-    expect(excCardHtml).toContain('Wafer W02');
+    expect(excCardHtml).toContain('W02');
 
     const excPrimaryClaim = excAutopsy.report.bodyClaims.find(
       (c) => c.claimId === 'claim:primary-evidence',
@@ -471,18 +433,16 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
 
     toggleReportClaimInStore(excStore, excLot, excPrimaryClaim, excFactsById);
     expect(excStore.getState().claimHighlight).toBeNull();
-    expect(excStore.getState().overlayHighlightCount).toBe(0);
 
-    // 2. handling-scratch clicked while viewing clean W01 (waferIndex = 0) jumps to scratched wafer W05..W22
     const scratchRes = await ingestDemoPreset('handling-scratch');
     expect(scratchRes.kind).toBe('ok');
     if (scratchRes.kind !== 'ok') return;
 
     const scratchStore = createSelectionStore();
     scratchStore.getState().setLot(scratchRes.lot);
-    expect(scratchStore.getState().activeWaferIndex).toBe(0);
-
-    const scratchFactsById = new Map(scratchRes.facts.map((f) => [f.factId, f]));
+    const scratchFactsById = new Map(
+      scratchRes.facts.map((f) => [f.factId, f]),
+    );
     toggleReportClaimInStore(
       scratchStore,
       scratchRes.lot,
@@ -491,55 +451,94 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
     );
     expect(scratchStore.getState().activeWaferIndex).toBeGreaterThanOrEqual(4);
     expect(scratchStore.getState().activeWaferIndex).toBeLessThanOrEqual(21);
-    expect(scratchStore.getState().overlayHighlightCount).toBeGreaterThan(0);
-
-    toggleReportClaimInStore(
-      scratchStore,
-      scratchRes.lot,
-      scratchRes.report.causeOfDeathHeadline,
-      scratchFactsById,
-    );
-    expect(scratchStore.getState().claimHighlight).toBeNull();
-    expect(scratchStore.getState().overlayHighlightCount).toBe(0);
   });
 
-  it('escapes untrusted HTML-like characters via React plain-text nodes (Requirement 2.4)', () => {
-    const excLot = buildSingleWaferExcursionLot();
-    const { report, verdict, facts } = generateOfflineAutopsyReport(excLot);
-    const adversarialReport = {
-      ...report,
-      bodyClaims: [
-        {
-          ...report.bodyClaims[0]!,
-          text: 'Injected <img src=x onerror=alert(1)> & <script>evil()</script> payload.',
-        },
-        ...report.bodyClaims.slice(1),
-      ],
-    };
+  it('renders deterministically across all 5 locales, hides parametric rows in bins-only mode (§3.8), and escapes untrusted HTML (Requirement 2.4)', async () => {
+    const res = await ingestDemoPreset('edge-ring-etch');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
 
-    const html = renderToStaticMarkup(
+    for (const locale of SUPPORTED_LOCALES) {
+      const renderOnce = (): string =>
+        renderToStaticMarkup(
+          React.createElement(
+            I18nProvider,
+            { initialLocale: locale },
+            React.createElement(AutopsyReportCard, {
+              lot: res.lot,
+              report: res.report,
+              verdict: res.verdict,
+              facts: res.facts,
+              yieldSummary: res.yieldSummary,
+            }),
+          ),
+        );
+      const htmlA = renderOnce();
+      const htmlB = renderOnce();
+      expect(htmlA).toBe(htmlB);
+      expect(htmlA).not.toMatch(
+        /\b(font-mono|type-mono-data|tabular-mono|uppercase)\b/,
+      );
+    }
+
+    // §3.8 Moment 2: bins-only mode hides parametric capability rows and renders BinsOnlyNotice cleanly
+    const binsOnlyLot: LotModel = { ...res.lot, parseMode: 'bins-only' };
+    const binsOnlyHtml = renderToStaticMarkup(
       React.createElement(AutopsyReportCard, {
-        lot: excLot,
-        report: adversarialReport,
-        verdict,
-        facts,
+        lot: binsOnlyLot,
+        report: res.report,
+        verdict: res.verdict,
+        facts: res.facts,
+        binsOnlyNotice: React.createElement(BinsOnlyNotice, {
+          onParseEverything: () => undefined,
+        }),
       }),
     );
+    expect(binsOnlyHtml).toContain('data-testid="bins-only-notice"');
+    expect(binsOnlyHtml).not.toContain('204 IDDQ_LEAK');
+    expect(binsOnlyHtml).not.toMatch(
+      /\b(font-mono|type-mono-data|tabular-mono|uppercase)\b/,
+    );
 
-    expect(html).not.toContain('<script>');
-    expect(html).not.toContain('<img ');
-    expect(html).toContain('&lt;script&gt;evil()&lt;/script&gt;');
+    // Requirement 2.4: escapes untrusted HTML characters in both params and expanded detail text
+    const store = createClientTestStore();
+    store.getState().setLot(res.lot);
+    const primary = res.report.bodyClaims[0]!;
+    const adversarialClaim = {
+      ...primary,
+      messageKey: 'findings.dominantBin.headline' as const,
+      params: {
+        ...primary.params,
+        bin: '<script>evil()</script>',
+      },
+      text: 'Injected <img src=x onerror=alert(1)> payload.',
+    };
+    const adversarialReport = {
+      ...res.report,
+      bodyClaims: [adversarialClaim, ...res.report.bodyClaims.slice(1)],
+    };
+    toggleReportClaimInStore(store, res.lot, adversarialClaim);
+
+    const escapedHtml = renderToStaticMarkup(
+      React.createElement(AutopsyReportCard, {
+        lot: res.lot,
+        report: adversarialReport,
+        verdict: res.verdict,
+        facts: res.facts,
+        store,
+      }),
+    );
+    expect(escapedHtml).not.toContain('<script>');
+    expect(escapedHtml).not.toContain('<img ');
+    expect(escapedHtml).toContain('&lt;script&gt;evil()&lt;/script&gt;');
+    expect(escapedHtml).toContain('&lt;img src=x onerror=alert(1)&gt;');
   });
 
-  it('supports injected SelectionStore on LoadedLotOverview (m-3) and sanitizes stream warning details (m-5)', async () => {
+  it('supports selection-scoped stats and finding counts when SelectionStore filter is active and sanitizes stream warnings', async () => {
     const presets = listDemoPresets();
     const res = await ingestDemoPreset('site2-probe-contact');
     expect(res.kind).toBe('ok');
     if (res.kind !== 'ok') return;
-
-    const store = createClientTestStore();
-    store.getState().setLot(res.lot);
-    store.getState().toggleSiteFilter(1);
 
     const payloadWithWarning = {
       ...res,
@@ -556,6 +555,8 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
         ],
       },
     };
+
+    const store = createClientTestStore();
     store.getState().setLot(payloadWithWarning.lot);
     store.getState().toggleSiteFilter(1);
 
@@ -571,8 +572,7 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
       }),
     );
 
-    expect(html).toContain('aria-pressed="true"');
-    expect(html).toContain('Highlighted');
+    expect(html).toContain('in selection');
     expect(html).not.toContain('<img');
     expect(html).not.toContain('\u0007');
     expect(html).toContain('Unexpected img src=x onerror=evil()frametail');

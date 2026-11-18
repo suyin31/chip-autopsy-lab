@@ -196,7 +196,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/redesign.md`. Each task is a <= 15-
 - [x] R4. Landing, drag overlay, parse error, bins-only
   - Landing hero with three demo cards and wafer thumbnails (§3.1), drag overlay (§3.2), error view per code (§3.7), bins-only sheet and notice (§3.8).
   - Accept: Playwright screenshots at 1440 x 900 and 390 x 844 match §3.1 above the fold; one click on a card loads the lot; a PNG drop shows "This file isn't an STDF log."; a stubbed 312 MB file opens the sheet with "Use bins-only" focused.
-- [ ] R5. Verdict column
+- [x] R5. Verdict column
   - Split `AutopsyReportCard` into `VerdictHero`, `ConfidencePill` (absorbs `NarrationBadge`), `StatRow`, `FindingsList`; add `messageKey`/`params` to claims, `renderReport(report, locale)`, and `stat-facts.ts`.
   - Accept: "Cause of death: Edge-Ring failure." fits <= 2 lines at 553 px with the cause phrase orange; exactly 3 stats; borderless one-line findings; no monospace or uppercase labels in the column; per-locale report rendering is deterministic.
 - [ ] R6. Wafer stage layout, rendering, and camera
