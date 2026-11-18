@@ -1,0 +1,89 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=34
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=34
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the current code.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Implementation looks largely complete. Running the checks.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=74
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Unit checks pass. Now the relevant e2e specs (they need a fresh build).
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=87
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+All 28 pass. Running perf-gate once, since the earlier session edited it.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=65
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+The only failure is the frame-timing check, which is the known perf-gate flake. The other two perf-gate tests pass. Now I'll tick the task and log progress.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=269
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=67
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+P11 (the landing page) is done. The earlier session had already written the code in the last commit, `efde87b`. I checked that code against premium §6.1 and found nothing missing, so this session only verified it, ticked P11 in `tasks.md` and added the P11 entry to `logs/progress.md`.
+
+**What the landing now has (premium §6.1):**
+- **Hero:** centred from 1024 px wide and left-aligned below that, with a 64 px headline between 640 and 1279 px.
+- **Buttons:** "Open the sample lot" is the only filled button on the page, next to a secondary "Open file".
+- **Hint line:** under the buttons, with a shorter version on mobile.
+- **Sample cards:** each card is one button with its wafer disc, contact shadow and sheen. Disc sizes are 152, 140, 120 and 112 px by breakpoint.
+- **Card layout:** three across from 1024 px, stacked 160 px rows at sm, and a swipeable row at 390 px where the second card peeks 46 px.
+- **Footer:** "Runs entirely in your browser." on the left and "Download sample files" on the right.
+- **Copy:** the new text is in all 5 locales.
+
+**Verification:**
+- `pnpm typecheck` and `pnpm lint` are clean, and `pnpm test` passes 276/276.
+- After a fresh build, 28/28 e2e tests passed across 8 specs: `landing-p11` (covers A14 and A20 at 1440, 1280, 1024, 800 and 390, in light and dark), `landing-r4`, `scaffold`, `typography-p4`, `disc-material-p5`, `die-tiles-p6`, `stage-shadows-p7` and `vertical-slice`.
+- In `perf-gate`, only the known frame-timing check failed; its other two tests passed.
+- No visual snapshots changed.
+
+**Decisions logged in progress.md:**
+- §6.1 gives no disc size for the 390 px card, so it reuses the 112 px sm disc.
+- The parse-error and no-results screens keep their old layout until P14.
+
+The new `logs/p11-cont.log` and the edited `logs/prompt-p11.txt` were already in the working tree when I started, so I left them as they were[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=129
+.

@@ -252,7 +252,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 
 **Layout**
 
-- [ ] P11. Landing
+- [x] P11. Landing
   - Hero, buttons, hint, sample cards with 152 px discs, footer, at 1440, 1280, 1024, sm, and 390 (premium §6.1).
   - Accept: A14, A20 (landing).
 - [ ] P12. Loaded view, desktop
