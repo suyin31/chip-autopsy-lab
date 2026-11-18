@@ -19,6 +19,17 @@ async function loadDemo(page: Page, width: number, height: number, presetId: str
   });
   await expect(page.getByTestId('verdict-headline')).toBeVisible();
   await expect(page.getByTestId('autopsy-hypotheses-toggle')).toBeVisible();
+  // Measure final geometry: wait for the §8.2 verdict rise-in to settle (no block still moving)
+  await page.waitForFunction(() => {
+    const blocks = document.querySelectorAll<HTMLElement>('[data-verdict-rise-block]');
+    return (
+      blocks.length === 6 &&
+      Array.from(blocks).every((el) => {
+        const cs = getComputedStyle(el);
+        return cs.opacity === '1' && (cs.transform === 'none' || /, 0\)$/.test(cs.transform));
+      })
+    );
+  });
 }
 
 async function measure(page: Page) {

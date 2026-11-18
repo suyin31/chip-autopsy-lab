@@ -316,7 +316,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P27. Probe sweep and ignite
   - Session flag, progress pacing, probe light, 280 ms ignite, skip on any input, reduced-motion fade, `data-sweep` (premium §8.1).
   - Accept: A37, A36 (sweep part).
-- [ ] P28. Verdict reveal and count-up
+- [x] P28. Verdict reveal and count-up
   - Six-block stagger with `spring-ui`, ref-based count-up, interrupt on input, reduced-motion path (premium §8.2).
   - Accept: A36 (also apply premium §11.5).
 - [ ] P29. Evidence ignite and camera focus

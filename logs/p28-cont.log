@@ -1,0 +1,140 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=32
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=80
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=59
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=75
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=28
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=58
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Code looks complete. Running the relevant e2e specs after a fresh build.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=15
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=62
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=51
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=52
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=31
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Wait for the rise-in to settle before measuring layout, as the test intends final geometry.
+[tool] Replace in File
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=156
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=57
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now tick the task, log progress, and clean up.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=269
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+P28 is done and ticked in `tasks.md`. The previous session had already committed almost all of the code in `HEAD` and timed out while checking it. The only thing I changed was one e2e test.
+
+**What P28 delivers (per premium §8.2 and §11.5):**
+- **Six-block rise-in:** the verdict column comes in as six blocks, 60 ms apart, using `spring-ui`. It now starts when the dies ignite rather than at 85 % of the probe sweep. It plays once per lot load, so switching wafers doesn't replay it.
+- **Count-ups:** the stat numbers count up from 0 by writing straight to the text through refs, with no React render per frame. They keep the final number format at every step, and their width stays fixed. The landing card's percent and the "Where the yield went" pills follow the same rule.
+- **Interrupt:** any pointer or key input in the verdict column finishes all blocks and counts at once.
+- **Reduced motion:** all blocks fade in together over 120 ms and the numbers show their final values.
+
+**What I changed:** `e2e/loaded-desktop-p12.spec.ts` was measuring the layout while the last block was still moving, so a gap read 17 px instead of 16 px. It now waits for the rise-in to finish before measuring.
+
+**Checks:**
+- `pnpm typecheck` and `pnpm lint` pass.
+- `pnpm test` passes 336/336.
+- After a fresh build, `verdict-reveal-p28` passes 5/5, along with the 14 related specs listed in `logs/progress.md`. One timing check in `verdict-reveal-p28` (the 60 ms gap between blocks) failed once while running alongside other specs, then passed 3 times in a row alone. No snapshots changed, and no locale keys were added, so all 5 locales still match.
+
+**Decision:** premium.md gives two different count-up timings: 700 ms ease-out-expo in §8.2 and 600 ms ease-out-quart in §11.5. The previous session used §11.5's 600 ms because it is the later rule written for P28, and I kept it. I recorded this in `logs/progress.md`.
+
+The e2e runs re-wrote some screenshots in `logs/shots/`, as earlier phases' runs did. I left them and the harness files `logs/p28-cont.*` in place.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=139
+
