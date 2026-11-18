@@ -909,4 +909,55 @@ describe('parseStdfBytes & gzip helpers (Requirements 1.3, 1.5-1.10, 2.1-2.5)', 
       }),
     ]);
   });
+
+  it('recovers valid dies and emits non-blocking MISSING_WIR_RECORD and MISSING_PIR_RECORD warnings when WIR or PIR is omitted (Requirement 2.3)', () => {
+    // Build a stream with FAR -> MIR -> raw PRR (no WIR and no PIR) -> MRR
+    const stream = new BinaryRecordBuilder('little');
+    const farHdr = stream.beginRecord(
+      STDF_RECORD_CODES.FAR.recTyp,
+      STDF_RECORD_CODES.FAR.recSub,
+    );
+    stream.writeU1(2); // little-endian
+    stream.writeU1(4); // STDF V4
+    stream.endRecord(farHdr);
+
+    const prrOffset = stream.toUint8Array().byteLength;
+    const prrHdr = stream.beginRecord(
+      STDF_RECORD_CODES.PRR.recTyp,
+      STDF_RECORD_CODES.PRR.recSub,
+    );
+    stream.writeU1(1); // HEAD_NUM
+    stream.writeU1(1); // SITE_NUM
+    stream.writeB1(0); // PART_FLG (pass)
+    stream.writeU2(1); // NUM_TEST
+    stream.writeU2(1); // HARD_BIN
+    stream.writeU2(1); // SOFT_BIN
+    stream.writeI2(3); // X_COORD
+    stream.writeI2(-4); // Y_COORD
+    stream.endRecord(prrHdr);
+
+    const parsed = parseStdfBytes(stream.toUint8Array(), { mode: 'full' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    expect(parsed.value.validPrrCount).toBe(1);
+    expect(parsed.value.wafers).toHaveLength(1);
+    expect(parsed.value.wafers[0]?.implicit).toBe(true);
+    expect(parsed.value.wafers[0]?.parts[0]?.xCoord).toBe(3);
+    expect(parsed.value.wafers[0]?.parts[0]?.yCoord).toBe(-4);
+    expect(parsed.value.warnings).toEqual([
+      expect.objectContaining({
+        code: 'MISSING_WIR_RECORD',
+        byteOffset: prrOffset,
+        recTyp: STDF_RECORD_CODES.PRR.recTyp,
+        recSub: STDF_RECORD_CODES.PRR.recSub,
+      }),
+      expect.objectContaining({
+        code: 'MISSING_PIR_RECORD',
+        byteOffset: prrOffset,
+        recTyp: STDF_RECORD_CODES.PRR.recTyp,
+        recSub: STDF_RECORD_CODES.PRR.recSub,
+      }),
+    ]);
+  });
 });

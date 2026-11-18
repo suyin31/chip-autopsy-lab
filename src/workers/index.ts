@@ -9,6 +9,7 @@ export {
   type IngestDemoOptions,
   ingestDemoPreset,
   ingestStdfBuffer,
+  type WorkerExportDemoResult,
   type WorkerLoadBufferRequest,
   type WorkerLoadDemoRequest,
   type WorkerParsePhase,
@@ -19,6 +20,7 @@ export {
 export {
   type AutopsyWorkerClient,
   type AutopsyWorkerClientOptions,
+  type ClientExportedDemoStdf,
   type ClientLoadBufferOptions,
   type ClientLoadDemoOptions,
   type ClientLoadFileOptions,

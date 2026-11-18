@@ -12,6 +12,11 @@ import {
   type WindowDropEventTarget,
 } from './FullWindowDropZone';
 import { IngestProgressPanel } from './IngestProgressPanel';
+import {
+  formatParseWarningToast,
+  notifyParseWarnings,
+  triggerBrowserBlobDownload,
+} from './ingest-helpers';
 import { LoadedLotOverview } from './LoadedLotOverview';
 
 describe('first-run empty state, drop zone, progress panel, and loaded overview (Sub-task 4.3)', () => {
@@ -38,8 +43,12 @@ describe('first-run empty state, drop zone, progress panel, and loaded overview 
     );
 
     expect(html).toContain('Load demo lot');
+    expect(html).toContain('Download edge-ring-etch.stdf');
     expect(html).toContain('Drop the body.');
     expect(html).toContain('Choose STDF file');
+    expect(html).toContain('aria-label="Choose STDF file (.stdf, .std, .stdf.gz, .gz)"');
+    expect(html).toContain('focus-visible:outline-accent');
+    expect(html).toContain('accept=".stdf,.std,.stdf.gz,.gz,application/gzip,application/octet-stream"');
     expect(html).toContain('Edge-Ring Plasma Etch Lot');
     expect(html).toContain('Robotic Handling Scratch Lot');
     expect(html).toContain('Site 2 Probe Contact Lot');
@@ -83,7 +92,12 @@ describe('first-run empty state, drop zone, progress panel, and loaded overview 
     expect(failedHtml).toContain('MISSING_FAR_HEADER');
     expect(failedHtml).toContain('corrupt.stdf');
     expect(failedHtml).toContain('Byte offset: 128');
+    expect(failedHtml).toContain(
+      'Supported file types: STDF V4 binary logs (.stdf, .std) and gzip-compressed streams (.stdf.gz, .gz).',
+    );
     expect(failedHtml).toContain('Load demo lot');
+    expect(failedHtml).toContain('Choose another file');
+    expect(failedHtml).toContain('Download edge-ring-etch.stdf');
 
     const noResultsHtml = renderToStaticMarkup(
       React.createElement(EmptyStateCard, {
@@ -275,5 +289,98 @@ describe('first-run empty state, drop zone, progress panel, and loaded overview 
     expect(site2Html).toContain('text-failure');
     expect(site2Html).toContain('pp yield drop');
     expect(site2Html.match(/Nominal/g)).toHaveLength(3);
+    expect(site2Html).not.toContain('data-testid="bins-only-notice"');
+
+    // Bins-only mode renders a clear clinical notice in LoadedLotOverview
+    const binsOnlyEdgeRes = await ingestDemoPreset('edge-ring-etch', {
+      mode: 'bins-only',
+    });
+    expect(binsOnlyEdgeRes.kind).toBe('ok');
+    if (binsOnlyEdgeRes.kind !== 'ok') return;
+
+    const binsOnlyHtml = renderToStaticMarkup(
+      React.createElement(LoadedLotOverview, {
+        data: binsOnlyEdgeRes,
+        presets,
+        selectedPresetId: 'edge-ring-etch',
+        onSelectPreset: () => undefined,
+        onLoadDemoLot: () => undefined,
+        onSelectFile: () => undefined,
+      }),
+    );
+    expect(binsOnlyHtml).toContain('data-testid="bins-only-notice"');
+    expect(binsOnlyHtml).toContain('Bins-only mode active:');
+    expect(binsOnlyHtml).toContain('Parametric records (PTR, MPR, FTR) were skipped');
+  });
+
+  it('formats non-blocking Sonner warning toasts (truncated tail, missing WIR/PIR) with escaped plain text and triggers .stdf Blob downloads (Task 9)', () => {
+    expect(formatParseWarningToast([])).toBeNull();
+
+    const emitted: Array<{ title: string; id: string; description: string }> = [];
+    const truncToast = notifyParseWarnings(
+      [
+        {
+          code: 'TRUNCATED_TAIL_RECORD',
+          byteOffset: 65_536,
+          recTyp: 1,
+          recSub: 20,
+          detail: 'Truncated record <script>alert(1)</script> at EOF.',
+        },
+      ],
+      (title, opts) => {
+        emitted.push({ title, id: opts.id, description: opts.description });
+      },
+    );
+
+    expect(truncToast).not.toBeNull();
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]?.title).toBe('Partial STDF stream: truncated tail record');
+    expect(emitted[0]?.description).toContain('Byte 65,536 (REC_TYP 1, REC_SUB 20)');
+    expect(emitted[0]?.description).not.toContain('<script>');
+
+    const missingWirPirToast = formatParseWarningToast([
+      {
+        code: 'MISSING_WIR_RECORD',
+        byteOffset: 6,
+        recTyp: 5,
+        recSub: 20,
+        detail: 'Part record encountered without an open WIR (2, 10).',
+      },
+      {
+        code: 'MISSING_PIR_RECORD',
+        byteOffset: 6,
+        recTyp: 5,
+        recSub: 20,
+        detail: 'PRR at site (1, 1) has no preceding PIR (5, 10).',
+      },
+    ]);
+    expect(missingWirPirToast?.title).toBe('Partial STDF stream: 2 warnings');
+    expect(missingWirPirToast?.description).toContain('Byte 6 (REC_TYP 5, REC_SUB 20)');
+    expect(missingWirPirToast?.description).toContain('(+1 more)');
+
+    // Browser .stdf download driver check
+    let createdBlobSize = 0;
+    let triggeredHref = '';
+    let triggeredName = '';
+    triggerBrowserBlobDownload(
+      new Uint8Array([0x02, 0x00, 0x00, 0x0a, 0x02, 0x04]),
+      'edge-ring-etch.stdf',
+      {
+        createObjectURL(blob) {
+          createdBlobSize = blob.size;
+          return 'blob:local/edge-ring-etch';
+        },
+        revokeObjectURL() {
+          // cleaned up on timer
+        },
+        triggerAnchorDownload(href, downloadName) {
+          triggeredHref = href;
+          triggeredName = downloadName;
+        },
+      },
+    );
+    expect(createdBlobSize).toBe(6);
+    expect(triggeredHref).toBe('blob:local/edge-ring-etch');
+    expect(triggeredName).toBe('edge-ring-etch.stdf');
   });
 });

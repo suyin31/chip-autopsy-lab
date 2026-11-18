@@ -1,0 +1,9 @@
+Implement task 9 of .kiro/specs/chip-autopsy-lab/tasks.md (read requirements.md sections 1, 2, 3, 15, 17 and design.md ingest/error-handling parts, plus .kiro/steering/*.md first; follow the design exactly; reuse existing worker-client, empty-state and wafer UI components, do not rewrite them).
+Scope:
+- Full-window drop zone overlay showing "Drop the body." while a file is dragged over the window; keyboard-accessible file picker button (Enter/Space opens it, visible focus ring, aria-label).
+- Gzip detection by magic bytes (1f 8b) and decompression via DecompressionStream in the worker path; plain STDF otherwise. Unit tests for detection.
+- Parse-failed empty state (clear message, what file types work, button to load a demo lot); partial-result warnings via Sonner toast (e.g. truncated records, missing WIR/PIR) without blocking the result.
+- Bins-only mode above 200 MB (skip PTR parsing, still produce wafer map, Pareto inputs and yield) with a visible notice; unit test the threshold logic with a fake size.
+- ".stdf" download of each demo lot (generate bytes from the existing demo generator/writer; filename like edge-ring-etch.stdf). Add a round-trip test: downloaded bytes parse back to the same die count.
+Clinical, concise English copy; Apple-like minimal UI; no cheesy horror copy beyond the drop line.
+Run `npx tsc --noEmit`, `npx eslint .`, `npx vitest run` until green; keep vitest < 60 s. Tick task 9. Append 2 lines to logs/progress.md. No web search. Finish within 15 minutes; if not done, leave tree compiling and append to logs/progress.md exactly what remains.

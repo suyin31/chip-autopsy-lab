@@ -10,3 +10,4 @@ export {
 } from './card';
 export { cn } from './cn';
 export { Progress, type ProgressProps } from './progress';
+export { ClinicalToaster } from './toaster';

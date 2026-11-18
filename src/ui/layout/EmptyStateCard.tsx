@@ -1,11 +1,12 @@
 'use client';
 
-import { Upload } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 import * as React from 'react';
 import {
   DEMO_DIES_PER_WAFER,
   type DemoPresetId,
   type DemoPresetMeta,
+  getDemoStdfFileName,
 } from '@/core/demo';
 import type { ParseFatalError } from '@/core/stdf';
 import { formatGroupedInt } from '@/ui/format';
@@ -28,6 +29,8 @@ export interface EmptyStateCardProps {
   readonly selectedPresetId: DemoPresetId;
   readonly onSelectPreset: (presetId: DemoPresetId) => void;
   readonly onLoadDemoLot: (presetId: DemoPresetId) => void;
+  readonly onDownloadDemoLot?: (presetId: DemoPresetId) => void;
+  readonly downloadingPresetId?: DemoPresetId | null;
   readonly onSelectFile: (file: File) => void;
   readonly parseError?: {
     readonly error: ParseFatalError;
@@ -50,6 +53,8 @@ export function EmptyStateCard({
   selectedPresetId,
   onSelectPreset,
   onLoadDemoLot,
+  onDownloadDemoLot,
+  downloadingPresetId = null,
   onSelectFile,
   parseError = null,
   activeFilterSummary,
@@ -58,6 +63,8 @@ export function EmptyStateCard({
 }: EmptyStateCardProps): React.JSX.Element {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isLocalDragOver, setIsLocalDragOver] = React.useState(false);
+  const demoDownloadFileName = getDemoStdfFileName(selectedPresetId);
+  const isExportingDemo = downloadingPresetId === selectedPresetId;
 
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -151,6 +158,10 @@ export function EmptyStateCard({
             <p className="text-[14px] text-text-primary">
               {parseError.error.message}
             </p>
+            <p className="mt-1.5 text-[13px] text-text-secondary">
+              Supported file types: STDF V4 binary logs (.stdf, .std) and
+              gzip-compressed streams (.stdf.gz, .gz).
+            </p>
             <div className="mt-2 flex flex-wrap items-center gap-4 font-mono text-[12px] text-text-tertiary">
               {parseError.fileName ? (
                 <span>File: {parseError.fileName}</span>
@@ -187,7 +198,7 @@ export function EmptyStateCard({
           ref={fileInputRef}
           tabIndex={-1}
           type="file"
-          accept=".stdf,.std,.gz,application/gzip,application/octet-stream"
+          accept=".stdf,.std,.stdf.gz,.gz,application/gzip,application/octet-stream"
           onChange={handleFileInputChange}
           disabled={disabled}
           className="sr-only"
@@ -286,16 +297,32 @@ export function EmptyStateCard({
                 >
                   Load demo lot
                 </Button>
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  data-testid="download-demo-stdf-button"
+                  aria-label={`Download ${demoDownloadFileName}`}
+                  onClick={() => onDownloadDemoLot?.(selectedPresetId)}
+                  disabled={disabled || isExportingDemo}
+                >
+                  <Download className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                  <span className="font-mono text-[13px]">
+                    {isExportingDemo
+                      ? `Exporting ${demoDownloadFileName}...`
+                      : `Download ${demoDownloadFileName}`}
+                  </span>
+                </Button>
                 {cause === 'parse-failed' ? (
                   <Button
-                    variant="secondary"
+                    variant="ghost"
                     size="lg"
+                    aria-label="Choose another STDF file (.stdf, .std, .stdf.gz, .gz)"
                     aria-controls="cal-file-picker"
                     aria-describedby="cal-file-picker-desc"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={disabled}
                   >
-                    Choose STDF file
+                    Choose another file
                   </Button>
                 ) : null}
               </div>
@@ -342,6 +369,8 @@ export function EmptyStateCard({
                   variant="secondary"
                   size="md"
                   className="mt-5"
+                  data-testid="empty-state-file-picker-button"
+                  aria-label="Choose STDF file (.stdf, .std, .stdf.gz, .gz)"
                   aria-controls="cal-file-picker"
                   aria-describedby="cal-file-picker-desc"
                   onClick={() => fileInputRef.current?.click()}

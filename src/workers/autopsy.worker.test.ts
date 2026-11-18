@@ -14,6 +14,7 @@ import {
 } from '@/core/demo';
 import {
   compressGzipBytes,
+  DEFAULT_MAX_UNCOMPRESSED_BYTES,
   PRR_PART_FLG,
   writeStdfBytes,
 } from '@/core/stdf';
@@ -420,6 +421,130 @@ describe('autopsy.worker plain testable pipeline (without a real Worker)', () =>
       expect(afterCancel.kind).toBe('error');
       if (afterCancel.kind === 'error') {
         expect(afterCancel.error.code).toBe('EMPTY_INPUT');
+      }
+    } finally {
+      client.dispose();
+    }
+  });
+
+  it('enforces the exact 200 MB Bins-Only threshold using a fake File.size and preserves wafer map, Pareto inputs, and yield while skipping PTRs (Requirements 2.5, 15.3)', async () => {
+    expect(DEFAULT_MAX_UNCOMPRESSED_BYTES).toBe(200 * 1024 * 1024);
+
+    const { port1, port2 } = new MessageChannel();
+    Comlink.expose(createAutopsyWorkerApi(), port1);
+    const client = createAutopsyWorkerClient({
+      endpoint: port2,
+      terminate: () => {
+        port1.close();
+        port2.close();
+      },
+    });
+
+    const createFakeSizedFile = (
+      bytes: Uint8Array,
+      name: string,
+      fakeSize: number,
+    ): File => {
+      const file = new File([bytes.slice()], name, {
+        type: 'application/octet-stream',
+      });
+      Object.defineProperty(file, 'size', {
+        value: fakeSize,
+        configurable: true,
+      });
+      return file;
+    };
+
+    try {
+      const rawBytes = buildCompactTestStdfBytes();
+
+      // 1. Exact 200 MB boundary (not > 200 MB): parses directly in 'full' mode with PTRs
+      const atCeilingFile = createFakeSizedFile(
+        rawBytes,
+        'at-200mb.stdf',
+        DEFAULT_MAX_UNCOMPRESSED_BYTES,
+      );
+      const fullRes = await client.loadFile(atCeilingFile);
+      expect(fullRes.kind).toBe('ok');
+      if (fullRes.kind === 'ok') {
+        expect(fullRes.lot.parseMode).toBe('full');
+        expect(fullRes.lot.tests.size).toBe(1);
+      }
+
+      // 2. 200 MB + 1 byte: pauses and prompts for Bins-Only Mode without reading full file first
+      const fakeAbove200Mb = DEFAULT_MAX_UNCOMPRESSED_BYTES + 1;
+      const aboveCeilingFile = createFakeSizedFile(
+        rawBytes,
+        'above-200mb.stdf',
+        fakeAbove200Mb,
+      );
+      const promptRes = await client.loadFile(aboveCeilingFile);
+      expect(promptRes).toEqual({
+        kind: 'large-file-prompt',
+        bytesObserved: fakeAbove200Mb,
+        maxUncompressedBytes: DEFAULT_MAX_UNCOMPRESSED_BYTES,
+        fileName: 'above-200mb.stdf',
+      });
+
+      // 3. Resuming in 'bins-only' skips PTR records yet produces complete wafer map, Pareto inputs, and yield
+      const binsOnlyRes = await client.resumeLargeFile('bins-only');
+      expect(binsOnlyRes.kind).toBe('ok');
+      if (binsOnlyRes.kind === 'ok') {
+        expect(binsOnlyRes.lot.parseMode).toBe('bins-only');
+        expect(binsOnlyRes.lot.tests.size).toBe(0);
+        expect(binsOnlyRes.skippedRecordCount).toBe(4); // 4 PTR records skipped
+
+        // Wafer map spatial coordinates & pass/fail intact
+        expect(binsOnlyRes.lot.wafers).toHaveLength(1);
+        expect(binsOnlyRes.lot.dies.count).toBe(4);
+        expect(Array.from(binsOnlyRes.lot.dies.x)).toEqual([0, 1, 0, 1]);
+        expect(Array.from(binsOnlyRes.lot.dies.y)).toEqual([0, 0, 1, 1]);
+        expect(Array.from(binsOnlyRes.lot.dies.finalPass)).toEqual([1, 0, 1, 1]);
+        expect(binsOnlyRes.lot.waferCoordIndex[0]?.size).toBe(4);
+
+        // Bin Pareto inputs (SBIN/HBIN columns, definitions, and dominant-bin EngineFact) intact
+        expect(Array.from(binsOnlyRes.lot.dies.sbin)).toEqual([1, 7, 1, 1]);
+        expect(Array.from(binsOnlyRes.lot.dies.hbin)).toEqual([1, 4, 1, 1]);
+        expect(binsOnlyRes.lot.sbins.get(7)?.name).toBe('IDDQ');
+        expect(binsOnlyRes.lot.hbins.get(4)?.name).toBe('LEAK');
+        expect(
+          binsOnlyRes.facts.some(
+            (f) => f.kind === 'dominant-bin' && f.binRef?.code === 7,
+          ),
+        ).toBe(true);
+
+        // Yield summary intact
+        expect(binsOnlyRes.yieldSummary.overall.testedDies).toBe(4);
+        expect(binsOnlyRes.yieldSummary.overall.finalPassDies).toBe(3);
+        expect(binsOnlyRes.yieldSummary.overall.finalFailDies).toBe(1);
+        expect(binsOnlyRes.yieldSummary.overall.finalYield).toBeCloseTo(0.75, 8);
+      }
+
+      // 4. Plain STDF named ".stdf.gz" (without 0x1F 0x8B magic bytes) parses as plain STDF
+      const plainNamedGz = new File([rawBytes.slice()], 'plain-not-gzipped.stdf.gz', {
+        type: 'application/gzip',
+      });
+      const plainNamedGzRes = await client.loadFile(plainNamedGz);
+      expect(plainNamedGzRes.kind).toBe('ok');
+      if (plainNamedGzRes.kind === 'ok') {
+        expect(plainNamedGzRes.source).toEqual({
+          kind: 'file',
+          fileName: 'plain-not-gzipped.stdf.gz',
+          compressed: false,
+        });
+        expect(plainNamedGzRes.lot.dies.count).toBe(4);
+      }
+
+      // 5. Worker .stdf demo export transfers bytes zero-copy and parses back to 15,825 dies
+      const exported = await client.exportDemoStdf('edge-ring-etch');
+      expect(exported.fileName).toBe('edge-ring-etch.stdf');
+      const droppedDemo = new File([exported.bytes.slice()], exported.fileName, {
+        type: 'application/octet-stream',
+      });
+      const reparsedDemo = await client.loadFile(droppedDemo);
+      expect(reparsedDemo.kind).toBe('ok');
+      if (reparsedDemo.kind === 'ok') {
+        expect(reparsedDemo.lot.dies.count).toBe(DEMO_WAFER_COUNT * DEMO_DIES_PER_WAFER);
       }
     } finally {
       client.dispose();

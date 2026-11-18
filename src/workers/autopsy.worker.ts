@@ -21,6 +21,7 @@ import {
   type YieldSummary,
 } from '@/core/analytics';
 import {
+  buildDemoStdfDownload,
   type DemoPresetId,
   type DemoPresetMeta,
   generateDemoStdfBytes,
@@ -145,6 +146,12 @@ export interface WorkerLoadDemoRequest {
   readonly maxUncompressedBytes?: number;
 }
 
+export interface WorkerExportDemoResult {
+  readonly presetId: DemoPresetId;
+  readonly fileName: `${DemoPresetId}.stdf`;
+  readonly buffer: ArrayBuffer;
+}
+
 export interface AutopsyWorkerApi {
   loadBuffer(
     buffer: ArrayBuffer,
@@ -156,6 +163,10 @@ export interface AutopsyWorkerApi {
     request?: WorkerLoadDemoRequest,
     onProgress?: WorkerProgressCallback,
   ): Promise<AutopsyWorkerResponse>;
+  exportDemoStdf(
+    presetId: DemoPresetId,
+    seed?: number,
+  ): Promise<WorkerExportDemoResult>;
   resumeLargeFileParse(
     mode: ParseMode,
     onProgress?: WorkerProgressCallback,
@@ -622,6 +633,28 @@ export function createAutopsyWorkerApi(options?: {
       pendingLargeBytes = null;
       pendingFileName = undefined;
       pendingMaxBytes = undefined;
+    },
+
+    async exportDemoStdf(
+      presetId: DemoPresetId,
+      seed?: number,
+    ): Promise<WorkerExportDemoResult> {
+      const payload = buildDemoStdfDownload(presetId, seed);
+      const exactBuffer =
+        payload.bytes.buffer instanceof ArrayBuffer &&
+        payload.bytes.byteOffset === 0 &&
+        payload.bytes.byteLength === payload.bytes.buffer.byteLength
+          ? payload.bytes.buffer
+          : payload.bytes.slice().buffer;
+      const result: WorkerExportDemoResult = {
+        presetId: payload.presetId,
+        fileName: payload.fileName,
+        buffer: exactBuffer,
+      };
+      if (enableTransfer && exactBuffer.byteLength > 0) {
+        return Comlink.transfer(result, [exactBuffer]);
+      }
+      return result;
     },
 
     getDemoPresets(): readonly DemoPresetMeta[] {

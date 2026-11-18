@@ -16,6 +16,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  ClinicalToaster,
   cn,
 } from '@/ui/primitives';
 import {
@@ -28,6 +29,11 @@ import {
 import { EmptyStateCard } from './EmptyStateCard';
 import { FullWindowDropZone } from './FullWindowDropZone';
 import { IngestProgressPanel } from './IngestProgressPanel';
+import {
+  notifyDemoStdfDownload,
+  notifyParseWarnings,
+  triggerBrowserBlobDownload,
+} from './ingest-helpers';
 import { LoadedLotOverview } from './LoadedLotOverview';
 
 type WorkspaceState =
@@ -79,6 +85,8 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
   const [workspace, setWorkspace] = React.useState<WorkspaceState>({
     status: 'empty',
   });
+  const [downloadingPresetId, setDownloadingPresetId] =
+    React.useState<DemoPresetId | null>(null);
   const [liveAnnouncement, setLiveAnnouncement] = React.useState('');
 
   const clientRef = React.useRef<AutopsyWorkerClient | null>(null);
@@ -111,6 +119,9 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
 
       if (response.kind === 'ok') {
         setWorkspace({ status: 'ready', payload: response });
+        if (response.lot.warnings.length > 0) {
+          notifyParseWarnings(response.lot.warnings);
+        }
         setLiveAnnouncement(
           `${response.report.causeOfDeathHeadline.text} Loaded lot ${response.lot.lotId}: ${formatGroupedInt(response.lot.dies.count)} dies across ${formatGroupedInt(response.lot.wafers.length)} wafers, final yield ${formatYieldPct(response.yieldSummary.overall.finalYield)}.`,
         );
@@ -290,6 +301,30 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
     [applyWorkerResponse, getWorkerClient, handleUnexpectedWorkerError],
   );
 
+  const handleDownloadDemoLot = React.useCallback(
+    (presetId: DemoPresetId): void => {
+      setDownloadingPresetId(presetId);
+      const client = getWorkerClient();
+      void client
+        .exportDemoStdf(presetId)
+        .then((exported) => {
+          triggerBrowserBlobDownload(exported.bytes, exported.fileName);
+          notifyDemoStdfDownload(exported.fileName, exported.bytes.byteLength);
+          setLiveAnnouncement(
+            `Downloaded ${exported.fileName} (${formatByteSize(exported.bytes.byteLength)}).`,
+          );
+        })
+        .catch((err: unknown) => {
+          const detail = err instanceof Error ? err.message : String(err);
+          setLiveAnnouncement(`Demo export failed: ${detail}`);
+        })
+        .finally(() => {
+          setDownloadingPresetId((prev) => (prev === presetId ? null : prev));
+        });
+    },
+    [getWorkerClient],
+  );
+
   const isLoading = workspace.status === 'loading';
   const ingestedBytes =
     workspace.status === 'ready'
@@ -300,6 +335,7 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
 
   return (
     <FullWindowDropZone disabled={isLoading} onFileDrop={handleLoadFile}>
+      <ClinicalToaster />
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {liveAnnouncement}
       </div>
@@ -332,6 +368,8 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
               selectedPresetId={selectedPresetId}
               onSelectPreset={setSelectedPresetId}
               onLoadDemoLot={handleLoadDemoLot}
+              onDownloadDemoLot={handleDownloadDemoLot}
+              downloadingPresetId={downloadingPresetId}
               onSelectFile={handleLoadFile}
             />
           ) : null}
@@ -343,6 +381,8 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
               selectedPresetId={selectedPresetId}
               onSelectPreset={setSelectedPresetId}
               onLoadDemoLot={handleLoadDemoLot}
+              onDownloadDemoLot={handleDownloadDemoLot}
+              downloadingPresetId={downloadingPresetId}
               onSelectFile={handleLoadFile}
               parseError={{
                 error: workspace.error,
@@ -425,6 +465,8 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
               selectedPresetId={selectedPresetId}
               onSelectPreset={setSelectedPresetId}
               onLoadDemoLot={handleLoadDemoLot}
+              onDownloadDemoLot={handleDownloadDemoLot}
+              downloadingPresetId={downloadingPresetId}
               onSelectFile={handleLoadFile}
             />
           ) : null}

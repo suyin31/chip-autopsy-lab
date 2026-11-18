@@ -167,6 +167,7 @@ export function FullWindowDropZone({
       {isDraggingOver ? (
         <div
           aria-hidden="true"
+          data-testid="full-window-drop-overlay"
           className="surface-overlay pointer-events-none fixed inset-3 z-50 flex flex-col items-center justify-center rounded-panel border border-accent transition-[transform,opacity] duration-150 ease-[var(--ease-clinical)]"
           style={{
             backgroundImage:

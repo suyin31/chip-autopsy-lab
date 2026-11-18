@@ -1093,7 +1093,11 @@ export function parseStdfBytes(
     openParts.clear();
   };
 
-  const ensureActiveWafer = (): MutableWaferAccumulator => {
+  const ensureActiveWafer = (
+    triggerOffset: number,
+    triggerTyp: number,
+    triggerSub: number,
+  ): MutableWaferAccumulator => {
     if (activeWafer !== null) {
       return activeWafer;
     }
@@ -1108,6 +1112,13 @@ export function parseStdfBytes(
     };
     wafers.push(created);
     activeWafer = created;
+    warnings.push({
+      code: 'MISSING_WIR_RECORD',
+      byteOffset: triggerOffset,
+      recTyp: triggerTyp,
+      recSub: triggerSub,
+      detail: `Part record encountered without an open WIR (2, 10); synthesized implicit wafer W${String(created.waferIndex + 1).padStart(2, '0')}.`,
+    });
     return created;
   };
 
@@ -1246,7 +1257,7 @@ export function parseStdfBytes(
           cursor.setWindow(recordStart, recordEnd);
           const headNum = cursor.readU1();
           const siteNum = cursor.readU1();
-          ensureActiveWafer();
+          ensureActiveWafer(offset, recTyp, recSub);
           openParts.set(packSiteKey(headNum, siteNum), {
             headNum,
             siteNum,
@@ -1273,11 +1284,19 @@ export function parseStdfBytes(
           const partTxt = cursor.readOptCn() ?? '';
           const partFix = cursor.readOptBn();
 
-          const wafer = ensureActiveWafer();
+          const wafer = ensureActiveWafer(offset, recTyp, recSub);
           const siteKey = packSiteKey(headNum, siteNum);
           const openPart = openParts.get(siteKey);
           if (openPart !== undefined) {
             openParts.delete(siteKey);
+          } else {
+            warnings.push({
+              code: 'MISSING_PIR_RECORD',
+              byteOffset: offset,
+              recTyp,
+              recSub,
+              detail: `PRR at site (${headNum}, ${siteNum}) has no preceding PIR (5, 10).`,
+            });
           }
 
           const execution: ParsedPartExecution = {

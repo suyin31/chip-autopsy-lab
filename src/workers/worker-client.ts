@@ -73,6 +73,12 @@ export interface AutopsyWorkerClientOptions {
   readonly workerFactory?: () => Worker;
 }
 
+export interface ClientExportedDemoStdf {
+  readonly presetId: DemoPresetId;
+  readonly fileName: `${DemoPresetId}.stdf`;
+  readonly bytes: Uint8Array;
+}
+
 export interface AutopsyWorkerClient {
   loadBuffer(
     buffer: ArrayBuffer,
@@ -86,6 +92,10 @@ export interface AutopsyWorkerClient {
     presetId: DemoPresetId,
     options?: ClientLoadDemoOptions,
   ): Promise<AutopsyWorkerResponse>;
+  exportDemoStdf(
+    presetId: DemoPresetId,
+    seed?: number,
+  ): Promise<ClientExportedDemoStdf>;
   resumeLargeFile(
     mode: ParseMode,
     onProgress?: WorkerProgressCallback,
@@ -270,6 +280,19 @@ export function createAutopsyWorkerClient(
       if (!disposed && remote !== null) {
         await remote.discardPendingLargeFile();
       }
+    },
+
+    async exportDemoStdf(
+      presetId: DemoPresetId,
+      seed?: number,
+    ): Promise<ClientExportedDemoStdf> {
+      const workerRemote = ensureRemote();
+      const exported = await workerRemote.exportDemoStdf(presetId, seed);
+      return {
+        presetId: exported.presetId,
+        fileName: exported.fileName,
+        bytes: new Uint8Array(exported.buffer),
+      };
     },
 
     listDemoPresets(): readonly DemoPresetMeta[] {

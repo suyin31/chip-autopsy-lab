@@ -1,9 +1,14 @@
 'use client';
 
+import { Download } from 'lucide-react';
 import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import type { DemoPresetId, DemoPresetMeta } from '@/core/demo';
+import {
+  type DemoPresetId,
+  type DemoPresetMeta,
+  getDemoStdfFileName,
+} from '@/core/demo';
 import { sanitizeReportProseText } from '@/core/report';
 import {
   formatGroupedInt,
@@ -28,6 +33,8 @@ export interface LoadedLotOverviewProps {
   readonly selectedPresetId: DemoPresetId;
   readonly onSelectPreset: (presetId: DemoPresetId) => void;
   readonly onLoadDemoLot: (presetId: DemoPresetId) => void;
+  readonly onDownloadDemoLot?: (presetId: DemoPresetId) => void;
+  readonly downloadingPresetId?: DemoPresetId | null;
   readonly onSelectFile: (file: File) => void;
   /** Optional isolated Zustand store instance for deterministic component tests. */
   readonly store?: StoreApi<SelectionStoreState>;
@@ -50,6 +57,8 @@ export function LoadedLotOverview({
   selectedPresetId,
   onSelectPreset,
   onLoadDemoLot,
+  onDownloadDemoLot,
+  downloadingPresetId = null,
   onSelectFile,
   store = useSelectionStore,
 }: LoadedLotOverviewProps): React.JSX.Element {
@@ -57,6 +66,8 @@ export function LoadedLotOverview({
   const { lot, yieldSummary, siteAnomalies, facts, verdict, report } = data;
   const overall = yieldSummary.overall;
   const primaryAnomaly = siteAnomalies[0];
+  const demoDownloadFileName = getDemoStdfFileName(selectedPresetId);
+  const isExportingDemo = downloadingPresetId === selectedPresetId;
 
   const { storeLot, rawSiteFilter } = useStore(
     store,
@@ -155,10 +166,10 @@ export function LoadedLotOverview({
             ref={fileInputRef}
             tabIndex={-1}
             type="file"
-            accept=".stdf,.std,.gz,application/gzip,application/octet-stream"
+            accept=".stdf,.std,.stdf.gz,.gz,application/gzip,application/octet-stream"
             onChange={handleFileChange}
             className="sr-only"
-            aria-label="Choose another STDF V4 file"
+            aria-label="Choose another STDF V4 file (.stdf, .std, .stdf.gz, .gz)"
           />
           <span id="cal-loaded-file-picker-desc" className="sr-only">
             Opens local STDF V4 file picker (.stdf, .std, .stdf.gz, .gz)
@@ -192,6 +203,18 @@ export function LoadedLotOverview({
           <Button
             variant="ghost"
             size="sm"
+            data-testid="loaded-download-demo-stdf-button"
+            aria-label={`Download ${demoDownloadFileName}`}
+            onClick={() => onDownloadDemoLot?.(selectedPresetId)}
+            disabled={isExportingDemo}
+          >
+            <Download className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
+            <span className="font-mono text-[12px]">.stdf</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Choose STDF file (.stdf, .std, .stdf.gz, .gz)"
             aria-controls="cal-loaded-file-picker"
             aria-describedby="cal-loaded-file-picker-desc"
             onClick={() => fileInputRef.current?.click()}
@@ -200,6 +223,25 @@ export function LoadedLotOverview({
           </Button>
         </div>
       </section>
+
+      {lot.parseMode === 'bins-only' ? (
+        <div
+          role="status"
+          data-testid="bins-only-notice"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-panel border border-hairline bg-panel px-4 py-2.5 text-[13px] text-text-secondary"
+        >
+          <span>
+            <span className="font-medium text-text-primary">
+              Bins-only mode active:
+            </span>{' '}
+            Parametric records (PTR, MPR, FTR) were skipped above 200 MB. Wafer
+            map, bin Pareto inputs, yield, and spatial diagnosis remain intact.
+          </span>
+          <span className="font-mono text-[12px] text-text-tertiary tabular-nums">
+            {formatGroupedInt(data.skippedRecordCount)} records skipped
+          </span>
+        </div>
+      ) : null}
 
       {/* Hero row: >=1280px side-by-side (verdict left ~44%, wafer map + lot strip right ~56%); <1280px stacked verdict-first */}
       <div

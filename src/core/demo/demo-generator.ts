@@ -1446,6 +1446,13 @@ export function generateDemoLot(
   };
 }
 
+export interface DemoStdfDownloadPayload {
+  readonly presetId: DemoPresetId;
+  readonly fileName: `${DemoPresetId}.stdf`;
+  readonly mimeType: 'application/octet-stream';
+  readonly bytes: Uint8Array;
+}
+
 /**
  * Generates deterministic STDF V4 binary bytes for one of the three built-in demo lots.
  */
@@ -1454,4 +1461,30 @@ export function generateDemoStdfBytes(
   seed?: number,
 ): Uint8Array {
   return generateDemoLot(presetId, seed).stdfBytes;
+}
+
+/**
+ * Canonical `.stdf` download filename for a built-in demo lot preset (Requirement 3.4).
+ */
+export function getDemoStdfFileName(
+  presetId: DemoPresetId,
+): `${DemoPresetId}.stdf` {
+  return `${presetId}.stdf`;
+}
+
+/**
+ * Builds a downloadable binary `.stdf` payload for `presetId` from `generateDemoStdfBytes`
+ * (`writeStdfBytes`) so users can export and drag demo files back into the workbench
+ * (Requirement 3.4).
+ */
+export function buildDemoStdfDownload(
+  presetId: DemoPresetId,
+  seed?: number,
+): DemoStdfDownloadPayload {
+  return {
+    presetId,
+    fileName: getDemoStdfFileName(presetId),
+    mimeType: 'application/octet-stream',
+    bytes: generateDemoStdfBytes(presetId, seed),
+  };
 }
