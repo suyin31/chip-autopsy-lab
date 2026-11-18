@@ -308,6 +308,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
   - Accept: A41, A42.
 - [ ] P26b. Editorial accent pass
   - Warm paper bg, one italic serif accent word, bigger landing headline, mono instrument notes (premium §12). Update e2e colour/contrast expectations that the new tokens change.
+  - Fonts are already installed (no network needed): load via next/font/local from node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2 and node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2 (both OFL).
   - Accept: A45, A46, A47, A48, and A1–A10 still pass.
 
 **Motion**
