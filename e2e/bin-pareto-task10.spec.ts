@@ -96,7 +96,7 @@ test.describe('Task 10 - HBIN/SBIN legend and Bin Pareto', () => {
     // Clicking the dominant-bin finding highlights its bar
     const binFinding = page
       .getByTestId('autopsy-body-claim-button')
-      .filter({ hasText: 'leads the loss' });
+      .filter({ hasText: 'One failure type causes' });
     await binFinding.click();
     await expect(binFinding).toHaveAttribute('aria-pressed', 'true');
     await expect(topRow).toHaveAttribute('data-highlighted', 'true');

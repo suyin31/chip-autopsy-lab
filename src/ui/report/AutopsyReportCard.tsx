@@ -199,6 +199,8 @@ function resolveClaimGlowOrderMode(
   }
   if (
     claim.messageKey === 'findings.edgeBand.headline' ||
+    claim.messageKey === 'findings.center.headline' ||
+    claim.messageKey === 'findings.donut.headline' ||
     ((claim.messageKey === 'verdict.pattern' ||
       claim.messageKey === 'findings.excursion.headline') &&
       (spatialPattern === 'Edge-Ring' ||
@@ -362,11 +364,18 @@ export function AutopsyReportCard({
     [buildRiseMotionProps],
   );
 
-  const { storeLot, activeClaimId, hasActiveFilter, selectedDieMask } =
+  const {
+    storeLot,
+    activeClaimId,
+    hasActiveFilter,
+    selectedDieMask,
+    storeActiveWaferIndex,
+  } =
     useStore(
       store,
       useShallow((s) => ({
         storeLot: s.lot,
+        storeActiveWaferIndex: s.activeWaferIndex,
         activeClaimId: s.claimHighlight?.claimId ?? null,
         hasActiveFilter: s.hasActiveFilter,
         selectedDieMask: s.selectedDieMask,
@@ -664,6 +673,12 @@ export function AutopsyReportCard({
           heading={rendered.findingsHeading}
           clearLabel={rendered.clearLabel}
           possibleCausesHeading={rendered.possibleCausesHeading}
+          checkNextLabel={rendered.checkNextLabel}
+          causesNote={rendered.causesNote}
+          lotKey={lot.lotId}
+          dieWaferIndex={lot.dies.waferIndex}
+          activeWaferIndex={storeLot === lot ? storeActiveWaferIndex : 0}
+          waferCount={lot.wafers.length}
           findings={visibleFindings}
           hypotheses={rendered.hypotheses}
           activeClaimId={effectiveActiveClaimId}

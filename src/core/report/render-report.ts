@@ -63,8 +63,12 @@ export interface RenderedConfidenceInfo {
   readonly methodBody: string;
 }
 
+/** Kind of evidence behind a finding row; picks the row's kind icon (premium §7.6.2). */
+export type FindingKind = 'pattern' | 'scratch' | 'site' | 'test' | 'bin';
+
 export interface RenderedFindingRow {
   readonly claimId: string;
+  readonly kind: FindingKind;
   readonly claim: ReportClaim;
   readonly headline: string;
   readonly subline: string;
@@ -72,8 +76,8 @@ export interface RenderedFindingRow {
   readonly dieCountLabel: string;
   /** Full detail sentence shown when the row is expanded (§3.5, §4.6). */
   readonly detailText: string;
-  /** Localized `"Check next: …"` lines when the claim's fact carries hypotheses (§4.6). */
-  readonly checkNextLines: readonly string[];
+  /** Up to 3 localized "Check next" steps when the claim's fact carries hypotheses (premium §7.6.4). */
+  readonly checkNextSteps: readonly string[];
   /** Untranslated tokens (`bin`, `test`, `wafer`) for `<bdi translate="no">` wrapping in UI (§6.6). */
   readonly untranslatedTokens: Readonly<Record<string, string>>;
 }
@@ -82,7 +86,6 @@ export interface RenderedHypothesisItem {
   readonly id: HypothesisTemplateId;
   readonly headline: string;
   readonly checkText: string;
-  readonly checkNextLine: string;
 }
 
 export interface RenderedAutopsyReport {
@@ -92,6 +95,10 @@ export interface RenderedAutopsyReport {
   readonly findingsHeading: string;
   readonly clearLabel: string;
   readonly possibleCausesHeading: string;
+  /** `"Check next"` label above the steps in an expanded finding (premium §7.6.4). */
+  readonly checkNextLabel: string;
+  /** First line of the open Possible causes disclosure (premium §7.6.5). */
+  readonly causesNote: string;
   readonly findings: readonly RenderedFindingRow[];
   readonly hypotheses: readonly RenderedHypothesisItem[];
 }
@@ -254,12 +261,10 @@ function renderHypothesisSpec(
   } else {
     checkText = t(locale, spec.checkKey);
   }
-  const checkNextLine = t(locale, 'findings.checkNext', { step: checkText });
   return {
     id: spec.id,
     headline,
     checkText,
-    checkNextLine,
   };
 }
 
@@ -278,7 +283,7 @@ function renderFindingTexts(
   switch (messageKey) {
     case 'findings.edgeBand.headline': {
       const headline = t(locale, 'findings.edgeBand.headline', {
-        share: formatPercent(locale, Number(params.share ?? 0)),
+        rings: formatInteger(locale, Number(params.rings ?? 3)),
       });
       const subline =
         subMessageKey === 'findings.edgeBand.sub'
@@ -312,12 +317,14 @@ function renderFindingTexts(
     case 'findings.dominantBin.headline': {
       const bin = String(params.bin ?? '');
       untranslated.bin = bin;
-      const headline = t(locale, 'findings.dominantBin.headline', { bin });
+      const headline = t(locale, 'findings.dominantBin.headline', {
+        share: formatPercent(locale, Number(params.share ?? 0)),
+      });
       const subline =
         subMessageKey === 'findings.dominantBin.sub'
           ? t(locale, 'findings.dominantBin.sub', {
+              bin,
               dies: formatInteger(locale, Number(params.dies ?? 0)),
-              share: formatPercent(locale, Number(params.share ?? 0)),
             })
           : '';
       return { headline, subline, untranslatedTokens: untranslated };
@@ -341,12 +348,21 @@ function renderFindingTexts(
     }
 
     case 'findings.capability.headline': {
-      const test = String(params.test ?? '0');
+      // Premium §9.3: the title names the test in plain words; Cpk and limits live in the sub-line
+      const testName = String(params.testName ?? '');
+      const test =
+        testName.length > 0
+          ? testName
+          : String(params.testNum ?? params.test ?? '0');
       untranslated.test = test;
-      const headline = t(locale, 'findings.capability.headline', {
-        test,
-        cpk: formatDecimal2(locale, Number(params.cpk ?? 0)),
-      });
+      const unitToken = String(params.units ?? '').trim();
+      const cpkValue = Number(params.cpk ?? 0);
+      const kind = t(locale, resolveTestKindKey(unitToken, testName));
+      const headline = t(
+        locale,
+        cpkValue < 1 ? 'findings.capability.headline' : 'findings.capability.close',
+        { kind, test },
+      );
 
       let subline = '';
       if (subMessageKey === 'findings.capability.sub') {
@@ -390,12 +406,31 @@ function renderFindingTexts(
         }
 
         subline = t(locale, 'findings.capability.sub', {
+          cpk: formatDecimal2(locale, cpkValue),
           mean: meanStr,
           lo: loStr,
           hi: hiStr,
         });
       }
 
+      return { headline, subline, untranslatedTokens: untranslated };
+    }
+
+    case 'findings.center.headline':
+    case 'findings.donut.headline':
+    case 'findings.edgeLoc.headline':
+    case 'findings.loc.headline':
+    case 'findings.nearFull.headline': {
+      const headline = t(locale, messageKey);
+      const subline =
+        subMessageKey === 'findings.pattern.sub'
+          ? t(locale, 'findings.pattern.sub', {
+              dies: formatInteger(locale, Number(params.dies ?? 0)),
+              share: formatPercent(locale, Number(params.share ?? 0)),
+              wafers: formatInteger(locale, Number(params.wafers ?? 1)),
+              total: formatInteger(locale, Number(params.total ?? 1)),
+            })
+          : '';
       return { headline, subline, untranslatedTokens: untranslated };
     }
 
@@ -444,6 +479,50 @@ function renderFindingTexts(
       });
       return { headline, subline, untranslatedTokens: untranslated };
     }
+  }
+}
+
+/** Plain-language test kind from the test unit and name (premium §9.3 `finding.test.title`). */
+function resolveTestKindKey(
+  units: string,
+  testName: string,
+):
+  | 'findings.testKind.leakage'
+  | 'findings.testKind.current'
+  | 'findings.testKind.voltage'
+  | 'findings.testKind.timing'
+  | 'findings.testKind.frequency'
+  | 'findings.testKind.generic' {
+  if (units === 'A') {
+    return testName.toUpperCase().startsWith('IDDQ')
+      ? 'findings.testKind.leakage'
+      : 'findings.testKind.current';
+  }
+  if (units === 'V') return 'findings.testKind.voltage';
+  if (units === 's') return 'findings.testKind.timing';
+  if (units === 'Hz') return 'findings.testKind.frequency';
+  return 'findings.testKind.generic';
+}
+
+/** Kind icon per finding (premium §7.6.2): spatial pattern, scratch, test site, parametric test, or bin. */
+export function resolveFindingKind(messageKey: MessageKey): FindingKind {
+  switch (messageKey) {
+    case 'findings.scratch.headline':
+      return 'scratch';
+    case 'findings.edgeBand.headline':
+    case 'findings.center.headline':
+    case 'findings.donut.headline':
+    case 'findings.edgeLoc.headline':
+    case 'findings.loc.headline':
+    case 'findings.nearFull.headline':
+    case 'findings.excursion.headline':
+      return 'pattern';
+    case 'findings.site.headline':
+      return 'site';
+    case 'findings.capability.headline':
+      return 'test';
+    default:
+      return 'bin';
   }
 }
 
@@ -531,20 +610,21 @@ export function renderReport(
     // Attach check-next steps to the primary finding when hypotheses exist (§4.6)
     const isPrimaryFinding =
       claim.claimId === 'claim:primary-evidence' || findings.length === 0;
-    const checkNextLines =
+    const checkNextSteps =
       isPrimaryFinding && renderedHypotheses.length > 0
-        ? renderedHypotheses.map((h) => h.checkNextLine)
+        ? renderedHypotheses.slice(0, 3).map((h) => h.checkText)
         : [];
 
     findings.push({
       claimId: claim.claimId,
+      kind: resolveFindingKind(claim.messageKey),
       claim,
       headline,
       subline,
       dieCount,
       dieCountLabel,
       detailText,
-      checkNextLines,
+      checkNextSteps,
       untranslatedTokens,
     });
   }
@@ -553,9 +633,11 @@ export function renderReport(
     locale,
     verdict,
     confidence,
-    findingsHeading: t(locale, 'findings.heading'),
+    findingsHeading: t(locale, 'findings.label'),
     clearLabel: t(locale, 'findings.clear'),
-    possibleCausesHeading: t(locale, 'findings.possibleCauses'),
+    possibleCausesHeading: t(locale, 'causes.label'),
+    checkNextLabel: t(locale, 'findings.checkNext'),
+    causesNote: t(locale, 'causes.note'),
     findings,
     hypotheses: renderedHypotheses,
   };

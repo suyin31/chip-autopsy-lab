@@ -41,7 +41,7 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
 
     // 2. Edge-band finding lights ring dies clockwise within 600 ms, dims non-evidence dies under the dim-veil, marks evidence wafers, and clears on second click (§3.5, §5.4)
     const edgeBandRow = page.getByTestId('autopsy-body-claim-button').first();
-    await expect(edgeBandRow).toContainText('of fails are in the edge band');
+    await expect(edgeBandRow).toContainText('Failures concentrate in the outer 3 rings');
 
     const clickStartMs = await page.evaluate(() => performance.now());
     await edgeBandRow.click();

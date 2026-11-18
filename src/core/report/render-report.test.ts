@@ -157,26 +157,40 @@ describe('ReportClaim messageKey/params & renderReport per-locale determinism (r
     expect(rendered.possibleCausesHeading).toBe('Possible causes');
     expect(rendered.findings).toHaveLength(3);
 
+    // Premium §9.3 finding title templates and §7.6.2 kind icons
+    expect(rendered.checkNextLabel).toBe('Check next');
+    expect(rendered.causesNote).toBe(
+      'These are likely explanations, not proof. Confirm them in the tool logs.',
+    );
+    expect(rendered.findings.map((f) => f.kind)).toEqual([
+      'pattern',
+      'bin',
+      'test',
+    ]);
     expect(rendered.findings[0]?.headline).toBe(
-      '93.8% of fails are in the edge band',
+      'Failures concentrate in the outer 3 rings',
+    );
+    expect(rendered.findings[0]?.checkNextSteps).toEqual(
+      rendered.hypotheses.map((h) => h.checkText),
     );
     expect(rendered.findings[0]?.subline).toMatch(
       /^\d+\.\d% edge fail rate vs \d+\.\d% interior, on 25 of 25 wafers$/,
     );
     expect(rendered.findings[0]?.dieCountLabel).toBe('2,552 dies');
 
-    expect(rendered.findings[1]?.headline).toBe(
-      'SBIN 7 IDDQ_EDGE_LEAK leads the loss',
+    expect(rendered.findings[1]?.headline).toMatch(
+      /^One failure type causes 9\d\.\d% of the loss$/,
     );
     expect(rendered.findings[1]?.subline).toMatch(
-      /^[\d,]+ dies, 9\d\.\d% of fails$/,
+      /^SBIN 7 IDDQ_EDGE_LEAK, [\d,]+ dies$/,
     );
+    expect(rendered.findings[1]?.checkNextSteps).toEqual([]);
 
-    expect(rendered.findings[2]?.headline).toMatch(
-      /^Test 204 IDDQ_LEAK has Cpk 0\.\d{2}$/,
+    expect(rendered.findings[2]?.headline).toBe(
+      'Leakage test IDDQ_LEAK is far off target',
     );
     expect(rendered.findings[2]?.subline).toMatch(
-      /^Mean \d+\.\d{2} uA against limits 0\.20 to 15\.00 uA$/,
+      /^Cpk 0\.\d{2}, mean \d+\.\d{2} uA, limits 0\.20 to 15\.00 uA$/,
     );
 
     expect(rendered.hypotheses).toHaveLength(3);
@@ -216,7 +230,6 @@ describe('ReportClaim messageKey/params & renderReport per-locale determinism (r
         for (const h of passA.hypotheses) {
           expect(h.headline).not.toMatch(/\{[a-zA-Z0-9_]+\}/);
           expect(h.checkText).not.toMatch(/\{[a-zA-Z0-9_]+\}/);
-          expect(h.checkNextLine).not.toMatch(/\{[a-zA-Z0-9_]+\}/);
         }
 
         // Untranslated tokens preserved in every locale (§6.6)
@@ -226,7 +239,8 @@ describe('ReportClaim messageKey/params & renderReport per-locale determinism (r
         if (presetId === 'edge-ring-etch') {
           expect(passA.verdict.cause).toContain('Edge-Ring');
           expect(passA.confidence.matchLabel).toContain('Edge-Ring');
-          expect(passA.findings[2]?.headline).toContain('204 IDDQ_LEAK');
+          expect(passA.findings[2]?.headline).toContain('IDDQ_LEAK');
+          expect(passA.findings[1]?.subline).toContain('SBIN 7 IDDQ_EDGE_LEAK');
         } else if (presetId === 'handling-scratch') {
           expect(passA.verdict.cause).toContain('Scratch');
           expect(passA.confidence.matchLabel).toContain('Scratch');
@@ -301,5 +315,34 @@ describe('ReportClaim messageKey/params & renderReport per-locale determinism (r
     expect(site.verdict.subline).toMatch(
       /^Test site 2 fails \d+\.\d% of its dies, the other sites fail \d+\.\d%\. Final yield is \d+\.\d%\.$/,
     );
+  });
+
+  it('renders plain-language finding titles with codes in the sub-line (premium §9.3, §7.6.2)', () => {
+    const scratch = renderReport(
+      generateOfflineAutopsyReport(buildDemoLot('handling-scratch')).report,
+      'en',
+    );
+    expect(scratch.findings.map((f) => f.kind)).toEqual(['scratch', 'bin', 'test']);
+    expect(scratch.findings[0]?.headline).toBe(
+      'Failures line up along a scratch on 22 wafers',
+    );
+    expect(scratch.findings[2]?.headline).toBe(
+      'Current test VCCA_SHORT is far off target',
+    );
+    const site = renderReport(
+      generateOfflineAutopsyReport(buildDemoLot('site2-probe-contact')).report,
+      'en',
+    );
+    expect(site.findings.map((f) => f.kind)).toEqual(['site', 'bin', 'test']);
+    expect(site.findings[0]?.headline).toMatch(
+      /^Site 2 fails \d+\.\d times more often than the others$/,
+    );
+    expect(site.findings[2]?.headline).toBe('Test VDD_CONT_R is far off target');
+    for (const report of [scratch, site]) {
+      for (const f of report.findings) {
+        // No bin codes or Cpk in a headline; they live in the sub-line
+        expect(f.headline).not.toMatch(/[HS]BIN|Cpk/);
+      }
+    }
   });
 });

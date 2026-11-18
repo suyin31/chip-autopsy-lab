@@ -1413,3 +1413,39 @@ Rules distilled from current award-gallery work (godly/recent.design, land-book,
 - A42: sample card text sits outside the tile; pattern chip present on all three tiles.
 - A43: in "Where the yield went", exactly one bar is solid `ember` at rest.
 - A44: first-run coach mark shows a pulse ring before its text (or a static ring under reduced motion).
+
+## 12. Editorial accent (added 2026-11-18, user direction: "干净亮眼高级感")
+
+Reference feel: an editorial manifesto site with warm paper, very large confident type, one italic serif word in a hot orange, mono for small notes, lots of air. We take the rules, not the look: our subject stays silicon and the probe station. This section overrides §3 and §4 only where it names a value.
+
+### 12.1 Warm paper, not grey
+- Light theme page background `bg` changes from cool grey to warm paper `#F6F3EE`; `surface` (cards) stays `#FFFFFF`; `fill-1` `#EFEBE4`, `fill-2` `#E6E1D8`; `hairline` `rgba(32,30,31,0.10)`, `hairline-strong` `rgba(32,30,31,0.18)`; `text-primary` (ink) `#201E1F`. Text secondary/tertiary keep their contrast ratios against the new bg (re-derive in the same warm hue; ≥ 4.5:1 for secondary, ≥ 3:1 large/tertiary per §3).
+- Dark theme unchanged except `text-primary` may warm to `#F4EFE8`.
+- The wafer disc material (§5) stays neutral silicon; check pass-tile and edge-ring contrast still meet A6 on the new bg (stage background may stay cooler if needed; note the choice).
+
+### 12.2 One italic serif word
+- Add Instrument Serif (OFL, self-hosted via next/font, italic 400 only, latin subset) as `--font-accent`.
+- Use it for exactly one word or short phrase per screen, in `ember-ink`, same size as the surrounding display line, optical size matched by eye (≈ +6 % size, baseline aligned):
+  - Landing headline: "Drop the *body*." (the word "body").
+  - Loaded verdict headline: the cause phrase (e.g. "*Edge-Ring* failure."), replacing the plain ember-ink weight change. It stays the same button with the same behaviour.
+  - Healthy-lot verdict: no accent word.
+- CJK locales: no serif italic (CJK has no italic); keep the current ember-ink weight treatment for those locales.
+- Never on body text, buttons, numbers, or labels. Max one per viewport.
+
+### 12.3 Bigger, more confident display
+- Landing headline `display-xl`: clamp(56px, 6.4vw, 104px), weight 600, tracking −0.035em, line-height 0.98. Subline `title-3` at 20/28 max 560 px, `text-secondary`.
+- Loaded verdict headline keeps §7 sizes.
+
+### 12.4 Mono for instrument notes
+- Add `--font-mono` (JetBrains Mono or IBM Plex Mono, OFL, 400 only, self-hosted) for: eyebrows ("Example result", "Sample lots" section label), reticle coordinate labels, die coordinates in tooltips/magnifier, and lot/wafer IDs. 12/16, tracking +0.02em, uppercase for eyebrows only. Numbers in stats stay Inter tabular.
+- Eyebrows get a 6 px `ember` dot before them (one dot, not a `##`).
+
+### 12.5 Restraint rules (keep it clean)
+- Ember budget (§3.4) unchanged: the accent word counts as the one ember element of the headline area.
+- No new colours beyond ember; no illustrations; no texture/grain on the page. Space does the work: landing sections ≥ 72 px apart, card padding ≥ 24.
+
+### 12.6 Acceptance
+- A45: light `bg` is `#F6F3EE` and cards are white; secondary text ≥ 4.5:1 on bg.
+- A46: exactly one `--font-accent` element visible per viewport on landing and loaded (Latin locales); none in zh/ja/ko.
+- A47: landing headline computed font-size ≥ 88 px at 1440 wide.
+- A48: eyebrows and reticle labels use `--font-mono`.

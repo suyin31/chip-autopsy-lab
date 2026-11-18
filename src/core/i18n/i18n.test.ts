@@ -139,7 +139,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(DICTIONARIES.ko).toBe(ko);
 
     const enKeys = Object.keys(en).sort() as MessageKey[];
-    expect(enKeys.length).toBe(207);
+    expect(enKeys.length).toBe(226);
 
     for (const locale of SUPPORTED_LOCALES) {
       const dict = getDictionary(locale);
@@ -196,20 +196,29 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
       expect(dict['error.vax.body']).toContain('CPU_TYPE');
       expect(dict['error.gzip.body']).toContain('1F 8B');
       expect(dict['error.noParts.body']).toContain('PRR');
-      expect(dict['findings.capability.headline']).toContain('Cpk');
+      expect(dict['findings.capability.sub']).toContain('Cpk');
 
       // Interpolated bin codes/names, test numbers/names, WM-811K classes, and IDs pass through verbatim (§6.6)
       expect(
-        t(locale, 'findings.dominantBin.headline', {
+        t(locale, 'findings.dominantBin.sub', {
           bin: 'SBIN 7 IDDQ_EDGE_LEAK',
+          dies: '2,483',
         }),
       ).toContain('SBIN 7 IDDQ_EDGE_LEAK');
       expect(
         t(locale, 'findings.capability.headline', {
-          test: '204 IDDQ_LEAK',
-          cpk: formatDecimal2(locale, 0.14),
+          kind: t(locale, 'findings.testKind.leakage'),
+          test: 'IDDQ_LEAK',
         }),
-      ).toContain('204 IDDQ_LEAK');
+      ).toContain('IDDQ_LEAK');
+      expect(
+        t(locale, 'findings.capability.sub', {
+          cpk: formatDecimal2(locale, 0.14),
+          mean: '10.22 uA',
+          lo: '0.20',
+          hi: '15.00 uA',
+        }),
+      ).toContain('Cpk');
       expect(
         t(locale, 'verdict.pattern', { pattern: 'Edge-Ring' }),
       ).toContain('Edge-Ring');

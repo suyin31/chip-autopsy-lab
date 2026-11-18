@@ -498,6 +498,7 @@ function resolveFactFindingMessageSpec(
           subMessageKey: 'findings.edgeBand.sub',
           params: {
             share,
+            rings: CLASSIFIER_THRESHOLDS.EDGE_RING_BAND,
             edgeRate: edgeRatePct / 100,
             interiorRate: interiorRatePct / 100,
             wafers: sigWafers,
@@ -515,6 +516,32 @@ function resolveFactFindingMessageSpec(
             wafers: sigWafers,
             dies: sigCount,
             share,
+          },
+        };
+      }
+
+      // Premium §9.3: one plain-language title per shaped WM-811K class
+      const shapedKey: MessageKey | null =
+        pattern === 'Center'
+          ? 'findings.center.headline'
+          : pattern === 'Donut'
+            ? 'findings.donut.headline'
+            : pattern === 'Edge-Loc'
+              ? 'findings.edgeLoc.headline'
+              : pattern === 'Loc'
+                ? 'findings.loc.headline'
+                : pattern === 'Near-full'
+                  ? 'findings.nearFull.headline'
+                  : null;
+      if (shapedKey !== null) {
+        return {
+          messageKey: shapedKey,
+          subMessageKey: 'findings.pattern.sub',
+          params: {
+            dies: sigCount,
+            share: boundedStatRatio(sigCount, totalFails),
+            wafers: sigWafers,
+            total: lot.wafers.length,
           },
         };
       }
@@ -595,6 +622,8 @@ function resolveFactFindingMessageSpec(
         subMessageKey: 'findings.capability.sub',
         params: {
           test: testLabel,
+          testNum,
+          testName: cleanName,
           cpk,
           mean: meanBase,
           hasLo: hasLo ? 1 : 0,

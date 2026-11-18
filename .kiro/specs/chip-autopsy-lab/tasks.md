@@ -279,7 +279,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P18. Stats
   - Stat buttons with evidence, captions, second caption line, no orange (premium §7.5).
   - Accept: A4.
-- [ ] P19. Findings and possible causes
+- [x] P19. Findings and possible causes
   - Card, rows (rest, hover, pressed, selected), kind icons, expanded body, "Show N more", Possible causes disclosure, finding title templates (premium §7.6, §9.3).
   - Accept: A27.
 - [ ] P20. "Where the yield went"
@@ -306,6 +306,9 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [ ] P26a. Landing hero and sample tiles (inspiration deltas)
   - Hero wafer with probe-station reticle and example result card; sample cards as tiles with captions outside and pattern chips (premium §11.1, §11.2). Also apply §11.3 in P20, §11.4 in P25, §11.5 in P28 when those run.
   - Accept: A41, A42.
+- [ ] P26b. Editorial accent pass
+  - Warm paper bg, one italic serif accent word, bigger landing headline, mono instrument notes (premium §12). Update e2e colour/contrast expectations that the new tokens change.
+  - Accept: A45, A46, A47, A48, and A1–A10 still pass.
 
 **Motion**
 

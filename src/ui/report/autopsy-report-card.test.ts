@@ -312,8 +312,11 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
         /\b(font-mono|type-mono-data|tabular-mono|uppercase)\b/,
       );
       expect(cardHtml).not.toMatch(/<(code|kbd|pre|samp)\b/);
-      // The focus-ring token (premium §3.2) is the only box-shadow allowed here
-      expect(cardHtml).not.toMatch(/\bshadow-(?!none\b|focus-ring\b)[a-z0-9]+\b/);
+      // The focus-ring token (premium §3.2) and the findings card's shadow-card (§7.6.1) are the only box-shadows here
+      expect(cardHtml).not.toMatch(/\bshadow-(?!none\b|focus-ring\b|card\b)[a-z0-9]+\b/);
+      expect(cardHtml).toMatch(
+        /data-testid="verdict-findings-list" class="[^"]*rounded-xl bg-surface p-1 shadow-card/,
+      );
       expect(cardHtml).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
 
       // Expanded Possible causes reveals all 3 hedged hypotheses + check-next sublines
@@ -509,7 +512,14 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
     );
     expect(expandedRowHtml).toContain('data-testid="finding-clear-label"');
     expect(expandedRowHtml).toContain('data-testid="finding-expanded-detail"');
-    expect(expandedRowHtml).toContain('Check next:');
+    // Premium §7.6.4: engine sentence, "Check next" label with its steps, and the meta line
+    expect(expandedRowHtml).toContain('data-testid="finding-check-next"');
+    expect(expandedRowHtml).toContain('>Check next</p>');
+    expect(expandedRowHtml).toContain('data-testid="finding-engine-sentence"');
+    expect(expandedRowHtml).toMatch(
+      /data-testid="finding-meta"[^>]*>[\d,]+ on this wafer, [\d,]+ on all 25 wafers</,
+    );
+    expect(expandedRowHtml).toMatch(/class="[^"]*pb-4 pl-11 pr-4/);
 
     // 3. Toggle parametric finding row -> sets activeTestNum = 204, second toggle clears
     const paramClaim = report.bodyClaims.find(
@@ -628,6 +638,7 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
     const adversarialClaim = {
       ...primary,
       messageKey: 'findings.dominantBin.headline' as const,
+      subMessageKey: 'findings.dominantBin.sub' as const,
       params: {
         ...primary.params,
         bin: '<script>evil()</script>',

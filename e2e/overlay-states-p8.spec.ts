@@ -166,7 +166,7 @@ test("A9: settled evidence keeps ember dies lit with a white rim and dims the re
   await loadEdgeRing(page);
   const overlay = page.getByTestId("wafer-overlay-wrapper");
   const finding = page.getByTestId("autopsy-body-claim-button").first();
-  await expect(finding).toContainText("of fails are in the edge band");
+  await expect(finding).toContainText("Failures concentrate in the outer 3 rings");
   await finding.click();
   await expect(overlay).toHaveAttribute("data-glow-phase", "settled", { timeout: 2_000 });
   await expect(overlay).toHaveAttribute("data-scrim-alpha", "1.000");
