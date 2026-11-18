@@ -183,11 +183,26 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
         }),
       );
 
-      // Verdict card sits strictly above the wafer map canvas in workspace DOM order
+      // Slim lot header bar sits above both; verdict precedes wafer map; KPI tiles & site table stay below
+      const lotBarIdx = html.indexOf('data-testid="lot-header-bar"');
+      const heroGridIdx = html.indexOf('data-testid="verdict-wafer-hero-grid"');
       const reportIdx = html.indexOf('data-testid="autopsy-report-card"');
       const waferIdx = html.indexOf('data-testid="wafer-base-canvas"');
-      expect(reportIdx).toBeGreaterThanOrEqual(0);
+      const tilesIdx = html.indexOf('aria-label="Lot Yield Summary"');
+      const siteTableIdx = html.indexOf('data-testid="site-breakdown-row"');
+      expect(lotBarIdx).toBeGreaterThanOrEqual(0);
+      expect(heroGridIdx).toBeGreaterThan(lotBarIdx);
+      expect(reportIdx).toBeGreaterThan(heroGridIdx);
       expect(waferIdx).toBeGreaterThan(reportIdx);
+      expect(tilesIdx).toBeGreaterThan(waferIdx);
+      expect(siteTableIdx).toBeGreaterThan(tilesIdx);
+
+      // >=1280px side-by-side (~44% / ~56%) + <1280px stacked responsive classes and slim header controls
+      expect(html).toContain('xl:grid-cols-[minmax(0,44fr)_minmax(0,56fr)]');
+      expect(html).toContain(`Lot ${res.lot.lotId}`);
+      expect(html).toContain('id="cal-preset-switcher"');
+      expect(html).toContain('Load demo lot');
+      expect(html).toContain('Choose STDF file');
 
       // Cause-of-death headline, hedged <=0.95 confidence chip, offline provenance badge, button semantics, focus ring, aria-pressed
       expect(html).toContain(expectedPrefix);
@@ -196,17 +211,26 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
       expect(html).toContain('High · 0.9');
       expect(html).not.toMatch(/High · 0\.9[6-9]|High · 1\.00/);
       expect(html).toContain('Click a finding to light its dies');
+      expect(html).toContain('data-testid="autopsy-live-region"');
       expect(html).toContain('aria-live="polite"');
       expect(html).toContain('Template · Offline');
       expect(html).toContain('data-testid="autopsy-headline-button"');
       expect(html).toContain('data-testid="autopsy-body-claim-button"');
+      expect(html).toContain('data-testid="site-row-toggle-button"');
+      expect(html).toContain('w-[3px] bg-accent');
+      expect(html).not.toContain('border-hairline bg-transparent');
       expect(html).toContain('type="button"');
       expect(html).toContain('aria-pressed="false"');
       expect(html).toContain('focus-visible:outline-accent');
 
-      // Hypotheses disclosure is collapsed by default (aria-expanded="false", body hidden)
+      // Hypotheses disclosure is collapsed by default (aria-expanded="false", aria-controls target exists & hidden)
       expect(html).toContain('data-testid="autopsy-hypotheses-toggle"');
       expect(html).toContain('aria-expanded="false"');
+      const controlsMatch = /data-testid="autopsy-hypotheses-toggle"[^>]*aria-controls="([^"]+)"/.exec(
+        html,
+      );
+      expect(controlsMatch?.[1]).toBeTruthy();
+      expect(html).toContain(`id="${controlsMatch?.[1]}"`);
       expect(html).not.toContain('Candidate mechanism:');
       expect(html).not.toContain('Check next:');
 
@@ -310,6 +334,9 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
     );
     expect(activeHtml).toContain('aria-pressed="true"');
     expect(activeHtml).toContain('Highlighted · Click to clear');
+    expect(activeHtml).toContain(
+      'Selected finding (claim:cause-of-death):',
+    );
 
     // OverlayCanvas paint helper lights up the cited dies on Wafer 0 in #7CF2C1 + outer halo
     const wafer0 = lot.wafers[afterFirstClick.activeWaferIndex]!;
@@ -485,5 +512,52 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
     expect(html).not.toContain('<script>');
     expect(html).not.toContain('<img ');
     expect(html).toContain('&lt;script&gt;evil()&lt;/script&gt;');
+  });
+
+  it('supports injected SelectionStore on LoadedLotOverview (m-3) and sanitizes stream warning details (m-5)', async () => {
+    const presets = listDemoPresets();
+    const res = await ingestDemoPreset('site2-probe-contact');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
+
+    const store = createClientTestStore();
+    store.getState().setLot(res.lot);
+    store.getState().toggleSiteFilter(1);
+
+    const payloadWithWarning = {
+      ...res,
+      lot: {
+        ...res.lot,
+        warnings: [
+          {
+            code: 'TRUNCATED_TAIL_RECORD' as const,
+            byteOffset: 4096,
+            recTyp: 5,
+            recSub: 20,
+            detail: 'Unexpected <img src=x onerror=evil()>frame\u0007tail',
+          },
+        ],
+      },
+    };
+    store.getState().setLot(payloadWithWarning.lot);
+    store.getState().toggleSiteFilter(1);
+
+    const html = renderToStaticMarkup(
+      React.createElement(LoadedLotOverview, {
+        data: payloadWithWarning,
+        presets,
+        selectedPresetId: 'site2-probe-contact',
+        onSelectPreset: () => undefined,
+        onLoadDemoLot: () => undefined,
+        onSelectFile: () => undefined,
+        store,
+      }),
+    );
+
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('Highlighted');
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('\u0007');
+    expect(html).toContain('Unexpected img src=x onerror=evil()frametail');
   });
 });

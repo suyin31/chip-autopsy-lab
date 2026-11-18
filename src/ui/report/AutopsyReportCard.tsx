@@ -12,6 +12,7 @@ import {
   type ReportClaim,
 } from '@/core/report';
 import { Badge, Card, CardContent, CardHeader } from '@/ui/primitives';
+import { formatGroupedInt } from '@/ui/format';
 import {
   type ClaimHighlightState,
   type SelectionStoreState,
@@ -203,21 +204,31 @@ interface DisclosedHypothesisItem {
   readonly key: string;
   readonly mechanismText: string;
   readonly checkNextText: string | null;
+  readonly combinedDisplayText: string;
   readonly linkedClaim?: ReportClaim;
 }
 
 function splitHypothesisClauses(rawText: string): {
   readonly mechanismText: string;
   readonly checkNextText: string | null;
+  readonly combinedDisplayText: string;
 } {
   const marker = ' Check next:';
   const idx = rawText.indexOf(marker);
   if (idx < 0) {
-    return { mechanismText: rawText.trim(), checkNextText: null };
+    const clean = rawText.trim();
+    return {
+      mechanismText: clean,
+      checkNextText: null,
+      combinedDisplayText: clean,
+    };
   }
+  const mechanismText = rawText.slice(0, idx).trim();
+  const checkNextText = rawText.slice(idx + 1).trim();
   return {
-    mechanismText: rawText.slice(0, idx).trim(),
-    checkNextText: rawText.slice(idx + 1).trim(), // starts with "Check next: ..."
+    mechanismText,
+    checkNextText,
+    combinedDisplayText: `${mechanismText} ${checkNextText}`,
   };
 }
 
@@ -237,12 +248,14 @@ function partitionClaimsAndHypotheses(
       claim.claimId === 'claim:root-cause-hypothesis' ||
       claim.text.startsWith('Candidate mechanism:')
     ) {
-      const { mechanismText, checkNextText } = splitHypothesisClauses(claim.text);
+      const { mechanismText, checkNextText, combinedDisplayText } =
+        splitHypothesisClauses(claim.text);
       seenHypothesisStrings.add(claim.text.trim());
       hypotheses.push({
         key: claim.claimId,
         mechanismText,
         checkNextText,
+        combinedDisplayText,
         linkedClaim: claim,
       });
 
@@ -263,6 +276,7 @@ function partitionClaimsAndHypotheses(
             key: `${factId}:hyp-${hIdx}`,
             mechanismText: extraSplit.mechanismText,
             checkNextText: extraSplit.checkNextText,
+            combinedDisplayText: extraSplit.combinedDisplayText,
           });
         }
       }
@@ -285,6 +299,7 @@ function partitionClaimsAndHypotheses(
           key: `${claim.claimId}:hypothesis`,
           mechanismText: splitTail.mechanismText,
           checkNextText: splitTail.checkNextText,
+          combinedDisplayText: splitTail.combinedDisplayText,
           linkedClaim: claim,
         });
       }
@@ -443,20 +458,49 @@ export function AutopsyReportCard({
     return map;
   }, [evidenceClaims, hypotheses, lot, factsById]);
 
+  const liveAnnouncement = React.useMemo(() => {
+    const headlineText = report.causeOfDeathHeadline.text;
+    if (!effectiveActiveClaimId) {
+      return headlineText;
+    }
+    const activeClaim =
+      report.causeOfDeathHeadline.claimId === effectiveActiveClaimId
+        ? report.causeOfDeathHeadline
+        : report.bodyClaims.find((c) => c.claimId === effectiveActiveClaimId);
+    if (!activeClaim) {
+      return `${headlineText} Highlighted finding: ${effectiveActiveClaimId}.`;
+    }
+    const dieCount = activeClaim.resolvedDieIndices.length;
+    const dieNoun = dieCount === 1 ? 'die' : 'dies';
+    const waferSuffix =
+      activeClaim === report.causeOfDeathHeadline
+        ? headlineWaferLabel
+        : (waferLabelByClaimId.get(activeClaim.claimId) ?? null);
+    return `${headlineText} Selected finding (${activeClaim.claimId}): ${formatGroupedInt(dieCount)} cited ${dieNoun} highlighted${waferSuffix ? ` on ${waferSuffix}` : ' on wafer map'}.`;
+  }, [
+    report.causeOfDeathHeadline,
+    report.bodyClaims,
+    effectiveActiveClaimId,
+    headlineWaferLabel,
+    waferLabelByClaimId,
+  ]);
+
   return (
     <Card
       aria-label="Autopsy Report"
       data-testid="autopsy-report-card"
       className="border-hairline bg-panel"
     >
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {report.causeOfDeathHeadline.text}
-        {effectiveActiveClaimId
-          ? ` Highlighted claim: ${effectiveActiveClaimId}`
-          : ''}
+      <div
+        data-testid="autopsy-live-region"
+        className="sr-only"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {liveAnnouncement}
       </div>
 
-      <CardHeader className="gap-3 pb-4">
+      <CardHeader className="gap-2.5 p-5 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-mono text-[12px] tracking-wider text-text-tertiary uppercase">
@@ -489,7 +533,7 @@ export function AutopsyReportCard({
         />
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-3 pt-0">
+      <CardContent className="flex flex-col gap-2.5 px-5 pt-0 pb-5">
         {/* 2–4 quantitative evidence claims grounded in deterministic EngineFacts */}
         <div
           role="group"
@@ -511,12 +555,12 @@ export function AutopsyReportCard({
 
         {/* Hedged engineering root-cause hypotheses & check-next steps (collapsed by default) */}
         {hypotheses.length > 0 ? (
-          <div className="mt-1 border-t border-hairline pt-3">
+          <div className="mt-0.5 border-t border-hairline pt-2.5">
             <button
               type="button"
               data-testid="autopsy-hypotheses-toggle"
               aria-expanded={hypothesesOpen}
-              aria-controls={hypothesesOpen ? hypothesesPanelId : undefined}
+              aria-controls={hypothesesPanelId}
               onClick={() => setHypothesesOpen((prev) => !prev)}
               className="inline-flex w-full cursor-pointer items-center justify-between gap-3 rounded-control border border-transparent px-2.5 py-1.5 text-left text-[13px] text-text-secondary transition-[transform,opacity] duration-150 ease-[var(--ease-clinical)] hover:bg-raised hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
@@ -535,57 +579,54 @@ export function AutopsyReportCard({
               </Badge>
             </button>
 
-            {hypothesesOpen ? (
-              <div
-                id={hypothesesPanelId}
-                role="region"
-                aria-label="Candidate root-cause hypotheses"
-                className="mt-2.5 flex flex-col gap-2"
-              >
-                {hypotheses.map((item) => {
-                  if (
-                    item.linkedClaim &&
-                    item.linkedClaim.claimId === 'claim:root-cause-hypothesis'
-                  ) {
+            <div
+              id={hypothesesPanelId}
+              role="region"
+              aria-label="Candidate root-cause hypotheses"
+              hidden={!hypothesesOpen}
+              className={hypothesesOpen ? 'mt-2.5 flex flex-col gap-2' : 'hidden'}
+            >
+              {hypothesesOpen
+                ? hypotheses.map((item) => {
+                    if (
+                      item.linkedClaim &&
+                      item.linkedClaim.claimId === 'claim:root-cause-hypothesis'
+                    ) {
+                      return (
+                        <div key={item.key} className="flex flex-col gap-1">
+                          <ClaimInlineButton
+                            claim={item.linkedClaim}
+                            displayText={item.combinedDisplayText}
+                            variant="body"
+                            targetWaferLabel={
+                              waferLabelByClaimId.get(item.linkedClaim.claimId) ??
+                              null
+                            }
+                            isActive={
+                              effectiveActiveClaimId === item.linkedClaim.claimId
+                            }
+                            onToggle={handleToggleClaim}
+                          />
+                        </div>
+                      );
+                    }
+
                     return (
-                      <div key={item.key} className="flex flex-col gap-1">
-                        <ClaimInlineButton
-                          claim={item.linkedClaim}
-                          displayText={
-                            item.checkNextText
-                              ? `${item.mechanismText} ${item.checkNextText}`
-                              : item.mechanismText
-                          }
-                          variant="body"
-                          targetWaferLabel={
-                            waferLabelByClaimId.get(item.linkedClaim.claimId) ??
-                            null
-                          }
-                          isActive={
-                            effectiveActiveClaimId === item.linkedClaim.claimId
-                          }
-                          onToggle={handleToggleClaim}
-                        />
+                      <div
+                        key={item.key}
+                        className="rounded-control border border-hairline bg-raised/40 px-3.5 py-2.5 text-[14px] leading-relaxed"
+                      >
+                        <p className="text-text-secondary">{item.mechanismText}</p>
+                        {item.checkNextText ? (
+                          <p className="mt-1 text-text-primary">
+                            {item.checkNextText}
+                          </p>
+                        ) : null}
                       </div>
                     );
-                  }
-
-                  return (
-                    <div
-                      key={item.key}
-                      className="rounded-control border border-hairline bg-raised/40 px-3.5 py-2.5 text-[14px] leading-relaxed"
-                    >
-                      <p className="text-text-secondary">{item.mechanismText}</p>
-                      {item.checkNextText ? (
-                        <p className="mt-1 text-text-primary">
-                          {item.checkNextText}
-                        </p>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
+                  })
+                : null}
+            </div>
           </div>
         ) : null}
       </CardContent>

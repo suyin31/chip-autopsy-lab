@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { LotModel } from '@/core/model';
-import { useSelectionStore } from '@/ui/state';
+import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
   computeWaferRenderLayout,
   paintWaferOverlayLayer,
@@ -20,6 +21,7 @@ export interface OverlayCanvasProps {
   readonly transform: ViewportTransform;
   readonly dpr?: number;
   readonly layout?: WaferRenderLayout | null;
+  readonly store?: StoreApi<SelectionStoreState>;
 }
 
 const EMPTY_MASK = new Uint8Array(0);
@@ -27,7 +29,7 @@ const EMPTY_MASK = new Uint8Array(0);
 /**
  * DPR-scaled Canvas2D overlay layer stacked above `BaseCanvas` (`pointer-events: none`).
  *
- * Subscribes via a single `useShallow` selector to `useSelectionStore` highlight,
+ * Subscribes via a single `useShallow` selector to `SelectionStore` highlight,
  * brush, and hover slices so `#7CF2C1` outlines/glows and hover reticles repaint
  * in `< 1 ms` without ever re-rendering or repainting `BaseCanvas`
  * (Requirements 4.3, 10.4, 15.4).
@@ -40,6 +42,7 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
   transform,
   dpr,
   layout,
+  store = useSelectionStore,
 }: OverlayCanvasProps): React.JSX.Element {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
@@ -50,7 +53,8 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
     rawOverlayCount,
     rawHoveredDieIndex,
     rawBrush,
-  } = useSelectionStore(
+  } = useStore(
+    store,
     useShallow((s) => ({
       storeLot: s.lot,
       rawOverlayMask: s.overlayHighlightMask,

@@ -74,33 +74,32 @@ export function ClaimInlineButton({
         aria-pressed={isActive}
         onClick={() => onToggle(claim)}
         className={cn(
-          'group flex w-full cursor-pointer flex-col items-start gap-3 rounded-control border p-4 text-left shadow-none',
+          'group relative flex w-full cursor-pointer flex-col items-start gap-2.5 overflow-hidden rounded-control border py-3.5 pr-4 pl-4 text-left shadow-none',
           'transition-[transform,opacity] duration-150 ease-[var(--ease-clinical)] active:scale-[0.998]',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
           isActive
-            ? 'border-accent bg-accent/8'
-            : 'border-hairline bg-raised hover:border-accent/40',
+            ? 'border-accent/60 bg-accent/8'
+            : 'border-hairline bg-raised hover:bg-overlay',
         )}
       >
-        <span className="heading-display block text-[24px] leading-snug sm:text-[28px]">
+        <span
+          aria-hidden="true"
+          className={cn(
+            'pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-accent transition-opacity duration-150 ease-[var(--ease-clinical)]',
+            isActive
+              ? 'opacity-100'
+              : 'opacity-0 group-hover:opacity-65 group-focus-visible:opacity-65',
+          )}
+        />
+
+        <span className="heading-display block">
           {renderHeadlineText(effectiveText, hasFailures)}
         </span>
 
         <span className="flex w-full flex-wrap items-center justify-between gap-2">
-          <span className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 font-mono text-[12px] text-text-secondary tabular-nums">
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'h-2 w-2 rounded-xs border',
-                  isActive
-                    ? 'border-accent bg-accent'
-                    : 'border-hairline bg-transparent group-hover:border-accent/60',
-                )}
-              />
-              <span>
-                {formatGroupedInt(dieCount)} cited {dieNoun}
-              </span>
+          <span className="flex flex-wrap items-center gap-1.5">
+            <span className="font-mono text-[12px] text-text-secondary tabular-nums">
+              {formatGroupedInt(dieCount)} cited {dieNoun}
             </span>
 
             {targetWaferLabel ? (
@@ -151,28 +150,29 @@ export function ClaimInlineButton({
       aria-pressed={isActive}
       onClick={() => onToggle(claim)}
       className={cn(
-        'group flex w-full cursor-pointer flex-col items-start justify-between gap-2.5 rounded-control border px-3.5 py-3 text-left shadow-none sm:flex-row sm:items-baseline sm:gap-4',
+        'group relative flex w-full cursor-pointer flex-col items-start gap-2 overflow-hidden rounded-control border py-2.5 pr-3.5 pl-4 text-left shadow-none',
         'transition-[transform,opacity] duration-150 ease-[var(--ease-clinical)] active:scale-[0.999]',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
         isActive
-          ? 'border-accent bg-accent/8'
+          ? 'border-accent/60 bg-accent/8'
           : 'border-hairline bg-raised/60 hover:bg-raised',
       )}
     >
-      <span className="flex items-baseline gap-2.5 text-[15px] leading-relaxed text-text-primary sm:text-[16px]">
-        <span
-          aria-hidden="true"
-          className={cn(
-            'mt-1.5 h-2 w-2 shrink-0 rounded-xs border',
-            isActive
-              ? 'border-accent bg-accent'
-              : 'border-hairline bg-transparent group-hover:border-accent/60',
-          )}
-        />
-        <span>{effectiveText}</span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          'pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-accent transition-opacity duration-150 ease-[var(--ease-clinical)]',
+          isActive
+            ? 'opacity-100'
+            : 'opacity-0 group-hover:opacity-65 group-focus-visible:opacity-65',
+        )}
+      />
+
+      <span className="text-[15px] leading-snug text-text-primary sm:text-[16px]">
+        {effectiveText}
       </span>
 
-      <span className="flex shrink-0 flex-wrap items-center gap-1.5 pl-4 sm:pl-0">
+      <span className="flex flex-wrap items-center gap-1.5">
         {targetWaferLabel ? (
           <Badge variant="neutral">{targetWaferLabel}</Badge>
         ) : null}

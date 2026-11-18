@@ -16,6 +16,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  cn,
 } from '@/ui/primitives';
 import {
   type AutopsyWorkerClient,
@@ -303,8 +304,13 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
         {liveAnnouncement}
       </div>
 
-      <main className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-6">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline pb-4">
+      <main
+        className={cn(
+          'mx-auto flex min-h-screen flex-col px-6 py-4',
+          workspace.status === 'ready' ? 'max-w-[1360px]' : 'max-w-6xl',
+        )}
+      >
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline pb-3">
           <div className="flex items-baseline gap-3">
             <h1 className="text-[20px] leading-tight text-text-primary">
               Chip Autopsy Lab
@@ -318,7 +324,7 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
           </span>
         </header>
 
-        <section aria-label="Autopsy Report Workspace" className="flex-1 py-6">
+        <section aria-label="Autopsy Report Workspace" className="flex-1 py-4">
           {workspace.status === 'empty' ? (
             <EmptyStateCard
               cause="first-run"

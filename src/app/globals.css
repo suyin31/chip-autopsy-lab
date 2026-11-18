@@ -37,10 +37,12 @@
     var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, monospace;
 
-  /* Radii & floating overlay blur (design-language.md) */
+  /* Radii, display scale & floating overlay blur (design-language.md, tokens.ts) */
   --radius-control: 8px;
   --radius-panel: 12px;
   --blur-overlay: 24px;
+  --text-verdict-clause-compact: 24px;
+  --text-verdict-clause: 28px;
 
   /* Standard UI easing (Req 17.5) */
   --ease-clinical: cubic-bezier(0.22, 1, 0.36, 1);
@@ -92,6 +94,15 @@
     font-optical-sizing: auto;
     letter-spacing: normal;
     font-weight: 540;
+  }
+
+  .heading-display {
+    font-size: clamp(
+      var(--text-verdict-clause-compact),
+      1.85vw,
+      var(--text-verdict-clause)
+    );
+    line-height: 1.3;
   }
 
   code,

@@ -1,0 +1,3 @@
+root agent idle; waiting for 1 background task(s) to finish
+Running `npx tsc --noEmit`, `npx eslint .`, and the first `npx vitest run` pass now; I will run the second `vitest` pass and `next build` once it completes.
+error: interrupted

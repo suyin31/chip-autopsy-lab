@@ -1,12 +1,17 @@
 'use client';
 
 import * as React from 'react';
+import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { YieldMetrics } from '@/core/analytics';
 import { type LotModel, packWaferCoord } from '@/core/model';
 import { formatGroupedInt, formatYieldPct } from '@/ui/format';
 import { Badge } from '@/ui/primitives';
-import { EMPTY_HIDDEN_BINS, useSelectionStore } from '@/ui/state';
+import {
+  EMPTY_HIDDEN_BINS,
+  type SelectionStoreState,
+  useSelectionStore,
+} from '@/ui/state';
 import { BaseCanvas } from './BaseCanvas';
 import { OverlayCanvas } from './OverlayCanvas';
 import { WaferSelector } from './WaferSelector';
@@ -19,6 +24,7 @@ import {
 export interface WaferMapCanvasProps {
   readonly lot: LotModel;
   readonly byWaferYield: readonly YieldMetrics[];
+  readonly store?: StoreApi<SelectionStoreState>;
 }
 
 const DEFAULT_STAGE_SIZE_PX = 520;
@@ -66,6 +72,7 @@ function useDevicePixelRatio(): number {
 interface WaferDieReadoutProps {
   readonly lot: LotModel;
   readonly waferIndex: number;
+  readonly store: StoreApi<SelectionStoreState>;
 }
 
 /**
@@ -75,8 +82,10 @@ interface WaferDieReadoutProps {
 const WaferDieReadout = React.memo(function WaferDieReadout({
   lot,
   waferIndex,
+  store,
 }: WaferDieReadoutProps): React.JSX.Element {
-  const { storeLot, hoveredDieIndex } = useSelectionStore(
+  const { storeLot, hoveredDieIndex } = useStore(
+    store,
     useShallow((s) => ({
       storeLot: s.lot,
       hoveredDieIndex: s.hoveredDieIndex,
@@ -111,7 +120,7 @@ const WaferDieReadout = React.memo(function WaferDieReadout({
       >
         {notchLabel} · POS_X {wafer?.geometry.posX ?? 'R'} · POS_Y{' '}
         {wafer?.geometry.posY ?? 'U'} · Hover or arrow-step dies to inspect
-        coordinates, site, and bin
+        site and bin
       </p>
     );
   }
@@ -167,11 +176,13 @@ const WaferDieReadout = React.memo(function WaferDieReadout({
 interface WaferHighlightBannerProps {
   readonly lot: LotModel;
   readonly waferIndex: number;
+  readonly store: StoreApi<SelectionStoreState>;
 }
 
 const WaferHighlightBanner = React.memo(function WaferHighlightBanner({
   lot,
   waferIndex,
+  store,
 }: WaferHighlightBannerProps): React.JSX.Element | null {
   const {
     storeLot,
@@ -180,7 +191,8 @@ const WaferHighlightBanner = React.memo(function WaferHighlightBanner({
     claimHighlight,
     overlayHighlightMask,
     overlayHighlightCount,
-  } = useSelectionStore(
+  } = useStore(
+    store,
     useShallow((s) => ({
       storeLot: s.lot,
       siteFilter: s.siteFilter,
@@ -191,18 +203,33 @@ const WaferHighlightBanner = React.memo(function WaferHighlightBanner({
     })),
   );
 
-  if (storeLot !== lot || overlayHighlightCount === 0) {
-    return null;
-  }
-
   const wafer = lot.wafers[waferIndex];
-  let countOnWafer = 0;
-  if (wafer && overlayHighlightMask.length >= wafer.dieEndIndex) {
+  const countOnWafer = React.useMemo(() => {
+    if (
+      storeLot !== lot ||
+      overlayHighlightCount === 0 ||
+      !wafer ||
+      overlayHighlightMask.length < wafer.dieEndIndex
+    ) {
+      return 0;
+    }
+    let count = 0;
     for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
       if (overlayHighlightMask[i] !== 0 && lot.dies.hasValidCoords[i] !== 0) {
-        countOnWafer += 1;
+        count += 1;
       }
     }
+    return count;
+  }, [
+    storeLot,
+    lot,
+    overlayHighlightCount,
+    wafer,
+    overlayHighlightMask,
+  ]);
+
+  if (storeLot !== lot || overlayHighlightCount === 0) {
+    return null;
   }
 
   let scopeLabel = 'Active selection';
@@ -232,7 +259,7 @@ const WaferHighlightBanner = React.memo(function WaferHighlightBanner({
       </span>
       <button
         type="button"
-        onClick={() => useSelectionStore.getState().clearFilters()}
+        onClick={() => store.getState().clearFilters()}
         aria-label="Clear active wafer highlight"
         className="ml-1 cursor-pointer rounded-xs px-1.5 py-0.5 text-[12px] text-accent hover:bg-accent/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
@@ -252,6 +279,7 @@ const WaferHighlightBanner = React.memo(function WaferHighlightBanner({
 export function WaferMapCanvas({
   lot,
   byWaferYield,
+  store = useSelectionStore,
 }: WaferMapCanvasProps): React.JSX.Element {
   const stageContainerRef = React.useRef<HTMLDivElement>(null);
   const [stageDims, setStageDims] = React.useState<StageDimensions>({
@@ -266,7 +294,8 @@ export function WaferMapCanvas({
     rawColorMode,
     rawActiveTestNum,
     rawHiddenBins,
-  } = useSelectionStore(
+  } = useStore(
+    store,
     useShallow((s) => ({
       storeLot: s.lot,
       rawWaferIndex: s.activeWaferIndex,
@@ -288,9 +317,12 @@ export function WaferMapCanvas({
   const activeTestNum = isSynced ? rawActiveTestNum : null;
   const hiddenBins = isSynced ? rawHiddenBins : EMPTY_HIDDEN_BINS;
 
-  const handleSelectWafer = React.useCallback((waferIndex: number): void => {
-    useSelectionStore.getState().setActiveWaferIndex(waferIndex);
-  }, []);
+  const handleSelectWafer = React.useCallback(
+    (waferIndex: number): void => {
+      store.getState().setActiveWaferIndex(waferIndex);
+    },
+    [store],
+  );
 
   React.useEffect(() => {
     const el = stageContainerRef.current;
@@ -352,19 +384,19 @@ export function WaferMapCanvas({
         layout,
         lot.waferCoordIndex[safeWaferIndex],
       );
-      useSelectionStore.getState().setHoveredDieIndex(hitIndex);
+      store.getState().setHoveredDieIndex(hitIndex);
     },
-    [layout, lot.waferCoordIndex, safeWaferIndex],
+    [layout, lot.waferCoordIndex, safeWaferIndex, store],
   );
 
   const handlePointerLeave = React.useCallback((): void => {
-    useSelectionStore.getState().setHoveredDieIndex(null);
-  }, []);
+    store.getState().setHoveredDieIndex(null);
+  }, [store]);
 
   const handleStageKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>): void => {
       if (event.key === 'Escape') {
-        const state = useSelectionStore.getState();
+        const state = store.getState();
         if (state.hasActiveFilter || state.claimHighlight !== null) {
           event.preventDefault();
           state.clearFilters();
@@ -399,7 +431,7 @@ export function WaferMapCanvas({
       }
 
       event.preventDefault();
-      const state = useSelectionStore.getState();
+      const state = store.getState();
       const currentIdx = state.hoveredDieIndex;
 
       if (
@@ -437,16 +469,16 @@ export function WaferMapCanvas({
         }
       }
     },
-    [lot.dies, lot.waferCoordIndex, safeWaferIndex, wafer],
+    [lot.dies, lot.waferCoordIndex, safeWaferIndex, store, wafer],
   );
 
   return (
     <section
       aria-label="Wafer Map Visual Centerpiece"
-      className="flex flex-col items-center gap-3"
+      className="flex flex-col items-center gap-2.5"
     >
       {/* Top wafer metadata & Pass/Fail non-color legend */}
-      <div className="flex w-full flex-wrap items-center justify-between gap-3">
+      <div className="flex w-full flex-wrap items-center justify-between gap-2.5">
         <div className="flex flex-wrap items-baseline gap-2.5">
           <h3 className="text-[20px] leading-snug text-text-primary">
             Wafer {wafer?.waferId ?? 'W01'}
@@ -457,8 +489,12 @@ export function WaferMapCanvas({
           <Badge variant="neutral">Pass / Fail</Badge>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <WaferHighlightBanner lot={lot} waferIndex={safeWaferIndex} />
+        <div className="flex flex-wrap items-center gap-2.5">
+          <WaferHighlightBanner
+            lot={lot}
+            waferIndex={safeWaferIndex}
+            store={store}
+          />
 
           <div
             aria-label="Wafer Pass/Fail Legend"
@@ -484,7 +520,7 @@ export function WaferMapCanvas({
         </div>
       </div>
 
-      {/* Hero Wafer Stage — tightened vertical framing so the wafer fills the hero area */}
+      {/* Hero Wafer Stage — sized so wafer + 25-wafer lot strip sit above the fold at 1440x900 */}
       <div className="flex w-full justify-center">
         <div
           ref={stageContainerRef}
@@ -495,7 +531,7 @@ export function WaferMapCanvas({
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
           onKeyDown={handleStageKeyDown}
-          className="relative aspect-square w-full max-w-[520px] overflow-hidden rounded-panel focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          className="relative aspect-square w-full max-w-[520px] overflow-hidden rounded-panel focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent xl:max-w-[460px]"
         >
           <BaseCanvas
             lot={lot}
@@ -517,6 +553,7 @@ export function WaferMapCanvas({
             transform={DEFAULT_VIEWPORT_TRANSFORM}
             dpr={dpr}
             layout={layout}
+            store={store}
           />
         </div>
       </div>
@@ -531,7 +568,11 @@ export function WaferMapCanvas({
       </div>
 
       {/* Non-occluding hover/keyboard coordinate readout */}
-      <WaferDieReadout lot={lot} waferIndex={safeWaferIndex} />
+      <WaferDieReadout
+        lot={lot}
+        waferIndex={safeWaferIndex}
+        store={store}
+      />
 
       {/* 25-wafer horizontal thumbnail lot strip */}
       <WaferSelector

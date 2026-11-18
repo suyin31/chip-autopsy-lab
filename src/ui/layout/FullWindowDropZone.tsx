@@ -175,7 +175,7 @@ export function FullWindowDropZone({
           }}
         >
           <div className="rounded-panel border border-hairline bg-panel px-8 py-6 text-center">
-            <p className="heading-display text-[28px] leading-snug text-text-primary">
+            <p className="heading-display text-text-primary">
               Drop the body.
             </p>
             <p className="mt-2 font-mono text-[12px] text-text-secondary">
