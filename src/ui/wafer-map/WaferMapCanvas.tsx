@@ -42,6 +42,7 @@ import {
 } from './linked-interactions';
 import { OverlayCanvas, type OverlayCanvasHandle } from './OverlayCanvas';
 import {
+  computeProbeLightOpacity,
   computeProbeSweepFraction,
   type InitialRevealPlan,
   PROBE_SWEEP_FAIL_FADE_MS,
@@ -292,6 +293,23 @@ function WaferMapCanvasImpl({
   const resetViewRef = React.useRef<HTMLDivElement>(null);
   const skipHintRef = React.useRef<HTMLParagraphElement>(null);
   const finishSweepRef = React.useRef<(() => void) | null>(null);
+  // Premium §8.1: the stage caption reads "Reading…" while the sweep runs, until ignite start.
+  // Swapped imperatively (React sets this span's text through `textContent`), so no stage render.
+  const defaultCaptionElRef = React.useRef<HTMLSpanElement>(null);
+  const defaultCaptionTextRef = React.useRef('');
+  const readingCaptionTextRef = React.useRef('');
+  const setSweepReading = React.useCallback((reading: boolean): void => {
+    const el = defaultCaptionElRef.current;
+    if (!el) {
+      return;
+    }
+    const next = reading
+      ? readingCaptionTextRef.current
+      : defaultCaptionTextRef.current;
+    if (el.textContent !== next) {
+      el.textContent = next;
+    }
+  }, []);
   const baseCanvasRef = React.useRef<BaseCanvasHandle>(null);
   const failCanvasRef = React.useRef<FailCanvasHandle>(null);
   const overlayCanvasRef = React.useRef<OverlayCanvasHandle>(null);
@@ -630,7 +648,8 @@ function WaferMapCanvasImpl({
     }
   }, []);
 
-  // §5.1 Probe-sweep load reveal (once per session, <= 1,200 ms, skippable by any key/click/tap, 240 ms subsequent fade, 120 ms reduced motion)
+  // Premium §8.1 load reveal: probe sweep + ignite on the first load per session, the ignite alone on
+  // later loads, a 120 ms base fade under reduced motion; any key, click, or wheel completes it
   React.useLayoutEffect(() => {
     if (
       !enableInitialReveal ||
@@ -644,6 +663,7 @@ function WaferMapCanvasImpl({
       if (skipHintRef.current) {
         skipHintRef.current.hidden = true;
       }
+      setSweepReading(false);
       onVerdictRevealTriggerRef.current?.();
       return;
     }
@@ -658,7 +678,16 @@ function WaferMapCanvasImpl({
       // Ignore storage restrictions in private sandboxes
     }
 
-    if (plan.mode !== 'sweep') {
+    const waferIdx = waferGeometryRef.current.safeWaferIndex;
+    const probeOrder =
+      plan.mode === 'reduced'
+        ? new Uint32Array(0)
+        : (probeOrderByWaferRef.current?.[waferIdx] ??
+          buildWaferProbeOrder(lot, waferIdx));
+
+    // A lot whose reveal already completed (cached with 0 ms) redraws at once on remount
+    const alreadyRevealed = plan.mode === 'ignite' && plan.fadeDurationMs <= 0;
+    if (plan.mode === 'reduced' || alreadyRevealed || probeOrder.length === 0) {
       finishSweepRef.current = null;
       baseCanvasRef.current?.setSweepSuppressAutoPaint(false);
       overlayCanvasRef.current?.setProbeHeadDieIndex(null);
@@ -666,47 +695,39 @@ function WaferMapCanvasImpl({
       if (skipHintRef.current) {
         skipHintRef.current.hidden = true;
       }
+      setSweepReading(false);
+      onVerdictRevealTriggerRef.current?.();
       if (stageRef.current) {
         stageRef.current.dataset.sweep = 'done';
       }
-      onVerdictRevealTriggerRef.current?.();
 
+      // Reduced motion: final dies drawn, base canvas opacity 0 -> 1 in 120 ms (§8.1, §8.16)
       const baseEl = baseCanvasRef.current?.getCanvasElement();
       if (
+        plan.mode === 'reduced' &&
         baseEl &&
         typeof baseEl.animate === 'function' &&
-        plan.fadeDurationMs > 0 &&
-        !reducedMotionRef.current
+        plan.fadeDurationMs > 0
       ) {
         const anim = baseEl.animate([{ opacity: 0 }, { opacity: 1 }], {
           duration: plan.fadeDurationMs,
-          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          easing: 'linear',
         });
         return () => anim.cancel();
       }
       return;
     }
 
-    const waferIdx = waferGeometryRef.current.safeWaferIndex;
-    const probeOrder =
-      probeOrderByWaferRef.current?.[waferIdx] ??
-      buildWaferProbeOrder(lot, waferIdx);
-
-    if (probeOrder.length === 0) {
-      baseCanvasRef.current?.setSweepSuppressAutoPaint(false);
-      if (stageRef.current) {
-        stageRef.current.dataset.sweep = 'done';
-      }
-      onVerdictRevealTriggerRef.current?.();
-      return;
-    }
+    // Later loads skip to the ignite step: every die drawn as a pass tile, then the fail canvas ignites
+    const igniteOnly = plan.mode === 'ignite';
 
     if (stageRef.current) {
-      stageRef.current.dataset.sweep = 'running';
+      stageRef.current.dataset.sweep = igniteOnly ? 'ignite' : 'running';
     }
     if (skipHintRef.current) {
-      skipHintRef.current.hidden = false;
+      skipHintRef.current.hidden = igniteOnly;
     }
+    setSweepReading(!igniteOnly);
 
     baseCanvasRef.current?.setSweepSuppressAutoPaint(true);
     baseCanvasRef.current?.paintSubstrateOnly();
@@ -717,11 +738,21 @@ function WaferMapCanvasImpl({
     let lastStageH = stageMetricsRef.current.stageHeight;
     let revealedCount = 0;
     let verdictTriggered = false;
+    let igniteStarted = false;
     let finished = false;
     let rafId: number | null = null;
-    const startMs =
+    const nowStart =
       typeof performance !== 'undefined' ? performance.now() : Date.now();
+    // The ignite-only path starts its clock at the end of the sweep
+    const startMs = igniteOnly ? nowStart - PROBE_SWEEP_REVEAL_MS : nowStart;
     const totalSweepMs = PROBE_SWEEP_REVEAL_MS + PROBE_SWEEP_FAIL_FADE_MS;
+
+    if (igniteOnly) {
+      baseCanvasRef.current?.paintSweepBatch(probeOrder, 0, probeOrder.length);
+      revealedCount = probeOrder.length;
+      verdictTriggered = true;
+      onVerdictRevealTriggerRef.current?.();
+    }
 
     const cleanupInputListeners = (): void => {
       window.removeEventListener('keydown', handleSkipInput, true);
@@ -740,16 +771,18 @@ function WaferMapCanvasImpl({
       }
       cleanupInputListeners();
       lotRevealPlanCache.set(lot, {
-        mode: 'subsequent-fade',
+        mode: 'ignite',
         fadeDurationMs: 0,
       });
 
+      // Fail canvas merges into the base: the base repaints every die in its final colour
       baseCanvasRef.current?.setSweepSuppressAutoPaint(false);
       overlayCanvasRef.current?.setProbeHeadDieIndex(null);
       failCanvasRef.current?.setOpacity(0);
       failCanvasRef.current?.clear();
       baseCanvasRef.current?.paintForCamera(getRasterCamera());
 
+      setSweepReading(false);
       if (!verdictTriggered) {
         verdictTriggered = true;
         onVerdictRevealTriggerRef.current?.();
@@ -820,12 +853,15 @@ function WaferMapCanvasImpl({
       if (elapsed < PROBE_SWEEP_REVEAL_MS) {
         const headDie =
           revealedCount > 0 ? probeOrder[revealedCount - 1]! : null;
-        overlayCanvasRef.current?.setProbeHeadDieIndex(headDie);
+        overlayCanvasRef.current?.setProbeHeadDieIndex(
+          headDie,
+          computeProbeLightOpacity(elapsed, PROBE_SWEEP_REVEAL_MS),
+        );
         rafId = requestAnimationFrame(stepSweep);
         return;
       }
 
-      // Reveal reached 100%: ensure all pass dies drawn, clear probe lamp, fade FailCanvas 0 -> 1 over 280 ms
+      // Sweep complete: all pass tiles drawn, probe light off, then the 280 ms ignite
       if (revealedCount < probeOrder.length) {
         baseCanvasRef.current?.paintSweepBatch(
           probeOrder,
@@ -834,7 +870,12 @@ function WaferMapCanvasImpl({
         );
         revealedCount = probeOrder.length;
       }
-      overlayCanvasRef.current?.setProbeHeadDieIndex(null);
+      if (!igniteStarted) {
+        igniteStarted = true;
+        overlayCanvasRef.current?.setProbeHeadDieIndex(null);
+        // Header caption swaps from "Reading…" to the fail count at ignite start (0 ms)
+        setSweepReading(false);
+      }
 
       if (elapsed >= totalSweepMs) {
         completeSweep();
@@ -859,7 +900,7 @@ function WaferMapCanvasImpl({
       overlayCanvasRef.current?.setProbeHeadDieIndex(null);
       failCanvasRef.current?.setOpacity(0);
     };
-  }, [lot, enableInitialReveal, getRasterCamera]);
+  }, [lot, enableInitialReveal, getRasterCamera, setSweepReading]);
 
   React.useEffect(() => {
     const controller = controllerRef.current;
@@ -2072,6 +2113,8 @@ function WaferMapCanvasImpl({
     failed: formatInteger(failCount),
     total: formatInteger(testedCount),
   });
+  defaultCaptionTextRef.current = defaultCaption;
+  readingCaptionTextRef.current = t('stage.reading');
   const evidenceText =
     evidenceSummary !== null
       ? t('stage.evidenceCaption', {
@@ -2140,6 +2183,7 @@ function WaferMapCanvasImpl({
           ).map(([kind, text]) => (
             <span
               key={kind}
+              ref={kind === 'default' ? defaultCaptionElRef : undefined}
               data-testid={`stage-${kind === 'default' ? 'caption' : kind === 'evidence' ? 'evidence-caption' : 'selected-caption'}`}
               data-active={captionKind === kind}
               aria-hidden={captionKind === kind ? undefined : true}

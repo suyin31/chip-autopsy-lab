@@ -26,3 +26,4 @@ Fix in R8 pass:
 - Minor: legend wraps to 2 lines at 1440 and sits tight under the disc; consider single-line with overflow fade (Task 19).
 - P26b (11-19 00:16): 暖纸底+斜体 body 效果好。瑕疵：顶部导航条仍是冷白 #FAFAFA 材质，与暖纸底不搭，应改暖（留 P26a/P20 顺手改或 Task 19）。
 - P26a (11-19 00:29): 大晶圆+刻度环+示例结论卡+图块样例卡 合格。瑕疵：导航条冷白仍未改暖（Task 19 记账）；首屏底部晶圆被折叠线切掉一点，可接受。截图 p26b/p26a 留到早上一并发老大。
+- P26 组件审核点（11-19 02:08，看 p26b-loaded-1440-light）：整体合格，有编辑感。瑕疵：(1)「Press any key to skip the animation.」压在晶圆下沿上，和盘面重叠，应移到盘外或动画结束后淡出（P27/P28 或 Task 19 改）；(2) 导航条冷白未改暖。

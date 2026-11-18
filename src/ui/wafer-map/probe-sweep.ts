@@ -6,14 +6,14 @@
 
 import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
 
-/** SessionStorage key guarding the once-per-session probe sweep (`redesign.md` §5.1). */
-export const PROBE_SWEEP_SESSION_KEY = 'cal.sweep.seen' as const;
+/** SessionStorage key guarding the once-per-session probe sweep (premium §8.1). */
+export const PROBE_SWEEP_SESSION_KEY = 'cal.sweep.v1' as const;
 
 /** Hard ceiling for the full probe-sweep reveal including fail-canvas completion fade (§5.1). */
 export const PROBE_SWEEP_TOTAL_MAX_MS =
   MOTION_TOKENS.revealCeilingsMs.probeSweep; // 1200 ms
 
-/** Fail-canvas orange fade-in duration at sweep completion (`redesign.md` §5.1: 280 ms). */
+/** Ignite: fail-canvas opacity 0 -> 1 at sweep end (premium §8.1: `dur-4`, 280 ms `ease-out`). */
 export const PROBE_SWEEP_FAIL_FADE_MS = 280 as const;
 
 /** Incremental die-reveal window (`900 ms` + `280 ms` fail fade = `1,180 ms <= 1,200 ms`). */
@@ -22,8 +22,11 @@ export const PROBE_SWEEP_REVEAL_MS = 900 as const;
 /** Sweep reveal fraction at which the Verdict Column starts its rise-in (`redesign.md` §5.2: 85%). */
 export const VERDICT_RISE_SWEEP_THRESHOLD = 0.85 as const;
 
-/** Subsequent lot load base-canvas fade duration (`redesign.md` §5.1: 240 ms). */
-export const SUBSEQUENT_LOAD_FADE_MS = 240 as const;
+/** Probe light opacity 0 -> 1 over the first 120 ms of the sweep (premium §8.1). */
+export const PROBE_LIGHT_FADE_IN_MS = 120 as const;
+
+/** Probe light opacity 1 -> 0 over the last 160 ms of the sweep (premium §8.1). */
+export const PROBE_LIGHT_FADE_OUT_MS = 160 as const;
 
 /** Reduced-motion opacity-only fade duration (`redesign.md` §5.1, §5.2: 120 ms). */
 export const REDUCED_MOTION_FADE_MS = 120 as const;
@@ -40,7 +43,7 @@ export const STAT_INITIAL_COUNTUP_MS =
 export const STAT_UPDATE_COUNTUP_MS =
   MOTION_TOKENS.revealCeilingsMs.statUpdate; // 300 ms
 
-export type InitialRevealMode = 'sweep' | 'subsequent-fade' | 'reduced';
+export type InitialRevealMode = 'sweep' | 'ignite' | 'reduced';
 
 export interface InitialRevealPlan {
   readonly mode: InitialRevealMode;
@@ -74,8 +77,8 @@ export function easeOutExpo(u: number): number {
 }
 
 /**
- * Computes `f(t) = min(parseProgress, easeInOutSine(t / durationMs))` (`redesign.md` §5.1)
- * so a slow parse holds the sweep instead of finishing early.
+ * Sweep progress `p(t) = min(parseProgress, t / durationMs)` (premium §8.1): never faster than
+ * `t / 900 ms`, and a slow parse holds the sweep instead of finishing early.
  */
 export function computeProbeSweepFraction(
   elapsedMs: number,
@@ -83,13 +86,30 @@ export function computeProbeSweepFraction(
   parseProgress = 1,
 ): number {
   const safeDur = durationMs > 0 ? durationMs : PROBE_SWEEP_REVEAL_MS;
-  const timeFrac = easeInOutSine(elapsedMs / safeDur);
-  return Math.min(clamp01(parseProgress), timeFrac);
+  return Math.min(clamp01(parseProgress), clamp01(elapsedMs / safeDur));
 }
 
 /**
- * Determines whether a lot reveal runs the once-per-session probe sweep, a `240 ms`
- * subsequent-load fade, or the `120 ms` reduced-motion opacity path (`redesign.md` §5.1).
+ * Probe light opacity at `elapsedMs` into a sweep of `durationMs` (premium §8.1): 0 -> 1 over the
+ * first 120 ms, 1 -> 0 over the last 160 ms, 0 outside the sweep.
+ */
+export function computeProbeLightOpacity(
+  elapsedMs: number,
+  durationMs: number = PROBE_SWEEP_REVEAL_MS,
+): number {
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0 || elapsedMs >= durationMs) {
+    return 0;
+  }
+  return Math.min(
+    1,
+    elapsedMs / PROBE_LIGHT_FADE_IN_MS,
+    (durationMs - elapsedMs) / PROBE_LIGHT_FADE_OUT_MS,
+  );
+}
+
+/**
+ * Chooses the load reveal (premium §8.1, §8.16): the probe sweep + ignite on the first lot load in a
+ * session, the 280 ms ignite alone on later loads, and a 120 ms base-canvas fade under reduced motion.
  */
 export function resolveInitialRevealMode(params: {
   readonly seenInSession: boolean;
@@ -99,7 +119,7 @@ export function resolveInitialRevealMode(params: {
     return { mode: 'reduced', fadeDurationMs: REDUCED_MOTION_FADE_MS };
   }
   if (params.seenInSession) {
-    return { mode: 'subsequent-fade', fadeDurationMs: SUBSEQUENT_LOAD_FADE_MS };
+    return { mode: 'ignite', fadeDurationMs: PROBE_SWEEP_FAIL_FADE_MS };
   }
   return { mode: 'sweep', fadeDurationMs: 0 };
 }

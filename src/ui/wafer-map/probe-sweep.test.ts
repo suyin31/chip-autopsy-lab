@@ -3,11 +3,13 @@ import { buildLotModel, buildWaferProbeOrder } from '@/core/model';
 import { parseStdfBytes, PRR_PART_FLG, writeStdfBytes } from '@/core/stdf';
 import { WAFER_TOKENS } from '@/ui/tokens';
 import {
+  computeProbeLightOpacity,
   computeProbeSweepFraction,
   computeVerdictRiseSchedule,
   easeInOutSine,
   PROBE_SWEEP_FAIL_FADE_MS,
   PROBE_SWEEP_REVEAL_MS,
+  PROBE_SWEEP_SESSION_KEY,
   PROBE_SWEEP_TOTAL_MAX_MS,
   resolveInitialRevealMode,
   sampleStatCountUp,
@@ -130,7 +132,7 @@ function createRecordingCanvas() {
 }
 
 describe('R8 reveal motion math & canvas probe-sweep painters (§5.1–§5.3)', () => {
-  it('keeps total probe-sweep + fail-fade ceiling <= 1,200 ms and gates progress by min(parseProgress, easeInOutSine)', () => {
+  it('keeps total probe-sweep + fail-fade ceiling <= 1,200 ms and gates progress by min(parseProgress, t / 900 ms)', () => {
     expect(PROBE_SWEEP_REVEAL_MS + PROBE_SWEEP_FAIL_FADE_MS).toBeLessThanOrEqual(
       PROBE_SWEEP_TOTAL_MAX_MS,
     );
@@ -147,18 +149,33 @@ describe('R8 reveal motion math & canvas probe-sweep painters (§5.1–§5.3)', 
       6,
     );
     expect(computeProbeSweepFraction(0, PROBE_SWEEP_REVEAL_MS, 1)).toBe(0);
+    // Never faster than t / 900 ms (premium §8.1): linear in time
+    expect(computeProbeSweepFraction(450, PROBE_SWEEP_REVEAL_MS, 1)).toBeCloseTo(0.5, 6);
+    expect(computeProbeSweepFraction(675, PROBE_SWEEP_REVEAL_MS, 1)).toBeCloseTo(0.75, 6);
+    expect(computeProbeSweepFraction(450, PROBE_SWEEP_REVEAL_MS, 0.2)).toBeCloseTo(0.2, 6);
+    expect(PROBE_SWEEP_SESSION_KEY).toBe('cal.sweep.v1');
     expect(
       computeProbeSweepFraction(PROBE_SWEEP_REVEAL_MS, PROBE_SWEEP_REVEAL_MS, 1),
     ).toBe(1);
   });
 
-  it('selects sweep on first session load, 240 ms base fade on subsequent loads, and 120 ms opacity fade under reduced motion', () => {
+  it('fades the probe light in over the first 120 ms and out over the last 160 ms (premium §8.1)', () => {
+    expect(computeProbeLightOpacity(0)).toBe(0);
+    expect(computeProbeLightOpacity(60)).toBeCloseTo(0.5, 6);
+    expect(computeProbeLightOpacity(120)).toBe(1);
+    expect(computeProbeLightOpacity(500)).toBe(1);
+    expect(computeProbeLightOpacity(PROBE_SWEEP_REVEAL_MS - 80)).toBeCloseTo(0.5, 6);
+    expect(computeProbeLightOpacity(PROBE_SWEEP_REVEAL_MS)).toBe(0);
+    expect(computeProbeLightOpacity(PROBE_SWEEP_REVEAL_MS + 50)).toBe(0);
+  });
+
+  it('selects sweep on first session load, the 280 ms ignite on later loads, and 120 ms opacity fade under reduced motion', () => {
     expect(
       resolveInitialRevealMode({ seenInSession: false, prefersReducedMotion: false }),
     ).toEqual({ mode: 'sweep', fadeDurationMs: 0 });
     expect(
       resolveInitialRevealMode({ seenInSession: true, prefersReducedMotion: false }),
-    ).toEqual({ mode: 'subsequent-fade', fadeDurationMs: 240 });
+    ).toEqual({ mode: 'ignite', fadeDurationMs: 280 });
     expect(
       resolveInitialRevealMode({ seenInSession: false, prefersReducedMotion: true }),
     ).toEqual({ mode: 'reduced', fadeDurationMs: 120 });
@@ -291,5 +308,23 @@ describe('R8 reveal motion math & canvas probe-sweep painters (§5.1–§5.3)', 
         (c) => c.op === 'drawImage' || c.op === 'arc' || c.op === 'fill',
       ),
     ).toBe(true);
+
+    // Opacity 0 draws no probe light
+    const hiddenRec = createRecordingCanvas();
+    paintWaferOverlayLayer(hiddenRec.ctx, {
+      lot,
+      waferIndex: 0,
+      layout,
+      dpr: 1,
+      overlayHighlightMask: new Uint8Array(lot.dies.count),
+      overlayHighlightCount: 0,
+      hoveredDieIndex: null,
+      brush: null,
+      probeHeadDieIndex: probeOrder[1]!,
+      probeHeadOpacity: 0,
+    });
+    expect(
+      hiddenRec.calls.some((c) => c.op === 'drawImage' || c.op === 'arc'),
+    ).toBe(false);
   });
 });

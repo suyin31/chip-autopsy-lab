@@ -36,7 +36,8 @@ import {
 export interface OverlayCanvasHandle {
   paintForCamera(camera: CameraState): void;
   setLiveBrushScreenRect(rect: ScreenBox | null): void;
-  setProbeHeadDieIndex(dieIndex: number | null): void;
+  /** Moves the probe light to `dieIndex` at `opacity` (premium §8.1); `null` hides it. */
+  setProbeHeadDieIndex(dieIndex: number | null, opacity?: number): void;
   /** Draws `pinned-stroke` on the pinned die (premium §5.4), or clears it with `null`. */
   setPinnedDieIndex(dieIndex: number | null): void;
   /**
@@ -126,6 +127,7 @@ const OverlayCanvasImpl = React.forwardRef<
   const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
   const liveBrushRectRef = React.useRef<ScreenBox | null>(null);
   const probeHeadDieIndexRef = React.useRef<number | null>(null);
+  const probeHeadOpacityRef = React.useRef(1);
   const pinnedDieIndexRef = React.useRef<number | null>(null);
   const animStateRef = React.useRef<GlowAnimatorState>(
     createIdleAnimatorState(waferIndex),
@@ -370,6 +372,7 @@ const OverlayCanvasImpl = React.forwardRef<
         glowOverride: buildCurrentGlowOverride(),
         liveBrushScreenRect: liveBrushRectRef.current,
         probeHeadDieIndex: probeHeadDieIndexRef.current,
+        probeHeadOpacity: probeHeadOpacityRef.current,
       });
       syncWrapperDebugAttrs();
     },
@@ -635,11 +638,15 @@ const OverlayCanvasImpl = React.forwardRef<
         liveBrushRectRef.current = rect;
         paintCurrentNow();
       },
-      setProbeHeadDieIndex(dieIndex: number | null): void {
-        if (probeHeadDieIndexRef.current === dieIndex) {
+      setProbeHeadDieIndex(dieIndex: number | null, opacity = 1): void {
+        if (
+          probeHeadDieIndexRef.current === dieIndex &&
+          (dieIndex === null || probeHeadOpacityRef.current === opacity)
+        ) {
           return;
         }
         probeHeadDieIndexRef.current = dieIndex;
+        probeHeadOpacityRef.current = opacity;
         paintCurrentNow();
       },
       setPinnedDieIndex(dieIndex: number | null): void {

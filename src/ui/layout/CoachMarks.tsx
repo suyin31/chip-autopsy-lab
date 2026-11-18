@@ -47,6 +47,7 @@ const BLOCKING_SELECTOR = [
   '[data-testid="wafer-selection-popover"][data-visible="true"]',
   '[data-testid="full-window-drop-overlay"]',
   '[data-sweep="running"]',
+  '[data-sweep="ignite"]',
 ].join(', ');
 
 const TICK_MS = 200;

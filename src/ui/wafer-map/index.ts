@@ -60,12 +60,15 @@ export {
 } from './OverlayCanvas';
 export {
   clamp01,
+  computeProbeLightOpacity,
   computeProbeSweepFraction,
   computeVerdictRiseSchedule,
   easeInOutSine,
   easeOutExpo,
   type InitialRevealMode,
   type InitialRevealPlan,
+  PROBE_LIGHT_FADE_IN_MS,
+  PROBE_LIGHT_FADE_OUT_MS,
   PROBE_SWEEP_FAIL_FADE_MS,
   PROBE_SWEEP_REVEAL_MS,
   PROBE_SWEEP_SESSION_KEY,
@@ -75,7 +78,6 @@ export {
   resolveInitialRevealMode,
   STAT_INITIAL_COUNTUP_MS,
   STAT_UPDATE_COUNTUP_MS,
-  SUBSEQUENT_LOAD_FADE_MS,
   sampleStatCountUp,
   VERDICT_RISE_BLOCK_ORDER,
   type VerdictRiseBlockId,

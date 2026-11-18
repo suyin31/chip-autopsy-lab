@@ -1322,13 +1322,17 @@ function getProbeHeadSprite(): CanvasImageSource | null {
   }
   if (typeof OffscreenCanvas !== 'undefined') {
     const size = 64;
+    const half = size / 2;
     const canvas = new OffscreenCanvas(size, size);
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-      g.addColorStop(0, 'rgba(214, 230, 255, 0.35)');
-      g.addColorStop(0.45, 'rgba(214, 230, 255, 0.14)');
-      g.addColorStop(1, 'rgba(214, 230, 255, 0)');
+      // `probe-light` (premium §3.3): gaussian falloff with sigma = radius / 3, peak white at 0.28
+      const g = ctx.createRadialGradient(half, half, 0, half, half, half);
+      const peak = 0.28;
+      for (const stop of [0, 0.2, 0.4, 0.6, 0.8, 1]) {
+        const a = stop >= 1 ? 0 : peak * Math.exp(-4.5 * stop * stop);
+        g.addColorStop(stop, `rgba(255, 255, 255, ${a.toFixed(4)})`);
+      }
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, size, size);
       cachedProbeHeadSprite = canvas;
@@ -1497,8 +1501,10 @@ export interface PaintWaferOverlayParams {
     readonly width: number;
     readonly height: number;
   } | null;
-  /** Optional last-revealed die index for the §5.1 probe-head examination light (3 die widths, 35% alpha). */
+  /** Last drawn die of the probe sweep, lit by the `probe-light` sprite (premium §3.3, §8.1). */
   readonly probeHeadDieIndex?: number | null;
+  /** Probe light opacity in [0, 1] (premium §8.1 fade in and out); defaults to 1. */
+  readonly probeHeadOpacity?: number;
 }
 
 /**
@@ -1525,6 +1531,7 @@ export function paintWaferOverlayLayer(
     glowOverride = null,
     liveBrushScreenRect = null,
     probeHeadDieIndex = null,
+    probeHeadOpacity = 1,
   } = params;
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1812,34 +1819,29 @@ export function paintWaferOverlayLayer(
   }
   strokeDieState(pinnedDieIndex, WAFER_TOKENS.pinnedStroke);
 
-  // 7. Probe-sweep examination lamp at the last revealed die (3 die widths, 35% ice alpha, §5.1)
+  // 7. `probe-light` at the last drawn die: white 0.28 gaussian, radius 3 die pitches (premium §3.3, §8.1)
+  const probeAlpha = Math.min(1, Math.max(0, probeHeadOpacity));
   if (
     probeHeadDieIndex !== null &&
+    probeAlpha > 0 &&
     probeHeadDieIndex >= start &&
     probeHeadDieIndex < end &&
     dies.hasValidCoords[probeHeadDieIndex] !== 0
   ) {
     const cx = dieCenterX(probeHeadDieIndex);
     const cy = dieCenterY(probeHeadDieIndex);
-    const diameter = Math.max(12, layout.diePitchPx * 3);
+    const radius = Math.max(6, layout.diePitchPx * WAFER_TOKENS.probeLight.radiusPitches);
     const probeSprite = getProbeHeadSprite();
+    ctx.globalAlpha = probeAlpha;
     if (probeSprite !== null && typeof ctx.drawImage === 'function') {
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 1;
-      ctx.drawImage(
-        probeSprite,
-        cx - diameter / 2,
-        cy - diameter / 2,
-        diameter,
-        diameter,
-      );
-      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(probeSprite, cx - radius, cy - radius, radius * 2, radius * 2);
     } else {
       ctx.beginPath();
-      ctx.arc(cx, cy, diameter / 2, 0, Math.PI * 2, false);
-      ctx.fillStyle = 'rgba(214, 230, 255, 0.35)';
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2, false);
+      ctx.fillStyle = WAFER_TOKENS.probeLight.color;
       ctx.fill();
     }
+    ctx.globalAlpha = 1;
   }
 }
 
