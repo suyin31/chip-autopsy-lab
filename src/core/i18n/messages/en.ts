@@ -101,11 +101,12 @@ export const en = {
   'glossary.confidence': 'How strongly the wafer pattern matches the named class, from 0 to 1. Computed on this device.',
 
   // Stats
-  'stats.edgeShare': 'of fails sit in the outer {rings} rings',
-  'stats.scratchShare': 'of fails on the scratch path',
+  'stats.edgeShare': 'of failing dies are in the outer {rings} rings',
+  'stats.scratchShare': 'of failing dies are on the scratch line',
   'stats.siteRate': 'fail rate on site {site} vs {other} elsewhere',
-  'stats.finalYield': 'final yield, {firstPass} first pass',
-  'stats.failingDies': 'failing dies of {tested} tested',
+  'stats.finalYield': 'final yield',
+  'stats.firstPass': '{firstPass} on the first test',
+  'stats.failingDies': 'dies failed, of {tested} tested',
   'stats.inSelection': '{caption} in selection',
 
   // Findings

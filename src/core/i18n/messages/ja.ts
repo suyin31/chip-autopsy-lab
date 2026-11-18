@@ -107,8 +107,9 @@ export const ja = {
   'stats.edgeShare': '外周 {rings} リング不良割合',
   'stats.scratchShare': 'スクラッチ経路不良割合',
   'stats.siteRate': 'サイト {site} 不良率、他サイト {other}',
-  'stats.finalYield': '最終歩留まり、初回 {firstPass}',
-  'stats.failingDies': '不良ダイ / 測定 {tested}',
+  'stats.finalYield': '最終歩留まり',
+  'stats.firstPass': '初回テストでは {firstPass}',
+  'stats.failingDies': '不良ダイ、測定 {tested} 個中',
   'stats.inSelection': '選択範囲内の{caption}',
 
   // Findings

@@ -106,8 +106,9 @@ export const zhCN = {
   'stats.edgeShare': '外侧 {rings} 环失效占比',
   'stats.scratchShare': '划痕路径失效占比',
   'stats.siteRate': '工位 {site} 失效率（其余工位 {other}）',
-  'stats.finalYield': '最终良率，初测 {firstPass}',
-  'stats.failingDies': '失效晶粒（共测 {tested} 颗）',
+  'stats.finalYield': '最终良率',
+  'stats.firstPass': '初测 {firstPass}',
+  'stats.failingDies': '失效晶粒，共测 {tested} 颗',
   'stats.inSelection': '选区内{caption}',
 
   // Findings

@@ -1,10 +1,11 @@
 'use client';
 
-import { useReducedMotion } from 'motion/react';
+import { animate, useReducedMotion } from 'motion/react';
 import * as React from 'react';
-import type { RenderedStatFactTuple } from '@/core/report';
+import type { RenderedStatFact, RenderedStatFactTuple } from '@/core/report';
 import { useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
+import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
 import {
   readPrefersReducedMotionSync,
   STAT_INITIAL_COUNTUP_MS,
@@ -18,14 +19,22 @@ export interface StatRowProps {
   readonly revealStarted?: boolean;
   /** Delay in ms matching the StatRow's §5.2 rise-in stagger (`180 ms` normal, `0 ms` reduced). */
   readonly revealDelayMs?: number;
+  /** Active selection-store highlight ID; a stat whose evidence ID matches shows selected. */
+  readonly activeClaimId?: string | null;
+  /** Lights (or clears) the stat's evidence dies through the selection store (premium §7.5). */
+  readonly onToggleStat?: (stat: RenderedStatFact) => void;
   readonly className?: string;
 }
 
 /**
- * Three-column big-number Stat Row (`src/ui/report/StatRow.tsx`, `redesign.md` §3.4, §3.6, §4.5, §5.3):
- * - `<dl>` with exactly 3 `<div>` items (`168 px` cols + `24 px` gap at 553 px desktop; `111 px` cols + `12 px` gap mobile).
- * - Caption `<dt>` (`footnote` secondary, max 2 lines) precedes `<dd>` in DOM and sits visually
- *   below `<dd>` (`stat` 40 px / 300 weight, 6 px gap) via `flex-direction: column-reverse`.
+ * Three-column big-number Stat Row (`src/ui/report/StatRow.tsx`, premium §7.5, `redesign.md` §5.3):
+ * - `<dl>` grid `repeat(3, 1fr)`, gap 24 (12 below 768); each stat `<div>` holds a `<button>`
+ *   (inside `<dd>`, padding 12 / margin -12, `r-lg`) that lights the stat's evidence dies.
+ *   Hover `fill-1` + caption `text-primary`, pressed `fill-2` + scale 0.985, selected
+ *   (`aria-pressed`) `fill-2`.
+ * - Number `<dd>`: `stat`, `text-primary`, tabular; never orange (A4).
+ * - Caption `<dt>` (`subhead` secondary, max 2 lines, optional `subhead` tertiary second line)
+ *   precedes `<dd>` in DOM and sits visually below it (6 px gap) via `flex-direction: column-reverse`.
  * - §5.3 Count-up:
  *   - First reveal: `0 -> target` in `700 ms` `ease-out-expo` via one rAF loop writing `textContent`
  *     to refs (zero React state per frame).
@@ -38,6 +47,8 @@ export function StatRow({
   stats,
   revealStarted = true,
   revealDelayMs = 0,
+  activeClaimId = null,
+  onToggleStat,
   className,
 }: StatRowProps): React.JSX.Element {
   const { formatInteger, formatPercent } = useT();
@@ -61,6 +72,42 @@ export function StatRow({
   ]);
   const hasCompletedInitialRevealRef = React.useRef(false);
   const rafRef = React.useRef<number | null>(null);
+  const itemRefs = React.useRef<Array<HTMLDivElement | null>>([null, null, null]);
+  const pressedIdxRef = React.useRef<number | null>(null);
+  const idPrefix = React.useId();
+
+  // Premium §7.5 / §3.12: cards and rows press to 0.985 (80 ms in, spring-snappy out); none under reduced motion
+  const handlePressStart = (
+    idx: number,
+    event: React.PointerEvent<HTMLButtonElement>,
+  ): void => {
+    if (typeof performance !== 'undefined') {
+      event.currentTarget.dataset.ack = String(performance.now());
+    }
+    if (event.button !== 0 || prefersReduced) {
+      return;
+    }
+    const el = itemRefs.current[idx];
+    if (el) {
+      pressedIdxRef.current = idx;
+      animate(
+        el,
+        { scale: MOTION_TOKENS.pressScale.row },
+        { duration: 0.08, ease: MOTION_TOKENS.easeOutTuple },
+      );
+    }
+  };
+  const handlePressEnd = (): void => {
+    const idx = pressedIdxRef.current;
+    if (idx === null) {
+      return;
+    }
+    pressedIdxRef.current = null;
+    const el = itemRefs.current[idx];
+    if (el) {
+      animate(el, { scale: 1 }, SPRING_TOKENS.snappy);
+    }
+  };
 
   const cancelRaf = React.useCallback((): void => {
     if (rafRef.current !== null && typeof cancelAnimationFrame === 'function') {
@@ -208,37 +255,79 @@ export function StatRow({
       data-testid="verdict-stat-row"
       className={cn('grid grid-cols-3 gap-3 md:gap-6', className)}
     >
-      {stats.map((stat, idx) => (
-        <div
-          key={idx}
-          data-testid="verdict-stat-item"
-          className="flex min-w-0 flex-col-reverse justify-end gap-1.5"
-        >
-          <dt className="line-clamp-2 type-subhead text-text-secondary lg:max-xl:line-clamp-3">
-            {stat.captionText}
-          </dt>
-          <dd
-            data-emphasis={stat.emphasis ? 'true' : 'false'}
-            className={cn(
-              'type-stat tabular-nums',
-              stat.emphasis ? 'text-failure' : 'text-text-primary',
-            )}
+      {stats.map((stat, idx) => {
+        const isSelected = activeClaimId === stat.evidence.claimId;
+        const captionId = `${idPrefix}-caption-${idx}`;
+        const valueId = `${idPrefix}-value-${idx}`;
+        return (
+          <div
+            key={idx}
+            ref={(el) => {
+              itemRefs.current[idx] = el;
+            }}
+            data-testid="verdict-stat-item"
+            data-selected={isSelected ? 'true' : undefined}
+            className="group/stat relative flex min-w-0 origin-center flex-col-reverse justify-end gap-1.5"
           >
-            <span
-              ref={(el) => {
-                valueRefs.current[idx] = el;
-              }}
-              data-testid="verdict-stat-value"
-              aria-hidden="true"
+            {/* Text sits above the button fill and lets pointer input through to the button */}
+            <dt
+              id={captionId}
+              className="pointer-events-none relative z-[1] type-subhead"
             >
-              {stat.valueText}
-            </span>
-            <span data-testid="verdict-stat-sr" className="sr-only">
-              {stat.valueText}
-            </span>
-          </dd>
-        </div>
-      ))}
+              <span
+                data-testid="verdict-stat-caption"
+                className="line-clamp-2 block text-text-secondary transition-colors duration-120 ease-out group-hover/stat:text-text-primary lg:max-xl:line-clamp-3"
+              >
+                {stat.captionText}
+              </span>
+              {stat.captionSecondaryText !== null ? (
+                <span
+                  data-testid="verdict-stat-caption-secondary"
+                  className="line-clamp-2 block text-text-tertiary tabular-nums"
+                >
+                  {stat.captionSecondaryText}
+                </span>
+              ) : null}
+            </dt>
+            <dd className="type-stat text-text-primary tabular-nums">
+              <span
+                ref={(el) => {
+                  valueRefs.current[idx] = el;
+                }}
+                data-testid="verdict-stat-value"
+                aria-hidden="true"
+                className="pointer-events-none relative z-[1]"
+              >
+                {stat.valueText}
+              </span>
+              <span id={valueId} data-testid="verdict-stat-sr" className="sr-only">
+                {stat.valueText}
+              </span>
+              {/* Premium §7.5: padding 12 / margin -12 keeps the text on the grid; r-lg */}
+              <button
+                type="button"
+                data-testid="verdict-stat-button"
+                data-claim-id={stat.evidence.claimId}
+                aria-pressed={isSelected}
+                aria-labelledby={`${valueId} ${captionId}`}
+                disabled={onToggleStat === undefined}
+                onPointerDown={(e) => handlePressStart(idx, e)}
+                onPointerUp={handlePressEnd}
+                onPointerLeave={handlePressEnd}
+                onPointerCancel={handlePressEnd}
+                onClick={() => onToggleStat?.(stat)}
+                className={cn(
+                  'absolute -inset-x-1.5 -inset-y-3 z-0 cursor-pointer md:-inset-x-3 appearance-none rounded-lg border-0 bg-transparent p-0',
+                  'transition-[background-color] duration-120 ease-out',
+                  'enabled:hover:bg-fill-1 enabled:active:bg-fill-2 aria-pressed:bg-fill-2 enabled:aria-pressed:hover:bg-fill-2',
+                  'focus-visible:shadow-focus-ring focus-visible:outline-none',
+                  'disabled:cursor-default',
+                )}
+              />
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }

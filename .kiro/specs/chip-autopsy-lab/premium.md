@@ -1377,3 +1377,39 @@ Each item is verified on a Playwright screenshot (Chromium, `deviceScaleFactor: 
 
 - **A40.** For `ja`, `zh-CN`, `zh-TW`, and `ko` at 1440 and 390: the verdict is at most 3 lines, letter-spacing computes to 0, no glyph or label is clipped, the nav stays on one line, segmented labels do not truncate, and bin codes, test names, and `Edge-Ring` appear untranslated. (§4.3, §9.7)
 
+
+## 11. Inspiration deltas (added 2026-11-18)
+
+Rules distilled from current award-gallery work (godly/recent.design, land-book, 60fps.design). Nothing is copied; each rule is restated in our own material (silicon, probe station, ember). Where a rule conflicts with §1–§10, this section wins only for the items it names.
+
+### 11.1 Landing hero shows the product working (P26a)
+- Reference rule: the best tool landings put one large, real product artifact directly under the headline, framed like an instrument, instead of only small cards.
+- Ours: between the hint line and "Sample lots", show one hero wafer at 320 px (1440/1280), 280 (1024), 240 (sm), 220 (xs), rendered with the real `edge-ring-etch` W01 data, the §5 disc material, stage shadows and at-rest sheen.
+- Instrument frame: a thin probe-station reticle around the disc: a `hairline` circle at D + 32, with tick marks every 10° (4 px, `hairline-strong`; 8 px every 90°) and four tiny coordinate labels at 12/3/6/9 o'clock ("0°", "90°", "180°", "270°", `caption-2`, `text-tertiary`, tabular). No other ornament. This is our identity mark; it must read as a measuring instrument, not decoration.
+- To the right of the disc at ≥1024 (below it under 1024), one quiet result card: eyebrow "Example result" (`caption-1`, `text-tertiary`), "Edge-Ring failure." (`title-2`, `ember-ink`), one line "93.8% of fails sit in the outer 3 rings." (`body`, `text-secondary`), and a text button "See how it was found →" that opens the sample lot. Card: `surface`, `r-2xl`, `shadow-card`, padding 24, width 280.
+- The hero wafer is a button with the same action as "Open the sample lot" (aria-label "Open the sample lot"). Hover: sheen follows pointer (P32 rules), cursor pointer.
+- Vertical rhythm: hint line → 56 px → hero row → 72 px → "Sample lots". At 1440 x 900 the headline, CTA and the top half of the hero wafer must be above the fold; the sample cards may move below the fold.
+- Reduced motion: no sheen follow.
+
+### 11.2 Sample cards: caption outside, one fact inside (P26a)
+- Reference rule: feature cards keep the artifact inside a soft tile and the text below the tile, outside the surface.
+- Ours: each sample card becomes a `fill-1` tile (`r-2xl`, no shadow at rest, `shadow-card` on hover with the existing lift) holding only the disc; name, one-line cause and "25 wafers, 15,825 dies" sit below the tile on the page background, left-aligned, 16 px gap.
+- Inside the tile, bottom-left, a small chip with the pattern name in plain words ("Edge ring", "Scratch", "Probe site"), `caption-1`, `fill-2`, `r-full`, height 24.
+
+### 11.3 "Where the yield went": one solid bar, the rest ghosted (P20)
+- Reference rule: show every bar as a quiet outline and fill only the one that matters, with a small percent pill.
+- Ours: non-top bins draw as `bar-neutral` at 40 % fill with a 1 px `hairline-strong` outline; only the top-loss bin is solid `ember`. Selected bin (store-linked) becomes solid `ink` (dark: `text-primary`). Each row ends with a percent-of-fails pill (`caption-1`, `fill-2`, `r-full`, tabular). Card header keeps the one big number (lot yield loss) left and the existing segmented control right.
+
+### 11.4 Coach marks point with a pulse, not a bubble first (P25)
+- Reference rule: first-run hints draw the eye with a soft border pulse on the real control, then reveal text.
+- Ours: each hint target gets a 2 px `ember` 40 % ring that pulses twice (scale 1 → 1.06, opacity 0.4 → 0, 1.2 s each, `ease-out`), then the hint bubble fades in. Reduced motion: static ring for 2 s, no pulse.
+
+### 11.5 Numbers tick, they do not just appear (P28)
+- Reference rule: hero numbers count with a short ticker and settle with a tiny overshoot-free ease.
+- Ours: stat numbers and the hero card percent count up over 600 ms (`ease-out-quart`), digits tabular so width never jumps; percent sign and units do not animate. Already covered by §8.2 count-up; this adds the landing result card and the "Where the yield went" pills to the same rule.
+
+### 11.6 Acceptance
+- A41: landing at 1440 x 900 shows headline, CTA, and ≥ 50 % of the hero wafer above the fold; reticle ticks present (72 ticks); hero click opens the sample lot.
+- A42: sample card text sits outside the tile; pattern chip present on all three tiles.
+- A43: in "Where the yield went", exactly one bar is solid `ember` at rest.
+- A44: first-run coach mark shows a pulse ring before its text (or a static ring under reduced motion).

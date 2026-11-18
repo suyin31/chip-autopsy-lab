@@ -127,19 +127,69 @@ describe('stat-facts core selector and localized formatter (redesign §3.4, §3.
     expect(renderedEn).toHaveLength(3);
     expect(renderedEn[0]).toEqual({
       valueText: '93.8%',
-      captionText: 'of fails sit in the outer 3 rings',
+      captionText: 'of failing dies are in the outer 3 rings',
+      captionSecondaryText: null,
+      evidence: stats[0]!.evidence,
       emphasis: true,
       numericValue: stats[0]!.value,
       format: 'percent',
     });
     expect(renderedEn[1]?.valueText).toBe('82.8%');
-    expect(renderedEn[1]?.captionText).toMatch(
-      /^final yield, 8\d\.\d% first pass$/,
-    );
+    expect(renderedEn[1]?.captionText).toBe('final yield');
+    expect(renderedEn[1]?.captionSecondaryText).toBe('81.5% on the first test');
     expect(renderedEn[1]?.emphasis).toBe(false);
     expect(renderedEn[2]?.valueText).toBe('2,721');
-    expect(renderedEn[2]?.captionText).toBe('failing dies of 15,825 tested');
+    expect(renderedEn[2]?.captionText).toBe('dies failed, of 15,825 tested');
+    expect(renderedEn[2]?.captionSecondaryText).toBeNull();
     expect(renderedEn[2]?.emphasis).toBe(false);
+  });
+
+  it('binds every stat to the dies behind its number (premium §7.5)', () => {
+    const lot = buildDemoLot('edge-ring-etch');
+    const { analysis, verdict } = generateOfflineAutopsyReport(lot);
+    const stats = buildStatFacts({ lot, verdict, analysis });
+    const ids = stats.map((s) => s.evidence.claimId);
+    expect(new Set(ids).size).toBe(3);
+    expect(ids).toEqual(['stat:stats.edgeShare', 'stat:stats.finalYield', 'stat:stats.failingDies']);
+
+    // Edge share: the outer-ring failing dies, traced clockwise; count matches the ratio
+    const edge = stats[0]!.evidence;
+    expect(edge.order).toBe('polar-cw');
+    for (const i of edge.dieIndices) {
+      expect(lot.dies.finalPass[i]).toBe(0);
+      expect(lot.dies.ringIndex[i]).toBeGreaterThanOrEqual(1);
+      expect(lot.dies.ringIndex[i]).toBeLessThanOrEqual(3);
+    }
+    expect(edge.dieIndices.length / stats[2]!.value).toBeCloseTo(stats[0]!.value, 3);
+
+    // Failing dies: exactly the final failing dies
+    expect(stats[2]!.evidence.dieIndices.length).toBe(2721);
+    expect(stats[1]!.evidence.dieIndices).toEqual(stats[2]!.evidence.dieIndices);
+
+    const siteLot = buildDemoLot('site2-probe-contact');
+    const siteRes = generateOfflineAutopsyReport(siteLot);
+    const siteStats = buildStatFacts({
+      lot: siteLot,
+      verdict: siteRes.verdict,
+      analysis: siteRes.analysis,
+    });
+    const siteEvidence = siteStats[0]!.evidence;
+    expect(siteEvidence.sites).toHaveLength(1);
+    expect(siteEvidence.sites[0]!.siteNum).toBe(2);
+    expect(siteEvidence.dieIndices.length).toBeGreaterThan(0);
+    for (const i of siteEvidence.dieIndices) {
+      expect(siteLot.dies.firstPass[i]).toBe(0);
+    }
+
+    const scratchLot = buildDemoLot('handling-scratch');
+    const scratchRes = generateOfflineAutopsyReport(scratchLot);
+    const scratchStats = buildStatFacts({
+      lot: scratchLot,
+      verdict: scratchRes.verdict,
+      analysis: scratchRes.analysis,
+    });
+    expect(scratchStats[0]!.evidence.order).toBe('principal-axis');
+    expect(scratchStats[0]!.evidence.dieIndices.length).toBeGreaterThan(0);
   });
 
   it('selects scratch-path share on handling-scratch and site fail rate on site2-probe-contact', () => {
@@ -154,7 +204,7 @@ describe('stat-facts core selector and localized formatter (redesign §3.4, §3.
     expect(scratchStats[0]?.captionKey).toBe('stats.scratchShare');
     expect(scratchStats[0]?.emphasis).toBe(true);
     const scratchEn = renderStatFacts(scratchStats, 'en');
-    expect(scratchEn[0]?.captionText).toBe('of fails on the scratch path');
+    expect(scratchEn[0]?.captionText).toBe('of failing dies are on the scratch line');
 
     const siteLot = buildDemoLot('site2-probe-contact');
     const siteRes = generateOfflineAutopsyReport(siteLot);
@@ -232,8 +282,12 @@ describe('stat-facts core selector and localized formatter (redesign §3.4, §3.
       expect(renderedA).toEqual(renderedB);
       if (locale === 'en') {
         expect(renderedA[2]?.captionText).toBe(
-          'failing dies of 633 tested in selection',
+          'dies failed, of 633 tested in selection',
         );
+        expect(renderedA[1]?.captionText).toBe('final yield in selection');
+        for (const i of selStats[2]!.evidence.dieIndices) {
+          expect(mask[i]).toBe(1);
+        }
       }
     }
   });

@@ -13,6 +13,7 @@ import {
   buildStatFacts,
   type EngineFact,
   renderReport,
+  type RenderedStatFact,
   renderStatFacts,
   type ReportClaim,
 } from '@/core/report';
@@ -458,6 +459,37 @@ export function AutopsyReportCard({
     [store, lot, factsById, analysis.primarySpatial.pattern],
   );
 
+  // Premium §7.5: a stat lights the dies behind its number through the same store toggle,
+  // deferred one frame like the claim toggle (the pressed fill acknowledges in the click frame)
+  const handleToggleStat = React.useCallback(
+    (stat: RenderedStatFact): void => {
+      const apply = (): void => {
+        flushPendingWaferCommits();
+        const state = store.getState();
+        if (state.lot !== lot) {
+          state.setLot(lot);
+        }
+        store.getState().toggleClaimHighlight({
+          claimId: stat.evidence.claimId,
+          dieIndices: stat.evidence.dieIndices,
+          citedSites: stat.evidence.sites,
+          glowOrderMode: stat.evidence.order,
+        });
+      };
+      if (typeof requestAnimationFrame !== 'function') {
+        apply();
+        return;
+      }
+      const pending = pendingToggleRafsRef.current;
+      const id = requestAnimationFrame(() => {
+        pending.delete(id);
+        apply();
+      });
+      pending.add(id);
+    },
+    [store, lot],
+  );
+
   // Premium §7.3: the cause phrase shows its selected state only when it lit the evidence,
   // not when "Show on wafer" did. Each control takes over the lit verdict instead of clearing it.
   const [headlineSource, setHeadlineSource] = React.useState<
@@ -616,6 +648,8 @@ export function AutopsyReportCard({
           stats={renderedStats}
           revealStarted={effectiveRevealed}
           revealDelayMs={riseByBlock.get('stats')?.delayMs ?? 0}
+          activeClaimId={effectiveActiveClaimId}
+          onToggleStat={handleToggleStat}
         />
       </motion.div>
 

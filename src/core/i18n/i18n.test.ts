@@ -139,7 +139,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(DICTIONARIES.ko).toBe(ko);
 
     const enKeys = Object.keys(en).sort() as MessageKey[];
-    expect(enKeys.length).toBe(206);
+    expect(enKeys.length).toBe(207);
 
     for (const locale of SUPPORTED_LOCALES) {
       const dict = getDictionary(locale);
@@ -225,7 +225,8 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
           site: formatInteger(locale, 2),
           other: formatPercent(locale, 0.021),
         }),
-        t(locale, 'stats.finalYield', {
+        t(locale, 'stats.finalYield'),
+        t(locale, 'stats.firstPass', {
           firstPass: formatPercent(locale, 0.815),
         }),
         t(locale, 'stats.failingDies', {

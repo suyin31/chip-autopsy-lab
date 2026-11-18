@@ -106,8 +106,9 @@ export const zhTW = {
   'stats.edgeShare': '外側 {rings} 環失效佔比',
   'stats.scratchShare': '刮痕路徑失效佔比',
   'stats.siteRate': '站點 {site} 失效率（其餘站點 {other}）',
-  'stats.finalYield': '最終良率，初測 {firstPass}',
-  'stats.failingDies': '失效晶粒（共測 {tested} 顆）',
+  'stats.finalYield': '最終良率',
+  'stats.firstPass': '初測 {firstPass}',
+  'stats.failingDies': '失效晶粒，共測 {tested} 顆',
   'stats.inSelection': '選取範圍內{caption}',
 
   // Findings

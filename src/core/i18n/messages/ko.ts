@@ -107,8 +107,9 @@ export const ko = {
   'stats.edgeShare': '외곽 {rings}개 링 불량 비중',
   'stats.scratchShare': '스크래치 경로 불량 비중',
   'stats.siteRate': '사이트 {site} 불량률, 타 사이트 {other}',
-  'stats.finalYield': '최종 수율, 초도 {firstPass}',
-  'stats.failingDies': '불량 다이 (측정 {tested}개)',
+  'stats.finalYield': '최종 수율',
+  'stats.firstPass': '초도 테스트 {firstPass}',
+  'stats.failingDies': '불량 다이, 측정 {tested}개 중',
   'stats.inSelection': '선택 영역 내 {caption}',
 
   // Findings

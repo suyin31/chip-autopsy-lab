@@ -276,7 +276,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P17. Verdict headline, takeaway, confidence chip
   - Cause phrase button states, healthy-lot variant, takeaway templates in core, confidence levels and popover (premium §7.3, §7.4, §9.3).
   - Accept: A25, A26.
-- [ ] P18. Stats
+- [x] P18. Stats
   - Stat buttons with evidence, captions, second caption line, no orange (premium §7.5).
   - Accept: A4.
 - [ ] P19. Findings and possible causes
@@ -284,7 +284,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
   - Accept: A27.
 - [ ] P20. "Where the yield went"
   - Section card, takeaway, bar rows with `bar-neutral`, selected state linked to the store, show-all, empty state (premium §7.9).
-  - Accept: A32.
+  - Accept: A32, A43 (also apply premium §11.3).
 - [ ] P21. Yield summary panel
   - Restyle `src/ui/charts/YieldSummaryPanel.tsx`: section card, takeaway, lot numbers, site and wafer rows, anomaly label, narrow-viewport column rule; keep current store behaviour and tests (premium §7.10).
   - Accept: A33, A19.
@@ -299,10 +299,13 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
   - Accept: A21, A22.
 - [ ] P25. Coach marks
   - Three hints, anchoring, persistence in `localStorage["cal.hints.v1"]`, `?nohints=1`, suppression rules (premium §2.4, §7.18).
-  - Accept: A23, A24.
+  - Accept: A23, A24, A44 (also apply premium §11.4).
 - [ ] P26. Copy and i18n pass
   - Plain labels from §2.2, every key in §9.5 in all 5 locales with parity, `<bdi translate="no">` wrapping, overflow behaviours from §9.7 (premium §9).
   - Accept: A40, A26 (no exclamation marks).
+- [ ] P26a. Landing hero and sample tiles (inspiration deltas)
+  - Hero wafer with probe-station reticle and example result card; sample cards as tiles with captions outside and pattern chips (premium §11.1, §11.2). Also apply §11.3 in P20, §11.4 in P25, §11.5 in P28 when those run.
+  - Accept: A41, A42.
 
 **Motion**
 
@@ -311,7 +314,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
   - Accept: A37, A36 (sweep part).
 - [ ] P28. Verdict reveal and count-up
   - Six-block stagger with `spring-ui`, ref-based count-up, interrupt on input, reduced-motion path (premium §8.2).
-  - Accept: A36.
+  - Accept: A36 (also apply premium §11.5).
 - [ ] P29. Evidence ignite and camera focus
   - Veil fade, pattern-ordered rim and bloom stagger, camera targeting rules, strip dimming, clear and switch behaviour, mobile scroll then ignite (premium §8.3).
   - Accept: A38, A9 (animated).

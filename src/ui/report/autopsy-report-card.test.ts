@@ -5,7 +5,7 @@ import type { StoreApi } from 'zustand';
 import { listDemoPresets } from '@/core/demo';
 import { SUPPORTED_LOCALES } from '@/core/i18n';
 import { buildLotModel, type LotModel } from '@/core/model';
-import { generateOfflineAutopsyReport } from '@/core/report';
+import { buildStatFacts, generateOfflineAutopsyReport } from '@/core/report';
 import { parseStdfBytes, PRR_PART_FLG, writeStdfBytes } from '@/core/stdf';
 import { I18nProvider } from '@/ui/i18n';
 import { BinsOnlyNotice, LoadedLotOverview } from '@/ui/layout';
@@ -289,8 +289,16 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       expect(cardHtml.match(/data-testid="verdict-stat-value"[^>]*aria-hidden="true"/g)).toHaveLength(3);
       expect(cardHtml).toContain('data-verdict-rise-block="headline"');
       expect(cardHtml).toContain('data-verdict-rise-block="findings"');
-      const emphasisMatches = cardHtml.match(/data-emphasis="true"/g) ?? [];
-      expect(emphasisMatches.length).toBe(1);
+      // Premium §7.5 / A4: each stat is a button bound to its evidence; numbers are never orange
+      expect(cardHtml.match(/data-testid="verdict-stat-button"/g)).toHaveLength(3);
+      expect(cardHtml.match(/data-testid="verdict-stat-button"[^>]*aria-pressed="false"/g)).toHaveLength(3);
+      expect(cardHtml).not.toContain('data-emphasis');
+      const statRowHtml = cardHtml.slice(
+        cardHtml.indexOf('data-testid="verdict-stat-row"'),
+        cardHtml.indexOf('data-testid="verdict-findings-section"'),
+      );
+      expect(statRowHtml).not.toMatch(/text-failure|text-ember|ember/);
+      expect(statRowHtml).toMatch(/<dd class="[^"]*text-text-primary/);
 
       // FindingsList: borderless rows (border-0), collapsed Possible causes by default
       expect(cardHtml).toContain('data-testid="verdict-findings-list"');
@@ -354,6 +362,42 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
     expect(html).not.toContain('text-ember');
     expect(html).toContain('2 of 2 dies passed every test.');
     expect(countPrimaryButtons(html)).toBe(1);
+  });
+
+  it('lights the evidence dies of a stat through the store and shows it selected (premium §7.5)', async () => {
+    const res = await ingestDemoPreset('edge-ring-etch');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
+    const { lot, report, verdict, facts } = res;
+    const store = createClientTestStore();
+    store.getState().setLot(lot);
+
+    const render = (): string =>
+      renderToStaticMarkup(
+        React.createElement(AutopsyReportCard, { lot, report, verdict, facts, store }),
+      );
+    const before = render();
+    expect(before).toContain('final yield');
+    expect(before).toMatch(
+      /data-testid="verdict-stat-caption-secondary"[^>]*>8\d\.\d% on the first test</,
+    );
+    expect(before).toContain('dies failed, of 15,825 tested');
+
+    const [edgeStat] = buildStatFacts({ lot });
+    store.getState().toggleClaimHighlight({
+      claimId: edgeStat.evidence.claimId,
+      dieIndices: edgeStat.evidence.dieIndices,
+      glowOrderMode: edgeStat.evidence.order,
+    });
+    expect(store.getState().overlayHighlightCount).toBe(edgeStat.evidence.dieIndices.length);
+
+    const after = render();
+    expect(
+      after.match(/data-testid="verdict-stat-button"[^>]*aria-pressed="true"/g),
+    ).toHaveLength(1);
+    expect(after).toMatch(
+      /data-testid="verdict-stat-button" data-claim-id="stat:stats.edgeShare" aria-pressed="true"/,
+    );
   });
 
   it('writes cited die mask on headline/finding toggle, shows expanded detail + Clear, lights #D6E6FF overlay strokes, and clears on second click', async () => {

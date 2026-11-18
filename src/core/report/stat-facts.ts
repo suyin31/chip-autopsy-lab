@@ -39,13 +39,33 @@ export type StatCaptionKey =
 
 export type StatParams = Readonly<Record<string, string | number>>;
 
+/** Ignite order for a stat's evidence dies (same literals as the UI `ClaimGlowOrderMode`). */
+export type StatEvidenceOrder = 'polar-cw' | 'principal-axis' | 'centroid-distance';
+
+/**
+ * Dies behind a stat number (premium §7.5: every number on the page is traceable). Activating a
+ * stat lights these dies through the selection store.
+ */
+export interface StatEvidence {
+  /** Stable highlight ID (`stat:<captionKey>`), unique within a stat tuple. */
+  readonly claimId: string;
+  readonly dieIndices: Uint32Array;
+  readonly order: StatEvidenceOrder;
+  readonly sites: ReadonlyArray<{ readonly headNum: number; readonly siteNum: number }>;
+}
+
 export interface StatFact {
   readonly value: number;
   readonly format: StatValueFormat;
   readonly captionKey: StatCaptionKey;
   readonly params: StatParams;
+  /**
+   * Lead diagnostic number. Kept for selection logic only; the UI never colours it
+   * (premium §7.5, A4: stat numbers are never orange).
+   */
   readonly emphasis: boolean;
   readonly inSelection?: boolean;
+  readonly evidence: StatEvidence;
 }
 
 export type StatFactTuple = readonly [StatFact, StatFact, StatFact];
@@ -53,6 +73,9 @@ export type StatFactTuple = readonly [StatFact, StatFact, StatFact];
 export interface RenderedStatFact {
   readonly valueText: string;
   readonly captionText: string;
+  /** Optional second caption line (premium §7.5, e.g. "81.5% on the first test"). */
+  readonly captionSecondaryText: string | null;
+  readonly evidence: StatEvidence;
   readonly emphasis: boolean;
   readonly numericValue: number;
   readonly format: StatValueFormat;
@@ -124,6 +147,8 @@ interface ScopedCounts {
   readonly finalPassDies: number;
   readonly finalFailDies: number;
   readonly edgeBandFailDies: number;
+  readonly finalFailIndices: Uint32Array;
+  readonly edgeBandFailIndices: Uint32Array;
 }
 
 function computeScopedCounts(
@@ -137,6 +162,8 @@ function computeScopedCounts(
   let finalPassDies = 0;
   let finalFailDies = 0;
   let edgeBandFailDies = 0;
+  const finalFailIndices: number[] = [];
+  const edgeBandFailIndices: number[] = [];
 
   const total = dies.count;
   for (let i = 0; i < total; i += 1) {
@@ -151,12 +178,14 @@ function computeScopedCounts(
       finalPassDies += 1;
     } else {
       finalFailDies += 1;
+      finalFailIndices.push(i);
       if (
         dies.hasValidCoords[i] !== 0 &&
         dies.ringIndex[i]! >= 1 &&
         dies.ringIndex[i]! <= maxRing
       ) {
         edgeBandFailDies += 1;
+        edgeBandFailIndices.push(i);
       }
     }
   }
@@ -167,7 +196,37 @@ function computeScopedCounts(
     finalPassDies,
     finalFailDies,
     edgeBandFailDies,
+    finalFailIndices: Uint32Array.from(finalFailIndices),
+    edgeBandFailIndices: Uint32Array.from(edgeBandFailIndices),
   };
+}
+
+/** Dies whose first test failed on `targetSiteIndex` (the numerator of the site fail rate). */
+function collectSiteFirstFailDies(
+  lot: LotModel,
+  targetSiteIndex: number,
+  mask: Uint8Array | null | undefined,
+): Uint32Array {
+  const { dies } = lot;
+  const out: number[] = [];
+  for (let i = 0; i < dies.count; i += 1) {
+    if (mask && mask[i] === 0) {
+      continue;
+    }
+    if (dies.firstSiteIndex[i] === targetSiteIndex && dies.firstPass[i] === 0) {
+      out.push(i);
+    }
+  }
+  return Uint32Array.from(out);
+}
+
+function statEvidence(
+  captionKey: StatCaptionKey,
+  dieIndices: Uint32Array,
+  order: StatEvidenceOrder,
+  sites: StatEvidence['sites'] = [],
+): StatEvidence {
+  return { claimId: `stat:${captionKey}`, dieIndices, order, sites };
 }
 
 function computeSiteFailComparison(
@@ -245,6 +304,8 @@ export function buildStatFacts(options: BuildStatFactsOptions): StatFactTuple {
     params: { firstPass: firstPassYieldRatio },
     emphasis: false,
     ...(inSelection ? { inSelection: true } : {}),
+    // Final yield traces to the dies that cost it (the final failing dies)
+    evidence: statEvidence('stats.finalYield', counts.finalFailIndices, 'centroid-distance'),
   };
 
   const failingDiesStat = (emphasis: boolean): StatFact => ({
@@ -254,6 +315,7 @@ export function buildStatFacts(options: BuildStatFactsOptions): StatFactTuple {
     params: { tested: counts.testedDies },
     emphasis: emphasis && !isHealthy,
     ...(inSelection ? { inSelection: true } : {}),
+    evidence: statEvidence('stats.failingDies', counts.finalFailIndices, 'centroid-distance'),
   });
 
   // Case 1: Test-site concentration anomaly (Tier 1)
@@ -272,6 +334,12 @@ export function buildStatFacts(options: BuildStatFactsOptions): StatFactTuple {
       params: { site: siteToken, other: otherFailRate },
       emphasis: !isHealthy,
       ...(inSelection ? { inSelection: true } : {}),
+      evidence: statEvidence(
+        'stats.siteRate',
+        collectSiteFirstFailDies(lot, site.siteIndex, selectionMask),
+        'centroid-distance',
+        [{ headNum: site.headNum, siteNum: site.siteNum }],
+      ),
     };
     return [leadSiteStat, finalYieldStat, failingDiesStat(false)];
   }
@@ -292,6 +360,7 @@ export function buildStatFacts(options: BuildStatFactsOptions): StatFactTuple {
       params: { rings: CLASSIFIER_THRESHOLDS.EDGE_RING_BAND },
       emphasis: !isHealthy,
       ...(inSelection ? { inSelection: true } : {}),
+      evidence: statEvidence('stats.edgeShare', counts.edgeBandFailIndices, 'polar-cw'),
     };
     return [leadEdgeStat, finalYieldStat, failingDiesStat(false)];
   }
@@ -304,15 +373,20 @@ export function buildStatFacts(options: BuildStatFactsOptions): StatFactTuple {
         : resolvedAnalysis.primarySpatial;
     const spatialBreakdown = computeSpatialDieBreakdown(lot, spatialSource);
     let scratchFailCount = 0;
+    let scratchDies: Uint32Array;
     if (inSelection && selectionMask) {
+      const inMask: number[] = [];
       for (let i = 0; i < spatialBreakdown.spatialDieIndices.length; i += 1) {
         const dieIdx = spatialBreakdown.spatialDieIndices[i]!;
         if (selectionMask[dieIdx] !== 0) {
           scratchFailCount += 1;
+          inMask.push(dieIdx);
         }
       }
+      scratchDies = Uint32Array.from(inMask);
     } else {
       scratchFailCount = spatialBreakdown.sigCount;
+      scratchDies = spatialBreakdown.spatialDieIndices;
     }
     const scratchShare = boundedStatRatio(
       scratchFailCount,
@@ -325,6 +399,7 @@ export function buildStatFacts(options: BuildStatFactsOptions): StatFactTuple {
       params: {},
       emphasis: !isHealthy,
       ...(inSelection ? { inSelection: true } : {}),
+      evidence: statEvidence('stats.scratchShare', scratchDies, 'principal-axis'),
     };
     return [leadScratchStat, finalYieldStat, failingDiesStat(false)];
   }
@@ -359,6 +434,12 @@ export function buildStatFacts(options: BuildStatFactsOptions): StatFactTuple {
       params: { site: siteToken, other: cmp.otherFailRate },
       emphasis: false,
       ...(inSelection ? { inSelection: true } : {}),
+      evidence: statEvidence(
+        'stats.siteRate',
+        collectSiteFirstFailDies(lot, chosenSite.siteIndex, selectionMask),
+        'centroid-distance',
+        [{ headNum: chosenSite.headNum, siteNum: chosenSite.siteNum }],
+      ),
     };
   } else {
     const edgeShare = boundedStatRatio(
@@ -372,6 +453,7 @@ export function buildStatFacts(options: BuildStatFactsOptions): StatFactTuple {
       params: { rings: CLASSIFIER_THRESHOLDS.EDGE_RING_BAND },
       emphasis: false,
       ...(inSelection ? { inSelection: true } : {}),
+      evidence: statEvidence('stats.edgeShare', counts.edgeBandFailIndices, 'polar-cw'),
     };
   }
 
@@ -406,10 +488,7 @@ function formatStatCaption(stat: StatFact, locale: Locale): string {
       break;
     }
     case 'stats.finalYield': {
-      const firstPassRatio = Number(stat.params.firstPass ?? 0);
-      baseCaption = t(locale, 'stats.finalYield', {
-        firstPass: formatPercent(locale, firstPassRatio),
-      });
+      baseCaption = t(locale, 'stats.finalYield');
       break;
     }
     case 'stats.failingDies': {
@@ -426,6 +505,16 @@ function formatStatCaption(stat: StatFact, locale: Locale): string {
     : baseCaption;
 }
 
+/** Second caption line (premium §7.5): final yield names the first-test yield under it. */
+function formatStatSecondaryCaption(stat: StatFact, locale: Locale): string | null {
+  if (stat.captionKey !== 'stats.finalYield') {
+    return null;
+  }
+  return t(locale, 'stats.firstPass', {
+    firstPass: formatPercent(locale, Number(stat.params.firstPass ?? 0)),
+  });
+}
+
 /**
  * Formats a 3-tuple of `StatFact`s for `locale` using cached `Intl` formatters (`redesign.md` §6.5).
  */
@@ -439,6 +528,8 @@ export function renderStatFacts(
         ? formatPercent(locale, stat.value)
         : formatInteger(locale, stat.value),
     captionText: formatStatCaption(stat, locale),
+    captionSecondaryText: formatStatSecondaryCaption(stat, locale),
+    evidence: stat.evidence,
     emphasis: stat.emphasis,
     numericValue: stat.value,
     format: stat.format,
