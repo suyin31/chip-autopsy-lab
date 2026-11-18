@@ -20,3 +20,7 @@ Fix in R8 pass:
 - Overall pass. Mobile HUD gap fixed (d), strip right fade present (f), finding click lights cited dies + expands row.
 - New minor: selected thumbnail ring (W01) clipped at top on desktop strip; selection label "W01" overlaps ring bottom. Fix in Task 19 polish.
 - Stat numerals (light weight) still look slightly loose; recheck tracking -0.02em in Task 19.
+
+## Task 10 pass (assistant, 2026-11-18 18:15) — logs/shots/t10-*.png
+- SBIN mode colours distinct (orange/cyan/violet, good die grey); legend shows name+count. Pareto "Yield loss by bin" under Findings, quiet bars, cumulative tick. Pass.
+- Minor: legend wraps to 2 lines at 1440 and sits tight under the disc; consider single-line with overflow fade (Task 19).
