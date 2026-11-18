@@ -1,8 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import type { StoreApi } from 'zustand';
 import type { LotModel } from '@/core/model';
-import { areHiddenBinSetsEqual, type WaferColorMode } from '@/ui/state';
+import {
+  areHiddenBinSetsEqual,
+  type SelectionStoreState,
+  type WaferColorMode,
+} from '@/ui/state';
 import {
   type CameraState,
   cameraToViewportTransform,
@@ -18,6 +23,7 @@ import {
   type ViewportTransform,
   type WaferRenderLayout,
 } from './wafer-geometry';
+import { useHiddenBinsRef } from './use-hidden-bins';
 
 export interface BaseCanvasHandle {
   paintForCamera(rasterCamera: CameraState): void;
@@ -41,7 +47,11 @@ export interface BaseCanvasProps {
   readonly waferIndex: number;
   readonly colorMode: WaferColorMode;
   readonly activeTestNum: number | null;
-  readonly hiddenBins: ReadonlySet<number>;
+  /**
+   * Selection Store read for hidden legend bins. The layer subscribes itself and repaints
+   * imperatively, so toggling a bin never re-renders the stage.
+   */
+  readonly store: StoreApi<SelectionStoreState>;
   readonly cssWidth: number;
   readonly cssHeight: number;
   readonly transform?: ViewportTransform;
@@ -83,13 +93,13 @@ function areBaseCanvasPropsEqual(
     prev.waferIndex === next.waferIndex &&
     prev.colorMode === next.colorMode &&
     prev.activeTestNum === next.activeTestNum &&
+    prev.store === next.store &&
     prev.cssWidth === next.cssWidth &&
     prev.cssHeight === next.cssHeight &&
     prev.dpr === next.dpr &&
     prev.layout === next.layout &&
     prev.getRasterCamera === next.getRasterCamera &&
-    sameTransform &&
-    areHiddenBinSetsEqual(prev.hiddenBins, next.hiddenBins)
+    sameTransform
   );
 }
 
@@ -109,7 +119,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       waferIndex,
       colorMode,
       activeTestNum,
-      hiddenBins,
+      store,
       cssWidth,
       cssHeight,
       transform,
@@ -133,7 +143,6 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       waferIndex,
       colorMode,
       activeTestNum,
-      hiddenBins,
       safeCssWidth,
       safeCssHeight,
       dpr,
@@ -144,12 +153,15 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       waferIndex,
       colorMode,
       activeTestNum,
-      hiddenBins,
       safeCssWidth,
       safeCssHeight,
       dpr,
       layout,
     };
+
+    /** Re-raster for a hidden-bin change; reassigned every render so it sees current props. */
+    const repaintRef = React.useRef<() => void>(() => undefined);
+    const hiddenBinsRef = useHiddenBinsRef(store, lot, () => repaintRef.current());
 
     const ensureCanvasAndContext = React.useCallback(() => {
       const canvas = canvasRef.current;
@@ -220,14 +232,14 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           dpr: dims.dpr,
           colorMode: cur.colorMode,
           activeTestNum: cur.activeTestNum,
-          hiddenBins: cur.hiddenBins,
+          hiddenBins: hiddenBinsRef.current,
         });
         lastPaintRef.current = {
           lot: cur.lot,
           waferIndex: cur.waferIndex,
           colorMode: cur.colorMode,
           activeTestNum: cur.activeTestNum,
-          hiddenBins: cur.hiddenBins,
+          hiddenBins: hiddenBinsRef.current,
           cssWidth: cur.safeCssWidth,
           cssHeight: cur.safeCssHeight,
           dpr: cur.dpr,
@@ -236,7 +248,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           panY: vp.panY,
         };
       },
-      [ensureCanvasAndContext],
+      [ensureCanvasAndContext, hiddenBinsRef],
     );
 
     React.useImperativeHandle(
@@ -340,6 +352,19 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       [ensureCanvasAndContext, paintWithViewport],
     );
 
+    repaintRef.current = () => {
+      if (suppressAutoPaintRef.current) {
+        return;
+      }
+      const rasterCam = getRasterCamera
+        ? getRasterCamera()
+        : DEFAULT_CAMERA_STATE;
+      const vp =
+        transform ??
+        cameraToViewportTransform(rasterCam, safeCssWidth, safeCssHeight);
+      paintWithViewport(vp, layout);
+    };
+
     React.useEffect(() => {
       if (suppressAutoPaintRef.current) {
         return;
@@ -363,7 +388,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
         last.scale === vp.scale &&
         last.panX === vp.panX &&
         last.panY === vp.panY &&
-        areHiddenBinSetsEqual(last.hiddenBins, hiddenBins)
+        areHiddenBinSetsEqual(last.hiddenBins, hiddenBinsRef.current)
       ) {
         // Already painted imperatively (e.g. keyboard wafer preview); skip the duplicate raster
         return;
@@ -374,7 +399,6 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       waferIndex,
       colorMode,
       activeTestNum,
-      hiddenBins,
       safeCssWidth,
       safeCssHeight,
       transform,
@@ -382,6 +406,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       dpr,
       layout,
       paintWithViewport,
+      hiddenBinsRef,
     ]);
 
     return (

@@ -134,6 +134,14 @@ export const ja = {
   'stage.legend.more': '他 +{count}',
   'stage.legend.toggleAria': '{bin} の表示を切り替え',
   'stage.zoomReset': 'ズームをリセット',
+  // Bin Pareto
+  'pareto.heading': 'ビン別の歩留まり損失',
+  'pareto.modeAria': 'ビンの種類',
+  'pareto.empty': 'この選択範囲に不良ダイはありません。',
+  'pareto.rowDetail': 'テスト済みの {share}、累積 {cumulative}',
+  'pareto.rowAria': '{bin} に絞り込み、{dies}、テスト済みの {share}',
+  'pareto.showAll': 'すべての {count} ビンを表示',
+  'pareto.showFewer': '表示を減らす',
   'stage.evidenceCaption': '全 {wafers} ウェハ中 {dies} ダイ、このウェハに {here}',
 
   // Magnifier

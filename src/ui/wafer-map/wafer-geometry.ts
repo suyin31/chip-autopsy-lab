@@ -434,6 +434,27 @@ export function buildFailBinRankMap(
   dies: ColumnarDies,
   mode: 'HBIN' | 'SBIN',
 ): ReadonlyMap<number, number> {
+  const cached = failBinRankCache.get(dies)?.[mode];
+  if (cached !== undefined) {
+    return cached;
+  }
+  const rankByCode = computeFailBinRankMap(dies, mode);
+  const entry = failBinRankCache.get(dies) ?? {};
+  entry[mode] = rankByCode;
+  failBinRankCache.set(dies, entry);
+  return rankByCode;
+}
+
+/** `ColumnarDies` are immutable after the lot is built, so ranks are cached per die table. */
+const failBinRankCache = new WeakMap<
+  ColumnarDies,
+  { HBIN?: ReadonlyMap<number, number>; SBIN?: ReadonlyMap<number, number> }
+>();
+
+function computeFailBinRankMap(
+  dies: ColumnarDies,
+  mode: 'HBIN' | 'SBIN',
+): ReadonlyMap<number, number> {
   const counts = new Map<number, number>();
   const binArr = mode === 'SBIN' ? dies.sbin : dies.hbin;
   for (let i = 0; i < dies.count; i += 1) {

@@ -13,6 +13,7 @@ import {
   parseHexColor,
   parseRgbaString,
   RADIUS_TOKENS_PX,
+  rgbToCieLch,
   SECONDARY_FAIL_BIN_PALETTE,
   SPACING_SCALE_PX,
   SPRING_TOKENS,
@@ -129,6 +130,13 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
       expect(hex).not.toBe(COLOR_TOKENS.failure);
       expect(hex).not.toBe(COLOR_TOKENS.accent);
       expect(hex).not.toBe(COLOR_TOKENS.passDie);
+    }
+  });
+
+  it('keeps the secondary fail-bin palette at equal CIE L* (66 +/- 1) so no bin reads brighter than another', () => {
+    for (const hex of SECONDARY_FAIL_BIN_PALETTE) {
+      const { l } = rgbToCieLch(parseHexColor(hex));
+      expect(Math.abs(l - 66)).toBeLessThanOrEqual(1);
     }
   });
 

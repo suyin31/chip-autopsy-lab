@@ -57,6 +57,8 @@ export interface AutopsyReportCardProps {
    * on mobile (`redesign.md` §3.4) while staying a single scrollable `553 px` column on desktop.
    */
   readonly splitForMobileStage?: boolean;
+  /** Optional quiet block rendered below the Findings list (the Bin Pareto, Requirement 6). */
+  readonly belowFindings?: React.ReactNode;
   /**
    * Controls §5.2 Verdict rise-in trigger (`true` once the §5.1 probe sweep reaches `85%`,
    * or immediately on skip / subsequent load / reduced motion / standalone tests).
@@ -283,6 +285,7 @@ export function AutopsyReportCard({
   defaultConfidenceOpen = false,
   binsOnlyNotice,
   splitForMobileStage = false,
+  belowFindings,
   verdictRevealed = true,
   className,
 }: AutopsyReportCardProps): React.JSX.Element {
@@ -570,6 +573,18 @@ export function AutopsyReportCard({
           onToggleClaim={handleToggleClaim}
         />
       </motion.div>
+
+      {belowFindings ? (
+        <div
+          data-testid="verdict-below-findings"
+          className={cn(
+            'mt-10 pb-6 md:mt-12',
+            splitForMobileStage && 'order-4 xl:order-none',
+          )}
+        >
+          {belowFindings}
+        </div>
+      ) : null}
     </section>
   );
 }

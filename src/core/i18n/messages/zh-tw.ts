@@ -128,6 +128,14 @@ export const zhTW = {
   'stage.legend.more': '另外 {count} 項',
   'stage.legend.toggleAria': '顯示或隱藏 {bin}',
   'stage.zoomReset': '重設縮放',
+  // Bin Pareto
+  'pareto.heading': '各 Bin 的良率損失',
+  'pareto.modeAria': 'Bin 類型',
+  'pareto.empty': '目前選取範圍內沒有失效晶粒。',
+  'pareto.rowDetail': '佔測試總數 {share}，累計 {cumulative}',
+  'pareto.rowAria': '篩選 {bin}，{dies}，佔測試總數 {share}',
+  'pareto.showAll': '顯示全部 {count} 個 Bin',
+  'pareto.showFewer': '收合',
   'stage.evidenceCaption': '共 {wafers} 片晶圓 {dies} 顆晶粒，本片 {here} 顆',
 
   // Magnifier

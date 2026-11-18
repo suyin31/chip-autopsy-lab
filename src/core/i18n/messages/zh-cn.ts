@@ -128,6 +128,14 @@ export const zhCN = {
   'stage.legend.more': '另外 {count} 项',
   'stage.legend.toggleAria': '显示或隐藏 {bin}',
   'stage.zoomReset': '重置缩放',
+  // Bin Pareto
+  'pareto.heading': '各 Bin 的良率损失',
+  'pareto.modeAria': 'Bin 类型',
+  'pareto.empty': '当前选区内没有失效晶粒。',
+  'pareto.rowDetail': '占测试总数 {share}，累计 {cumulative}',
+  'pareto.rowAria': '筛选 {bin}，{dies}，占测试总数 {share}',
+  'pareto.showAll': '显示全部 {count} 个 Bin',
+  'pareto.showFewer': '收起',
   'stage.evidenceCaption': '共 {wafers} 片晶圆 {dies} 颗晶粒，本片 {here} 颗',
 
   // Magnifier

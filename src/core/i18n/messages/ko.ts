@@ -134,6 +134,14 @@ export const ko = {
   'stage.legend.more': '+{count}개 더보기',
   'stage.legend.toggleAria': '{bin} 표시 전환',
   'stage.zoomReset': '줌 초기화',
+  // Bin Pareto
+  'pareto.heading': '빈별 수율 손실',
+  'pareto.modeAria': '빈 종류',
+  'pareto.empty': '이 선택 영역에는 불량 다이가 없습니다.',
+  'pareto.rowDetail': '테스트 대비 {share}, 누적 {cumulative}',
+  'pareto.rowAria': '{bin}(으)로 필터, {dies}, 테스트 대비 {share}',
+  'pareto.showAll': '빈 {count}개 모두 보기',
+  'pareto.showFewer': '간단히 보기',
   'stage.evidenceCaption': '웨이퍼 {wafers}장 중 {dies}개 다이, 현재 웨이퍼 {here}개',
 
   // Magnifier

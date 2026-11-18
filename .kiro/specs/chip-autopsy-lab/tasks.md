@@ -93,13 +93,13 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
   - Full-window drop zone with `"Drop the body."`, keyboard file picker, gzip by magic bytes via `DecompressionStream`, parse-failed empty state, partial-result warnings via Sonner, bins-only mode above 200 MB, and `.stdf` download of the demo lots.
   - _Requirements: 1.1, 1.2, 1.3, 2.2, 2.3, 2.5, 3.4, 15.3, 17.6_
 
-- [ ] 10. Add HBIN/SBIN wafer modes, the legend, and the Bin Pareto chart
-  - [ ] 10.1 HBIN and SBIN colour modes with the equal-lightness LCH palette and an interactive legend that hides bins
+- [x] 10. Add HBIN/SBIN wafer modes, the legend, and the Bin Pareto chart
+  - [x] 10.1 HBIN and SBIN colour modes with the equal-lightness LCH palette and an interactive legend that hides bins
     - _Requirements: 4.1, 4.6, 14.2_
-  - [ ] 10.2 Implement `bin-pareto.ts` and the visx `BinParetoChart`
-    - Sorted counts, cumulative share, dominant bin in `#FF7A1A`, bar click toggles a bin filter, claim click highlights the matching bar.
+  - [x] 10.2 Implement `bin-pareto.ts` and the visx `BinParetoChart`
+    - Sorted counts, cumulative share, dominant bin in `failure` (`#FF6B2C`, redesign accent), bar click toggles a bin filter, claim click highlights the matching bar.
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 10.4_
-  - [ ]* 10.3 Property test: Pareto count conservation and monotonic ordering
+  - [x]* 10.3 Property test: Pareto count conservation and monotonic ordering
     - **Property 5** in `src/core/analytics/bin-pareto.prop.test.ts`
     - _Requirements: 6.1, 6.2, 6.5_
 

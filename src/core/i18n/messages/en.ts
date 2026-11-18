@@ -134,6 +134,14 @@ export const en = {
   'stage.legend.more': '+{count} more',
   'stage.legend.toggleAria': 'Show or hide {bin}',
   'stage.zoomReset': 'Reset zoom',
+  // Bin Pareto
+  'pareto.heading': 'Yield loss by bin',
+  'pareto.modeAria': 'Bin type',
+  'pareto.empty': 'No failing dies in this selection.',
+  'pareto.rowDetail': '{share} of tested, {cumulative} cumulative',
+  'pareto.rowAria': 'Filter to {bin}, {dies}, {share} of tested',
+  'pareto.showAll': 'Show all {count} bins',
+  'pareto.showFewer': 'Show fewer',
   'stage.evidenceCaption':
     '{dies} dies on {wafers} wafers, {here} on this wafer',
 

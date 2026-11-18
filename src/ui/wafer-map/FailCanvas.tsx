@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import type { StoreApi } from 'zustand';
 import type { LotModel } from '@/core/model';
-import { areHiddenBinSetsEqual, type WaferColorMode } from '@/ui/state';
+import type { SelectionStoreState, WaferColorMode } from '@/ui/state';
 import {
   type CameraState,
   cameraToViewportTransform,
@@ -13,6 +14,7 @@ import {
   paintWaferFailLayer,
   resolveSupersampledCanvasSize,
 } from './wafer-geometry';
+import { useHiddenBinsRef } from './use-hidden-bins';
 
 export interface FailCanvasHandle {
   paintForCamera(rasterCamera: CameraState): void;
@@ -24,7 +26,8 @@ export interface FailCanvasProps {
   readonly lot: LotModel;
   readonly waferIndex: number;
   readonly colorMode: WaferColorMode;
-  readonly hiddenBins: ReadonlySet<number>;
+  /** Selection Store read for hidden legend bins (repaints imperatively, no stage re-render). */
+  readonly store: StoreApi<SelectionStoreState>;
   readonly cssWidth: number;
   readonly cssHeight: number;
   readonly dpr?: number;
@@ -43,8 +46,8 @@ function areFailCanvasPropsEqual(
     prev.cssWidth === next.cssWidth &&
     prev.cssHeight === next.cssHeight &&
     prev.dpr === next.dpr &&
-    prev.active === next.active &&
-    areHiddenBinSetsEqual(prev.hiddenBins, next.hiddenBins)
+    prev.store === next.store &&
+    prev.active === next.active
   );
 }
 
@@ -59,7 +62,7 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
       lot,
       waferIndex,
       colorMode,
-      hiddenBins,
+      store,
       cssWidth,
       cssHeight,
       dpr,
@@ -77,7 +80,6 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
       lot,
       waferIndex,
       colorMode,
-      hiddenBins,
       safeCssWidth,
       safeCssHeight,
       dpr,
@@ -86,11 +88,15 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
       lot,
       waferIndex,
       colorMode,
-      hiddenBins,
       safeCssWidth,
       safeCssHeight,
       dpr,
     };
+
+    const repaintHiddenRef = React.useRef<() => void>(() => undefined);
+    const hiddenBinsRef = useHiddenBinsRef(store, lot, () =>
+      repaintHiddenRef.current(),
+    );
 
     const paintCamera = React.useCallback((rasterCamera: CameraState): void => {
       const canvas = canvasRef.current;
@@ -148,9 +154,15 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
         layout,
         dpr: dims.dpr,
         colorMode: cur.colorMode,
-        hiddenBins: cur.hiddenBins,
+        hiddenBins: hiddenBinsRef.current,
       });
-    }, []);
+    }, [hiddenBinsRef]);
+
+    repaintHiddenRef.current = () => {
+      if (active) {
+        paintCamera(DEFAULT_CAMERA_STATE);
+      }
+    };
 
     React.useImperativeHandle(
       ref,
@@ -184,7 +196,6 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
       lot,
       waferIndex,
       colorMode,
-      hiddenBins,
       safeCssWidth,
       safeCssHeight,
       dpr,
