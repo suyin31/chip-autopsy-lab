@@ -175,8 +175,8 @@ export function BinParetoChart({
 
   const modeOptions = React.useMemo(
     () => [
-      { value: 'SBIN' as const, label: t('stage.mode.sbin') },
-      { value: 'HBIN' as const, label: t('stage.mode.hbin') },
+      { value: 'SBIN' as const, label: t('mode.softBins') },
+      { value: 'HBIN' as const, label: t('mode.hardBins') },
     ],
     [t],
   );
@@ -202,7 +202,7 @@ export function BinParetoChart({
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <h2
           id={headingId}
           className="min-w-0 type-title-2 text-balance text-text-primary"

@@ -46,6 +46,7 @@ import {
   resolveLandingHeroWaferSize,
   resolveLandingWaferSize,
 } from './landing-layout';
+import { renderWithUntranslatedTokens } from '@/ui/report/render-untranslated';
 import { resolveParseErrorViewModel } from './parse-error-copy';
 
 export type EmptyStateCause = 'first-run' | 'parse-failed' | 'no-results';
@@ -718,12 +719,12 @@ export function EmptyStateCard({
           className="pt-12 text-left md:mx-auto md:max-w-[640px] md:pt-32 md:text-center"
         >
           <h1 className="type-title-2 text-text-primary">
-            Zero dies match the active filter predicates.
+            {t('empty.noResults.title')}
           </h1>
-          <p className="mt-3 type-body text-text-secondary">
+          <p className="mt-3 type-body text-pretty text-text-secondary">
             {activeFilterSummary
-              ? `Active filter: ${activeFilterSummary}. Clear filters or open a demo lot.`
-              : 'Clear active filters to restore the lot, or open a demo lot.'}
+              ? t('empty.noResults.bodyFilter', { filter: activeFilterSummary })
+              : t('empty.noResults.body')}
           </p>
           <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-center">
             {onClearFilters ? (
@@ -734,7 +735,7 @@ export function EmptyStateCard({
                 disabled={disabled}
                 className="w-full md:w-auto"
               >
-                Clear filters
+                {t('empty.noResults.clear')}
               </Button>
             ) : null}
             <Button
@@ -744,7 +745,7 @@ export function EmptyStateCard({
               disabled={disabled}
               className="w-full md:w-auto"
             >
-              {t('error.loadDemo')}
+              {t('landing.primary')}
             </Button>
           </div>
         </div>
@@ -767,7 +768,10 @@ export function EmptyStateCard({
             data-testid="parse-error-body"
             className="mt-3 max-w-[560px] type-body text-text-secondary lg:mx-auto"
           >
-            {errorVm.body}
+            {renderWithUntranslatedTokens(
+              errorVm.body,
+              errorVm.untranslatedTokens,
+            )}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-center">

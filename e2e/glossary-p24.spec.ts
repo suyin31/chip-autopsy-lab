@@ -47,7 +47,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(page.getByTestId('verdict-subline')).toHaveText(/Final yield is 8\d\.\d%\.$/);
 
       // A control Term waits 600 ms (premium §5.6) and is described to screen readers
-      const hard = page.getByRole('radio', { name: 'Hard bins' });
+      const hard = page.getByTestId('stage-mode-segmented').getByRole('radio', { name: 'Hard bins' });
       await expect(hard).toHaveAccessibleDescription(
         'Coarse sort categories (HBIN) that decide where a die physically goes.',
       );

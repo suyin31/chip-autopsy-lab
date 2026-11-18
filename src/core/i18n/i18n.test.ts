@@ -139,7 +139,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(DICTIONARIES.ko).toBe(ko);
 
     const enKeys = Object.keys(en).sort() as MessageKey[];
-    expect(enKeys.length).toBe(279);
+    expect(enKeys.length).toBe(285);
 
     for (const locale of SUPPORTED_LOCALES) {
       const dict = getDictionary(locale);
@@ -184,8 +184,6 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
       expect(dict['app.title']).toBe('Chip Autopsy Lab');
       expect(dict['nav.wordmark']).toBe('Chip Autopsy Lab');
       expect(dict['nav.wordmarkShort']).toBe('Autopsy Lab');
-      expect(dict['stage.mode.hbin']).toBe('HBIN');
-      expect(dict['stage.mode.sbin']).toBe('SBIN');
       expect(dict['magnifier.place']).toMatch(/^X \{x\}.+Y \{y\}$/);
       expect(dict['demo.edgeRing.title']).toContain('Edge-Ring');
       expect(dict['demo.scratch.description']).toContain('18');
@@ -261,6 +259,45 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(t('en', 'landing.headline')).toBe('Drop the body.');
     expect(t('zh-CN', 'landing.headline')).toBe('把遗体放这里。');
     expect(t('ja', 'landing.headline')).toBe('遺体をここに。');
+  });
+
+  it('keeps every locale on the premium §9.1 tone rules and §9.4 themed-copy limits (A26)', () => {
+    // Keys allowed to carry the autopsy theme (premium §9.4) plus the product name
+    const themedKeys = new Set<MessageKey>([
+      'landing.headline',
+      'landing.headlineAccent',
+      'drop.headline',
+      'verdict.prefix',
+      'verdict.healthy',
+    ]);
+    const themedWords: Readonly<Record<Locale, RegExp>> = {
+      en: /\b(autopsy|body|bodies|dead|death)\b/i,
+      'zh-CN': /死|遗体|尸|解剖/,
+      'zh-TW': /死|遺體|屍|解剖/,
+      ja: /死|遺体|解剖|検死/,
+      ko: /사인|시신|부검|죽음/,
+    };
+    for (const locale of SUPPORTED_LOCALES) {
+      const dict = getDictionary(locale);
+      for (const key of Object.keys(dict) as MessageKey[]) {
+        const value = dict[key].replaceAll('Chip Autopsy Lab', '').replaceAll('Autopsy Lab', '');
+        expect(dict[key], `exclamation mark in ${locale}:${key}`).not.toMatch(/[!！]/);
+        if (!themedKeys.has(key)) {
+          expect(value, `themed copy outside §9.4 in ${locale}:${key}`).not.toMatch(themedWords[locale]);
+        }
+      }
+    }
+    for (const key of Object.keys(en) as MessageKey[]) {
+      const value = en[key];
+      expect(value, `banned word in en:${key}`).not.toMatch(
+        /\b(please|simply|just|oops|sorry|successfully)\b/i,
+      );
+      if (!key.startsWith('causes.') && !key.startsWith('hypothesis.')) {
+        expect(value, `hedging adverb in en:${key}`).not.toMatch(/\b(possibly|perhaps|seems)\b/i);
+      }
+      // Prose lists never use middle dots (premium §9.1 rule 8)
+      expect(value, `middle dot in en:${key}`).not.toContain('·');
+    }
   });
 
   it('interpolates parameters deterministically, escapes $-replacement hazards, and resolves plural forms', () => {

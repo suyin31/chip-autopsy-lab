@@ -274,6 +274,9 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
 
     expect(failedHtml).toContain("This file isn&#x27;t an STDF log.");
     expect(failedHtml).toContain('89 50 4E 47');
+    // premium §9.2: STDF record names and raw bytes inside the localized body stay untranslated
+    expect(failedHtml).toContain('<bdi translate="no">FAR (0, 10)</bdi>');
+    expect(failedHtml).toContain('<bdi translate="no">89 50 4E 47</bdi>');
     expect(failedHtml).toContain('Open another file');
     // premium §6.4 / §9.6: `title-1`, secondary reads "Open the sample lot", one `ink` primary (A20)
     expect(failedHtml).toContain('type-title-1');
@@ -314,7 +317,8 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
       }),
     );
     expect(noResultsHtml).toContain('aria-live="polite"');
-    expect(noResultsHtml).toContain('Clear filters');
+    expect(noResultsHtml).toContain('Clear the filter');
+    expect(noResultsHtml).toContain('Active filter: sbin = 7.');
   });
 
   it('renders §3.8 BinsOnlySheet for 312 MB (~21s) and BinsOnlyNotice under confidence pill while hiding parametric claims', async () => {
@@ -541,7 +545,7 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
         onSelectFile: () => undefined,
       }),
     );
-    expect(site2Html).toContain('Head 1 · Site 2');
+    expect(site2Html).toContain('Head 1, site 2');
     expect(site2Html).toContain('data-testid="wafer-base-canvas"');
     expect(site2Html).toContain('data-testid="wafer-overlay-canvas"');
     expect(site2Html).not.toContain('data-testid="bins-only-notice"');

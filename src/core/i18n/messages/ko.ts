@@ -216,8 +216,6 @@ export const ko = {
   // Wafer stage
   'stage.aria': '웨이퍼 {wafer}, 다이 {dies}개, 불량 {fails}개',
   'stage.roleDescription': '웨이퍼 맵',
-  'stage.mode.hbin': 'HBIN',
-  'stage.mode.sbin': 'SBIN',
   'stage.legend.toggleAria': '{bin} 표시 전환',
   'mode.passFail': '양품/불량',
   'mode.hardBins': '하드 빈',
@@ -317,7 +315,6 @@ export const ko = {
   'error.noParts.title': '측정된 다이를 찾을 수 없습니다.',
   'error.noParts.body': '로그에 PRR 레코드가 없어 맵을 표시할 수 없습니다.',
   'error.openAnother': '다른 파일 열기',
-  'error.loadDemo': '데모 로트 불러오기',
   'error.showDetails': '세부 정보 보기',
   'error.detailsTitle': '세부 정보',
 
@@ -347,4 +344,13 @@ export const ko = {
   'shortcut.open': '파일 열기',
   'a11y.skipToVerdict': '판정으로 건너뛰기',
   'a11y.failingDiesTable': '웨이퍼 {wafer}의 불량 다이 목록',
+  'a11y.workspace': '로트 보고서',
+  'a11y.opening': '{name} 여는 중.',
+  'a11y.loaded': '{headline} 로트 {lotId} 불러옴: 웨이퍼 {wafers}장, 다이 {dies}개, 최종 수율 {yield}.',
+  'a11y.downloadFailed': '샘플 파일을 다운로드하지 못했습니다. 다시 시도하세요.',
+  'a11y.headSite': '헤드 {head}, 사이트 {site}',
+  'empty.noResults.title': '이 필터와 일치하는 다이가 없습니다.',
+  'empty.noResults.body': '필터를 해제하면 로트 전체가 보입니다.',
+  'empty.noResults.bodyFilter': '적용된 필터: {filter}. 필터를 해제하면 로트 전체가 보입니다.',
+  'empty.noResults.clear': '필터 해제',
 } as const satisfies Dictionary;

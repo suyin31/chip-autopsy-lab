@@ -212,8 +212,6 @@ export const zhCN = {
   // Wafer stage
   'stage.aria': '晶圆 {wafer}，共 {dies} 颗晶粒，{fails} 颗失效',
   'stage.roleDescription': '晶圆图',
-  'stage.mode.hbin': 'HBIN',
-  'stage.mode.sbin': 'SBIN',
   'stage.legend.toggleAria': '显示或隐藏 {bin}',
   'mode.passFail': '合格/失效',
   'mode.hardBins': '硬分档',
@@ -313,7 +311,6 @@ export const zhCN = {
   'error.noParts.title': '未找到已测晶粒。',
   'error.noParts.body': '日志中不包含 PRR 记录，无法生成晶圆图。',
   'error.openAnother': '打开其他文件',
-  'error.loadDemo': '加载示例批次',
   'error.showDetails': '查看详情',
   'error.detailsTitle': '详情',
 
@@ -343,4 +340,13 @@ export const zhCN = {
   'shortcut.open': '打开文件',
   'a11y.skipToVerdict': '跳至分析结论',
   'a11y.failingDiesTable': '晶圆 {wafer} 上的失效晶粒',
+  'a11y.workspace': '批次报告',
+  'a11y.opening': '正在打开 {name}。',
+  'a11y.loaded': '{headline} 已加载批次 {lotId}：{wafers} 片晶圆，{dies} 颗晶粒，最终良率 {yield}。',
+  'a11y.downloadFailed': '示例文件未能下载。再试一次。',
+  'a11y.headSite': '测试头 {head}，工位 {site}',
+  'empty.noResults.title': '没有晶粒符合此筛选。',
+  'empty.noResults.body': '清除筛选即可查看整个批次。',
+  'empty.noResults.bodyFilter': '当前筛选：{filter}。清除筛选即可查看整个批次。',
+  'empty.noResults.clear': '清除筛选',
 } as const satisfies Dictionary;

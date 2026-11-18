@@ -8,7 +8,7 @@ import {
   listDemoPresets,
 } from '@/core/demo';
 import type { ParseFatalError, ParseMode } from '@/core/stdf';
-import { formatByteSize, formatGroupedInt, formatYieldPct } from '@/ui/format';
+import { formatByteSize } from '@/ui/format';
 import { useT } from '@/ui/i18n';
 import { ClinicalToaster, cn } from '@/ui/primitives';
 import {
@@ -30,7 +30,10 @@ import {
 import { LoadedLotOverview } from './LoadedLotOverview';
 import type { RecentLotEntry } from './LotPicker';
 import { type ActiveNavLotInfo, NavBar } from './NavBar';
-import { resolveTruncatedWarningToastModel } from './parse-error-copy';
+import {
+  resolveParseErrorViewModel,
+  resolveTruncatedWarningToastModel,
+} from './parse-error-copy';
 
 type BaseViewState =
   | { readonly status: 'empty' }
@@ -100,7 +103,7 @@ const INITIAL_PROGRESS: WorkerParseProgress = {
  * Validates: Requirements 1.1, 1.2, 1.4, 1.10, 2.2, 2.5, 3.2, 3.3, 14.4, 17.1–17.6 & redesign §3.1, §3.2, §3.7, §3.8
  */
 export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
-  const { locale, t, formatInteger } = useT();
+  const { locale, t, formatInteger, formatPercent } = useT();
   const presets = React.useMemo(() => listDemoPresets(), []);
   const [selectedPresetId, setSelectedPresetId] =
     React.useState<DemoPresetId>('edge-ring-etch');
@@ -288,7 +291,13 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         }
 
         setLiveAnnouncement(
-          `${response.report.causeOfDeathHeadline.text} Loaded lot ${response.lot.lotId}: ${formatGroupedInt(response.lot.dies.count)} dies across ${formatGroupedInt(response.lot.wafers.length)} wafers, final yield ${formatYieldPct(response.yieldSummary.overall.finalYield)}.`,
+          t('a11y.loaded', {
+            headline: response.report.causeOfDeathHeadline.text,
+            lotId: response.lot.lotId,
+            dies: formatInteger(response.lot.dies.count),
+            wafers: formatInteger(response.lot.wafers.length),
+            yield: formatPercent(response.yieldSummary.overall.finalYield ?? 0),
+          }),
         );
         return;
       }
@@ -322,9 +331,11 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       previousStableViewRef.current = failedState;
       setActiveNavLot(null);
       setWorkspace(failedState);
-      setLiveAnnouncement(`STDF parse failed: ${response.error.message}`);
+      setLiveAnnouncement(
+        resolveParseErrorViewModel(response.error, locale).title,
+      );
     },
-    [formatInteger, locale, t],
+    [formatInteger, formatPercent, locale, t],
   );
 
   const handleUnexpectedWorkerError = React.useCallback(
@@ -346,9 +357,11 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       previousStableViewRef.current = failedState;
       setActiveNavLot(null);
       setWorkspace(failedState);
-      setLiveAnnouncement(`Worker error: ${detail}`);
+      setLiveAnnouncement(
+        resolveParseErrorViewModel(fallbackError, locale).title,
+      );
     },
-    [],
+    [locale],
   );
 
   const handleLoadDemoLot = React.useCallback(
@@ -370,7 +383,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         label,
         progress: { ...INITIAL_PROGRESS, phase: 'generating-demo' },
       });
-      setLiveAnnouncement(`Loading demo lot ${preset.title}.`);
+      setLiveAnnouncement(t('a11y.opening', { name: preset.title }));
 
       const client = getWorkerClient();
       void client
@@ -401,6 +414,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       getWorkerClient,
       handleUnexpectedWorkerError,
       largeFilePrompt,
+      t,
     ],
   );
 
@@ -431,7 +445,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
           totalBytes: file.size > 0 ? file.size : null,
         },
       });
-      setLiveAnnouncement(`Parsing STDF file ${file.name}.`);
+      setLiveAnnouncement(t('a11y.opening', { name: file.name }));
 
       const client = getWorkerClient();
       void client
@@ -464,6 +478,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       getWorkerClient,
       handleUnexpectedWorkerError,
       largeFilePrompt,
+      t,
     ],
   );
 
@@ -592,12 +607,11 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
             description: formatByteSize(exported.bytes.byteLength),
           });
           setLiveAnnouncement(
-            `Downloaded ${exported.fileName} (${formatByteSize(exported.bytes.byteLength)}).`,
+            t('toast.downloaded', { fileName: exported.fileName }),
           );
         })
-        .catch((err: unknown) => {
-          const detail = err instanceof Error ? err.message : String(err);
-          setLiveAnnouncement(`Demo export failed: ${detail}`);
+        .catch(() => {
+          setLiveAnnouncement(t('a11y.downloadFailed'));
         })
         .finally(() => {
           setDownloadingPresetId((prev) => (prev === presetId ? null : prev));
@@ -654,7 +668,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         )}
       >
         <section
-          aria-label="Autopsy Report Workspace"
+          aria-label={t('a11y.workspace')}
           className="flex-1"
         >
           {workspace.status === 'empty' ? (

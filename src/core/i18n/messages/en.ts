@@ -177,7 +177,7 @@ export const en = {
   'findings.excursion.headline': 'Wafer {wafer} dropped to {yield}',
   'findings.excursion.sub': '{delta} below the lot median',
   'findings.lotYield.headline': 'Final yield {yield}',
-  'findings.lotYield.sub': '{firstPass} first pass, {retests} retested dies',
+  'findings.lotYield.sub': '{firstPass} on the first test, {retests} retested dies',
   'findings.more.one': 'Show {count} more finding',
   'findings.more.other': 'Show {count} more findings',
   'findings.meta': '{wafer} on this wafer, {lot} on all {wafers} wafers',
@@ -213,8 +213,6 @@ export const en = {
   // Wafer stage
   'stage.aria': 'Wafer {wafer}, {dies} dies, {fails} failing',
   'stage.roleDescription': 'wafer map',
-  'stage.mode.hbin': 'HBIN',
-  'stage.mode.sbin': 'SBIN',
   'stage.legend.toggleAria': 'Show or hide {bin}',
   'mode.passFail': 'Pass/fail',
   'mode.hardBins': 'Hard bins',
@@ -316,7 +314,6 @@ export const en = {
   'error.noParts.body':
     'The log has no PRR records, so there is nothing to map.',
   'error.openAnother': 'Open another file',
-  'error.loadDemo': 'Load demo lot',
   'error.showDetails': 'Show details',
   'error.detailsTitle': 'Details',
 
@@ -346,4 +343,13 @@ export const en = {
   'shortcut.open': 'Open file',
   'a11y.skipToVerdict': 'Skip to verdict',
   'a11y.failingDiesTable': 'Failing dies on wafer {wafer}',
+  'a11y.workspace': 'Lot report',
+  'a11y.opening': 'Opening {name}.',
+  'a11y.loaded': '{headline} Loaded lot {lotId}: {dies} dies on {wafers} wafers, final yield {yield}.',
+  'a11y.downloadFailed': 'The sample file did not download. Try again.',
+  'a11y.headSite': 'Head {head}, site {site}',
+  'empty.noResults.title': 'No dies match this filter.',
+  'empty.noResults.body': 'Clear the filter to see the whole lot.',
+  'empty.noResults.bodyFilter': 'Active filter: {filter}. Clear the filter to see the whole lot.',
+  'empty.noResults.clear': 'Clear the filter',
 } as const;

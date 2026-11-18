@@ -216,8 +216,6 @@ export const ja = {
   // Wafer stage
   'stage.aria': 'ウェハ {wafer}、{dies} ダイ、不良 {fails}',
   'stage.roleDescription': 'ウェハマップ',
-  'stage.mode.hbin': 'HBIN',
-  'stage.mode.sbin': 'SBIN',
   'stage.legend.toggleAria': '{bin} の表示を切り替え',
   'mode.passFail': '良/不良',
   'mode.hardBins': 'ハードビン',
@@ -317,7 +315,6 @@ export const ja = {
   'error.noParts.title': '測定済みダイが見つかりません。',
   'error.noParts.body': 'ログに PRR レコードがないため、マップを描画できません。',
   'error.openAnother': '別のファイルを開く',
-  'error.loadDemo': 'デモロットを読み込む',
   'error.showDetails': '詳細を表示',
   'error.detailsTitle': '詳細',
 
@@ -347,4 +344,13 @@ export const ja = {
   'shortcut.open': 'ファイルを開く',
   'a11y.skipToVerdict': '判定へスキップ',
   'a11y.failingDiesTable': 'ウェハ {wafer} の不良ダイ一覧',
+  'a11y.workspace': 'ロットレポート',
+  'a11y.opening': '{name} を開いています。',
+  'a11y.loaded': '{headline} ロット {lotId} を読み込みました：{wafers} ウェハ、{dies} ダイ、最終歩留まり {yield}。',
+  'a11y.downloadFailed': 'サンプルファイルをダウンロードできませんでした。もう一度試してください。',
+  'a11y.headSite': 'ヘッド {head}、サイト {site}',
+  'empty.noResults.title': 'このフィルターに一致するダイはありません。',
+  'empty.noResults.body': 'フィルターを解除するとロット全体が表示されます。',
+  'empty.noResults.bodyFilter': '適用中のフィルター：{filter}。フィルターを解除するとロット全体が表示されます。',
+  'empty.noResults.clear': 'フィルターを解除',
 } as const satisfies Dictionary;

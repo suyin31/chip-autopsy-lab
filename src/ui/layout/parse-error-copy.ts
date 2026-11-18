@@ -14,8 +14,31 @@ export interface ParseErrorViewModel {
   readonly uiCode: ParseErrorUiCode;
   readonly title: string;
   readonly body: string;
+  /** Never-translated substrings of `body` to wrap in `<bdi translate="no">` (premium §9.2) */
+  readonly untranslatedTokens: Readonly<Record<string, string>>;
   readonly byteOffset: number;
   readonly first16BytesHex: string;
+}
+
+/** STDF record and field names and the product name that error bodies embed (premium §9.2) */
+const ERROR_BODY_TOKENS: Readonly<Record<string, string>> = {
+  farHeader: 'FAR (0, 10)',
+  farCpuType: 'FAR.CPU_TYPE',
+  cpuType: 'CPU_TYPE',
+  stdfVer: 'STDF_VER',
+  stdfV4: 'STDF V4',
+  stdf: 'STDF',
+  far: 'FAR',
+  prr: 'PRR',
+  gzipMagic: '1F 8B',
+  product: 'Chip Autopsy Lab',
+};
+
+function withTokens(
+  vm: Omit<ParseErrorViewModel, 'untranslatedTokens'>,
+  extra: Readonly<Record<string, string>> = {},
+): ParseErrorViewModel {
+  return { ...vm, untranslatedTokens: { ...ERROR_BODY_TOKENS, ...extra } };
 }
 
 export interface TruncatedWarningToastModel {
@@ -62,17 +85,17 @@ export function resolveParseErrorViewModel(
   const first16BytesHex = error.firstBytesHex ?? '';
 
   if (error.code === 'EMPTY_INPUT') {
-    return {
+    return withTokens({
       uiCode: 'empty',
       title: t(locale, 'error.empty.title'),
       body: t(locale, 'error.empty.body'),
       byteOffset,
       first16BytesHex,
-    };
+    });
   }
 
   if (error.code === 'GZIP_DECOMPRESS_FAILED') {
-    return {
+    return withTokens({
       uiCode: 'gzip-failed',
       title: t(locale, 'error.gzip.title'),
       body: t(locale, 'error.gzip.body', {
@@ -80,35 +103,35 @@ export function resolveParseErrorViewModel(
       }),
       byteOffset,
       first16BytesHex: first16BytesHex || '1F 8B',
-    };
+    });
   }
 
   if (error.code === 'UNSUPPORTED_STDF_VERSION') {
     const version =
       error.stdfVersion !== undefined ? String(error.stdfVersion) : '?';
-    return {
+    return withTokens({
       uiCode: 'unsupported-version',
       title: t(locale, 'error.version.title'),
       body: t(locale, 'error.version.body', { version }),
       byteOffset,
       first16BytesHex,
-    };
+    });
   }
 
   if (error.code === 'UNSUPPORTED_CPU_TYPE_VAX') {
-    return {
+    return withTokens({
       uiCode: 'vax-cpu',
       title: t(locale, 'error.vax.title'),
       body: t(locale, 'error.vax.body'),
       byteOffset,
       first16BytesHex,
-    };
+    });
   }
 
   if (error.code === 'ZERO_VALID_PRR') {
     if (error.truncatedRecord !== undefined) {
       const tr = error.truncatedRecord;
-      return {
+      return withTokens({
         uiCode: 'truncated',
         title: t(locale, 'error.truncated.title'),
         body: t(locale, 'error.truncated.body', {
@@ -119,28 +142,27 @@ export function resolveParseErrorViewModel(
         }),
         byteOffset: tr.byteOffset,
         first16BytesHex,
-      };
+      }, { recType: tr.recName });
     }
 
-    return {
+    return withTokens({
       uiCode: 'no-parts',
       title: t(locale, 'error.noParts.title'),
       body: t(locale, 'error.noParts.body'),
       byteOffset,
       first16BytesHex,
-    };
+    });
   }
 
   // MISSING_FAR_HEADER -> not-stdf
-  return {
+  const hex = extractShortHexPrefix(first16BytesHex);
+  return withTokens({
     uiCode: 'not-stdf',
     title: t(locale, 'error.notStdf.title'),
-    body: t(locale, 'error.notStdf.body', {
-      hex: extractShortHexPrefix(first16BytesHex),
-    }),
+    body: t(locale, 'error.notStdf.body', { hex }),
     byteOffset,
     first16BytesHex,
-  };
+  }, { hex });
 }
 
 /**

@@ -230,13 +230,15 @@ const FailingDiesTable = React.memo(function FailingDiesTable({
         idx: i,
         x: lot.dies.x[i]!,
         y: lot.dies.y[i]!,
-        siteLabel: site ? `Head ${site.headNum} · Site ${site.siteNum}` : '—',
+        siteLabel: site
+          ? t('a11y.headSite', { head: site.headNum, site: site.siteNum })
+          : '—',
         sbin: lot.dies.sbin[i]!,
         hbin: lot.dies.hbin[i]!,
       });
     }
     return nextRows;
-  }, [wafer, lot.dies, lot.sites]);
+  }, [wafer, lot.dies, lot.sites, t]);
 
   return (
     <table className="sr-only">
@@ -246,7 +248,7 @@ const FailingDiesTable = React.memo(function FailingDiesTable({
       <thead>
         <tr>
           <th scope="col">X, Y</th>
-          <th scope="col">Site</th>
+          <th scope="col">{t('yield.col.site')}</th>
           <th scope="col">SBIN</th>
           <th scope="col">HBIN</th>
         </tr>

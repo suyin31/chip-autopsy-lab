@@ -300,7 +300,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P25. Coach marks
   - Three hints, anchoring, persistence in `localStorage["cal.hints.v1"]`, `?nohints=1`, suppression rules (premium §2.4, §7.18).
   - Accept: A23, A24, A44 (also apply premium §11.4).
-- [ ] P26. Copy and i18n pass
+- [x] P26. Copy and i18n pass
   - Plain labels from §2.2, every key in §9.5 in all 5 locales with parity, `<bdi translate="no">` wrapping, overflow behaviours from §9.7 (premium §9).
   - Accept: A40, A26 (no exclamation marks).
 - [x] P26a. Landing hero and sample tiles (inspiration deltas)
