@@ -151,7 +151,7 @@ test.describe('Premium P17 - verdict headline, takeaway, confidence chip', () =>
     await expect(page.getByTestId('confidence-match')).toContainText('Match with Edge-Ring');
     await expect(page.getByTestId('confidence-match')).toContainText('0.95');
     // Measure layout boxes (the open spring scales the popover from 0.97)
-    const pop = await popover.evaluate((el) => ({
+    const pop = await popover.evaluate((el: HTMLElement) => ({
       width: el.offsetWidth,
       top: Number.parseFloat(el.style.top),
     }));

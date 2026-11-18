@@ -162,7 +162,7 @@ export function ConfidencePill({
       initial={
         shouldReduceMotion
           ? { opacity: 0 }
-          : { opacity: 0, scale: 0.96 }
+          : { opacity: 0, scale: 0.97 }
       }
       animate={
         shouldReduceMotion

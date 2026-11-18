@@ -273,7 +273,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P16. Nav, theme toggle, lot picker
   - Nav grid and scroll hairline, language switcher, Appearance menu (desktop button, mobile globe group), lot picker trigger and menu (premium §7.1, §7.2).
   - Accept: A2 (menu path), A28, A29, A35 (tab order).
-- [ ] P17. Verdict headline, takeaway, confidence chip
+- [x] P17. Verdict headline, takeaway, confidence chip
   - Cause phrase button states, healthy-lot variant, takeaway templates in core, confidence levels and popover (premium §7.3, §7.4, §9.3).
   - Accept: A25, A26.
 - [ ] P18. Stats

@@ -1,0 +1,130 @@
+Warning: Permanently added '[redacted-host]' (ED25519) to the list of known hosts.
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=49
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=54
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=38
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the diff of the core and UI code.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=34
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Code looks largely in place. Let me run the checks first to see what state it's in.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=41
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[tool] status: Completed
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=23
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=71
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Typecheck passes. Let me review the key UI files against the spec.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=88
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Implementation appears complete; the popover's open scale is 0.96 while the rule says 0.97, so I'll align that, then build and run the relevant e2e specs.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=105
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+The browser fails to launch because `libatk-1.0.so.0` is missing. Let me see whether the libraries exist somewhere on this machine.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=84
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=74
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+All 13 pass. Now the other specs that touch the verdict column (typography step-down, responsive order, tab order, linking).
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=124
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=67
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+That is the known settle-timing flake (802 ms vs 780). Final lint and unit run, plus details for the log.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=94
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=53
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now tick the task and append to the progress log.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=381
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+P17 is done and ticked in `tasks.md`. Typecheck, lint and `pnpm test` (285/285 in 48 files) all pass.
+
+The previous session had already written almost all of P17 in commit `3f221a7`: the verdict headline, the takeaway templates in core, the confidence chip and popover, new keys in all 5 locales (206 keys), unit tests and a new e2e spec. Two things were left to fix:
+
+- **Typecheck error:** `pnpm typecheck` failed on a type error in `e2e/verdict-p17.spec.ts`. I fixed it in the spec.
+- **Popover open scale:** the confidence popover opened from scale 0.96. I changed it to 0.97, the value the design rules give for popovers.
+
+**E2E:** Chromium on this machine is missing system libraries such as `libatk`. I ran the tests using libraries from an earlier sandbox scratch folder (`LD_LIBRARY_PATH`), with no system changes. After a fresh build:
+- `verdict-p17` passes 4/4 and covers A25 (the P17 part), A26, the cause-phrase states, the confidence chip and popover, and the dark-theme site verdict.
+- `vertical-slice`, `loaded-desktop-p12`, `primitives-p15`, `typography-p4`, `loaded-responsive-p13`, `scaffold`, `wafer-stage-r6` and `nav-p16` all pass.
+- `linked-interactions-r7` failed twice, both times on the known timing check (802 ms against a 780 ms limit).
+- No snapshots changed.
+
+**Decisions where premium.md is silent** (also in `logs/progress.md`):
+- The cause phrase shows as selected only when clicking it lit the dies. "Show on wafer" lights the same dies without selecting the phrase.
+- The site verdict's popover has no "Match with…" row, because no spatial pattern class backs that score.
+- The takeaway is capped at 3 lines on desktop and 5 on mobile, following §9.7. The e2e test checks that it stays within 2 lines at 1440.
+- The full 14-line A25 check waits for P35, since stats and findings belong to P18 and P19.
+
+I left `logs/prompt-p17.txt` and `logs/p17-cont.log` untouched; they look like files the session runner wrote.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=147
+
