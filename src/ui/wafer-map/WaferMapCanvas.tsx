@@ -2391,10 +2391,6 @@ function WaferMapCanvasImpl({
             onClick={() =>
               setStageTool((prev) => (prev === 'select' ? 'pan' : 'select'))
             }
-            className={cn(
-              stageTool === 'select' &&
-                'bg-fill-2 text-text-primary enabled:hover:bg-fill-3',
-            )}
           >
             <SquareDashed aria-hidden="true" strokeWidth={1.5} />
           </Button>

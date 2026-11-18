@@ -513,12 +513,7 @@ export function EmptyStateCard({
               aria-controls="cal-file-picker"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
-              className={cn(
-                'h-12 w-full sm:w-auto',
-                // premium §7.11 primary: `ink` fill, `on-ink` text (A20)
-                'bg-ink text-on-ink enabled:hover:bg-[#333336] enabled:active:bg-black',
-                'dark:enabled:hover:bg-white dark:enabled:active:bg-[#e8e8ed]',
-              )}
+              className="w-full sm:w-auto"
             >
               {t('error.openAnother')}
             </Button>
@@ -529,11 +524,7 @@ export function EmptyStateCard({
               data-testid="parse-error-load-demo"
               onClick={() => onLoadDemoLot('edge-ring-etch')}
               disabled={disabled}
-              className={cn(
-                'h-11 w-full sm:h-12 sm:w-auto',
-                // premium §7.11 secondary: `fill-2`, hover `fill-3`
-                'bg-fill-2 text-text-primary enabled:hover:bg-fill-3 enabled:active:bg-fill-3',
-              )}
+              className="h-11 w-full sm:h-12 sm:w-auto"
             >
               {t('landing.primary')}
             </Button>
@@ -584,12 +575,7 @@ export function EmptyStateCard({
               data-testid="landing-open-sample-button"
               onClick={() => onLoadDemoLot('edge-ring-etch')}
               disabled={disabled}
-              className={cn(
-                'h-12 w-full sm:w-auto',
-                // premium §7.11 primary: `ink` fill, `on-ink` text (A20)
-                'bg-ink text-on-ink enabled:hover:bg-[#333336] enabled:active:bg-black',
-                'dark:enabled:hover:bg-white dark:enabled:active:bg-[#e8e8ed]',
-              )}
+              className="w-full sm:w-auto"
             >
               {t('landing.primary')}
             </Button>
@@ -601,11 +587,7 @@ export function EmptyStateCard({
               aria-controls="cal-file-picker"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
-              className={cn(
-                'h-11 w-full sm:h-12 sm:w-auto',
-                // premium §7.11 secondary: `fill-2`, hover `fill-3`
-                'bg-fill-2 text-text-primary enabled:hover:bg-fill-3 enabled:active:bg-fill-3',
-              )}
+              className="h-11 w-full sm:h-12 sm:w-auto"
             >
               {t('landing.secondary')}
             </Button>

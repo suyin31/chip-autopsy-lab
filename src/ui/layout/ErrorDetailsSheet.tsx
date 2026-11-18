@@ -87,7 +87,7 @@ export function ErrorDetailsSheet({
         <Button
           ref={dismissRef}
           variant="secondary"
-          size="lg"
+          size="md"
           onClick={onClose}
           className="w-full md:w-auto"
         >

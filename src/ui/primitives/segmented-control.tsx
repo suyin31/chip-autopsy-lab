@@ -84,10 +84,13 @@ export function resolveSegmentedKeyStep(
 }
 
 /**
- * Single-select `SegmentedControl` implementing `redesign.md` §4.12:
- * - Height `32 px` desktop (`28 px` mobile), `.surface-material`, radius `999`, padding `2 px`
- * - `surface-3` thumb slides with `spring-snappy` via Motion `layoutId` (`0 ms` on keyboard / reduced motion)
- * - Roving `tabIndex` + WAI-ARIA `radiogroup` / `radio` semantics + `2 px` ice `#D6E6FF` focus rings
+ * Single-select `SegmentedControl` implementing premium §7.8 and §8.9:
+ * - Track 32 px, padding 2, `r-pill`, `fill-2`, no border; 28 px segments, padding 0 14 (0 10 in CJK)
+ * - Thumb `#FFFFFF` + `shadow-thumb` (light) / white 0.16, no shadow (dark); slides on `spring-snappy`
+ *   via Motion `layoutId`, `0 ms` on keyboard and reduced motion
+ * - Labels `text-secondary`, hover and active `text-primary`, pressed scale 0.97 on the label only
+ * - Roving `tabIndex` + WAI-ARIA `radiogroup` / `radio` semantics + `focus-ring` on `:focus-visible`
+ * - Hit area 40 px (44 px on coarse pointers) via `::after`
  */
 export function SegmentedControl<T extends string = string>({
   options,
@@ -109,12 +112,8 @@ export function SegmentedControl<T extends string = string>({
     options.findIndex((opt) => opt.value === value),
   );
 
-  const sizeClass =
-    size === 'sm'
-      ? 'h-7'
-      : size === 'md'
-        ? 'h-8'
-        : 'h-7 md:h-8';
+  // premium §7.8: the track is 32 px at every width; `sm` (28 px) remains for the R-series Pareto header until P20
+  const sizeClass = size === 'sm' ? 'h-7' : 'h-8';
 
   const handleKeyDown = (
     event: React.KeyboardEvent<HTMLButtonElement>,
@@ -147,7 +146,7 @@ export function SegmentedControl<T extends string = string>({
       aria-label={ariaLabel}
       data-testid={dataTestId}
       className={cn(
-        'surface-material inline-flex items-center rounded-pill p-0.5 select-none',
+        'inline-flex items-center rounded-pill bg-fill-2 p-0.5 select-none',
         sizeClass,
         disabled && 'opacity-40',
         className,
@@ -183,10 +182,11 @@ export function SegmentedControl<T extends string = string>({
             }}
             onKeyDown={(event) => handleKeyDown(event, idx)}
             className={cn(
-              'relative inline-flex h-full cursor-pointer items-center justify-center rounded-pill px-3 type-control whitespace-nowrap',
-              "after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] md:after:-inset-y-1.5",
-              'transition-colors duration-[120ms] ease-[var(--ease-out)]',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+              'group relative inline-flex h-full cursor-pointer items-center justify-center rounded-pill px-3.5 type-control whitespace-nowrap',
+              '[:is(:lang(zh),:lang(ja),:lang(ko))_&]:px-2.5',
+              "after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] pointer-coarse:after:-inset-y-2",
+              'transition-[color] duration-[120ms] ease-[var(--ease-out)]',
+              'focus-visible:shadow-focus-ring focus-visible:outline-none',
               'disabled:cursor-not-allowed disabled:opacity-40',
               isActive
                 ? 'text-text-primary'
@@ -202,10 +202,20 @@ export function SegmentedControl<T extends string = string>({
                     ? { duration: 0 }
                     : SPRING_TOKENS.snappy
                 }
-                className="pointer-events-none absolute inset-0 rounded-pill bg-surface-3"
+                data-segmented-thumb=""
+                className="pointer-events-none absolute inset-0 rounded-pill bg-white shadow-thumb dark:bg-[rgba(255,255,255,0.16)] dark:shadow-none"
               />
             ) : null}
-            <span className="relative z-10">{option.label}</span>
+            <span
+              className={cn(
+                'relative z-10 inline-block',
+                // Pressed: scale 0.97 on the label only, 80 ms in, 160 ms out (premium §7.8, §8.9)
+                'transition-transform duration-[160ms] ease-[var(--ease-out)]',
+                'motion-safe:group-enabled:group-active:scale-[0.97] motion-safe:group-enabled:group-active:duration-[80ms]',
+              )}
+            >
+              {option.label}
+            </span>
           </button>
         );
       })}

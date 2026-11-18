@@ -1,7 +1,11 @@
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { Button } from './button';
+import { listDemoPresets } from '@/core/demo';
+import { I18nProvider } from '@/ui/i18n';
+import { BinsOnlySheet } from '@/ui/layout/BinsOnlySheet';
+import { EmptyStateCard } from '@/ui/layout/EmptyStateCard';
+import { Button, countPrimaryButtons, resolveButtonPressScale } from './button';
 import {
   computeAnchoredMenuPosition,
   DropdownMenu,
@@ -19,90 +23,170 @@ import {
   resolveSegmentedKeyStep,
   SegmentedControl,
 } from './segmented-control';
+import {
+  MENU_SURFACE_CLASS,
+  POPOVER_SURFACE_CLASS,
+  TOOLTIP_SURFACE_CLASS,
+} from './surfaces';
 import { ClinicalToaster, SONNER_TOAST_OPTIONS } from './toaster';
 
 describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () => {
-  it('restyles Button across §4.11 variants with pill radius, ice 2px focus rings, optical icon padding, and zero transition:all', () => {
-    const primaryHtml = renderToStaticMarkup(
-      React.createElement(Button, { variant: 'primary' }, 'Open STDF file'),
-    );
-    expect(primaryHtml).toContain('rounded-pill');
-    expect(primaryHtml).toContain('bg-button-primary');
-    expect(primaryHtml).toContain('text-button-primary-text');
-    expect(primaryHtml).toContain('h-11');
-    expect(primaryHtml).toContain('px-[22px]');
-    expect(primaryHtml).toContain('text-[15px]');
-    expect(primaryHtml).toContain('font-[590]');
-    expect(primaryHtml).toContain('focus-visible:outline-2');
-    expect(primaryHtml).toContain('focus-visible:outline-offset-2');
-    expect(primaryHtml).toContain('focus-visible:outline-accent');
-    expect(primaryHtml).not.toContain('transition-all');
-    expect(primaryHtml).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
+  it('styles Button per premium §7.11: every variant, size, state, focus-ring, and hit area', () => {
+    const render = (props: Record<string, unknown>, label = 'Label') =>
+      renderToStaticMarkup(React.createElement(Button, props, label));
 
-    const secondaryNavHtml = renderToStaticMarkup(
+    const primaryLg = render({ variant: 'primary', size: 'lg' }, 'Open the sample lot');
+    expect(primaryLg).toContain('data-variant="primary"');
+    expect(primaryLg).toContain('rounded-pill');
+    expect(primaryLg).toContain('origin-center');
+    expect(primaryLg).toContain('bg-ink text-on-ink');
+    expect(primaryLg).toContain('h-12');
+    expect(primaryLg).toContain('px-[22px]');
+    expect(primaryLg).toContain('text-[15px]');
+    expect(primaryLg).toContain('font-[590]');
+    expect(primaryLg).toContain('tracking-[-0.01em]');
+    expect(primaryLg).toContain('enabled:hover:bg-[#333336]');
+    expect(primaryLg).toContain('dark:enabled:hover:bg-white');
+    expect(primaryLg).toContain('enabled:active:bg-black');
+    expect(primaryLg).toContain('dark:enabled:active:bg-[#e8e8ed]');
+    expect(primaryLg).toContain('disabled:opacity-32');
+    expect(primaryLg).toContain('focus-visible:shadow-focus-ring');
+    expect(primaryLg).toContain('focus-visible:outline-none');
+    expect(primaryLg).not.toContain('outline-accent');
+    expect(primaryLg).not.toContain('transition-all');
+    expect(primaryLg).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
+    // Verdict action row primary is 40 px
+    expect(render({ variant: 'primary' })).toContain('h-10');
+
+    const secondaryLg = render({ variant: 'secondary', size: 'lg' });
+    expect(secondaryLg).toContain('h-12');
+    expect(secondaryLg).toContain('px-5');
+    expect(secondaryLg).toContain('bg-fill-2');
+    expect(secondaryLg).toContain('text-text-primary');
+    expect(secondaryLg).toContain('enabled:hover:bg-fill-3');
+    expect(secondaryLg).toContain('disabled:opacity-32');
+    expect(render({ variant: 'secondary', size: 'md' })).toContain('h-11');
+    const secondaryNav = render({ variant: 'secondary', size: 'sm' });
+    expect(secondaryNav).toContain('h-8');
+    expect(secondaryNav).toContain('px-[14px]');
+    expect(secondaryNav).toContain('after:-inset-y-1');
+    expect(secondaryNav).toContain('pointer-coarse:after:-inset-y-1.5');
+
+    const ghost = render({ variant: 'ghost', iconSide: 'start' }, 'Reset view');
+    expect(ghost).toContain('h-8');
+    // Optical alignment: 2px less padding on the leading icon side (8px left vs 10px right)
+    expect(ghost).toContain('pl-2');
+    expect(ghost).toContain('pr-2.5');
+    expect(ghost).toContain('text-text-secondary');
+    expect(ghost).toContain('enabled:hover:bg-fill-1');
+    expect(ghost).toContain('enabled:active:bg-fill-2');
+    expect(ghost).toContain('disabled:text-text-disabled');
+
+    const text = render({ variant: 'text' }, 'Clear');
+    expect(text).toContain('after:-inset-2');
+    expect(text).toContain('p-0');
+    expect(text).toContain('enabled:hover:text-text-primary');
+    expect(text).toContain('enabled:active:opacity-64');
+    expect(text).toContain('disabled:text-text-disabled');
+
+    const icon = renderToStaticMarkup(
       React.createElement(
         Button,
-        { variant: 'secondary', size: 'sm' },
-        'Open STDF',
-      ),
-    );
-    expect(secondaryNavHtml).toContain('h-8');
-    expect(secondaryNavHtml).toContain('px-[14px]');
-    expect(secondaryNavHtml).toContain('bg-white/10');
-    expect(secondaryNavHtml).toContain('text-text-primary');
-
-    const secondaryLgHtml = renderToStaticMarkup(
-      React.createElement(
-        Button,
-        { variant: 'secondary', size: 'lg' },
-        'Parse everything',
-      ),
-    );
-    expect(secondaryLgHtml).toContain('h-11');
-    expect(secondaryLgHtml).toContain('px-5');
-
-    const ghostHtml = renderToStaticMarkup(
-      React.createElement(
-        Button,
-        { variant: 'ghost', iconSide: 'start' },
-        'EN',
-      ),
-    );
-    expect(ghostHtml).toContain('h-8');
-    // Optical alignment: 2px less padding on leading icon side (8px left vs 10px right)
-    expect(ghostHtml).toContain('pl-2');
-    expect(ghostHtml).toContain('pr-2.5');
-    expect(ghostHtml).toContain('text-text-secondary');
-
-    const textHtml = renderToStaticMarkup(
-      React.createElement(Button, { variant: 'text' }, 'Clear'),
-    );
-    expect(textHtml).toContain('after:-inset-2');
-    expect(textHtml).toContain('p-0');
-
-    const iconHtml = renderToStaticMarkup(
-      React.createElement(
-        Button,
-        { variant: 'icon', 'aria-label': 'Change language' },
+        { variant: 'icon', 'aria-label': 'Select an area', 'aria-pressed': true },
         React.createElement('svg', { 'aria-hidden': 'true' }),
       ),
     );
-    expect(iconHtml).toContain('h-11');
-    expect(iconHtml).toContain('w-11');
-    expect(iconHtml).toContain('md:h-8');
-    expect(iconHtml).toContain('md:w-8');
-    expect(iconHtml).toContain('aria-label="Change language"');
+    expect(icon).toContain('size-8');
+    expect(icon).toContain('pointer-coarse:size-11');
+    expect(icon).toContain('after:-inset-1');
+    expect(icon).toContain('[&amp;_svg]:size-4');
+    expect(icon).toContain('enabled:hover:bg-fill-1');
+    expect(icon).toContain('aria-pressed:bg-fill-2');
+    expect(icon).toContain('aria-pressed:text-text-primary');
+    expect(icon).toContain('aria-pressed:enabled:hover:bg-fill-3');
+    expect(icon).toContain('aria-pressed="true"');
 
-    const disabledHtml = renderToStaticMarkup(
-      React.createElement(
-        Button,
-        { variant: 'secondary', disabled: true },
-        'Disabled',
-      ),
+    // Press scales (premium §3.12): 0.97 buttons, 0.94 icon buttons, text buttons dim instead
+    expect(resolveButtonPressScale('primary')).toBe(0.97);
+    expect(resolveButtonPressScale('secondary')).toBe(0.97);
+    expect(resolveButtonPressScale('ghost')).toBe(0.97);
+    expect(resolveButtonPressScale('icon')).toBe(0.94);
+    expect(resolveButtonPressScale('text')).toBeNull();
+
+    const disabled = render({ variant: 'secondary', disabled: true }, 'Disabled');
+    expect(disabled).toContain('aria-disabled="true"');
+    expect(disabled).toContain('disabled:cursor-not-allowed');
+
+    // No hover style outside `enabled:` and no box-shadow or size transitions
+    for (const html of [primaryLg, secondaryLg, ghost, text, icon]) {
+      expect(html).toContain('transition-[background-color,color,opacity]');
+      expect(html).not.toMatch(/transition-(all|shadow)\b/);
+    }
+  });
+
+  it('counts exactly one primary button on each screen (premium §7.11, A20)', () => {
+    const presets = listDemoPresets();
+    const withLocale = (node: React.ReactElement) =>
+      renderToStaticMarkup(
+        React.createElement(I18nProvider, { initialLocale: 'en' }, node),
+      );
+    const landing = withLocale(
+      React.createElement(EmptyStateCard, {
+        cause: 'first-run',
+        presets,
+        selectedPresetId: 'edge-ring-etch',
+        onSelectPreset: () => undefined,
+        onLoadDemoLot: () => undefined,
+        onDownloadDemoLot: () => undefined,
+        onSelectFile: () => undefined,
+      }),
     );
-    expect(disabledHtml).toContain('aria-disabled="true"');
-    expect(disabledHtml).toContain('disabled:opacity-40');
-    expect(disabledHtml).toContain('disabled:cursor-not-allowed');
+    const parseError = withLocale(
+      React.createElement(EmptyStateCard, {
+        cause: 'parse-failed',
+        presets,
+        selectedPresetId: 'edge-ring-etch',
+        onSelectPreset: () => undefined,
+        onLoadDemoLot: () => undefined,
+        onDownloadDemoLot: () => undefined,
+        onSelectFile: () => undefined,
+        parseError: {
+          fileName: 'photo.png',
+          error: {
+            code: 'MISSING_FAR_HEADER',
+            message: 'bad far',
+            byteOffset: 0,
+            firstBytesHex: '89 50 4E 47 0D 0A 1A 0A 00 00 00 0D 49 48 44 52',
+          },
+        },
+      }),
+    );
+    const binsOnly = withLocale(
+      React.createElement(BinsOnlySheet, {
+        open: true,
+        bytesObserved: 312 * 1024 * 1024,
+        onUseBinsOnly: () => undefined,
+        onParseEverything: () => undefined,
+        onCancel: () => undefined,
+        disablePortal: true,
+      }),
+    );
+
+    expect(countPrimaryButtons(landing)).toBe(1);
+    expect(countPrimaryButtons(parseError)).toBe(1);
+    expect(countPrimaryButtons(binsOnly)).toBe(1);
+    expect(
+      countPrimaryButtons(
+        renderToStaticMarkup(
+          React.createElement(
+            'div',
+            null,
+            React.createElement(Button, { variant: 'secondary' }, 'A'),
+            React.createElement(Button, { variant: 'ghost' }, 'B'),
+          ),
+        ),
+      ),
+    ).toBe(0);
   });
 
   it('renders SegmentedControl (§4.12) with 32px/28px material track, roving radio semantics, and 0ms keyboard stepping', () => {
@@ -121,14 +205,24 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
 
     expect(html).toContain('role="radiogroup"');
     expect(html).toContain('aria-label="Wafer color mode"');
-    expect(html).toContain('surface-material');
+    // A30 (premium §7.8): fill-2 track, 32 px, padding 2, no border; white thumb + shadow-thumb in
+    // light, white 0.16 and no shadow in dark; active label text-primary
+    expect(html).toContain('bg-fill-2');
+    expect(html).not.toContain('surface-material');
     expect(html).toContain('rounded-pill');
-    expect(html).toContain('h-7');
-    expect(html).toContain('md:h-8');
+    expect(html).toContain('h-8');
+    expect(html).toContain('p-0.5');
     expect(html).toContain('role="radio"');
     expect(html).toContain('aria-checked="true"');
-    expect(html).toContain('bg-surface-3');
-    expect(html).toContain('focus-visible:outline-accent');
+    expect(html).toContain('bg-white shadow-thumb dark:bg-[rgba(255,255,255,0.16)] dark:shadow-none');
+    expect(html).toMatch(/aria-checked="true"[^>]*text-text-primary/);
+    expect(html).toMatch(/aria-checked="false"[^>]*text-text-secondary/);
+    expect(html).toContain('px-3.5');
+    expect(html).toContain('[:is(:lang(zh),:lang(ja),:lang(ko))_&amp;]:px-2.5');
+    expect(html).toContain('motion-safe:group-enabled:group-active:scale-[0.97]');
+    expect(html).toContain('pointer-coarse:after:-inset-y-2');
+    expect(html).toContain('focus-visible:shadow-focus-ring');
+    expect(html).not.toContain('outline-accent');
 
     const items = [
       { value: 'pass-fail', disabled: false },
@@ -198,8 +292,18 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
     expect(openHtml).toContain('aria-haspopup="menu"');
     expect(openHtml).toContain('aria-expanded="true"');
     expect(openHtml).toContain('role="menu"');
-    expect(openHtml).toContain('surface-material');
+    // premium §7.12: material-thick + shadow-popover, r-2xl, padding 12; 40 px r-md rows on fill-1 / fill-2
+    expect(openHtml).toContain('bg-material-thick');
+    expect(openHtml).toContain('shadow-popover');
     expect(openHtml).toContain('rounded-2xl');
+    expect(openHtml).toContain('p-3');
+    expect(openHtml).toContain('min-h-10');
+    expect(openHtml).toContain('rounded-md');
+    expect(openHtml).toContain('hover:bg-fill-1');
+    expect(openHtml).toContain('enabled:active:bg-fill-2');
+    expect(openHtml).toContain('text-ink');
+    expect(openHtml).toContain('bg-hairline');
+    expect(openHtml).not.toContain('bg-surface-2');
     expect(openHtml).toContain('role="menuitemradio"');
     expect(openHtml).toContain('aria-checked="true"');
     expect(openHtml).toContain('lang="ja"');
@@ -258,6 +362,23 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
     expect(mobilePos.top).toBe(48);
     expect(mobilePos.left).toBeGreaterThanOrEqual(8);
     expect(mobilePos.left + 360).toBeLessThanOrEqual(382);
+  });
+
+  it('defines menu, popover, and tooltip surfaces per premium §7.12', () => {
+    for (const cls of [MENU_SURFACE_CLASS, POPOVER_SURFACE_CLASS, TOOLTIP_SURFACE_CLASS]) {
+      expect(cls).toContain('bg-material-thick');
+      expect(cls).toContain('shadow-popover');
+      expect(cls).toContain('[backdrop-filter:var(--material-thick-filter)]');
+    }
+    expect(MENU_SURFACE_CLASS).toContain('rounded-2xl');
+    expect(MENU_SURFACE_CLASS).toContain('p-3');
+    expect(POPOVER_SURFACE_CLASS).toContain('w-[320px]');
+    expect(POPOVER_SURFACE_CLASS).toContain('rounded-lg');
+    expect(POPOVER_SURFACE_CLASS).toContain('p-4');
+    expect(TOOLTIP_SURFACE_CLASS).toContain('max-w-[240px]');
+    expect(TOOLTIP_SURFACE_CLASS).toContain('rounded-sm');
+    expect(TOOLTIP_SURFACE_CLASS).toContain('px-2.5 py-1.5');
+    expect(TOOLTIP_SURFACE_CLASS).toContain('type-caption text-text-primary');
   });
 
   it('styles ClinicalToaster (§4.13) at bottom-center with material surface, radius-16, callout/footnote sans tokens, max 3 visible, 8px gap, and 4s duration', () => {

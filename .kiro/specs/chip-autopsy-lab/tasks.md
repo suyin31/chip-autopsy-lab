@@ -267,7 +267,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 
 **Components**
 
-- [ ] P15. Primitives
+- [x] P15. Primitives
   - Buttons (all variants and states), segmented control, menu, popover, and tooltip surfaces (premium §7.11, §7.8, §7.12).
   - Accept: A30; primitives test asserts one primary variant per screen helper.
 - [ ] P16. Nav, theme toggle, lot picker

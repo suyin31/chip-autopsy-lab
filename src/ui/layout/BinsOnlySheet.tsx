@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
-import { cn } from '@/ui/primitives/cn';
 import { ModalSheet } from '@/ui/primitives/sheet';
 import { estimateFullParseSeconds } from './parse-error-copy';
 
@@ -68,12 +67,7 @@ export function BinsOnlySheet({
           autoFocus
           data-testid="bins-only-confirm-button"
           onClick={onUseBinsOnly}
-          className={cn(
-            'w-full md:w-auto',
-            // premium §7.11 primary: `ink` fill, `on-ink` text (A20)
-            'bg-ink text-on-ink enabled:hover:bg-[#333336] enabled:active:bg-black',
-            'dark:enabled:hover:bg-white dark:enabled:active:bg-[#e8e8ed]',
-          )}
+          className="w-full md:w-auto"
         >
           {t('binsOnly.useBinsOnly')}
         </Button>
@@ -83,11 +77,7 @@ export function BinsOnlySheet({
           size="lg"
           data-testid="bins-only-parse-all-button"
           onClick={onParseEverything}
-          className={cn(
-            'w-full md:w-auto',
-            // premium §7.11 secondary: `fill-2`, hover `fill-3`
-            'bg-fill-2 text-text-primary enabled:hover:bg-fill-3 enabled:active:bg-fill-3',
-          )}
+          className="w-full md:w-auto"
         >
           {t('binsOnly.parseAll')}
         </Button>

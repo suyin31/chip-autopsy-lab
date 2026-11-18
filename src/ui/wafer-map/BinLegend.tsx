@@ -6,6 +6,7 @@ import type { StoreApi } from 'zustand';
 import type { LotModel } from '@/core/model';
 import { Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
+import { MENU_SURFACE_CLASS } from '@/ui/primitives/surfaces';
 import {
   EMPTY_HIDDEN_BINS,
   type SelectionStoreState,
@@ -319,8 +320,8 @@ export function BinLegend({
           aria-label={t('legend.more', { count: formatInteger(overflowCount) })}
           data-testid="stage-legend-popover"
           className={cn(
-            'absolute bottom-full left-0 z-[var(--z-menus)] mb-2 flex max-h-80 w-60 flex-col overflow-y-auto rounded-2xl p-3',
-            'bg-material-thick shadow-popover [backdrop-filter:var(--material-thick-filter)] [-webkit-backdrop-filter:var(--material-thick-filter)]',
+            MENU_SURFACE_CLASS,
+            'absolute bottom-full left-0 z-[var(--z-menus)] mb-2 flex max-h-80 w-60 flex-col overflow-y-auto',
           )}
         >
           {allBins.map((bin) => {

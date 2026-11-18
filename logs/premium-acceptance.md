@@ -11,3 +11,7 @@
 ## P5 — Disc material
 - A5: `e2e/disc-material-p5.spec.ts` reads the base canvas backing store at 1440 x 900 (edge-ring-etch, 624 px disc). Body L\* at 25 %/25 % is 18.4 vs 11.0 at 75 %/75 % (difference 7.4, needs >= 6); the pixel 0.008 D inside the 6 o'clock rim is transparent (notch) while the mirrored top pixel and a pixel 0.05 D beside the notch are opaque; top rim L\* 49.1 vs 14.7 just inside and 17.5 at the bottom rim. Screenshot: `logs/shots/p5-disc-1440.png`.
 - Exclusion radius: `wafer-geometry.test.ts` checks every die cell corner of all three demo lots stays inside `R - 0.026 D` at 783 x 720, 390, and 152 px.
+
+## P15 — Primitives
+- A30: `e2e/primitives-p15.spec.ts` at 1440 x 900 on edge-ring-etch. Light: track `rgba(0, 0, 0, 0.055)`, 32 px high, no border, 28 px segments, thumb `rgb(255, 255, 255)` with `shadow-thumb`, active label `rgb(29, 29, 31)`, inactive `rgb(81, 81, 84)`. Dark: track `rgba(255, 255, 255, 0.08)`, thumb white 0.16 with only transparent shadow layers, active label white 0.92. Screenshots: `logs/shots/p15-segmented-light.png`, `logs/shots/p15-segmented-dark.png`.
+- §7.11: the same spec checks the landing primary (`ink` / `on-ink`), the secondary (`fill-2`, hover `fill-3`), exactly one visible `data-variant="primary"`, and the keyboard-only `focus-ring` (no outline). `primitives.test.ts` uses `countPrimaryButtons` to assert one primary on the landing, parse-error, and bins-only screens.

@@ -1,6 +1,8 @@
 export { Badge, type BadgeProps, type BadgeVariant } from './badge';
 export {
   Button,
+  countPrimaryButtons,
+  resolveButtonPressScale,
   type ButtonIconSide,
   type ButtonProps,
   type ButtonSize,
@@ -48,4 +50,10 @@ export {
   type SegmentedKeyStepResult,
 } from './segmented-control';
 export { ModalSheet, type ModalSheetProps } from './sheet';
+export {
+  MATERIAL_THICK_CLASS,
+  MENU_SURFACE_CLASS,
+  POPOVER_SURFACE_CLASS,
+  TOOLTIP_SURFACE_CLASS,
+} from './surfaces';
 export { ClinicalToaster, SONNER_TOAST_OPTIONS } from './toaster';

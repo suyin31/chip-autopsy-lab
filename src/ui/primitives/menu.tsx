@@ -6,6 +6,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
 import { cn } from './cn';
+import { MENU_SURFACE_CLASS } from './surfaces';
 
 export type DropdownMenuAlign = 'start' | 'center' | 'end';
 export type DropdownMenuOpenSource = 'pointer' | 'keyboard';
@@ -612,7 +613,8 @@ export function DropdownMenuContent({
             transformOrigin: position.transformOrigin,
           }}
           className={cn(
-            'surface-material fixed z-[var(--z-menus)] flex flex-col rounded-2xl p-2 text-text-primary outline-none select-none',
+            MENU_SURFACE_CLASS,
+            'fixed z-[var(--z-menus)] flex flex-col text-text-primary outline-none select-none',
             className,
           )}
           {...props}
@@ -635,6 +637,19 @@ export function DropdownMenuContent({
 
   return createPortal(menuNode, document.body);
 }
+
+/**
+ * Menu row (premium §7.12): 40 px, `r-md`, padding 0 12, `control` primary, 8 px before a leading
+ * icon, hover / keyboard highlight `fill-1` (the row's focus cue), pressed `fill-2`.
+ */
+const MENU_ROW_CLASS = cn(
+  'flex min-h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 text-left type-control text-text-primary',
+  '[&_svg]:shrink-0',
+  'transition-[background-color,color] duration-[120ms] ease-[var(--ease-out)]',
+  'hover:bg-fill-1 focus:bg-fill-1 enabled:active:bg-fill-2',
+  'outline-none',
+  'disabled:cursor-not-allowed disabled:text-text-disabled',
+);
 
 export interface DropdownMenuItemProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onSelect'> {
@@ -689,11 +704,7 @@ export const DropdownMenuItem = React.forwardRef<
       }}
       onClick={handleClick}
       className={cn(
-        'flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left type-control text-text-primary',
-        'transition-[background-color,color,transform] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
-        'hover:bg-surface-2 focus:bg-surface-2 enabled:active:scale-[0.99] enabled:active:bg-surface-3',
-        'outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
-        'disabled:cursor-not-allowed disabled:opacity-40',
+        MENU_ROW_CLASS,
         className,
       )}
       {...props}
@@ -765,11 +776,7 @@ export const DropdownMenuRadioItem = React.forwardRef<
       }}
       onClick={handleClick}
       className={cn(
-        'flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left type-control text-text-primary',
-        'transition-[background-color,color,transform] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
-        'hover:bg-surface-2 focus:bg-surface-2 enabled:active:scale-[0.99] enabled:active:bg-surface-3',
-        'outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
-        'disabled:cursor-not-allowed disabled:opacity-40',
+        MENU_ROW_CLASS,
         className,
       )}
       {...props}
@@ -780,8 +787,8 @@ export const DropdownMenuRadioItem = React.forwardRef<
           {checked ? (
             <>
               <Check
-                className="size-4 text-text-primary"
-                strokeWidth={1.75}
+                className="size-4 text-ink"
+                strokeWidth={1.5}
                 aria-hidden="true"
               />
               {checkAriaLabel ? (
@@ -817,7 +824,7 @@ export function DropdownMenuSeparator({
   return (
     <div
       role="separator"
-      className={cn('mx-2 my-1.5 h-px bg-separator', className)}
+      className={cn('mx-2 my-1.5 h-px bg-hairline', className)}
       {...props}
     />
   );
@@ -830,7 +837,7 @@ export function DropdownMenuShortcut({
   return (
     <kbd
       className={cn(
-        'ml-auto rounded-xs bg-white/8 px-1.5 py-0.5 font-sans type-caption text-text-tertiary',
+        'ml-auto rounded-xs bg-fill-2 px-1.5 py-0.5 font-sans type-caption text-text-tertiary tabular-nums',
         className,
       )}
       {...props}

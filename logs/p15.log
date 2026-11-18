@@ -1,0 +1,284 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=42
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=57
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=54
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=23
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=82
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=37
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=62
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=63
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=60
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=73
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=251
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=104
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=68
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=86
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Let me grep tests and e2e for classes I'll change.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=62
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=57
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=294
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=208
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=80
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=60
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=237
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1243
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=458
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=53
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=118
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=563
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=446
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=360
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=227
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=121
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1640
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=192
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=77
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=37
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the e2e spec for A30.
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=711
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=61
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=129
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=70
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=118
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=65
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=53
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=52
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=70
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=42
+[tool] status: Completed
+The light segmented control matches A30: a grey track, a white thumb with a soft shadow, and dark text on the active segment. Next I'll record the docs.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=507
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+P15 is finished and ticked in `tasks.md`. Typecheck and lint are clean, and `pnpm test` passes 278/278.
+
+**What changed**
+- **Buttons (`button.tsx`):** the button component now carries every style from premium §7.11 itself:
+  - Primary is the dark `ink` fill: 48 px at `lg`, otherwise 40 px.
+  - Secondary is 48, 44 or 32 px.
+  - Ghost, text and icon buttons each have their hover, pressed and disabled looks; the icon button also has its toggled look.
+  - Keyboard focus shows the `focus-ring` token, and the press-in takes 80 ms.
+
+  Each button writes `data-variant`, and a new `countPrimaryButtons` helper uses it. The colour overrides that the landing, parse-error, bins-only sheet and stage code used to add are removed, since the component now does that work.
+- **Segmented control (A30):** grey `fill-2` track 32 px high. The thumb is white with `shadow-thumb` in light and translucent white with no shadow in dark. The active label is `text-primary`. Segment padding is 14 px (10 px in CJK) and pressing scales only the label to 0.97.
+- **Menus, popovers, tooltips:** menus use the `material-thick` surface with `shadow-popover`, 12 px padding and 40 px rows. A new `surfaces.ts` holds the menu, popover and tooltip surface styles, and the legend "+N more" menu now uses the menu style.
+- **Small sizing knock-ons:** the lot picker keeps its 8 px padding, and the error-details "Dismiss" button stays at 44 px.
+
+**Tests**
+- `primitives.test.ts` now checks every button variant, the segmented control and the menu surfaces. It also renders the landing, parse-error and bins-only screens and asserts each has exactly one primary button.
+- A new e2e spec, `primitives-p15`, checks A30 in light and dark plus the button fills and focus ring (3/3). Screenshots: `logs/shots/p15-segmented-{light,dark}.png`.
+- The related specs pass after a fresh build: landing (p11, r4), loading/error (p14), stage controls (p10), loaded views (p12, p13), Pareto (task10), r6, vertical slice, theme (p3) and scaffold. `linked-interactions-r7` hit only its known timing flake (809 ms against a 780 ms limit).
+- No snapshots changed. The p11 and p14 evidence screenshots were re-captured by those runs.
+
+**Decisions where premium.md was silent or the setup didn't allow it (recorded in `logs/progress.md`)**
+- Radix isn't installed, so the segmented control keeps its own radio-group code instead of Radix ToggleGroup. CJK always uses the 10 px padding, rather than only when the row would wrap.
+- The Pareto chart's smaller 28 px track stays until P20.
+- Menu rows show keyboard focus with the `fill-1` highlight, not a ring.
+- Nav and menu triggers keep the old outline focus style until P16.
+- There is no tooltip component yet, so P15 only adds its surface style. Menu, popover and tooltip motion is left for P31.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=215
+

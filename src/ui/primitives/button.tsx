@@ -12,11 +12,30 @@ export type ButtonIconSide = 'start' | 'end';
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   readonly variant?: ButtonVariant;
+  /**
+   * Height step (premium §7.11). Primary: `lg` 48 (landing, error, sheets), `md`/`sm` 40
+   * (verdict action row). Secondary: `lg` 48, `md` 44, `sm` 32 (nav). Ghost, text, and icon
+   * have one size each.
+   */
   readonly size?: ButtonSize;
-  /** Reduces padding by 2px on the icon side for optical balance (redesign.md §4.11). */
+  /** Reduces padding by 2px on the icon side for optical balance (premium §7). */
   readonly iconSide?: ButtonIconSide;
   /** Disables tactile scale-on-press when motion would be distracting. */
   readonly static?: boolean;
+}
+
+/**
+ * Every `Button` writes `data-variant`. Counts primary (`ink`) buttons in rendered markup. Every screen holds exactly one
+ * (premium §1.1 rule 4, §7.11, A20).
+ */
+export function countPrimaryButtons(markup: string): number {
+  return markup.match(/<button\b[^>]*\bdata-variant="primary"/g)?.length ?? 0;
+}
+
+/** Press scale per variant (premium §3.12): 0.97 buttons, 0.94 icon buttons; text buttons dim instead. */
+export function resolveButtonPressScale(variant: ButtonVariant): number | null {
+  if (variant === 'text') return null;
+  return variant === 'icon' ? 0.94 : 0.97;
 }
 
 function resolvePaddingClass(
@@ -31,7 +50,7 @@ function resolvePaddingClass(
   }
 
   if (variant === 'secondary') {
-    if (size === 'lg') {
+    if (size !== 'sm') {
       if (iconSide === 'start') return 'pl-[18px] pr-5';
       if (iconSide === 'end') return 'pl-5 pr-[18px]';
       return 'px-5';
@@ -50,63 +69,77 @@ function resolvePaddingClass(
   return 'p-0';
 }
 
+// 32 px visuals reach 40 px on fine pointers and 44 px on coarse pointers via ::after (premium §3.10)
+const HIT_AREA_32_CLASS =
+  "relative after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] pointer-coarse:after:-inset-y-1.5";
+
 function resolveSizeAndHitClass(
   variant: ButtonVariant,
   size: ButtonSize,
 ): string {
   if (variant === 'primary') {
-    return 'h-11 text-[15px] leading-[var(--leading-control)] font-[590] tracking-[var(--tracking-control)]';
+    return cn(
+      size === 'lg' ? 'h-12' : 'h-10',
+      'text-[15px] leading-[var(--leading-control)] font-[590] tracking-[-0.01em]',
+    );
   }
 
   if (variant === 'secondary') {
-    if (size === 'lg') {
-      return 'h-11 type-control';
-    }
-    return "relative h-8 type-control after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] md:after:-inset-y-1";
+    if (size === 'lg') return 'h-12 type-control';
+    if (size === 'md') return 'h-11 type-control';
+    return cn('h-8 type-control', HIT_AREA_32_CLASS);
   }
 
   if (variant === 'ghost') {
-    if (size === 'lg') {
-      return 'h-11 type-control';
-    }
-    return "relative h-8 type-control after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] md:after:-inset-y-1";
+    return cn('h-8 type-control', HIT_AREA_32_CLASS);
   }
 
   if (variant === 'text') {
     return "relative h-auto type-control after:absolute after:-inset-2 after:content-['']";
   }
 
-  // variant === 'icon': 44x44 mobile, 32x32 desktop with 40x40 hit area (redesign.md §4.11, §2.3)
-  return "relative h-11 w-11 md:h-8 md:w-8 [&_svg]:size-4 [&_svg]:shrink-0 md:after:absolute md:after:-inset-1 md:after:content-['']";
+  // variant === 'icon': 32 x 32 with a 40 px hit area, 44 x 44 on coarse pointers; icon 16 (premium §7.11)
+  return "relative size-8 pointer-coarse:size-11 [&_svg]:size-4 [&_svg]:shrink-0 after:absolute after:-inset-1 after:content-[''] pointer-coarse:after:inset-0";
 }
 
 function resolveVariantSurfaceClass(variant: ButtonVariant): string {
   if (variant === 'primary') {
-    return 'bg-button-primary text-button-primary-text enabled:hover:bg-white enabled:active:bg-[#e8e8ed]';
+    // `ink` fill, hover #333336 / #FFFFFF, pressed #000000 / #E8E8ED, disabled 0.32 (premium §7.11)
+    return cn(
+      'bg-ink text-on-ink',
+      'enabled:hover:bg-[#333336] dark:enabled:hover:bg-white',
+      'enabled:active:bg-black dark:enabled:active:bg-[#e8e8ed]',
+      'disabled:opacity-32 aria-disabled:opacity-32',
+    );
   }
 
   if (variant === 'secondary') {
-    return 'bg-white/10 text-text-primary enabled:hover:bg-white/14 enabled:active:bg-white/8';
+    return 'bg-fill-2 text-text-primary enabled:hover:bg-fill-3 disabled:opacity-32 aria-disabled:opacity-32';
   }
 
   if (variant === 'ghost') {
-    return 'bg-transparent text-text-secondary enabled:hover:bg-white/6 enabled:hover:text-text-primary';
+    return 'bg-transparent text-text-secondary enabled:hover:bg-fill-1 enabled:hover:text-text-primary enabled:active:bg-fill-2 disabled:text-text-disabled aria-disabled:text-text-disabled';
   }
 
   if (variant === 'text') {
-    return 'bg-transparent text-text-secondary enabled:hover:text-text-primary enabled:active:opacity-70';
+    return 'bg-transparent text-text-secondary enabled:hover:text-text-primary enabled:active:opacity-64 disabled:text-text-disabled aria-disabled:text-text-disabled';
   }
 
-  // variant === 'icon'
-  return 'bg-transparent text-text-secondary enabled:hover:bg-white/6 enabled:hover:text-text-primary';
+  // variant === 'icon'; toggled (`aria-pressed="true"`): fill-2, icon primary, hover fill-3
+  return cn(
+    'bg-transparent text-text-secondary enabled:hover:bg-fill-1 enabled:hover:text-text-primary',
+    'aria-pressed:bg-fill-2 aria-pressed:text-text-primary aria-pressed:enabled:hover:bg-fill-3',
+    'disabled:text-text-disabled aria-disabled:text-text-disabled',
+  );
 }
 
 /**
- * Owned `Button` primitive implementing `redesign.md` §4 & §4.11:
- * - Pill radius (`999px`), zero DOM drop shadows, weights <= 590 (never >= 700)
- * - Interruptible `100 ms` `pointerdown` scale feedback (`0.97`, `0.94` for icon) + `spring-snappy` release
- * - Ice `#D6E6FF` 2 px focus-visible outline at 2 px offset
- * - >= 40x40 desktop / >= 44x44 mobile hit areas via pseudo-element expansion
+ * Owned `Button` primitive implementing premium §7.11 and §8.9:
+ * - Pill radius, `control` text, weights <= 590, `transform-origin: center`
+ * - Interruptible `80 ms` `pointerdown` scale (`0.97`, `0.94` for icon) + `spring-snappy` release;
+ *   none under reduced motion
+ * - `focus-ring` token on `:focus-visible` only, following the pill radius
+ * - >= 40x40 desktop / >= 44x44 coarse-pointer hit areas via pseudo-element expansion
  */
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(
@@ -166,19 +199,18 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           event.button !== 0 ||
           isAriaDisabled ||
           isStatic ||
-          shouldReduceMotion ||
-          variant === 'text'
+          shouldReduceMotion
         ) {
           return;
         }
+        const targetScale = resolveButtonPressScale(variant);
         const el = innerRef.current;
-        if (el) {
+        if (el && targetScale !== null) {
           pressedRef.current = true;
-          const targetScale = variant === 'icon' ? 0.94 : 0.97;
           animate(
             el,
             { scale: targetScale },
-            { duration: 0.1, ease: MOTION_TOKENS.easeOutTuple },
+            { duration: 0.08, ease: MOTION_TOKENS.easeOutTuple },
           );
         }
       },
@@ -226,16 +258,17 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         type={type}
         disabled={disabled}
         aria-disabled={isAriaDisabled ? 'true' : undefined}
+        data-variant={variant}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
         onPointerCancel={handlePointerCancel}
         onClick={handleClick}
         className={cn(
-          'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-pill whitespace-nowrap shadow-none select-none',
-          'transition-[background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
-          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-          'disabled:cursor-not-allowed disabled:opacity-40 aria-disabled:cursor-not-allowed aria-disabled:opacity-40',
+          'inline-flex origin-center cursor-pointer items-center justify-center gap-1.5 rounded-pill whitespace-nowrap shadow-none select-none',
+          'transition-[background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)]',
+          'focus-visible:shadow-focus-ring focus-visible:outline-none',
+          'disabled:cursor-not-allowed aria-disabled:cursor-not-allowed',
           resolveSizeAndHitClass(variant, size),
           resolvePaddingClass(variant, size, iconSide),
           resolveVariantSurfaceClass(variant),

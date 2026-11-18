@@ -212,7 +212,7 @@ export function LotPicker({
         sideOffset={8}
         expectedWidthPx={360}
         data-testid="lot-picker-menu"
-        className="w-[360px] max-w-[calc(100vw-16px)]"
+        className="w-[360px] max-w-[calc(100vw-16px)] p-2"
       >
         <DropdownMenuLabel>{t('lotPicker.demoSection')}</DropdownMenuLabel>
 
