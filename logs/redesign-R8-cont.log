@@ -1,2 +1,8 @@
-error: NOT_FOUND (code 404): Requested entity was not found.
-AGY_ERROR: {"short_error":"NOT_FOUND (code 404): Requested entity was not found.","status":"NOT_FOUND","error_code":404,"code_kind":"http","retryable":false,"error_id":"390ee9af-2bed-4782-a8d0-66586514bf30-85"}
+error: invalid model selection (--model "gemini-4-carbon-high" --effort ""): model gemini-4-carbon-high is not recognized as a known model or custom model in settings
+Available models:
+  Gemini 3.8 Flash (High)
+  Gemini 3.8 Flash (Medium)
+  Gemini 3.8 Flash (Low)
+  Claude Sonnet 4.6 (Thinking)
+  Claude Opus 4.6 (Thinking)
+  GPT-OSS 120B (Medium)
