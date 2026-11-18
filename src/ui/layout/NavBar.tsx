@@ -53,21 +53,16 @@ export function NavBar({
       return;
     }
 
-    let verdictScrollTop = 0;
+    const readVerdictScrollTop = (): number =>
+      document.querySelector<HTMLElement>('[data-verdict-scroll]')?.scrollTop ??
+      0;
 
     const syncScrolled = (): void => {
-      const nextScrolled = window.scrollY > 4 || verdictScrollTop > 4;
+      const nextScrolled = window.scrollY > 4 || readVerdictScrollTop() > 4;
       setIsScrolled((prev) => (prev === nextScrolled ? prev : nextScrolled));
     };
 
-    const handleCapturedScroll = (event: Event): void => {
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        target.hasAttribute('data-verdict-scroll')
-      ) {
-        verdictScrollTop = target.scrollTop;
-      }
+    const handleCapturedScroll = (): void => {
       syncScrolled();
     };
 
@@ -90,7 +85,7 @@ export function NavBar({
       document.removeEventListener('scroll', handleCapturedScroll, true);
       mql.removeEventListener('change', handleMediaChange);
     };
-  }, []);
+  }, [activeLot]);
 
   return (
     <header

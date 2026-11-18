@@ -67,6 +67,22 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
     const zoomLabel = (await zoomPill.textContent()) ?? '';
     expect(Number.parseInt(zoomLabel, 10)).toBeGreaterThan(130);
 
+    // Verify exact cursor-anchored zoom invariance: fit-space point (540, 260) stays at (540, 260)
+    const wheelTransform = await page
+      .getByTestId('wafer-camera-wrapper')
+      .evaluate((el) => (el as HTMLElement).style.transform);
+    const wheelMatch =
+      /translate3d\(([-\d.]+)px,\s*([-\d.]+)px,\s*0(?:px)?\)\s*scale\(([-\d.]+)\)/.exec(
+        wheelTransform,
+      );
+    expect(wheelMatch).not.toBeNull();
+    const wheelTx = Number(wheelMatch![1]);
+    const wheelTy = Number(wheelMatch![2]);
+    const wheelScale = Number(wheelMatch![3]);
+    expect(wheelScale).toBeGreaterThan(1.3);
+    expect(540 * wheelScale + wheelTx).toBeCloseTo(540, 1);
+    expect(260 * wheelScale + wheelTy).toBeCloseTo(260, 1);
+
     // 3. Drag pan + flick inertia coasting with ZERO React renders during drag
     const rendersBeforeDrag = Number(
       await stage.getAttribute('data-render-count'),

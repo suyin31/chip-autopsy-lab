@@ -262,21 +262,34 @@ export function computeReleaseVelocity(
   if (releaseTimeMs - latest.timeMs > 100) {
     return { vx: 0, vy: 0 };
   }
-  let earliest = samples[0]!;
+  let earliest: PointerVelocitySample | null = null;
   for (let i = 0; i < samples.length - 1; i += 1) {
-    if (latest.timeMs - samples[i]!.timeMs <= 100) {
-      earliest = samples[i]!;
+    const candidate = samples[i]!;
+    if (
+      releaseTimeMs - candidate.timeMs <= 100 &&
+      latest.timeMs - candidate.timeMs <= 100
+    ) {
+      earliest = candidate;
       break;
     }
   }
-  const dtMs = latest.timeMs - earliest.timeMs;
-  if (dtMs < 4) {
+  if (earliest === null) {
     return { vx: 0, vy: 0 };
   }
+  const rawDtMs = latest.timeMs - earliest.timeMs;
+  if (rawDtMs < 0) {
+    return { vx: 0, vy: 0 };
+  }
+  const dx = latest.x - earliest.x;
+  const dy = latest.y - earliest.y;
+  if (dx === 0 && dy === 0) {
+    return { vx: 0, vy: 0 };
+  }
+  const effectiveDtMs = Math.max(4, rawDtMs);
   const maxVel = 6000;
   return {
-    vx: clamp(((latest.x - earliest.x) / dtMs) * 1000, -maxVel, maxVel),
-    vy: clamp(((latest.y - earliest.y) / dtMs) * 1000, -maxVel, maxVel),
+    vx: clamp((dx / effectiveDtMs) * 1000, -maxVel, maxVel),
+    vy: clamp((dy / effectiveDtMs) * 1000, -maxVel, maxVel),
   };
 }
 
@@ -819,7 +832,10 @@ export function createWaferCameraController(
       scheduleSettleCheck();
       return;
     }
-    if (Math.abs(target.scale - camera.scale) > 0.0005) {
+    if (
+      Math.abs(target.scale - camera.scale) > 0.0005 ||
+      Math.abs(animScale.velocity) > 0.005
+    ) {
       animScale.target = target.scale;
       animScale.spring = SPRING_TOKENS.camera;
       animScale.active = true;

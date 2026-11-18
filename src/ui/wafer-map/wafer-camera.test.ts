@@ -135,6 +135,21 @@ describe('Wafer Camera Physics & Gesture Controller (Task R6, redesign.md §4.7,
     // Stale samples (> 100 ms old) yield zero velocity
     expect(computeReleaseVelocity(samples, 250)).toEqual({ vx: 0, vy: 0 });
 
+    // Pause > 100 ms after an earlier drag then a single sample does NOT fling from the old sample
+    const pausedSamples = [
+      { x: 100, y: 200, timeMs: 10 },
+      { x: 400, y: 200, timeMs: 40 },
+      { x: 401, y: 200, timeMs: 900 },
+    ];
+    expect(computeReleaseVelocity(pausedSamples, 905)).toEqual({ vx: 0, vy: 0 });
+
+    // Sub-4 ms burst samples clamp dt to 4 ms rather than dropping velocity to zero
+    const burstSamples = [
+      { x: 100, y: 200, timeMs: 500 },
+      { x: 112, y: 200, timeMs: 501 },
+    ];
+    expect(computeReleaseVelocity(burstSamples, 502).vx).toBeGreaterThan(0);
+
     const bounds = computeCameraPanBounds(1, 783, 720, 312);
     expect(bounds.minTx).toBeCloseTo(-391.5, 5);
     expect(bounds.maxTx).toBeCloseTo(391.5, 5);

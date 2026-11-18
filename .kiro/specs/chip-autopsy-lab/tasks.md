@@ -199,7 +199,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/redesign.md`. Each task is a <= 15-
 - [x] R5. Verdict column
   - Split `AutopsyReportCard` into `VerdictHero`, `ConfidencePill` (absorbs `NarrationBadge`), `StatRow`, `FindingsList`; add `messageKey`/`params` to claims, `renderReport(report, locale)`, and `stat-facts.ts`.
   - Accept: "Cause of death: Edge-Ring failure." fits <= 2 lines at 553 px with the cause phrase orange; exactly 3 stats; borderless one-line findings; no monospace or uppercase labels in the column; per-locale report rendering is deterministic.
-- [ ] R6. Wafer stage layout, rendering, and camera
+- [x] R6. Wafer stage layout, rendering, and camera
   - Loaded layout grid (§3.4), boxless stage with vignette and top light, pass/fail geometry cue, three canvases, camera controller (wheel, pinch, drag pan with inertia and rubber-band, double-click reset) on a CSS-transform wrapper with re-raster after settle.
   - Accept: wafer >= 560 px at 1440 x 900 and 350 px at 390 px; wheel zoom anchored at the cursor; flick pan coasts; double-click resets; no React render during drag; arrow-key die stepping still works.
 - [ ] R7. Linked interactions

@@ -23,9 +23,11 @@ import { WaferSelector } from './WaferSelector';
 import {
   applyKeyboardZoom,
   cameraToViewportTransform,
+  computeRelativeWrapperTransform,
   createWaferCameraController,
   DEFAULT_CAMERA_STATE,
   ensurePointWithinMargin,
+  formatWrapperCssTransform,
   isCameraAtFit,
   type WaferCameraController,
 } from './wafer-camera';
@@ -306,6 +308,27 @@ export function WaferMapCanvas({
       controllerRef.current?.dispose();
     };
   }, []);
+
+  // Keep imperative wrapper transform, top-light raster geometry, and touch-action synced across stage resizes or discrete store re-renders
+  React.useEffect(() => {
+    const controller = controllerRef.current;
+    if (!controller) {
+      return;
+    }
+    const cam = controller.getCamera();
+    const rasterCam = controller.getRasterCamera();
+    const wrapperEl = cameraWrapperRef.current;
+    if (wrapperEl) {
+      wrapperEl.style.transform = formatWrapperCssTransform(
+        computeRelativeWrapperTransform(cam, rasterCam),
+      );
+    }
+    const stageEl = stageRef.current;
+    if (stageEl) {
+      stageEl.style.touchAction = cam.scale > 1.001 ? 'none' : 'pan-y';
+    }
+    syncTopLightForRaster(rasterCam.scale, rasterCam.tx, rasterCam.ty);
+  }, [fitLayout, safeWaferIndex, syncTopLightForRaster]);
 
   // Measure actual stage CSS dimensions via ResizeObserver (no artificial 560 px cap)
   React.useEffect(() => {

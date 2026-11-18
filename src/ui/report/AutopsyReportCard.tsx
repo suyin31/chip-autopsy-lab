@@ -345,6 +345,7 @@ export function AutopsyReportCard({
     <section
       aria-label={rendered.findingsHeading}
       data-testid="autopsy-report-card"
+      data-verdict-scroll="true"
       className={cn(
         'flex w-full flex-col xl:pt-14',
         splitForMobileStage && 'max-xl:contents',
