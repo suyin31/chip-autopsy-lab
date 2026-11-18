@@ -237,7 +237,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P6. Die tiles and thumbnails
   - Street, fail die radius and facet, 80 % pass tile, `pass-tile-hc` under `prefers-contrast: more`, thumbnail rules for `p < 3` (premium §5.3).
   - Accept: A6, A7, A13.
-- [ ] P7. Stage shadows and static sheen
+- [x] P7. Stage shadows and static sheen
   - Ambient and contact shadow (light), halo (dark) inside the camera wrapper; sheen layer with the SVG notch mask at its rest position; hidden under reduced transparency (premium §5.1, §5.2 step 6, §3.3).
   - Accept: A8.
 - [ ] P8. Overlay die states

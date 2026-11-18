@@ -214,7 +214,7 @@ export const THEME_TOKENS: Readonly<Record<ThemeName, ThemeTokens>> = {
 
 /**
  * Theme-independent wafer tokens (`premium.md` §3.3): the disc is the same object in both
- * themes. DOM stage shadows (`contactShadow`, `ambientShadow`, `halo`) are CSS gradients;
+ * themes. DOM stage shadows (`contactShadow`, `ambientShadow`, `halo`) and the `sheen` are CSS gradients;
  * their sizes are fractions of the disc diameter D.
  */
 export const WAFER_TOKENS = {
@@ -278,6 +278,16 @@ export const WAFER_TOKENS = {
   halo:
     'radial-gradient(closest-side, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018) 55%, rgba(255, 255, 255, 0) 100%)',
   haloSize: { diameterD: 1.5 },
+  /** Specular sheen ellipse (premium §5.2 step 6), composited `screen` inside the disc mask. */
+  sheen:
+    'radial-gradient(closest-side, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.03) 60%, rgba(255, 255, 255, 0) 100%)',
+  sheenSize: {
+    widthD: 0.92,
+    heightD: 0.58,
+    centerXD: 0.34,
+    centerYD: 0.26,
+    rotateDeg: -24,
+  },
 } as const;
 
 /** Where a bin colour is drawn: on the disc (both themes) or listed on the page. */

@@ -19,7 +19,7 @@ import {
   useSelectionStore,
   type WaferColorMode,
 } from '@/ui/state';
-import { SPRING_PHYSICS_EQUIVALENTS } from '@/ui/tokens';
+import { SPRING_PHYSICS_EQUIVALENTS, WAFER_TOKENS } from '@/ui/tokens';
 import { BaseCanvas, type BaseCanvasHandle } from './BaseCanvas';
 import { BinLegend } from './BinLegend';
 import { FailCanvas, type FailCanvasHandle } from './FailCanvas';
@@ -70,6 +70,12 @@ import {
   hitTestWaferDie,
   projectBrushToCanvasRect,
 } from './wafer-geometry';
+import {
+  applyStageLayerRect,
+  buildWaferDiscMaskImage,
+  computeSheenEllipseRestStyle,
+  computeStageDiscLayerRects,
+} from './stage-layers';
 import { usePrefersMoreContrast } from './use-prefers-more-contrast';
 
 export interface WaferMapCanvasProps {
@@ -270,7 +276,10 @@ function WaferMapCanvasImpl({
   const cameraWrapperRef = React.useRef<HTMLDivElement>(null);
   const crossfadeCanvasRef = React.useRef<HTMLCanvasElement>(null);
   const crossfadeAnimRef = React.useRef<Animation | null>(null);
-  const topLightRef = React.useRef<HTMLDivElement>(null);
+  const ambientShadowRef = React.useRef<HTMLDivElement>(null);
+  const contactShadowRef = React.useRef<HTMLDivElement>(null);
+  const haloRef = React.useRef<HTMLDivElement>(null);
+  const sheenRef = React.useRef<HTMLDivElement>(null);
   const zoomPillRef = React.useRef<HTMLButtonElement>(null);
   const skipHintRef = React.useRef<HTMLParagraphElement>(null);
   const finishSweepRef = React.useRef<(() => void) | null>(null);
@@ -462,11 +471,11 @@ function WaferMapCanvasImpl({
     [],
   );
 
-  const syncTopLightForRaster = React.useCallback(
+  // Re-place the DOM shadow, halo, and sheen layers (premium §5.1) in the raster's CSS px
+  const syncDiscLayersForRaster = React.useCallback(
     (rasterScale: number, rasterTx: number, rasterTy: number): void => {
-      const topLightEl = topLightRef.current;
       const curWafer = waferGeometryRef.current.wafer;
-      if (!topLightEl || !curWafer) {
+      if (!curWafer) {
         return;
       }
       const { stageWidth, stageHeight } = stageMetricsRef.current;
@@ -482,11 +491,24 @@ function WaferMapCanvasImpl({
         waferGeometryRef.current.lot.dies,
         vp,
       );
-      const diam = rasterLayout.waferRadiusPx * 2;
-      topLightEl.style.width = `${diam}px`;
-      topLightEl.style.height = `${diam}px`;
-      topLightEl.style.left = `${rasterLayout.centerXCss - rasterLayout.waferRadiusPx}px`;
-      topLightEl.style.top = `${rasterLayout.centerYCss - rasterLayout.waferRadiusPx}px`;
+      const rects = computeStageDiscLayerRects(
+        rasterLayout.centerXCss,
+        rasterLayout.centerYCss,
+        rasterLayout.waferRadiusPx,
+      );
+      const pairs: ReadonlyArray<
+        readonly [HTMLDivElement | null, keyof typeof rects]
+      > = [
+        [ambientShadowRef.current, 'ambient'],
+        [contactShadowRef.current, 'contact'],
+        [haloRef.current, 'halo'],
+        [sheenRef.current, 'sheen'],
+      ];
+      for (const [el, key] of pairs) {
+        if (el) {
+          applyStageLayerRect(el.style, rects[key]);
+        }
+      }
     },
     [],
   );
@@ -526,7 +548,7 @@ function WaferMapCanvasImpl({
       },
       onSettleReRaster: (rasterCamera) => {
         baseCanvasRef.current?.paintForCamera(rasterCamera);
-        syncTopLightForRaster(
+        syncDiscLayersForRaster(
           rasterCamera.scale,
           rasterCamera.tx,
           rasterCamera.ty,
@@ -534,7 +556,7 @@ function WaferMapCanvasImpl({
       },
       onRestoreFitRaster: () => {
         baseCanvasRef.current?.paintForCamera(DEFAULT_CAMERA_STATE);
-        syncTopLightForRaster(1, 0, 0);
+        syncDiscLayersForRaster(1, 0, 0);
       },
     });
   }
@@ -922,7 +944,7 @@ function WaferMapCanvasImpl({
     syncCommittedPopoverForCamera,
   ]);
 
-  // Keep imperative wrapper transform, top-light raster geometry, and touch-action synced across stage resizes or discrete store re-renders
+  // Keep imperative wrapper transform, disc-layer raster geometry, and touch-action synced across stage resizes or discrete store re-renders
   React.useEffect(() => {
     const controller = controllerRef.current;
     if (!controller) {
@@ -941,8 +963,8 @@ function WaferMapCanvasImpl({
       stageEl.style.touchAction =
         stageTool === 'select' || cam.scale > 1.001 ? 'none' : 'pan-y';
     }
-    syncTopLightForRaster(rasterCam.scale, rasterCam.tx, rasterCam.ty);
-  }, [fitLayout, safeWaferIndex, stageTool, syncTopLightForRaster]);
+    syncDiscLayersForRaster(rasterCam.scale, rasterCam.tx, rasterCam.ty);
+  }, [fitLayout, safeWaferIndex, stageTool, syncDiscLayersForRaster]);
 
   // Measure actual stage CSS dimensions via ResizeObserver
   React.useEffect(() => {
@@ -2032,13 +2054,22 @@ function WaferMapCanvasImpl({
   const passCount = waferYield?.finalPassDies ?? 0;
   const failCount = waferYield?.finalFailDies ?? 0;
   const fitWaferDiameter = (fitLayout?.fitWaferRadiusPx ?? 312) * 2;
-  const vignetteDiameter = Math.round(fitWaferDiameter * 1.5);
-  const topLightLeft =
-    (fitLayout?.centerXCss ?? stageDims.width / 2) -
-    (fitLayout?.fitWaferRadiusPx ?? 312);
-  const topLightTop =
-    (fitLayout?.centerYCss ?? stageDims.height / 2) -
-    (fitLayout?.fitWaferRadiusPx ?? 312);
+  const discLayerRects = computeStageDiscLayerRects(
+    fitLayout?.centerXCss ?? stageDims.width / 2,
+    fitLayout?.centerYCss ?? stageDims.height / 2,
+    fitLayout?.fitWaferRadiusPx ?? 312,
+  );
+  const discMaskImage = buildWaferDiscMaskImage(wafer?.geometry.wfFlat ?? 'D');
+  const sheenEllipseRest = computeSheenEllipseRestStyle();
+  const layerBox = (key: keyof typeof discLayerRects): React.CSSProperties => {
+    const r = discLayerRects[key];
+    return {
+      left: `${r.left}px`,
+      top: `${r.top}px`,
+      width: `${r.width}px`,
+      height: `${r.height}px`,
+    };
+  };
 
   return (
     <div className={cn('flex w-full flex-col xl:h-full', className)}>
@@ -2069,25 +2100,13 @@ function WaferMapCanvasImpl({
           onDoubleClick={handleDoubleClick}
           onKeyDown={handleStageKeyDown}
           className={cn(
-            'relative isolate h-[456px] w-full overflow-hidden bg-bg select-none',
+            'relative isolate h-[456px] w-full overflow-hidden select-none',
             stageTool === 'select' ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing',
             'md:mx-auto md:h-auto md:aspect-square md:max-w-[680px] xl:mx-0 xl:aspect-auto xl:min-h-[600px] xl:max-w-none xl:flex-1',
             'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
           )}
         >
-          {/* Ambient radial stage vignette (diameter = wafer diameter x 1.5, §2.1) */}
-          <div
-            data-testid="wafer-stage-vignette"
-            aria-hidden="true"
-            style={{
-              width: `${vignetteDiameter}px`,
-              height: `${vignetteDiameter}px`,
-              background: 'var(--vignette)',
-            }}
-            className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-          />
-
-          {/* Composite-only CSS-transform camera wrapper moving stacked Base layers, FailCanvas, and top-light (§4.7, §5.8) */}
+          {/* Composite-only CSS-transform camera wrapper moving the disc shadows, Base layers, FailCanvas, and sheen (§4.7, premium §5.1) */}
           <div
             ref={cameraWrapperRef}
             data-testid="wafer-camera-wrapper"
@@ -2097,6 +2116,28 @@ function WaferMapCanvasImpl({
             }}
             className="pointer-events-none absolute inset-0"
           >
+            {/* Stage shadows (premium §5.1 step 2, §3.3): light ambient then contact; dark halo */}
+            <div
+              ref={ambientShadowRef}
+              data-testid="wafer-stage-ambient-shadow"
+              aria-hidden="true"
+              style={{ ...layerBox('ambient'), backgroundImage: WAFER_TOKENS.ambientShadow }}
+              className="pointer-events-none absolute dark:hidden"
+            />
+            <div
+              ref={contactShadowRef}
+              data-testid="wafer-stage-contact-shadow"
+              aria-hidden="true"
+              style={{ ...layerBox('contact'), backgroundImage: WAFER_TOKENS.contactShadow }}
+              className="pointer-events-none absolute dark:hidden"
+            />
+            <div
+              ref={haloRef}
+              data-testid="wafer-stage-halo"
+              aria-hidden="true"
+              style={{ ...layerBox('halo'), backgroundImage: WAFER_TOKENS.halo }}
+              className="pointer-events-none absolute hidden dark:block"
+            />
             <BaseCanvas
               ref={baseCanvasRef}
               lot={lot}
@@ -2135,20 +2176,31 @@ function WaferMapCanvasImpl({
               cssHeight={stageDims.height}
               dpr={dpr}
             />
-            {/* Faint top light catching the top of the silicon wafer disc (§2.1) */}
+            {/* Specular sheen at rest, masked to the notch-cut disc (premium §5.2 step 6) */}
             <div
-              ref={topLightRef}
-              data-testid="wafer-stage-top-light"
+              ref={sheenRef}
+              data-testid="wafer-stage-sheen"
               aria-hidden="true"
               style={{
-                width: `${fitWaferDiameter}px`,
-                height: `${fitWaferDiameter}px`,
-                left: `${topLightLeft}px`,
-                top: `${topLightTop}px`,
-                background: 'var(--top-light)',
+                ...layerBox('sheen'),
+                maskImage: discMaskImage,
+                WebkitMaskImage: discMaskImage,
+                maskSize: '100% 100%',
+                WebkitMaskSize: '100% 100%',
+                maskRepeat: 'no-repeat',
+                WebkitMaskRepeat: 'no-repeat',
               }}
-              className="pointer-events-none absolute z-[2] rounded-full"
-            />
+              className="wafer-sheen pointer-events-none absolute z-[2] overflow-hidden rounded-full mix-blend-screen"
+            >
+              <div
+                data-testid="wafer-stage-sheen-ellipse"
+                style={{
+                  ...sheenEllipseRest,
+                  backgroundImage: WAFER_TOKENS.sheen,
+                }}
+                className="absolute mix-blend-screen"
+              />
+            </div>
           </div>
 
           {/* Screen-space OverlayCanvas (z: 3) */}

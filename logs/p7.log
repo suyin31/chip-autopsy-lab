@@ -1,0 +1,201 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=49
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=61
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=67
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=85
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=52
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=135
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=99
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=62
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=302
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=55
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=136
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the pure stage-layer helper module.
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=790
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=66
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now edit WaferMapCanvas.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1132
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=243
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=82
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=446
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=76
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=63
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=258
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the e2e spec for A8.
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=930
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=101
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=59
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=51
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=57
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=55
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Failed: Run Command
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=44
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=283
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+P7 is done and ticked in `tasks.md`. In light theme the disc now sits on an ambient shadow and a contact shadow, and nothing (box, border or fill) surrounds the stage. In dark theme only the faint halo shows. The sheen sits at its rest position, masked to the notch-cut disc.
+
+**Checks:** typecheck and lint are clean, and `pnpm test` passes 263/263. On the first full run, one unrelated test (`wm811k-classifier.prop.test.ts`) failed; it passed on its own and in a second full run. After a fresh build these e2e specs pass:
+- the new `stage-shadows-p7`, which covers A8 in light and dark, checks the shadows keep their size relative to the disc when zoomed, and checks the sheen hides under reduced transparency;
+- `wafer-stage-r6`, `disc-material-p5`, `die-tiles-p6`, `theme-p3`, `vertical-slice` and `landing-r4`.
+
+The r6 flick-coast timing check failed once and passed on two reruns. No visual snapshots changed.
+
+**What changed:**
+- **New `src/ui/wafer-map/stage-layers.ts`:** sizes the shadow, halo and sheen layers from the disc diameter using the premium §3.3 values. It also builds the sheen's SVG mask from the same notch geometry the canvas uses.
+- **`WaferMapCanvas.tsx`:**
+  - The shadows and halo are now the first layers inside the camera wrapper, so they pan and zoom with the disc.
+  - The light/dark switch is done in CSS (`dark:hidden`), with no JavaScript theme reads.
+  - The sheen sits above the fail canvas.
+  - When the canvases re-render after a zoom or pan settles, all four layers are repositioned.
+- **Removed:** the old full-screen vignette, the old top-light layer, and the stage's background fill.
+- **Tokens and CSS:** the sheen gradient and its size are new entries in `WAFER_TOKENS` in `palette.ts`. `globals.css` hides the sheen under `prefers-reduced-transparency`.
+- **Tests:** tests that used the old top-light layer to measure the disc now use the sheen layer. A new unit test file, `stage-layers.test.ts`, covers the layer sizes and the mask.
+
+**Decisions where premium.md was silent (also noted in `logs/progress.md`):**
+- The spec puts `mix-blend-mode: screen` on the sheen ellipse. I also put it on the sheen layer itself: the mask cuts the ellipse off from the disc behind it, so blending only the ellipse would have no effect.
+- Under reduced transparency only the sheen hides. The shadows and halo stay.
+- The landing cards still use the old vignette and top-light styles; that is P11's job.
+
+Running the P5 and P6 e2e specs rewrites their evidence screenshots in `logs/shots/`. I restored those files, so earlier evidence is unchanged. The untracked `logs/p7.log` and `logs/prompt-p7.txt` were already there and I left them alone.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=182
+

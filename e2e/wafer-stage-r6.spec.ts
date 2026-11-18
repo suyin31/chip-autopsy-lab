@@ -17,7 +17,7 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
         '[data-testid="wafer-stage"]',
       )!;
       const topLightEl = document.querySelector<HTMLElement>(
-        '[data-testid="wafer-stage-top-light"]',
+        '[data-testid="wafer-stage-sheen"]',
       )!;
       const verdictCol = document.querySelector<HTMLElement>(
         '[data-testid="autopsy-report-card"]',
@@ -150,7 +150,7 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
         '[data-testid="wafer-stage"]',
       )!;
       const topLightEl = document.querySelector<HTMLElement>(
-        '[data-testid="wafer-stage-top-light"]',
+        '[data-testid="wafer-stage-sheen"]',
       )!;
       const statItem = document.querySelector<HTMLElement>(
         '[data-testid="verdict-stat-item"]',

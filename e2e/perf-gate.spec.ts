@@ -393,7 +393,7 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
         '[data-testid="stage-mode-segmented"]',
       )!;
       const disc = document.querySelector<HTMLElement>(
-        '[data-testid="wafer-stage-top-light"]',
+        '[data-testid="wafer-stage-sheen"]',
       )!;
       const stripLabels = Array.from(
         document.querySelectorAll<HTMLElement>(

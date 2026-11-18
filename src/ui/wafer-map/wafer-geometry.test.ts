@@ -582,7 +582,7 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(failFills).toHaveLength(3);
   });
 
-  it('renders boxless stage with vignette, top light, three canvases, HUD segmented control, legend, and strip (§3.4, §4.7)', async () => {
+  it('renders boxless stage with disc shadows, halo, sheen, three canvases, HUD segmented control, legend, and strip (§3.4, §4.7)', async () => {
     const res = await ingestDemoPreset('edge-ring-etch');
     expect(res.kind).toBe('ok');
     if (res.kind !== 'ok') return;
@@ -600,8 +600,11 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
 
     expect(html).toContain('role="application"');
     expect(html).toContain('aria-roledescription="wafer map"');
-    expect(html).toContain('data-testid="wafer-stage-vignette"');
-    expect(html).toContain('data-testid="wafer-stage-top-light"');
+    expect(html).not.toContain('data-testid="wafer-stage-vignette"');
+    expect(html).toContain('data-testid="wafer-stage-ambient-shadow"');
+    expect(html).toContain('data-testid="wafer-stage-contact-shadow"');
+    expect(html).toContain('data-testid="wafer-stage-halo"');
+    expect(html).toContain('data-testid="wafer-stage-sheen"');
     expect(html).toContain('data-testid="wafer-camera-wrapper"');
     expect(html).toContain('data-testid="wafer-base-canvas"');
     expect(html).toContain('data-testid="wafer-fail-canvas"');

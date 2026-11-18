@@ -792,6 +792,11 @@
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  /* The silicon sheen is hidden under reduced transparency (premium §5.2 step 6) */
+  .wafer-sheen {
+    display: none;
+  }
+
   .surface-material,
   .surface-overlay {
     background-color: var(--color-surface-2);
