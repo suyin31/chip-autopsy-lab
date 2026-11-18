@@ -20,7 +20,7 @@ test('renders dark clinical scaffold with self-hosted fonts and zero third-party
   expect(externalRequests).toEqual([]);
 });
 
-test('NavBar R3 acceptance: 52px desktop / 48px mobile, language reload persistence, ice 2px focus rings, and Tab order', async ({
+test('NavBar acceptance: 52px desktop / 48px mobile, language reload persistence, focus-ring token, and Tab order', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -60,6 +60,7 @@ test('NavBar R3 acceptance: 52px desktop / 48px mobile, language reload persiste
     'nav-wordmark',
     'lot-picker-trigger',
     'language-switcher-trigger',
+    'theme-toggle-trigger',
     'nav-open-stdf',
   ];
 
@@ -68,15 +69,13 @@ test('NavBar R3 acceptance: 52px desktop / 48px mobile, language reload persiste
     const focused = page.getByTestId(testId);
     await expect(focused).toBeFocused();
 
-    const focusOutline = await focused.evaluate((el) => {
+    // Premium focus-ring token (dark): 2 px page-colour gap + 2 px ink ring, no outline
+    const focusStyle = await focused.evaluate((el) => {
       const style = getComputedStyle(el);
-      return {
-        outlineWidth: style.outlineWidth,
-        outlineColor: style.outlineColor,
-      };
+      return { outlineStyle: style.outlineStyle, boxShadow: style.boxShadow };
     });
-    expect(focusOutline.outlineWidth).toBe('2px');
-    expect(focusOutline.outlineColor).toBe('rgb(214, 230, 255)');
+    expect(focusStyle.outlineStyle).toBe('none');
+    expect(focusStyle.boxShadow).toContain('0px 0px 0px 4px');
   }
 
   // Mobile 390x844: 48px height and two 44x44 icon buttons

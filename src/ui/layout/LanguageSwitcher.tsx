@@ -13,27 +13,36 @@ import {
   cn,
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  resolveButtonClassName,
 } from '@/ui/primitives';
+import { AppearanceRadioRows, useThemeMenuState } from './ThemeToggle';
 
 export interface LanguageSwitcherProps {
   readonly defaultOpen?: boolean;
+  /** Mobile (< 1024): the globe menu also holds the Appearance group (premium §7.1). */
+  readonly includeAppearance?: boolean;
   readonly className?: string;
 }
 
 /**
- * Navigation `LanguageSwitcher` implementing `redesign.md` §4.10:
- * - Desktop (`>= 768px`): ghost pill height `32 px`, `16 px` globe icon + `control` `"EN"`/`"简"`/`"繁"`/`"日"`/`"한"`
- * - Mobile (`< 768px`): `44 x 44 px` globe icon button with `aria-label`
- * - Menu: width `220 px`, material, radius `24 px`, padding `8 px`, `0 ms` open via keyboard / `120 ms` fade via pointer
- * - Selecting applies instantly (`0 ms`), updates `<html lang>`, persists `localStorage["cal.locale"]`, and announces via live region
+ * Navigation language switcher (premium §7.1, §7.12):
+ * - Desktop (>= 1024): ghost button 32 h, padding 0 10 0 8, globe 16 + 6 px + `control` short label
+ * - Mobile (< 1024): 44 x 44 globe icon button; the menu adds a second "Appearance" group after a
+ *   `hairline` inset 12
+ * - Menu 220 wide, native names with `lang`, check on the current row; selecting applies at 0 ms
  */
 export function LanguageSwitcher({
   defaultOpen = false,
+  includeAppearance = false,
   className,
 }: LanguageSwitcherProps): React.JSX.Element {
   const { locale, setLocale, t } = useT();
+  const { preference } = useThemeMenuState();
+  const appearanceLabelId = React.useId();
 
   return (
     <DropdownMenu defaultOpen={defaultOpen}>
@@ -41,12 +50,9 @@ export function LanguageSwitcher({
         data-testid="language-switcher-trigger"
         aria-label={t('nav.languageAria')}
         className={cn(
-          'relative inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill bg-transparent p-0 text-text-secondary shadow-none select-none',
-          'md:h-8 md:w-auto md:gap-1.5 md:pl-2 md:pr-2.5',
-          "md:after:absolute md:after:inset-x-0 md:after:-inset-y-1 md:after:content-['']",
-          'transition-[transform,background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
-          'enabled:hover:bg-white/6 enabled:hover:text-text-primary enabled:active:scale-[0.94] md:enabled:active:scale-[0.97]',
-          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+          resolveButtonClassName({ variant: 'ghost', iconSide: 'start' }),
+          'transition-[transform,background-color,color,opacity] motion-safe:enabled:active:scale-[0.97]',
+          'max-lg:size-11 max-lg:p-0 max-lg:after:inset-0 max-lg:motion-safe:enabled:active:scale-[0.94]',
           className,
         )}
       >
@@ -55,7 +61,7 @@ export function LanguageSwitcher({
           strokeWidth={1.5}
           aria-hidden="true"
         />
-        <span className="max-md:hidden type-control" translate="no">
+        <span className="max-lg:hidden" translate="no">
           {LOCALE_SHORT_LABELS[locale]}
         </span>
       </DropdownMenuTrigger>
@@ -91,6 +97,17 @@ export function LanguageSwitcher({
             </DropdownMenuRadioItem>
           );
         })}
+        {includeAppearance ? (
+          <>
+            <DropdownMenuSeparator className="mx-3 my-1" />
+            <div role="group" aria-labelledby={appearanceLabelId}>
+              <DropdownMenuLabel id={appearanceLabelId} className="pt-2 pb-1">
+                {t('theme.label')}
+              </DropdownMenuLabel>
+              <AppearanceRadioRows preference={preference} />
+            </div>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -318,6 +318,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
           : {}),
       };
       previousStableViewRef.current = failedState;
+      setActiveNavLot(null);
       setWorkspace(failedState);
       setLiveAnnouncement(`STDF parse failed: ${response.error.message}`);
     },
@@ -341,6 +342,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         ...(fileName !== undefined ? { fileName } : {}),
       };
       previousStableViewRef.current = failedState;
+      setActiveNavLot(null);
       setWorkspace(failedState);
       setLiveAnnouncement(`Worker error: ${detail}`);
     },
@@ -490,6 +492,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
     setLargeFilePrompt(null);
     const emptyState: BaseViewState = { status: 'empty' };
     previousStableViewRef.current = emptyState;
+    setActiveNavLot(null);
     setWorkspace(emptyState);
   }, [largeFilePrompt]);
 
@@ -631,7 +634,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       />
 
       <NavBar
-        activeLot={workspace.status === 'ready' ? activeNavLot : null}
+        activeLot={workspace.status === 'ready' || isLoading ? activeNavLot : null}
         recentLots={recentLotEntries}
         onNavigateHome={handleNavigateHome}
         onSelectDemoPreset={(presetId) => handleLoadDemoLot(presetId)}

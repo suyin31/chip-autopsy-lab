@@ -14,18 +14,31 @@ export const ja = {
     'ウェハロットの歩留まり低下原因を特定。ブラウザ内で完結する STDF V4 解析ツール。',
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
-  'nav.openStdf': 'STDF を開く',
+  'nav.openFile': 'ファイルを開く',
   'nav.openStdfAria': 'STDF ファイルを開く',
   'nav.languageAria': '言語を変更',
   'nav.home': 'スタートに戻る',
 
   // Lot picker
   'lotPicker.triggerAria': 'ロットを選択、現在のロット {lotId}',
-  'lotPicker.demoSection': 'デモロット',
-  'lotPicker.recentSection': '最近開いたファイル',
-  'lotPicker.openFile': 'STDF ファイルを開く…',
-  'lotPicker.yield': '歩留まり {yield}',
+  'lotPicker.demoSection': 'サンプルロット',
+  'lotPicker.recentSection': '最近のファイル',
+  'lotPicker.openFile': 'ファイルを開く…',
+  'lotPicker.yield': '歩留まり {yield}、{wafers} ウェハ',
   'lotPicker.current': '現在のロット',
+
+  // Appearance (premium §7.1)
+  'theme.label': '外観',
+  'theme.ariaLabel': '外観: {preference}',
+  'theme.ariaSystemLight': 'システム、現在はライト',
+  'theme.ariaSystemDark': 'システム、現在はダーク',
+  'theme.system': 'システムに合わせる',
+  'theme.light': 'ライト',
+  'theme.dark': 'ダーク',
+  'theme.systemNote': '「システムに合わせる」はデバイスの設定に従います。',
+
+  // Glossary (premium §2.3)
+  'glossary.lot': '一緒に製造されたウェハのまとまり。同じロットの問題は原因が共通することが多い。',
 
   // Landing
   'landing.headline': '遺体をここに。',

@@ -5,7 +5,17 @@ import { listDemoPresets } from '@/core/demo';
 import { I18nProvider } from '@/ui/i18n';
 import { BinsOnlySheet } from '@/ui/layout/BinsOnlySheet';
 import { EmptyStateCard } from '@/ui/layout/EmptyStateCard';
-import { Button, countPrimaryButtons, resolveButtonPressScale } from './button';
+import {
+  Button,
+  countPrimaryButtons,
+  resolveButtonClassName,
+  resolveButtonPressScale,
+} from './button';
+import {
+  resolveTooltipDelayMs,
+  TOOLTIP_DELAY_MS,
+  TOOLTIP_SKIP_DELAY_WINDOW_MS,
+} from './tooltip';
 import {
   computeAnchoredMenuPosition,
   DropdownMenu,
@@ -407,5 +417,22 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
     expect(SONNER_TOAST_OPTIONS.classNames.description).not.toContain(
       'font-mono',
     );
+  });
+
+  it('tooltip waits 600 ms, or 0 ms within 400 ms of another closing (premium §7.12)', () => {
+    expect(TOOLTIP_DELAY_MS).toBe(600);
+    expect(TOOLTIP_SKIP_DELAY_WINDOW_MS).toBe(400);
+    expect(resolveTooltipDelayMs(1000, Number.NEGATIVE_INFINITY)).toBe(600);
+    expect(resolveTooltipDelayMs(1000, 700)).toBe(0);
+    expect(resolveTooltipDelayMs(1000, 500)).toBe(600);
+  });
+
+  it('menu triggers share the Button variant classes (premium §7.1, §7.11)', () => {
+    const icon = resolveButtonClassName({ variant: 'icon' });
+    expect(icon).toContain('size-8');
+    expect(icon).toContain('focus-visible:shadow-focus-ring');
+    const ghost = resolveButtonClassName({ variant: 'ghost', iconSide: 'start' });
+    expect(ghost).toContain('h-8');
+    expect(ghost).toContain('pl-2 pr-2.5');
   });
 });

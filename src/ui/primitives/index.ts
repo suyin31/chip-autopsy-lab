@@ -2,6 +2,7 @@ export { Badge, type BadgeProps, type BadgeVariant } from './badge';
 export {
   Button,
   countPrimaryButtons,
+  resolveButtonClassName,
   resolveButtonPressScale,
   type ButtonIconSide,
   type ButtonProps,
@@ -57,3 +58,10 @@ export {
   TOOLTIP_SURFACE_CLASS,
 } from './surfaces';
 export { ClinicalToaster, SONNER_TOAST_OPTIONS } from './toaster';
+export {
+  resolveTooltipDelayMs,
+  Tooltip,
+  TOOLTIP_DELAY_MS,
+  TOOLTIP_SKIP_DELAY_WINDOW_MS,
+  type TooltipProps,
+} from './tooltip';

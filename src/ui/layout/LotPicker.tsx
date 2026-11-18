@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, File } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import {
@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
+  Tooltip,
 } from '@/ui/primitives';
 import { SPRING_TOKENS } from '@/ui/tokens';
 import { usePrefersMoreContrast } from '@/ui/wafer-map/use-prefers-more-contrast';
@@ -113,13 +114,12 @@ function DemoThumbCanvas({ presetId }: DemoThumbCanvasProps): React.JSX.Element 
 }
 
 /**
- * Centre navigation `LotPicker` menu implementing `redesign.md` §4.2:
- * - Pill trigger (`32 px` height, `0 12px 0 14px` padding, `surface-2` at 60%, `surface-3` on hover)
- * - Lot ID (`control` primary) + `8 px` + lot title (`control` secondary, hidden `< 1024 px`) + `6 px` + `12 px` chevron (`180°` `spring-snappy`)
- * - Menu (`360 px` width, material, radius `24 px`, padding `8 px`, anchored `top center`):
- *   1. `"Demo lots"`: 3 rows (`56 px` height, radius `16 px`, `40 px` wafer thumbnail, `headline` title, `footnote` yield meta, check icon)
- *   2. `"Recent"`: up to 3 session files (file name, formatted size)
- *   3. `"Open STDF file…"` with `"⌘O"` / `"Ctrl O"` shortcut cap
+ * Centre navigation lot picker (premium §7.2):
+ * - Trigger: `fill-2` pill 32 h, padding 0 12 0 14, max 420; lot ID (never truncates) + 8 px +
+ *   title (hidden < 1024, truncates first) + 6 px + 12 px `text-tertiary` chevron (180° when open);
+ *   hover and open `fill-3`, pressed 0.97, disabled `text-disabled`; tooltip `glossary.lot` after 600 ms
+ * - Menu 360 wide, padding 8: "Sample lots" rows 56 h (40 px disc, `row-title`, "Yield 82.8%, 25 wafers"),
+ *   "Recent files" rows 48 h (file icon, name, size), then "Open file…" with a keycap
  */
 export function LotPicker({
   currentLotId,
@@ -134,7 +134,7 @@ export function LotPicker({
   defaultOpen = false,
   className,
 }: LotPickerProps): React.JSX.Element {
-  const { t, formatPercent, formatFileSize } = useT();
+  const { t, formatPercent, formatFileSize, formatInteger } = useT();
   const shouldReduceMotion = useReducedMotion();
   const [open, setOpen] = React.useState(defaultOpen);
   const [shortcutLabel, setShortcutLabel] = React.useState('Ctrl O');
@@ -169,43 +169,51 @@ export function LotPicker({
 
   const cappedRecents = recentLots.slice(0, 3);
 
+  const rowClass =
+    'grid grid-cols-[40px_minmax(0,1fr)_16px] items-center gap-3 rounded-lg px-3 py-2';
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger
-        data-testid="lot-picker-trigger"
-        disabled={disabled}
-        aria-label={t('lotPicker.triggerAria', { lotId: cleanLotId })}
-        className={cn(
-          'relative inline-flex h-8 max-w-[calc(100vw-164px)] cursor-pointer items-center rounded-pill bg-surface-2/60 pl-[14px] pr-3 shadow-none select-none',
-          "after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] md:after:-inset-y-1",
-          'transition-[transform,background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
-          'enabled:hover:bg-surface-3 enabled:active:scale-[0.97]',
-          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-          'disabled:cursor-not-allowed disabled:opacity-40',
-          className,
-        )}
+      <Tooltip
+        content={t('glossary.lot')}
+        disabled={open || disabled}
+        className="min-w-0"
       >
-        <Untranslated className="truncate type-control text-text-primary">
-          {cleanLotId}
-        </Untranslated>
-
-        {triggerTitle ? (
-          <span className="ml-2 hidden lg:inline max-w-[220px] truncate type-control text-text-secondary">
-            {triggerTitle}
-          </span>
-        ) : null}
-
-        <motion.span
-          aria-hidden="true"
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={
-            shouldReduceMotion ? { duration: 0 } : SPRING_TOKENS.snappy
-          }
-          className="ml-1.5 inline-flex size-3 shrink-0 items-center justify-center text-text-secondary"
+        <DropdownMenuTrigger
+          data-testid="lot-picker-trigger"
+          disabled={disabled}
+          aria-label={t('lotPicker.triggerAria', { lotId: cleanLotId })}
+          className={cn(
+            'group relative inline-flex h-8 max-w-[min(420px,calc(100vw-164px))] min-w-0 cursor-pointer items-center rounded-pill bg-fill-2 pl-[14px] pr-3 shadow-none select-none',
+            "after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] pointer-coarse:after:-inset-y-1.5",
+            'transition-[transform,background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)]',
+            'enabled:hover:bg-fill-3 aria-expanded:bg-fill-3 motion-safe:enabled:active:scale-[0.97]',
+            'disabled:cursor-not-allowed',
+            className,
+          )}
         >
-          <ChevronDown className="size-3" strokeWidth={1.75} />
-        </motion.span>
-      </DropdownMenuTrigger>
+          <Untranslated className="shrink-0 whitespace-nowrap type-control text-text-primary group-disabled:text-text-disabled">
+            {cleanLotId}
+          </Untranslated>
+
+          {triggerTitle ? (
+            <span className="ml-2 hidden min-w-0 truncate type-control text-text-secondary group-disabled:text-text-disabled lg:inline">
+              {triggerTitle}
+            </span>
+          ) : null}
+
+          <motion.span
+            aria-hidden="true"
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={
+              shouldReduceMotion ? { duration: 0 } : SPRING_TOKENS.snappy
+            }
+            className="ml-1.5 inline-flex size-3 shrink-0 items-center justify-center text-text-tertiary group-disabled:text-text-disabled"
+          >
+            <ChevronDown className="size-3" strokeWidth={1.5} />
+          </motion.span>
+        </DropdownMenuTrigger>
+      </Tooltip>
 
       <DropdownMenuContent
         align="center"
@@ -214,13 +222,16 @@ export function LotPicker({
         data-testid="lot-picker-menu"
         className="w-[360px] max-w-[calc(100vw-16px)] p-2"
       >
-        <DropdownMenuLabel>{t('lotPicker.demoSection')}</DropdownMenuLabel>
+        <DropdownMenuLabel className="px-3 pt-2 pb-1">
+          {t('lotPicker.demoSection')}
+        </DropdownMenuLabel>
 
         {presets.map((preset) => {
           const preview = getDemoPresetPreview(preset.id);
           const title = t(DEMO_TITLE_KEYS[preset.id]);
-          const yieldText = t('lotPicker.yield', {
+          const metaText = t('lotPicker.yield', {
             yield: formatPercent(preview.finalYield),
+            wafers: formatInteger(preset.waferCount),
           });
           const isCurrent =
             currentRecentId === null && currentPresetId === preset.id;
@@ -232,18 +243,17 @@ export function LotPicker({
               checked={isCurrent}
               checkAriaLabel={t('lotPicker.current')}
               typeaheadLabel={title}
+              data-testid={`lot-picker-row-${preset.id}`}
+              leading={<DemoThumbCanvas presetId={preset.id} />}
               onSelect={() => onSelectDemoPreset(preset.id)}
-              className="min-h-14 rounded-lg px-3 py-2"
+              className={cn(rowClass, 'h-14')}
             >
-              <span className="flex min-w-0 items-center gap-3">
-                <DemoThumbCanvas presetId={preset.id} />
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate type-headline text-text-primary">
-                    {title}
-                  </span>
-                  <span className="type-subhead text-text-tertiary tabular-nums">
-                    {yieldText}
-                  </span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="truncate type-row-title text-text-primary">
+                  {title}
+                </span>
+                <span className="truncate type-subhead text-text-tertiary tabular-nums">
+                  {metaText}
                 </span>
               </span>
             </DropdownMenuRadioItem>
@@ -252,8 +262,10 @@ export function LotPicker({
 
         {cappedRecents.length > 0 ? (
           <>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>{t('lotPicker.recentSection')}</DropdownMenuLabel>
+            <DropdownMenuSeparator className="mx-3 my-1" />
+            <DropdownMenuLabel className="px-3 pt-2 pb-1">
+              {t('lotPicker.recentSection')}
+            </DropdownMenuLabel>
             {cappedRecents.map((entry) => {
               const cleanName =
                 sanitizeReportProseText(entry.fileName) || 'wafer.stdf';
@@ -265,14 +277,23 @@ export function LotPicker({
                   checked={isCurrent}
                   checkAriaLabel={t('lotPicker.current')}
                   typeaheadLabel={cleanName}
+                  leading={
+                    <span className="flex size-10 items-center justify-center">
+                      <File
+                        className="size-4 text-text-secondary"
+                        strokeWidth={1.5}
+                        aria-hidden="true"
+                      />
+                    </span>
+                  }
                   onSelect={() => onSelectRecentLot(entry.id)}
-                  className="rounded-lg px-3 py-2"
+                  className={cn(rowClass, 'h-12')}
                 >
                   <span className="flex min-w-0 flex-col gap-0.5">
-                    <Untranslated className="truncate type-control text-text-primary">
+                    <Untranslated className="truncate type-row-title text-text-primary">
                       {cleanName}
                     </Untranslated>
-                    <span className="type-subhead text-text-tertiary tabular-nums">
+                    <span className="truncate type-subhead text-text-tertiary tabular-nums">
                       {formatFileSize(entry.byteSize)}
                     </span>
                   </span>
@@ -282,15 +303,18 @@ export function LotPicker({
           </>
         ) : null}
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="mx-3 my-1" />
 
         <DropdownMenuItem
           typeaheadLabel={t('lotPicker.openFile')}
+          data-testid="lot-picker-open-file"
           onSelect={onOpenFilePicker}
-          className="rounded-lg px-3 py-2"
+          className="px-3"
         >
           <span>{t('lotPicker.openFile')}</span>
-          <DropdownMenuShortcut>{shortcutLabel}</DropdownMenuShortcut>
+          <DropdownMenuShortcut className="text-text-secondary">
+            {shortcutLabel}
+          </DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

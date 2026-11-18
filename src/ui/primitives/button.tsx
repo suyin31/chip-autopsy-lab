@@ -141,6 +141,29 @@ function resolveVariantSurfaceClass(variant: ButtonVariant): string {
  * - `focus-ring` token on `:focus-visible` only, following the pill radius
  * - >= 40x40 desktop / >= 44x44 coarse-pointer hit areas via pseudo-element expansion
  */
+/** Base classes shared by `Button` and menu triggers that must look like a button (premium §7.1, §7.11). */
+const BUTTON_BASE_CLASS = cn(
+  'inline-flex origin-center cursor-pointer items-center justify-center gap-1.5 rounded-pill whitespace-nowrap shadow-none select-none',
+  'transition-[background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)]',
+  'focus-visible:shadow-focus-ring focus-visible:outline-none',
+  'disabled:cursor-not-allowed aria-disabled:cursor-not-allowed',
+);
+
+/** Visual classes of a `Button` variant, for elements that render their own `<button>` (menu triggers). */
+export function resolveButtonClassName(options: {
+  readonly variant: ButtonVariant;
+  readonly size?: ButtonSize;
+  readonly iconSide?: ButtonIconSide;
+}): string {
+  const size = options.size ?? 'md';
+  return cn(
+    BUTTON_BASE_CLASS,
+    resolveSizeAndHitClass(options.variant, size),
+    resolvePaddingClass(options.variant, size, options.iconSide),
+    resolveVariantSurfaceClass(options.variant),
+  );
+}
+
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(
     {
@@ -265,10 +288,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         onPointerCancel={handlePointerCancel}
         onClick={handleClick}
         className={cn(
-          'inline-flex origin-center cursor-pointer items-center justify-center gap-1.5 rounded-pill whitespace-nowrap shadow-none select-none',
-          'transition-[background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)]',
-          'focus-visible:shadow-focus-ring focus-visible:outline-none',
-          'disabled:cursor-not-allowed aria-disabled:cursor-not-allowed',
+          BUTTON_BASE_CLASS,
           resolveSizeAndHitClass(variant, size),
           resolvePaddingClass(variant, size, iconSide),
           resolveVariantSurfaceClass(variant),

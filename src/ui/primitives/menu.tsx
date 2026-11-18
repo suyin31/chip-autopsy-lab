@@ -344,7 +344,7 @@ export const DropdownMenuTrigger = React.forwardRef<
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={cn(
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+        'focus-visible:shadow-focus-ring focus-visible:outline-none',
         className,
       )}
       {...props}
@@ -723,6 +723,8 @@ export interface DropdownMenuRadioItemProps
   readonly typeaheadLabel?: string;
   readonly hideCheckIcon?: boolean;
   readonly checkAriaLabel?: string;
+  /** Leading slot (16 px icon or 40 px thumbnail) rendered before the label (premium §7.12, §7.2). */
+  readonly leading?: React.ReactNode;
 }
 
 export const DropdownMenuRadioItem = React.forwardRef<
@@ -739,6 +741,7 @@ export const DropdownMenuRadioItem = React.forwardRef<
     typeaheadLabel,
     hideCheckIcon = false,
     checkAriaLabel,
+    leading,
     className,
     children,
     ...props
@@ -781,6 +784,7 @@ export const DropdownMenuRadioItem = React.forwardRef<
       )}
       {...props}
     >
+      {leading}
       <span className="min-w-0 flex-1">{children}</span>
       {!hideCheckIcon ? (
         <span className="flex size-4 shrink-0 items-center justify-center">

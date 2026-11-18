@@ -11,18 +11,31 @@ export const en = {
     'Find out why a wafer lot lost yield. STDF V4 analysis that runs in your browser.',
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
-  'nav.openStdf': 'Open STDF',
+  'nav.openFile': 'Open file',
   'nav.openStdfAria': 'Open an STDF file',
   'nav.languageAria': 'Change language',
   'nav.home': 'Back to start',
 
   // Lot picker
   'lotPicker.triggerAria': 'Choose lot, current lot {lotId}',
-  'lotPicker.demoSection': 'Demo lots',
-  'lotPicker.recentSection': 'Recent',
-  'lotPicker.openFile': 'Open STDF file…',
-  'lotPicker.yield': 'Yield {yield}',
+  'lotPicker.demoSection': 'Sample lots',
+  'lotPicker.recentSection': 'Recent files',
+  'lotPicker.openFile': 'Open file…',
+  'lotPicker.yield': 'Yield {yield}, {wafers} wafers',
   'lotPicker.current': 'Current lot',
+
+  // Appearance (premium §7.1)
+  'theme.label': 'Appearance',
+  'theme.ariaLabel': 'Appearance: {preference}',
+  'theme.ariaSystemLight': 'System, currently light',
+  'theme.ariaSystemDark': 'System, currently dark',
+  'theme.system': 'Match system',
+  'theme.light': 'Light',
+  'theme.dark': 'Dark',
+  'theme.systemNote': 'Match system follows your device setting.',
+
+  // Glossary (premium §2.3)
+  'glossary.lot': 'A batch of wafers made together. Problems in one lot often share a cause.',
 
   // Landing
   'landing.headline': 'Drop the body.',

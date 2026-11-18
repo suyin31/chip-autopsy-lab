@@ -13,7 +13,7 @@ export const zhTW = {
   'app.description': '查明晶圓批次良率損失原因。在瀏覽器本機執行的 STDF V4 分析工具。',
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
-  'nav.openStdf': '開啟 STDF',
+  'nav.openFile': '開啟檔案',
   'nav.openStdfAria': '開啟 STDF 檔案',
   'nav.languageAria': '切換語言',
   'nav.home': '返回起始頁',
@@ -21,10 +21,23 @@ export const zhTW = {
   // Lot picker
   'lotPicker.triggerAria': '選擇批次，目前批次 {lotId}',
   'lotPicker.demoSection': '範例批次',
-  'lotPicker.recentSection': '最近開啟',
-  'lotPicker.openFile': '開啟 STDF 檔案…',
-  'lotPicker.yield': '良率 {yield}',
+  'lotPicker.recentSection': '最近檔案',
+  'lotPicker.openFile': '開啟檔案…',
+  'lotPicker.yield': '良率 {yield}，{wafers} 片晶圓',
   'lotPicker.current': '目前批次',
+
+  // Appearance (premium §7.1)
+  'theme.label': '外觀',
+  'theme.ariaLabel': '外觀：{preference}',
+  'theme.ariaSystemLight': '跟隨系統，目前為淺色',
+  'theme.ariaSystemDark': '跟隨系統，目前為深色',
+  'theme.system': '跟隨系統',
+  'theme.light': '淺色',
+  'theme.dark': '深色',
+  'theme.systemNote': '「跟隨系統」會使用裝置的設定。',
+
+  // Glossary (premium §2.3)
+  'glossary.lot': '一起製造的一批晶圓。同一批次的問題通常有共同原因。',
 
   // Landing
   'landing.headline': '把遺體放這裡。',

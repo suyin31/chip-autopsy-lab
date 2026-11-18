@@ -14,18 +14,31 @@ export const ko = {
     '웨이퍼 로트의 수율 저하 원인을 규명합니다. 브라우저에서 바로 실행되는 STDF V4 분석 도구입니다.',
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
-  'nav.openStdf': 'STDF 열기',
+  'nav.openFile': '파일 열기',
   'nav.openStdfAria': 'STDF 파일 열기',
   'nav.languageAria': '언어 변경',
   'nav.home': '처음으로 돌아가기',
 
   // Lot picker
   'lotPicker.triggerAria': '로트 선택, 현재 로트 {lotId}',
-  'lotPicker.demoSection': '데모 로트',
-  'lotPicker.recentSection': '최근 항목',
-  'lotPicker.openFile': 'STDF 파일 열기…',
-  'lotPicker.yield': '수율 {yield}',
+  'lotPicker.demoSection': '샘플 로트',
+  'lotPicker.recentSection': '최근 파일',
+  'lotPicker.openFile': '파일 열기…',
+  'lotPicker.yield': '수율 {yield}, 웨이퍼 {wafers}장',
   'lotPicker.current': '현재 로트',
+
+  // Appearance (premium §7.1)
+  'theme.label': '모양',
+  'theme.ariaLabel': '모양: {preference}',
+  'theme.ariaSystemLight': '시스템, 현재 라이트',
+  'theme.ariaSystemDark': '시스템, 현재 다크',
+  'theme.system': '시스템 설정에 맞춤',
+  'theme.light': '라이트',
+  'theme.dark': '다크',
+  'theme.systemNote': '시스템 설정에 맞춤은 기기 설정을 따릅니다.',
+
+  // Glossary (premium §2.3)
+  'glossary.lot': '함께 제조된 웨이퍼 묶음입니다. 한 로트의 문제는 원인이 같은 경우가 많습니다.',
 
   // Landing
   'landing.headline': '시신을 여기에.',

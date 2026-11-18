@@ -1,12 +1,14 @@
 'use client';
 
 import { FolderOpen } from 'lucide-react';
+import Link from 'next/link';
 import * as React from 'react';
 import type { DemoPresetId } from '@/core/demo';
 import { useT } from '@/ui/i18n';
-import { cn } from '@/ui/primitives';
+import { Button, cn } from '@/ui/primitives';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { LotPicker, type RecentLotEntry } from './LotPicker';
+import { ThemeToggle } from './ThemeToggle';
 
 export interface ActiveNavLotInfo {
   readonly lotId: string;
@@ -28,11 +30,13 @@ export interface NavBarProps {
 }
 
 /**
- * Sticky translucent navigation bar implementing `redesign.md` §4.1:
- * - Height `52 px` desktop (`>= 768 px`) / `48 px` mobile (`< 768 px`), `position: sticky; top: 0`
- * - Material surface with no resting bottom border; `1 px` `separator` fades in (`120 ms`) when scrolled `> 4 px`
- * - 3-zone grid (`1fr auto 1fr`), side padding `40 px` desktop / `16 px` mobile
- * - Strict keyboard Tab order: wordmark -> lot picker (when loaded) -> language -> Open STDF
+ * Sticky nav bar (premium §7.1):
+ * - 52 px from 1024 (48 below), `material`, z 40; a 1 px `hairline` fades in (`dur-1`) after 4 px of scroll
+ * - Desktop grid `1fr auto 1fr` with the page margin (32 at md, 40 from 1280); mobile `auto 1fr auto`, padding 0 16
+ * - Left wordmark link to `/`; centre lot picker (absent on landing, disabled while loading);
+ *   right: language, 4 px, theme toggle, 12 px, "Open file" secondary 32 h. Mobile: globe (with the
+ *   Appearance group) and folder-open icon buttons, 44 x 44, gap 0
+ * - Tab order: wordmark, lot picker, language, theme, Open file
  */
 export function NavBar({
   activeLot,
@@ -73,7 +77,7 @@ export function NavBar({
       capture: true,
     });
 
-    const mql = window.matchMedia('(max-width: 767px)');
+    const mql = window.matchMedia('(max-width: 1023px)');
     const handleMediaChange = (): void => {
       setIsMobileViewport(mql.matches);
     };
@@ -91,37 +95,50 @@ export function NavBar({
     <header
       data-testid="nav-bar"
       className={cn(
-        'surface-material sticky top-0 z-[var(--z-nav)] w-full shadow-none',
+        'sticky top-0 z-[var(--z-nav)] w-full bg-material [backdrop-filter:var(--material-filter)] [-webkit-backdrop-filter:var(--material-filter)]',
         className,
       )}
     >
       <nav
         aria-label={t('app.title')}
-        className="mx-auto grid h-12 w-full grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 md:h-[52px] md:px-10"
+        className="mx-auto grid h-12 w-full grid-cols-[auto_1fr_auto] items-center gap-2 px-4 lg:h-[52px] lg:grid-cols-[1fr_auto_1fr] lg:px-8 xl:px-10"
       >
-        {/* Zone 1 (Left): Wordmark — click returns to landing without confirmation */}
+        {/* Left: wordmark, a link to `/` that returns to the landing without confirmation */}
         <div className="flex min-w-0 items-center justify-self-start">
-          <button
-            type="button"
+          <Link
+            href="/"
             data-testid="nav-wordmark"
             title={activeLot !== null ? t('nav.home') : undefined}
-            onClick={onNavigateHome}
+            onClick={(event) => {
+              if (
+                event.defaultPrevented ||
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              ) {
+                return;
+              }
+              event.preventDefault();
+              onNavigateHome();
+            }}
             className={cn(
-              'relative inline-flex h-11 cursor-pointer items-center rounded-pill px-1 text-[15px] leading-[1.29] font-[590] tracking-[-0.01em] whitespace-nowrap text-text-primary select-none md:h-10',
-              'transition-[transform,color,opacity] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms] enabled:active:scale-[0.97]',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+              'relative inline-flex h-11 cursor-pointer items-center rounded-pill px-1 text-[15px] leading-[1.33] font-[590] tracking-[-0.01em] whitespace-nowrap text-text-primary no-underline select-none lg:h-10',
+              'transition-opacity duration-[120ms] ease-[var(--ease-out)] hover:opacity-72',
+              'focus-visible:shadow-focus-ring focus-visible:outline-none',
             )}
           >
-            <span className="max-md:hidden" translate="no">
+            <span className="max-lg:hidden" translate="no">
               {t('nav.wordmark')}
             </span>
-            <span className="md:hidden" translate="no">
+            <span className="lg:hidden" translate="no">
               {t('nav.wordmarkShort')}
             </span>
-          </button>
+          </Link>
         </div>
 
-        {/* Zone 2 (Centre): LotPicker — hidden on landing state */}
+        {/* Centre: lot picker, absent on landing */}
         <div className="flex min-w-0 items-center justify-self-center">
           {activeLot !== null ? (
             <LotPicker
@@ -140,37 +157,34 @@ export function NavBar({
           ) : null}
         </div>
 
-        {/* Zone 3 (Right): LanguageSwitcher + 8px gap + Open STDF (hidden on landing per visual-acceptance (b)) */}
-        <div className="flex items-center justify-self-end gap-2">
-          <LanguageSwitcher />
+        {/* Right: language, 4 px, theme, 12 px, Open file (hidden on landing, which has its own) */}
+        <div className="flex items-center justify-self-end">
+          <LanguageSwitcher includeAppearance={isMobileViewport} />
+
+          <ThemeToggle className="ml-1 max-lg:hidden" />
 
           {activeLot !== null ? (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               data-testid="nav-open-stdf"
               disabled={disabled}
-              aria-disabled={disabled ? 'true' : undefined}
               aria-label={isMobileViewport ? t('nav.openStdfAria') : undefined}
               onClick={onOpenFilePicker}
               className={cn(
-                'relative inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill bg-transparent p-0 type-control whitespace-nowrap text-text-secondary shadow-none select-none',
-                'md:h-8 md:w-auto md:bg-white/10 md:px-[14px] md:text-text-primary',
-                "md:after:absolute md:after:inset-x-0 md:after:-inset-y-1 md:after:content-['']",
-                'transition-[transform,background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
-                'enabled:hover:bg-white/6 enabled:hover:text-text-primary enabled:active:scale-[0.94]',
-                'md:enabled:hover:bg-white/14 md:enabled:active:scale-[0.97] md:enabled:active:bg-white/8',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-                'disabled:cursor-not-allowed disabled:opacity-40 aria-disabled:cursor-not-allowed aria-disabled:opacity-40',
+                'lg:ml-3',
+                'max-lg:size-11 max-lg:bg-transparent max-lg:p-0 max-lg:text-text-secondary max-lg:after:inset-0',
+                'max-lg:enabled:hover:bg-fill-1 max-lg:enabled:hover:text-text-primary',
               )}
             >
               <FolderOpen
-                className="size-4 shrink-0 md:hidden"
+                className="size-4 shrink-0 lg:hidden"
                 strokeWidth={1.5}
                 aria-hidden="true"
               />
-              <span className="sr-only md:hidden">{t('nav.openStdfAria')}</span>
-              <span className="max-md:hidden">{t('nav.openStdf')}</span>
-            </button>
+              <span className="sr-only lg:hidden">{t('nav.openStdfAria')}</span>
+              <span className="max-lg:hidden">{t('nav.openFile')}</span>
+            </Button>
           ) : null}
         </div>
       </nav>
@@ -179,7 +193,7 @@ export function NavBar({
         aria-hidden="true"
         data-testid="nav-scroll-separator"
         className={cn(
-          'pointer-events-none absolute inset-x-0 bottom-0 h-px bg-separator transition-opacity duration-[120ms] ease-[var(--ease-out)]',
+          'pointer-events-none absolute inset-x-0 bottom-0 h-px bg-hairline transition-opacity duration-[120ms] ease-[var(--ease-out)]',
           isScrolled ? 'opacity-100' : 'opacity-0',
         )}
       />
