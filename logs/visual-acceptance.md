@@ -25,3 +25,4 @@ Fix in R8 pass:
 - SBIN mode colours distinct (orange/cyan/violet, good die grey); legend shows name+count. Pareto "Yield loss by bin" under Findings, quiet bars, cumulative tick. Pass.
 - Minor: legend wraps to 2 lines at 1440 and sits tight under the disc; consider single-line with overflow fade (Task 19).
 - P26b (11-19 00:16): 暖纸底+斜体 body 效果好。瑕疵：顶部导航条仍是冷白 #FAFAFA 材质，与暖纸底不搭，应改暖（留 P26a/P20 顺手改或 Task 19）。
+- P26a (11-19 00:29): 大晶圆+刻度环+示例结论卡+图块样例卡 合格。瑕疵：导航条冷白仍未改暖（Task 19 记账）；首屏底部晶圆被折叠线切掉一点，可接受。截图 p26b/p26a 留到早上一并发老大。
