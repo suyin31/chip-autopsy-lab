@@ -13,7 +13,11 @@
  */
 
 import { computeWaferEdgeRingIndices } from '../model/lot-builder';
-import type { DieId } from '../model/types';
+import type {
+  ColumnarDies,
+  DieId,
+  WaferSummaryMeta,
+} from '../model/types';
 import { writeStdfBytes } from '../stdf/stdf-writer';
 import {
   PRR_PART_FLG,
@@ -1487,4 +1491,174 @@ export function buildDemoStdfDownload(
     mimeType: 'application/octet-stream',
     bytes: generateDemoStdfBytes(presetId, seed),
   };
+}
+
+export interface DemoPresetPreview {
+  readonly presetId: DemoPresetId;
+  readonly lotId: string;
+  readonly waferCount: number;
+  readonly diesPerWafer: number;
+  readonly totalDies: number;
+  readonly finalYield: number;
+  readonly wafer: WaferSummaryMeta;
+  readonly dies: ColumnarDies;
+}
+
+const cachedDefaultPreviews = new Map<string, DemoPresetPreview>();
+
+/**
+ * Computes a lightweight deterministic lot-yield + single-wafer thumbnail preview
+ * for `LotPicker` (§4.2) and landing cards (§3.1) without serializing 9 MB of STDF bytes.
+ */
+export function getDemoPresetPreview(
+  presetId: DemoPresetId,
+  options?: { readonly waferIndex?: number; readonly seed?: number },
+): DemoPresetPreview {
+  const preset = getDemoPresetMeta(presetId);
+  const config = PRESET_LOT_CONFIG[presetId];
+  const resolvedSeed = normalizeSeed(options?.seed ?? preset.defaultSeed);
+  const defaultWaferIdx = presetId === 'handling-scratch' ? 4 : 0;
+  const targetWaferIndex = Math.min(
+    DEMO_WAFER_COUNT - 1,
+    Math.max(0, options?.waferIndex ?? defaultWaferIdx),
+  );
+  const cacheKey = `${presetId}:${resolvedSeed}:${targetWaferIndex}`;
+  const hit = cachedDefaultPreviews.get(cacheKey);
+  if (hit !== undefined) {
+    return hit;
+  }
+
+  const rootRng = createPrng(mixSeed(resolvedSeed, config.salt));
+  const layout = getStaticWaferLayout();
+  const scratchChord =
+    presetId === 'handling-scratch'
+      ? buildSeededScratchChordPlan(resolvedSeed, layout.dies)
+      : null;
+
+  let totalParts = 0;
+  let totalGood = 0;
+  let selectedPlans: readonly DiePlan[] | null = null;
+
+  for (let wIdx = 0; wIdx < DEMO_WAFER_COUNT; wIdx += 1) {
+    const waferRng = rootRng.fork(wIdx + 1);
+    const plans = planWaferDieOutcomes(
+      waferRng,
+      presetId,
+      wIdx,
+      layout,
+      scratchChord,
+    );
+    if (wIdx === targetWaferIndex) {
+      selectedPlans = plans;
+    }
+    for (let d = 0; d < plans.length; d += 1) {
+      const plan = plans[d]!;
+      const finalOutcome = plan.retestOutcome ?? plan.firstOutcome;
+      totalParts += 1;
+      if (finalOutcome.mode === 'PASS') {
+        totalGood += 1;
+      }
+    }
+  }
+
+  const activePlans = selectedPlans ?? [];
+  const count = activePlans.length;
+  const waferIdxArr = new Uint16Array(count);
+  const xArr = new Int16Array(count);
+  const yArr = new Int16Array(count);
+  const hasValidCoords = new Uint8Array(count);
+  const firstSiteIndex = new Uint8Array(count);
+  const siteIndex = new Uint8Array(count);
+  const firstPass = new Uint8Array(count);
+  const finalPass = new Uint8Array(count);
+  const hbin = new Uint16Array(count);
+  const sbin = new Uint16Array(count);
+  const retestCount = new Uint16Array(count);
+  const ringIndex = new Uint16Array(count);
+  const firstPrrOrder = new Uint32Array(count);
+
+  let minX = count > 0 ? activePlans[0]!.die.x : 0;
+  let maxX = minX;
+  let minY = count > 0 ? activePlans[0]!.die.y : 0;
+  let maxY = minY;
+  let maxRingIndex = 0;
+
+  for (let i = 0; i < count; i += 1) {
+    const plan = activePlans[i]!;
+    const { die, firstOutcome, retestOutcome } = plan;
+    const finalOutcome = retestOutcome ?? firstOutcome;
+    waferIdxArr[i] = 0;
+    xArr[i] = die.x;
+    yArr[i] = die.y;
+    hasValidCoords[i] = 1;
+    firstSiteIndex[i] = die.siteNum - 1;
+    siteIndex[i] = die.siteNum - 1;
+    firstPass[i] = firstOutcome.mode === 'PASS' ? 1 : 0;
+    finalPass[i] = finalOutcome.mode === 'PASS' ? 1 : 0;
+    hbin[i] = finalOutcome.hardBin;
+    sbin[i] = finalOutcome.softBin;
+    retestCount[i] = retestOutcome !== null ? 1 : 0;
+    ringIndex[i] = die.ringIndex;
+    firstPrrOrder[i] = i;
+
+    if (die.x < minX) minX = die.x;
+    if (die.x > maxX) maxX = die.x;
+    if (die.y < minY) minY = die.y;
+    if (die.y > maxY) maxY = die.y;
+    if (die.ringIndex > maxRingIndex) maxRingIndex = die.ringIndex;
+  }
+
+  const wafer: WaferSummaryMeta = {
+    waferIndex: 0,
+    waferId: `W${String(targetWaferIndex + 1).padStart(2, '0')}`,
+    dieStartIndex: 0,
+    dieEndIndex: count,
+    minX,
+    maxX,
+    minY,
+    maxY,
+    maxRingIndex,
+    geometry: {
+      wfSize: 300,
+      dieHt: 9.8,
+      dieWid: 9.8,
+      wfUnits: 2,
+      wfFlat: 'D',
+      centerX: 0,
+      centerY: 0,
+      posX: 'R',
+      posY: 'U',
+    },
+  };
+
+  const dies: ColumnarDies = {
+    count,
+    waferIndex: waferIdxArr,
+    x: xArr,
+    y: yArr,
+    hasValidCoords,
+    firstSiteIndex,
+    siteIndex,
+    firstPass,
+    finalPass,
+    hbin,
+    sbin,
+    retestCount,
+    ringIndex,
+    firstPrrOrder,
+  };
+
+  const preview: DemoPresetPreview = {
+    presetId,
+    lotId: config.lotId,
+    waferCount: DEMO_WAFER_COUNT,
+    diesPerWafer: DEMO_DIES_PER_WAFER,
+    totalDies: DEMO_WAFER_COUNT * DEMO_DIES_PER_WAFER,
+    finalYield: totalParts > 0 ? totalGood / totalParts : 0,
+    wafer,
+    dies,
+  };
+
+  cachedDefaultPreviews.set(cacheKey, preview);
+  return preview;
 }
