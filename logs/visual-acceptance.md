@@ -12,3 +12,6 @@ Fix in R8 pass:
 (f) Desktop strip: last thumbnail clipped hard at column edge; add fade mask on right edge.
 (g) Stat numerals look widely tracked ("2,721"); tighten tracking (-0.02em) on display digits while keeping tabular-nums.
 (h) Still open from R4: nav "Open STDF" label larger than wordmark.
+
+## R8 status (verified by e2e/perf-gate.spec.ts visual-acceptance test)
+- Fixed: R4 items (nav Open STDF 14px and hidden on landing, 190px thumbnails), (d) mobile HUD moved to top 8px so gap above disc >= 12px, (e) all 25 strip labels, (f) strip right-edge fade mask, (g) stat tracking < 0 with tabular-nums, (h) nav label <= wordmark.

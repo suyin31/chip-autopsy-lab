@@ -184,7 +184,7 @@ function isStageHudEventTarget(target: EventTarget | null): boolean {
  * - Two-stacked-base-canvas `160 ms` `ease-out` wafer crossfade on click/single-step, and `0 ms`
  *   instant swap on held `ArrowRight` (`event.repeat === true`) or `prefers-reduced-motion`.
  */
-export function WaferMapCanvas({
+function WaferMapCanvasImpl({
   lot,
   byWaferYield,
   probeOrderByWafer,
@@ -2134,7 +2134,7 @@ export function WaferMapCanvas({
           {/* Stage HUD Top-Left: Pass/Fail | HBIN | SBIN + Pan | Select Segmented Controls (§3.4, §3.6, §4.12) */}
           <div
             data-stage-hud="true"
-            className="absolute top-3 left-3 z-[var(--z-stage-hud)] flex flex-nowrap items-center gap-2 md:top-4 md:left-4"
+            className="absolute top-2 left-3 z-[var(--z-stage-hud)] flex flex-nowrap items-center gap-2 md:top-4 md:left-4"
           >
             <SegmentedControl
               data-testid="stage-mode-segmented"
@@ -2411,3 +2411,6 @@ export function WaferMapCanvas({
     </div>
   );
 }
+
+/** Memoized so parent-only state (e.g. the §5.2 verdict reveal) never re-renders the stage mid-gesture. */
+export const WaferMapCanvas = React.memo(WaferMapCanvasImpl);

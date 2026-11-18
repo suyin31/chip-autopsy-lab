@@ -1,19 +1,172 @@
-[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=10
-[tool] Run Command
-[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=90
-[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8
+[tool] Read skills, R8 task, and recent progress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=61
 [tool] status: InProgress
 [tool] status: InProgress
 [tool] status: Completed
+[tool] Skim apple skill, visual acceptance, scripts
 [tool] status: InProgress
 [tool] status: InProgress
 [tool] status: Completed
-[tool] Run Command
+[tool] Read failing e2e specs
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=65
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Failed: Read failing e2e specs
+[tool] Run e2e suite to see current failures
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=67
 [tool] status: InProgress
 [tool] status: InProgress
 [tool] status: Completed
-[tool] Run Command
-[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+[tool] Inspect r7 failure and render count
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=41
 [tool] status: InProgress
 [tool] status: InProgress
 [tool] status: Completed
+[tool] Look at r6 setup and state in WaferMapCanvas
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=58
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read probe sweep effect
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Find verdict trigger wiring and WaferMapCanvas props
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=74
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read LoadedLotOverview
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=35
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check WaferMapCanvas signature and usages
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=71
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Memoize WaferMapCanvas; find segmented control
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=86
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Find disc fit padding logic
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=76
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read stage margin function
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Raise mobile HUD; view r7 settle test
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=68
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Rerun e2e after fixes
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=76
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check playwright webServer config
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Stale build is being served. Rebuilding.
+[tool] Rebuild then rerun e2e
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=55
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check build and e2e status
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=24
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Start production build in background
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+While that builds, I'll fix the visual-acceptance log and run typecheck/lint.
+[tool] Run typecheck and lint
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=35
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Wait for build to finish
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=23
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Rerun e2e against fresh build
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=39
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Re-run perf gate for stability
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] Run unit and property tests
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=85
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] status: Completed
+[tool] Re-run perf gate without contention
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=63
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Temporarily instrument long frames to locate source
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=227
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Capture long-frame script attribution
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=135
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Clean temp spec and record progress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=301
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Confirm unit test totals
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=37
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Add unit test result to progress log
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+R8 is not finished, so I left it unticked in `tasks.md`. Two of the three e2e failures are fixed. The perf gate still fails most of the time on a single slow frame, which I traced but didn't fix in the time limit.
+
+**What I fixed in `src/ui/wafer-map/WaferMapCanvas.tsx`:**
+- **`wafer-stage-r6.spec.ts` (expected 2, got 4):** the probe sweep finishes during the test's zoom. At that point the verdict reveal changed state in the parent component, which re-rendered the wafer canvas. I wrapped `WaferMapCanvas` in `React.memo`, since its props from the parent don't change, so the reveal no longer re-renders the stage.
+- **Visual-acceptance gap (8 px, needs ≥ 12):** the mobile mode control now sits 8 px from the top instead of 12 px, which leaves a gap of at least 12 px above the wafer disc. The other visual items (a)–(h) were already passing their checks. I marked all of them fixed in `logs/visual-acceptance.md`.
+
+**Why the first reruns looked unchanged:** Playwright serves the existing production build from `.next` and rebuilds only if that build is missing. Until you run `pnpm build`, `pnpm e2e` tests old code. I've noted this in `logs/progress.md`.
+
+**Results after a fresh build:**
+- `pnpm typecheck`: 0 errors. `pnpm lint`: 0 errors. `pnpm test`: 34/34 files pass.
+- Full `pnpm e2e` passed 13/13 once. In that run the perf gate showed 0 frames over 50 ms, median frame 16.7 ms, p95 16.8 ms, verdict visible after 936 ms, and the sweep took 1,164 ms.
+
+**What remains:**
+- **The perf gate is flaky.** In 3 of 4 isolated reruns it recorded one frame of 58–62 ms. One rerun also ran at the same time as the unit tests and got 8 slow frames, so I didn't count it.
+- **The cause:** browser timing data points to the keydown handler that swaps wafers when you press ArrowRight in the wafer strip. It spends 31 ms in script and 8 ms forcing a layout, giving a frame of about 70 ms.
+- **Next step:** make that swap skip the React render and avoid reading layout inside the key handler, then rerun the perf gate a few times and tick R8. This is written in `logs/progress.md`.
+
+The R7 settle test also missed its 780 ms limit by 10 ms once (789.8 ms), then passed in the later runs. I didn't change that test.
+
+I deleted the temporary measurement spec I used. `logs/redesign-R8-kiro.log` and `tools/kiro_cli_step.sh` were already modified before I started, and I didn't touch them.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=175
+
