@@ -320,10 +320,13 @@ test.describe('P35 acceptance: item screenshots', () => {
     await page.waitForTimeout(400);
     await shot(page, 'a28-appearance-menu-1440');
     await page.keyboard.press('Escape');
+    await expect(page.getByTestId('theme-menu')).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.getByTestId('language-switcher-trigger').click();
-    await expect(page.getByTestId('theme-option-system')).toBeVisible();
+    await expect(
+      page.getByTestId('language-switcher-menu').getByTestId('theme-option-system'),
+    ).toBeVisible();
     await page.waitForTimeout(400);
     await shot(page, 'a28-globe-menu-390');
   });

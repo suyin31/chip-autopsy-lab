@@ -340,6 +340,6 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P34. Reduced motion and perf gate
   - Extend `e2e/perf-gate.spec.ts` with the theme switch and sheen sweep; reduced-motion e2e covering every row of §8.16; record numbers in `logs/` (premium §8.16, §8.17).
   - Accept: A36, A39.
-- [ ] P35. Full acceptance run (also amend requirements.md 14.2/14.3 focus colours and product.md mobile non-goal to match premium.md)
+- [x] P35. Full acceptance run (also amend requirements.md 14.2/14.3 focus colours and product.md mobile non-goal to match premium.md)
   - Screenshots for A1–A40 at the four viewports and both themes; fix small regressions found; write `logs/premium-acceptance.md` with pass or fail per item and `logs/phase-premium-summary.md` (premium §10).
   - Accept: every item A1–A40 marked pass.

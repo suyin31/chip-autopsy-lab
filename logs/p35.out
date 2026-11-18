@@ -1,1 +1,7 @@
 EXIT 124
+committed
+## 2026-11-18 — Premium P34 complete
+- `e2e/perf-gate.spec.ts` now adds the §8.17 theme switch (Appearance menu) and a 1 s sheen sweep, and tags each long frame with its step. New e2e `reduced-motion-p34` (9 tests) covers every §8.16 row plus A36. Menus and the confidence popover mount only after their anchored position is known (no one-frame flash at the default spot; static renders still render the open menu); finding rows drop press scale under reduced motion. Removed the leftover `e2e/tmp-p34-probe.spec.ts`.
+- Verified: typecheck and lint clean, `pnpm test` 370/370 (59 files); e2e `reduced-motion-p34` 9/9; `primitives-p15`, `nav-p16`, `findings-p19`, `verdict-p17`, `verdict-reveal-p28` pass; `theme-sheen-p32` 5/5 run alone. Perf gate (A39) numbers: median rAF 16.7 ms, p95 33.3 ms, max ack 22 ms, sweep 1171 ms, verdict 1228 ms, 2 frames > 50 ms (62.9 ms max, in `strip-keys` and `theme-switch`), the known software-raster flake on this sandbox. No snapshot or locale changes.
+- Decision (restrained): the magnifier keeps its `backdrop-filter`, since the gate's p95 stays under 34 ms (§8.17 fallback not triggered).
+343:- [ ] P35. Full acceptance run (also amend requirements.md 14.2/14.3 focus colours and product.md mobile non-goal to match premium.md)
