@@ -2,7 +2,7 @@
 
 import { animate, useReducedMotion } from 'motion/react';
 import * as React from 'react';
-import { SPRING_TOKENS } from '@/ui/tokens';
+import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
 import { cn } from './cn';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'text' | 'icon';
@@ -80,29 +80,17 @@ function resolveSizeAndHitClass(
   return "relative h-11 w-11 md:h-8 md:w-8 [&_svg]:size-4 [&_svg]:shrink-0 md:after:absolute md:after:-inset-1 md:after:content-['']";
 }
 
-function resolveVariantSurfaceClass(
-  variant: ButtonVariant,
-  isStatic: boolean,
-): string {
+function resolveVariantSurfaceClass(variant: ButtonVariant): string {
   if (variant === 'primary') {
-    return cn(
-      'bg-button-primary text-button-primary-text enabled:hover:bg-white enabled:active:bg-[#e8e8ed]',
-      !isStatic && 'enabled:active:scale-[0.97]',
-    );
+    return 'bg-button-primary text-button-primary-text enabled:hover:bg-white enabled:active:bg-[#e8e8ed]';
   }
 
   if (variant === 'secondary') {
-    return cn(
-      'bg-white/10 text-text-primary enabled:hover:bg-white/14 enabled:active:bg-white/8',
-      !isStatic && 'enabled:active:scale-[0.97]',
-    );
+    return 'bg-white/10 text-text-primary enabled:hover:bg-white/14 enabled:active:bg-white/8';
   }
 
   if (variant === 'ghost') {
-    return cn(
-      'bg-transparent text-text-secondary enabled:hover:bg-white/6 enabled:hover:text-text-primary',
-      !isStatic && 'enabled:active:scale-[0.97]',
-    );
+    return 'bg-transparent text-text-secondary enabled:hover:bg-white/6 enabled:hover:text-text-primary';
   }
 
   if (variant === 'text') {
@@ -110,16 +98,13 @@ function resolveVariantSurfaceClass(
   }
 
   // variant === 'icon'
-  return cn(
-    'bg-transparent text-text-secondary enabled:hover:bg-white/6 enabled:hover:text-text-primary',
-    !isStatic && 'enabled:active:scale-[0.94]',
-  );
+  return 'bg-transparent text-text-secondary enabled:hover:bg-white/6 enabled:hover:text-text-primary';
 }
 
 /**
  * Owned `Button` primitive implementing `redesign.md` §4 & §4.11:
  * - Pill radius (`999px`), zero DOM drop shadows, weights <= 590 (never >= 700)
- * - 100 ms `pointerdown` scale feedback (`0.97`, `0.94` for icon) + `spring-snappy` release
+ * - Interruptible `100 ms` `pointerdown` scale feedback (`0.97`, `0.94` for icon) + `spring-snappy` release
  * - Ice `#D6E6FF` 2 px focus-visible outline at 2 px offset
  * - >= 40x40 desktop / >= 44x44 mobile hit areas via pseudo-element expansion
  */
@@ -135,12 +120,15 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       type = 'button',
       onPointerDown,
       onPointerUp,
+      onPointerLeave,
+      onPointerCancel,
       onClick,
       ...props
     },
     forwardedRef,
   ) {
     const innerRef = React.useRef<HTMLButtonElement | null>(null);
+    const pressedRef = React.useRef(false);
     const shouldReduceMotion = useReducedMotion();
     const isAriaDisabled =
       disabled === true ||
@@ -159,17 +147,23 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       [forwardedRef],
     );
 
+    const releasePressScale = React.useCallback(() => {
+      if (!pressedRef.current) {
+        return;
+      }
+      pressedRef.current = false;
+      const el = innerRef.current;
+      if (el && !shouldReduceMotion) {
+        animate(el, { scale: 1 }, SPRING_TOKENS.snappy);
+      }
+    }, [shouldReduceMotion]);
+
     const handlePointerDown = React.useCallback(
       (event: React.PointerEvent<HTMLButtonElement>) => {
         onPointerDown?.(event);
-      },
-      [onPointerDown],
-    );
-
-    const handlePointerUp = React.useCallback(
-      (event: React.PointerEvent<HTMLButtonElement>) => {
-        onPointerUp?.(event);
         if (
+          event.defaultPrevented ||
+          event.button !== 0 ||
           isAriaDisabled ||
           isStatic ||
           shouldReduceMotion ||
@@ -179,11 +173,40 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         }
         const el = innerRef.current;
         if (el) {
-          const fromScale = variant === 'icon' ? 0.94 : 0.97;
-          animate(el, { scale: [fromScale, 1] }, SPRING_TOKENS.snappy);
+          pressedRef.current = true;
+          const targetScale = variant === 'icon' ? 0.94 : 0.97;
+          animate(
+            el,
+            { scale: targetScale },
+            { duration: 0.1, ease: MOTION_TOKENS.easeOutTuple },
+          );
         }
       },
-      [isAriaDisabled, isStatic, onPointerUp, shouldReduceMotion, variant],
+      [isAriaDisabled, isStatic, onPointerDown, shouldReduceMotion, variant],
+    );
+
+    const handlePointerUp = React.useCallback(
+      (event: React.PointerEvent<HTMLButtonElement>) => {
+        onPointerUp?.(event);
+        releasePressScale();
+      },
+      [onPointerUp, releasePressScale],
+    );
+
+    const handlePointerLeave = React.useCallback(
+      (event: React.PointerEvent<HTMLButtonElement>) => {
+        onPointerLeave?.(event);
+        releasePressScale();
+      },
+      [onPointerLeave, releasePressScale],
+    );
+
+    const handlePointerCancel = React.useCallback(
+      (event: React.PointerEvent<HTMLButtonElement>) => {
+        onPointerCancel?.(event);
+        releasePressScale();
+      },
+      [onPointerCancel, releasePressScale],
     );
 
     const handleClick = React.useCallback(
@@ -205,15 +228,17 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         aria-disabled={isAriaDisabled ? 'true' : undefined}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerLeave}
+        onPointerCancel={handlePointerCancel}
         onClick={handleClick}
         className={cn(
           'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-pill whitespace-nowrap shadow-none select-none',
-          'transition-[transform,background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
+          'transition-[background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
           'disabled:cursor-not-allowed disabled:opacity-40 aria-disabled:cursor-not-allowed aria-disabled:opacity-40',
           resolveSizeAndHitClass(variant, size),
           resolvePaddingClass(variant, size, iconSide),
-          resolveVariantSurfaceClass(variant, isStatic),
+          resolveVariantSurfaceClass(variant),
           className,
         )}
         {...props}

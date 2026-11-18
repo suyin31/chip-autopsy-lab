@@ -8,6 +8,7 @@ import {
 } from '@/core/demo';
 import type { ParseFatalError, ParseMode } from '@/core/stdf';
 import { formatByteSize, formatGroupedInt, formatYieldPct } from '@/ui/format';
+import { useT } from '@/ui/i18n';
 import {
   Badge,
   Button,
@@ -35,6 +36,8 @@ import {
   triggerBrowserBlobDownload,
 } from './ingest-helpers';
 import { LoadedLotOverview } from './LoadedLotOverview';
+import type { RecentLotEntry } from './LotPicker';
+import { type ActiveNavLotInfo, NavBar } from './NavBar';
 
 type WorkspaceState =
   | { readonly status: 'empty' }
@@ -59,10 +62,26 @@ type WorkspaceState =
       readonly payload: AutopsyWorkerLoadedPayload;
     };
 
+type ActiveLotOrigin =
+  | { readonly kind: 'preset'; readonly presetId: DemoPresetId }
+  | {
+      readonly kind: 'file';
+      readonly recentId: string;
+      readonly fileName: string;
+      readonly byteSize: number;
+    };
+
+interface CachedRecentLot {
+  readonly entry: RecentLotEntry;
+  readonly payload: AutopsyWorkerLoadedPayload;
+}
+
 export interface AppShellProps {
   /** Optional injected worker client factory for deterministic testing. */
   readonly createClient?: () => AutopsyWorkerClient;
 }
+
+const MAX_RECENT_LOTS = 3 as const;
 
 const INITIAL_PROGRESS: WorkerParseProgress = {
   phase: 'parsing',
@@ -73,24 +92,34 @@ const INITIAL_PROGRESS: WorkerParseProgress = {
 };
 
 /**
- * Primary client workbench shell wiring `FullWindowDropZone`, `EmptyStateCard`,
+ * Primary client workbench shell wiring `NavBar`, `FullWindowDropZone`, `EmptyStateCard`,
  * `IngestProgressPanel`, and `LoadedLotOverview` to `createAutopsyWorkerClient`.
  *
- * Validates: Requirements 1.1, 1.2, 1.4, 1.10, 2.2, 2.5, 3.2, 3.3, 14.4, 17.1–17.6
+ * Validates: Requirements 1.1, 1.2, 1.4, 1.10, 2.2, 2.5, 3.2, 3.3, 14.4, 17.1–17.6 & redesign §4.1, §4.2
  */
-export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Element {
+export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
+  const { t } = useT();
   const presets = React.useMemo(() => listDemoPresets(), []);
   const [selectedPresetId, setSelectedPresetId] =
     React.useState<DemoPresetId>('edge-ring-etch');
   const [workspace, setWorkspace] = React.useState<WorkspaceState>({
     status: 'empty',
   });
+  const [activeNavLot, setActiveNavLot] =
+    React.useState<ActiveNavLotInfo | null>(null);
+  const [cachedRecents, setCachedRecents] = React.useState<
+    readonly CachedRecentLot[]
+  >([]);
   const [downloadingPresetId, setDownloadingPresetId] =
     React.useState<DemoPresetId | null>(null);
   const [liveAnnouncement, setLiveAnnouncement] = React.useState('');
 
+  const navFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const clientRef = React.useRef<AutopsyWorkerClient | null>(null);
   const activeRequestIdRef = React.useRef(0);
+  const pendingOriginRef = React.useRef<ActiveLotOrigin | null>(null);
+
+  const isLoading = workspace.status === 'loading';
 
   const getWorkerClient = React.useCallback((): AutopsyWorkerClient => {
     if (clientRef.current === null) {
@@ -111,6 +140,31 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
     };
   }, []);
 
+  const handleOpenFilePicker = React.useCallback((): void => {
+    if (!isLoading) {
+      navFileInputRef.current?.click();
+    }
+  }, [isLoading]);
+
+  React.useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent): void => {
+      if (isLoading) {
+        return;
+      }
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === 'o'
+      ) {
+        event.preventDefault();
+        navFileInputRef.current?.click();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isLoading]);
+
   const applyWorkerResponse = React.useCallback(
     (requestId: number, response: AutopsyWorkerResponse): void => {
       if (requestId !== activeRequestIdRef.current) {
@@ -118,6 +172,39 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
       }
 
       if (response.kind === 'ok') {
+        const origin = pendingOriginRef.current;
+        if (origin?.kind === 'file') {
+          const entry: RecentLotEntry = {
+            id: origin.recentId,
+            fileName: origin.fileName,
+            byteSize:
+              origin.byteSize > 0
+                ? origin.byteSize
+                : response.uncompressedByteLength,
+            lotId: response.lot.lotId,
+          };
+          setCachedRecents((prev) => [
+            { entry, payload: response },
+            ...prev
+              .filter((item) => item.entry.id !== entry.id)
+              .slice(0, MAX_RECENT_LOTS - 1),
+          ]);
+          setActiveNavLot({
+            lotId: response.lot.lotId,
+            presetId: null,
+            recentId: entry.id,
+            customTitle: entry.fileName,
+          });
+        } else {
+          const presetId =
+            origin?.kind === 'preset' ? origin.presetId : 'edge-ring-etch';
+          setActiveNavLot({
+            lotId: response.lot.lotId,
+            presetId,
+            recentId: null,
+          });
+        }
+
         setWorkspace({ status: 'ready', payload: response });
         if (response.lot.warnings.length > 0) {
           notifyParseWarnings(response.lot.warnings);
@@ -179,6 +266,7 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
     (presetId: DemoPresetId): void => {
       const preset = getDemoPresetMeta(presetId);
       setSelectedPresetId(presetId);
+      pendingOriginRef.current = { kind: 'preset', presetId };
 
       const requestId = activeRequestIdRef.current + 1;
       activeRequestIdRef.current = requestId;
@@ -219,6 +307,14 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
 
   const handleLoadFile = React.useCallback(
     (file: File): void => {
+      const recentId = `file:${file.name}:${file.size}:${file.lastModified}`;
+      pendingOriginRef.current = {
+        kind: 'file',
+        recentId,
+        fileName: file.name,
+        byteSize: file.size,
+      };
+
       const requestId = activeRequestIdRef.current + 1;
       activeRequestIdRef.current = requestId;
       const label = `Local STDF · ${file.name}`;
@@ -259,6 +355,43 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
         );
     },
     [applyWorkerResponse, getWorkerClient, handleUnexpectedWorkerError],
+  );
+
+  const handleNavFileInputChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>): void => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (file) {
+        handleLoadFile(file);
+      }
+    },
+    [handleLoadFile],
+  );
+
+  const handleNavigateHome = React.useCallback((): void => {
+    activeRequestIdRef.current += 1;
+    if (workspace.status === 'large-file-prompt' && clientRef.current !== null) {
+      void clientRef.current.cancelLargeFile();
+    }
+    setWorkspace({ status: 'empty' });
+  }, [workspace.status]);
+
+  const handleSelectRecentLot = React.useCallback(
+    (recentId: string): void => {
+      const matched = cachedRecents.find((item) => item.entry.id === recentId);
+      if (!matched) {
+        return;
+      }
+      activeRequestIdRef.current += 1;
+      setActiveNavLot({
+        lotId: matched.entry.lotId,
+        presetId: null,
+        recentId: matched.entry.id,
+        customTitle: matched.entry.fileName,
+      });
+      setWorkspace({ status: 'ready', payload: matched.payload });
+    },
+    [cachedRecents],
   );
 
   const handleResumeLargeFile = React.useCallback(
@@ -325,13 +458,10 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
     [getWorkerClient],
   );
 
-  const isLoading = workspace.status === 'loading';
-  const ingestedBytes =
-    workspace.status === 'ready'
-      ? workspace.payload.uncompressedByteLength
-      : workspace.status === 'loading'
-        ? workspace.progress.bytesProcessed
-        : 0;
+  const recentLotEntries = React.useMemo(
+    () => cachedRecents.map((item) => item.entry),
+    [cachedRecents],
+  );
 
   return (
     <FullWindowDropZone disabled={isLoading} onFileDrop={handleLoadFile}>
@@ -339,28 +469,35 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {liveAnnouncement}
       </div>
+      <input
+        ref={navFileInputRef}
+        id="cal-nav-file-picker"
+        tabIndex={-1}
+        type="file"
+        accept=".stdf,.std,.stdf.gz,.gz,application/gzip,application/octet-stream"
+        onChange={handleNavFileInputChange}
+        disabled={isLoading}
+        className="sr-only"
+        aria-label={t('nav.openStdfAria')}
+      />
+
+      <NavBar
+        activeLot={workspace.status === 'ready' ? activeNavLot : null}
+        recentLots={recentLotEntries}
+        onNavigateHome={handleNavigateHome}
+        onSelectDemoPreset={handleLoadDemoLot}
+        onSelectRecentLot={handleSelectRecentLot}
+        onOpenFilePicker={handleOpenFilePicker}
+        disabled={isLoading}
+      />
 
       <main
         className={cn(
-          'mx-auto flex min-h-screen flex-col px-6 py-4',
-          workspace.status === 'ready' ? 'max-w-[1360px]' : 'max-w-6xl',
+          'mx-auto flex w-full flex-col px-4 py-4 md:px-10 md:py-6',
+          workspace.status === 'ready' ? 'max-w-[1440px]' : 'max-w-6xl',
         )}
       >
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline pb-3">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-[20px] leading-tight text-text-primary">
-              Chip Autopsy Lab
-            </h1>
-            <span className="font-mono text-[12px] text-text-tertiary">
-              STDF V4 · Local-First Workbench
-            </span>
-          </div>
-          <span className="rounded-control border border-hairline bg-raised px-2 py-1 font-mono text-[12px] text-text-tertiary">
-            Browser Sandbox
-          </span>
-        </header>
-
-        <section aria-label="Autopsy Report Workspace" className="flex-1 py-4">
+        <section aria-label="Autopsy Report Workspace" className="flex-1">
           {workspace.status === 'empty' ? (
             <EmptyStateCard
               cause="first-run"
@@ -471,15 +608,6 @@ export function AppShell({ createClient }: AppShellProps = {}): React.JSX.Elemen
             />
           ) : null}
         </section>
-
-        <footer className="mt-auto flex items-center justify-between border-t border-hairline pt-4 text-[12px] text-text-tertiary">
-          <span>Zero server STDF uploads</span>
-          <span className="font-mono tabular-nums">
-            {ingestedBytes === 0
-              ? '0 bytes ingested'
-              : `${formatByteSize(ingestedBytes)} (${formatGroupedInt(ingestedBytes)} bytes) ingested`}
-          </span>
-        </footer>
       </main>
     </FullWindowDropZone>
   );

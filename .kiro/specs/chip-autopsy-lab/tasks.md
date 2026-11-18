@@ -190,7 +190,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/redesign.md`. Each task is a <= 15-
 - [x] R2. i18n core and provider
   - Add `src/core/i18n/` (locales, typed `t`, `Intl` formatters, `en` table from redesign §6.8, `zh-CN`, `zh-TW`, `ja`, `ko`) and `src/ui/i18n/` (provider, `useT`, pre-hydration locale script, `localStorage["cal.locale"]`).
   - Accept: key and placeholder parity across all 5 locales; `matchLocale` maps `zh-HK` to `zh-TW`, `zh` to `zh-CN`, `fr` to `en`; core isolation lint passes.
-- [ ] R3. Primitives and nav
+- [x] R3. Primitives and nav
   - Restyle buttons (§4.11), add segmented control and menus, build `NavBar`, `LotPicker`, `LanguageSwitcher`; remove the old header, toolbar row, `Browser Sandbox` badge, and footer counter.
   - Accept: nav 52 px desktop / 48 px mobile; language change updates `<html lang>` and survives reload; ice 2 px focus rings; Tab order wordmark, lot picker, language, Open STDF.
 - [ ] R4. Landing, drag overlay, parse error, bins-only

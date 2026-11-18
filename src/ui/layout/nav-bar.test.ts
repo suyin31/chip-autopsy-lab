@@ -2,8 +2,13 @@ import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { listDemoPresets } from '@/core/demo';
-import { SUPPORTED_LOCALES } from '@/core/i18n';
-import { I18nProvider } from '@/ui/i18n';
+import { LOCALE_STORAGE_KEY, SUPPORTED_LOCALES } from '@/core/i18n';
+import {
+  I18nProvider,
+  LOCALE_INIT_SCRIPT,
+  persistAndApplyLocale,
+  readClientInitialLocale,
+} from '@/ui/i18n';
 import { ingestDemoPreset } from '@/workers';
 import { AppShell } from './AppShell';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -153,6 +158,76 @@ describe('NavBar, LotPicker, LanguageSwitcher, and legacy chrome removal (Task R
       'language-switcher-trigger',
       'nav-open-stdf',
     ]);
+
+    // Every nav button has ice 2px focus ring and remains in Tab order (zero tabindex="-1")
+    const buttonTags = Array.from(
+      loadedNavHtml.matchAll(/<button\b[^>]*>/g),
+      (m) => m[0],
+    );
+    expect(buttonTags).toHaveLength(4);
+    for (const tag of buttonTags) {
+      expect(tag).toContain('focus-visible:outline-2');
+      expect(tag).toContain('focus-visible:outline-offset-2');
+      expect(tag).toContain('focus-visible:outline-accent');
+      expect(tag).not.toContain('tabindex="-1"');
+    }
+
+    // Mobile 390px: both right-zone controls render as 44x44 icon buttons (h-11 w-11)
+    expect(buttonTags[2]).toContain('h-11');
+    expect(buttonTags[2]).toContain('w-11');
+    expect(buttonTags[3]).toContain('h-11');
+    expect(buttonTags[3]).toContain('w-11');
+
+    // Language switch updates <html lang> and survives full reload via LOCALE_INIT_SCRIPT
+    const storageMap = new Map<string, string>();
+    const docEl = {
+      lang: 'en',
+      dataLocale: 'en',
+      getAttribute(name: string): string | null {
+        if (name === 'lang') return docEl.lang;
+        if (name === 'data-locale') return docEl.dataLocale;
+        return null;
+      },
+      setAttribute(name: string, value: string): void {
+        if (name === 'lang') docEl.lang = value;
+        if (name === 'data-locale') docEl.dataLocale = value;
+      },
+    };
+    const storage = {
+      getItem: (k: string) => storageMap.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        storageMap.set(k, v);
+      },
+    };
+
+    persistAndApplyLocale('ko', { storage, documentElement: docEl });
+    expect(docEl.lang).toBe('ko');
+    expect(storageMap.get(LOCALE_STORAGE_KEY)).toBe('ko');
+
+    // Simulate reload: reset DOM to SSR default lang="en", run pre-hydration script, mount provider
+    docEl.lang = 'en';
+    docEl.dataLocale = '';
+    new Function('localStorage', 'navigator', 'document', LOCALE_INIT_SCRIPT)(
+      storage,
+      { languages: ['en-US'], language: 'en-US' },
+      { documentElement: docEl },
+    );
+    expect(docEl.lang).toBe('ko');
+    const reloadedLocale = readClientInitialLocale({
+      documentElement: docEl,
+      storage,
+      navigatorLanguages: ['en-US'],
+    });
+    expect(reloadedLocale).toBe('ko');
+
+    const reloadedSwitcherHtml = renderToStaticMarkup(
+      React.createElement(
+        I18nProvider,
+        { initialLocale: reloadedLocale },
+        React.createElement(LanguageSwitcher),
+      ),
+    );
+    expect(reloadedSwitcherHtml).toContain('>한<');
   });
 
   it('removes the old header, Browser Sandbox badge, second toolbar row, native select, and footer byte counter', async () => {

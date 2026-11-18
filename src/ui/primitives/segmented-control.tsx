@@ -184,7 +184,7 @@ export function SegmentedControl<T extends string = string>({
             onKeyDown={(event) => handleKeyDown(event, idx)}
             className={cn(
               'relative inline-flex h-full cursor-pointer items-center justify-center rounded-pill px-3 type-control whitespace-nowrap',
-              "after:absolute after:inset-x-0 after:-inset-y-2 after:content-[''] md:after:-inset-y-1.5",
+              "after:absolute after:inset-x-0 after:-inset-y-2.5 after:content-[''] md:after:-inset-y-1.5",
               'transition-colors duration-[120ms] ease-[var(--ease-out)]',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
               'disabled:cursor-not-allowed disabled:opacity-40',

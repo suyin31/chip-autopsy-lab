@@ -30,11 +30,11 @@ import {
 
 const DEMO_THUMB_SIZE_PX = 40 as const;
 
-const DEMO_TITLE_KEYS: Readonly<Record<DemoPresetId, MessageKey>> = {
+const DEMO_TITLE_KEYS = {
   'edge-ring-etch': 'demo.edgeRing.title',
   'handling-scratch': 'demo.scratch.title',
   'site2-probe-contact': 'demo.site2.title',
-};
+} as const satisfies Record<DemoPresetId, MessageKey>;
 
 export interface RecentLotEntry {
   readonly id: string;
@@ -187,7 +187,7 @@ export function LotPicker({
         </Untranslated>
 
         {triggerTitle ? (
-          <span className="ml-2 hidden max-w-[220px] truncate type-control text-text-secondary lg:inline">
+          <span className="ml-2 hidden lg:inline max-w-[220px] truncate type-control text-text-secondary">
             {triggerTitle}
           </span>
         ) : null}

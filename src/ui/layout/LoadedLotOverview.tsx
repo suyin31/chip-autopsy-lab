@@ -1,14 +1,9 @@
 'use client';
 
-import { Download } from 'lucide-react';
 import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import {
-  type DemoPresetId,
-  type DemoPresetMeta,
-  getDemoStdfFileName,
-} from '@/core/demo';
+import type { DemoPresetId, DemoPresetMeta } from '@/core/demo';
 import { sanitizeReportProseText } from '@/core/report';
 import {
   formatGroupedInt,
@@ -17,7 +12,6 @@ import {
 } from '@/ui/format';
 import {
   Badge,
-  Button,
   Card,
   CardContent,
   cn,
@@ -29,45 +23,35 @@ import type { AutopsyWorkerLoadedPayload } from '@/workers';
 
 export interface LoadedLotOverviewProps {
   readonly data: AutopsyWorkerLoadedPayload;
-  readonly presets: readonly DemoPresetMeta[];
-  readonly selectedPresetId: DemoPresetId;
-  readonly onSelectPreset: (presetId: DemoPresetId) => void;
-  readonly onLoadDemoLot: (presetId: DemoPresetId) => void;
+  readonly presets?: readonly DemoPresetMeta[];
+  readonly selectedPresetId?: DemoPresetId;
+  readonly onSelectPreset?: (presetId: DemoPresetId) => void;
+  readonly onLoadDemoLot?: (presetId: DemoPresetId) => void;
   readonly onDownloadDemoLot?: (presetId: DemoPresetId) => void;
   readonly downloadingPresetId?: DemoPresetId | null;
-  readonly onSelectFile: (file: File) => void;
+  readonly onSelectFile?: (file: File) => void;
   /** Optional isolated Zustand store instance for deterministic component tests. */
   readonly store?: StoreApi<SelectionStoreState>;
 }
 
 /**
  * Loaded-lot diagnostic workspace:
- * 1. Slim top Lot Header bar (lot ID, final yield, part/job, preset switcher, Load demo lot, Choose STDF file).
- * 2. Above-the-fold hero row: side-by-side at `>= 1280 px` (`AutopsyReportCard` left ~44%,
+ * 1. Above-the-fold hero row: side-by-side at `>= 1280 px` (`AutopsyReportCard` left ~44%,
  *    `WaferMapCanvas` + 25-wafer lot strip right ~56%) so the verdict and cited dies are
  *    simultaneously visible at `1440x900`; stacked verdict-first below `1280 px`.
- * 3. Supporting lot KPI tiles, interactive Test Site yield breakdown table, and stream warnings below.
+ * 2. Supporting lot KPI tiles, interactive Test Site yield breakdown table, and stream warnings below.
  *
+ * Lot switching and file opening live in `NavBar` / `LotPicker` (redesign §0, §4.1, §4.2).
  * All STDF strings (`lotId`, `partTyp`, `jobNam`, warning details, report claims)
  * are sanitized and rendered strictly via React plain-text nodes (Requirement 2.4).
  */
 export function LoadedLotOverview({
   data,
-  presets,
-  selectedPresetId,
-  onSelectPreset,
-  onLoadDemoLot,
-  onDownloadDemoLot,
-  downloadingPresetId = null,
-  onSelectFile,
   store = useSelectionStore,
 }: LoadedLotOverviewProps): React.JSX.Element {
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { lot, yieldSummary, siteAnomalies, facts, verdict, report } = data;
   const overall = yieldSummary.overall;
   const primaryAnomaly = siteAnomalies[0];
-  const demoDownloadFileName = getDemoStdfFileName(selectedPresetId);
-  const isExportingDemo = downloadingPresetId === selectedPresetId;
 
   const { storeLot, rawSiteFilter } = useStore(
     store,
@@ -81,15 +65,6 @@ export function LoadedLotOverview({
   React.useEffect(() => {
     store.getState().setLot(lot);
   }, [lot, store]);
-
-  const sanitizedLotMeta = React.useMemo(
-    () => ({
-      lotId: sanitizeReportProseText(lot.lotId) || 'UNKNOWN',
-      partTyp: sanitizeReportProseText(lot.partTyp) || 'N/A',
-      jobNam: sanitizeReportProseText(lot.jobNam) || 'N/A',
-    }),
-    [lot.lotId, lot.partTyp, lot.jobNam],
-  );
 
   const anomalyBySiteIndex = React.useMemo(() => {
     const map = new Map<number, (typeof siteAnomalies)[number]>();
@@ -122,110 +97,8 @@ export function LoadedLotOverview({
     [lot, store],
   );
 
-  const handleFileChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>): void => {
-      const file = event.target.files?.[0];
-      event.target.value = '';
-      if (file) {
-        onSelectFile(file);
-      }
-    },
-    [onSelectFile],
-  );
-
   return (
     <div className="flex flex-col gap-4">
-      {/* Slim Lot Header Bar above both Verdict and Wafer Map */}
-      <section
-        aria-label="Lot Header"
-        data-testid="lot-header-bar"
-        className="flex flex-wrap items-center justify-between gap-3 rounded-panel border border-hairline bg-panel px-4 py-2.5"
-      >
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 className="text-[16px] leading-snug text-text-primary">
-            Lot {sanitizedLotMeta.lotId}{' '}
-            <span className="text-text-tertiary">·</span> Final Yield{' '}
-            <span className="tabular-nums">
-              {formatYieldPct(overall.finalYield)}
-            </span>
-          </h2>
-          <span className="font-mono text-[12px] text-text-secondary">
-            Part {sanitizedLotMeta.partTyp} · Job {sanitizedLotMeta.jobNam}
-          </span>
-          {lot.parseMode === 'bins-only' ? (
-            <Badge variant="neutral">Bins-Only</Badge>
-          ) : null}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <label htmlFor="cal-loaded-file-picker" className="sr-only">
-            Choose another STDF V4 file (.stdf, .std, .stdf.gz, .gz)
-          </label>
-          <input
-            id="cal-loaded-file-picker"
-            ref={fileInputRef}
-            tabIndex={-1}
-            type="file"
-            accept=".stdf,.std,.stdf.gz,.gz,application/gzip,application/octet-stream"
-            onChange={handleFileChange}
-            className="sr-only"
-            aria-label="Choose another STDF V4 file (.stdf, .std, .stdf.gz, .gz)"
-          />
-          <span id="cal-loaded-file-picker-desc" className="sr-only">
-            Opens local STDF V4 file picker (.stdf, .std, .stdf.gz, .gz)
-          </span>
-          <label className="sr-only" htmlFor="cal-preset-switcher">
-            Select synthetic demo lot preset
-          </label>
-          <select
-            id="cal-preset-switcher"
-            value={selectedPresetId}
-            onChange={(e) => onSelectPreset(e.target.value as DemoPresetId)}
-            className="h-8 rounded-control border border-hairline bg-raised px-2.5 font-mono text-[12px] text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            {presets.map((preset) => (
-              <option
-                key={preset.id}
-                value={preset.id}
-                className="bg-panel text-text-primary"
-              >
-                {preset.title}
-              </option>
-            ))}
-          </select>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => onLoadDemoLot(selectedPresetId)}
-          >
-            Load demo lot
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            data-testid="loaded-download-demo-stdf-button"
-            aria-label={`Download ${demoDownloadFileName}`}
-            onClick={() => onDownloadDemoLot?.(selectedPresetId)}
-            disabled={downloadingPresetId !== null}
-          >
-            <Download className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
-            <span className="font-mono text-[12px]">
-              {isExportingDemo ? 'Exporting...' : '.stdf'}
-            </span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Choose STDF file (.stdf, .std, .stdf.gz, .gz)"
-            aria-controls="cal-loaded-file-picker"
-            aria-describedby="cal-loaded-file-picker-desc"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Choose STDF file
-          </Button>
-        </div>
-      </section>
-
       {lot.parseMode === 'bins-only' ? (
         <div
           role="status"

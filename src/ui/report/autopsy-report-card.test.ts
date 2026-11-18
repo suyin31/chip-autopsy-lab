@@ -184,26 +184,22 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
         }),
       );
 
-      // Slim lot header bar sits above both; verdict precedes wafer map; KPI tiles & site table stay below
-      const lotBarIdx = html.indexOf('data-testid="lot-header-bar"');
+      // Second toolbar row was removed in R3 (moved to NavBar + LotPicker); verdict precedes wafer map; KPI tiles & site table stay below
       const heroGridIdx = html.indexOf('data-testid="verdict-wafer-hero-grid"');
       const reportIdx = html.indexOf('data-testid="autopsy-report-card"');
       const waferIdx = html.indexOf('data-testid="wafer-base-canvas"');
       const tilesIdx = html.indexOf('aria-label="Lot Yield Summary"');
       const siteTableIdx = html.indexOf('data-testid="site-breakdown-row"');
-      expect(lotBarIdx).toBeGreaterThanOrEqual(0);
-      expect(heroGridIdx).toBeGreaterThan(lotBarIdx);
+      expect(html).not.toContain('data-testid="lot-header-bar"');
+      expect(html).not.toContain('id="cal-preset-switcher"');
+      expect(heroGridIdx).toBeGreaterThanOrEqual(0);
       expect(reportIdx).toBeGreaterThan(heroGridIdx);
       expect(waferIdx).toBeGreaterThan(reportIdx);
       expect(tilesIdx).toBeGreaterThan(waferIdx);
       expect(siteTableIdx).toBeGreaterThan(tilesIdx);
 
-      // >=1280px side-by-side (~44% / ~56%) + <1280px stacked responsive classes and slim header controls
+      // >=1280px side-by-side (~44% / ~56%) + <1280px stacked responsive classes
       expect(html).toContain('xl:grid-cols-[minmax(0,44fr)_minmax(0,56fr)]');
-      expect(html).toContain(`Lot ${res.lot.lotId}`);
-      expect(html).toContain('id="cal-preset-switcher"');
-      expect(html).toContain('Load demo lot');
-      expect(html).toContain('Choose STDF file');
 
       // Cause-of-death headline, hedged <=0.95 confidence chip, offline provenance badge, button semantics, focus ring, aria-pressed
       expect(html).toContain(expectedPrefix);

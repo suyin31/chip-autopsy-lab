@@ -1,0 +1,23 @@
+root agent idle; waiting for 1 background task(s) to finish
+Running `pnpm build` and `pnpm test:e2e` to verify the production build, R3 browser acceptance checks, and the vertical-slice suite; waiting for completion.
+Running `pnpm typecheck`, `pnpm lint`, and `pnpm test` across all suites; waiting for completion before marking R3 complete.
+Waiting for the final `eslint` check to complete.
+Completed Redesign task **R3 (Primitives and nav)**:
+
+### Summary of Changes
+- **TypeScript & Primitive Fixes**:
+  - Narrowed `DEMO_TITLE_KEYS` with `as const satisfies` in [LotPicker.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/LotPicker.tsx#L33-L37) and aligned responsive `hidden lg:inline` class ordering.
+  - Removed the default empty-object signature on [LanguageSwitcher.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/LanguageSwitcher.tsx#L32-L35) and made `children` optional on `DropdownMenuProps` / `DropdownMenuTriggerProps` (plus SSR-safe portal mount gating and `pointercancel` cleanup) in [menu.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/primitives/menu.tsx#L177-L182).
+  - Updated [button.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/primitives/button.tsx#L150-L205) to animate press/release scale directly from the live presentation value (`pointerdown` 100 ms `ease-out` -> `spring-snappy` release) without double-applying CSS `scale`, and expanded mobile segment hit areas to `44 px` in [segmented-control.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/primitives/segmented-control.tsx#L186-L188).
+- **Nav Integration & Legacy Chrome Removal**:
+  - Wired sticky `NavBar` (`52 px` desktop / `48 px` mobile), session `Recent` lot caching (up to 3 files), wordmark return-to-landing, and `⌘O` / `Ctrl O` file-picker shortcut into [AppShell.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/AppShell.tsx#L397-L423), removing the old header, `Browser Sandbox` badge, and `0 bytes ingested` footer counter.
+  - Removed the legacy second toolbar row (`lot-header-bar`) and native `<select>` from [LoadedLotOverview.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/LoadedLotOverview.tsx) and exported nav components from [index.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/index.ts).
+- **Tests & Tracking**:
+  - Expanded R3 acceptance assertions in [nav-bar.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/nav-bar.test.ts#L155-L224) and [scaffold.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/scaffold.spec.ts), and updated [autopsy-report-card.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/report/autopsy-report-card.test.ts#L187-L203).
+  - Marked `R3` complete in [tasks.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/specs/chip-autopsy-lab/tasks.md#L193) and recorded the summary in [progress.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/progress.md#L37-L39).
+
+### Verification
+- `pnpm typecheck`: **0 errors**
+- `pnpm lint`: **0 errors**
+- `pnpm test`: **150/150 tests passed** across 29 files
+- `pnpm build`: **exit 0**

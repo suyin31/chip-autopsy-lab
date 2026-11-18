@@ -1,0 +1,15 @@
+Continue Redesign task R3 in .kiro/specs/chip-autopsy-lab/tasks.md (spec: .kiro/specs/chip-autopsy-lab/redesign.md). A previous run was interrupted by timeout partway; its work is committed. First read .agent/skills/verification-before-completion/SKILL.md and .agent/skills/apple-design/SKILL.md. Audit the current code against every bullet and acceptance check of R3, finish what is missing, and fix any errors. Current typecheck output (may be empty):
+src/ui/layout/LotPicker.tsx(154,14): error TS2554: Expected 2 arguments, but got 1.
+src/ui/layout/LotPicker.tsx(218,25): error TS2554: Expected 2 arguments, but got 1.
+src/ui/layout/nav-bar.test.ts(37,49): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'defaultOpen' does not exist in type 'Attributes'.
+src/ui/primitives/primitives.test.ts(166,9): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '{ open: true; onOpenChange: () => undefined; }' is not assignable to parameter of type 'Attributes & DropdownMenuProps'.
+      Property 'children' is missing in type '{ open: true; onOpenChange: () => undefined; }' but required in type 'DropdownMenuProps'.
+src/ui/primitives/primitives.test.ts(169,11): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '{ 'aria-label': string; }' is not assignable to parameter of type 'Attributes & DropdownMenuTriggerProps & RefAttributes<HTMLButtonElement>'.
+      Property 'children' is missing in type '{ 'aria-label': string; }' but required in type 'DropdownMenuTriggerProps'.
+Run pnpm typecheck, pnpm lint, pnpm test until green. Then tick '- [ ] R3.' in tasks.md and append 2-4 lines to logs/progress.md. Do not start the next task. No web search. Finish within 13 minutes; if still unfinished, leave it compiling and write exactly what remains in logs/progress.md.

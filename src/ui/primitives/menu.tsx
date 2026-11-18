@@ -178,7 +178,7 @@ export interface DropdownMenuProps {
   readonly open?: boolean;
   readonly defaultOpen?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
-  readonly children: React.ReactNode;
+  readonly children?: React.ReactNode;
 }
 
 export function DropdownMenu({
@@ -248,14 +248,22 @@ export function DropdownMenu({
 
 export interface DropdownMenuTriggerProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  readonly children: React.ReactNode;
+  readonly children?: React.ReactNode;
 }
 
 export const DropdownMenuTrigger = React.forwardRef<
   HTMLButtonElement,
   DropdownMenuTriggerProps
 >(function DropdownMenuTrigger(
-  { className, onClick, onKeyDown, onPointerDown, type = 'button', ...props },
+  {
+    className,
+    onClick,
+    onKeyDown,
+    onPointerDown,
+    onPointerCancel,
+    type = 'button',
+    ...props
+  },
   forwardedRef,
 ) {
   const { open, triggerId, contentId, triggerRef, setOpenWithSource } =
@@ -285,17 +293,24 @@ export const DropdownMenuTrigger = React.forwardRef<
     setOpenWithSource(!open, 'pointer');
   };
 
+  const handlePointerCancel = (
+    event: React.PointerEvent<HTMLButtonElement>,
+  ): void => {
+    onPointerCancel?.(event);
+    pointerOpenedRef.current = false;
+  };
+
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>): void => {
     onClick?.(event);
     if (event.defaultPrevented || props.disabled) {
       return;
     }
-    if (pointerOpenedRef.current) {
+    const isKeyboardDetail = event.detail === 0;
+    if (pointerOpenedRef.current && !isKeyboardDetail) {
       pointerOpenedRef.current = false;
       return;
     }
-    // Activated via keyboard Enter/Space click synthesis or programmatic `.click()`
-    const isKeyboardDetail = event.detail === 0;
+    pointerOpenedRef.current = false;
     setOpenWithSource(!open, isKeyboardDetail ? 'keyboard' : 'pointer');
   };
 
@@ -324,6 +339,7 @@ export const DropdownMenuTrigger = React.forwardRef<
       aria-expanded={open}
       aria-controls={open ? contentId : undefined}
       onPointerDown={handlePointerDown}
+      onPointerCancel={handlePointerCancel}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={cn(
@@ -607,7 +623,13 @@ export function DropdownMenuContent({
     </AnimatePresence>
   );
 
-  if (typeof document === 'undefined') {
+  const [isClientMounted, setIsClientMounted] = React.useState(false);
+
+  React.useLayoutEffect(() => {
+    setIsClientMounted(true);
+  }, []);
+
+  if (!isClientMounted || typeof document === 'undefined') {
     return menuNode;
   }
 

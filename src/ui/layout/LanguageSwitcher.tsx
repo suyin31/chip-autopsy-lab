@@ -32,7 +32,7 @@ export interface LanguageSwitcherProps {
 export function LanguageSwitcher({
   defaultOpen = false,
   className,
-}: LanguageSwitcherProps = {}): React.JSX.Element {
+}: LanguageSwitcherProps): React.JSX.Element {
   const { locale, setLocale, t } = useT();
 
   return (
