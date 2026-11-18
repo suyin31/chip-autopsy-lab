@@ -24,7 +24,6 @@ import { ErrorDetailsSheet } from './ErrorDetailsSheet';
 import { FullWindowDropZone } from './FullWindowDropZone';
 import { IngestProgressPanel } from './IngestProgressPanel';
 import {
-  notifyDemoStdfDownload,
   notifyParseWarnings,
   triggerBrowserBlobDownload,
 } from './ingest-helpers';
@@ -101,7 +100,7 @@ const INITIAL_PROGRESS: WorkerParseProgress = {
  * Validates: Requirements 1.1, 1.2, 1.4, 1.10, 2.2, 2.5, 3.2, 3.3, 14.4, 17.1–17.6 & redesign §3.1, §3.2, §3.7, §3.8
  */
 export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
-  const { locale, t } = useT();
+  const { locale, t, formatInteger } = useT();
   const presets = React.useMemo(() => listDemoPresets(), []);
   const [selectedPresetId, setSelectedPresetId] =
     React.useState<DemoPresetId>('edge-ring-etch');
@@ -271,6 +270,19 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         if (otherWarnings.length > 0) {
           notifyParseWarnings(otherWarnings);
         }
+        if (response.skippedRecordCount > 0) {
+          toast.message(
+            t('toast.skippedRecords', {
+              count: formatInteger(response.skippedRecordCount),
+            }),
+            { id: `skipped-records-${response.lot.lotId}` },
+          );
+        }
+        if (response.lot.parseMode === 'bins-only') {
+          toast.message(t('toast.binsOnly'), {
+            id: `bins-only-${response.lot.lotId}`,
+          });
+        }
 
         setLiveAnnouncement(
           `${response.report.causeOfDeathHeadline.text} Loaded lot ${response.lot.lotId}: ${formatGroupedInt(response.lot.dies.count)} dies across ${formatGroupedInt(response.lot.wafers.length)} wafers, final yield ${formatYieldPct(response.yieldSummary.overall.finalYield)}.`,
@@ -308,7 +320,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       setWorkspace(failedState);
       setLiveAnnouncement(`STDF parse failed: ${response.error.message}`);
     },
-    [locale, t],
+    [formatInteger, locale, t],
   );
 
   const handleUnexpectedWorkerError = React.useCallback(
@@ -569,7 +581,10 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         .exportDemoStdf(presetId)
         .then((exported) => {
           triggerBrowserBlobDownload(exported.bytes, exported.fileName);
-          notifyDemoStdfDownload(exported.fileName, exported.bytes.byteLength);
+          toast.message(t('toast.downloaded', { fileName: exported.fileName }), {
+            id: `demo-download-${exported.fileName}`,
+            description: formatByteSize(exported.bytes.byteLength),
+          });
           setLiveAnnouncement(
             `Downloaded ${exported.fileName} (${formatByteSize(exported.bytes.byteLength)}).`,
           );
@@ -582,7 +597,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
           setDownloadingPresetId((prev) => (prev === presetId ? null : prev));
         });
     },
-    [getWorkerClient],
+    [getWorkerClient, t],
   );
 
   const recentLotEntries = React.useMemo(

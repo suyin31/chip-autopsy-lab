@@ -73,8 +73,8 @@ const DEMO_CARD_COPY_KEYS = {
   { readonly title: MessageKey; readonly description: MessageKey }
 >;
 
-const LANDING_WAFER_DIAMETER_PX = 168 as const;
-const LANDING_VIGNETTE_DIAMETER_PX = 252 as const; // 168 * 1.5 (§2.1)
+const LANDING_WAFER_DIAMETER_PX = 190 as const;
+const LANDING_VIGNETTE_DIAMETER_PX = 285 as const; // 190 * 1.5 (§2.1 + visual-acceptance (c))
 
 interface DemoWaferThumbnailProps {
   readonly presetId: DemoPresetId;
@@ -170,8 +170,8 @@ function DemoWaferThumbnail({
   }, [presetId, preview, renderWorkerThumbnail]);
 
   return (
-    <div className="relative flex h-[176px] w-full shrink-0 items-center justify-center overflow-hidden rounded-md bg-bg md:h-[196px]">
-      {/* Radial vignette behind wafer: diameter = 168 * 1.5 = 252 px (§2.1, §3.1) */}
+    <div className="relative flex h-[176px] w-full shrink-0 items-center justify-center overflow-hidden rounded-md md:h-[196px]">
+      {/* Radial vignette behind wafer: diameter = 190 * 1.5 = 285 px (§2.1, §3.1, visual-acceptance (c)) */}
       <div
         aria-hidden="true"
         style={{
@@ -187,11 +187,7 @@ function DemoWaferThumbnail({
           ref={canvasRef}
           data-testid={`landing-demo-wafer-${presetId}`}
           aria-hidden="true"
-          style={{
-            width: `${LANDING_WAFER_DIAMETER_PX}px`,
-            height: `${LANDING_WAFER_DIAMETER_PX}px`,
-          }}
-          className="pointer-events-none block select-none"
+          className="pointer-events-none block h-[168px] w-[168px] select-none md:h-[190px] md:w-[190px]"
         />
         {/* Faint top-light sheen masked to the wafer disc (§2.1) */}
         <div

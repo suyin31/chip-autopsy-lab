@@ -5,7 +5,11 @@ import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { YieldMetrics } from '@/core/analytics';
-import { type LotModel, packWaferCoord } from '@/core/model';
+import {
+  buildWaferProbeOrder,
+  type LotModel,
+  packWaferCoord,
+} from '@/core/model';
 import { Untranslated, useT } from '@/ui/i18n';
 import { SegmentedControl, type SegmentedControlOption } from '@/ui/primitives';
 import { cn } from '@/ui/primitives/cn';
@@ -25,10 +29,21 @@ import {
   computeLiveBoxSelectStats,
   computePopoverPlacement,
   computeWaferEvidencePresence,
+  sampleCubicEaseOut,
   type ScreenBox,
   screenRectToWaferGridBounds,
 } from './linked-interactions';
 import { OverlayCanvas, type OverlayCanvasHandle } from './OverlayCanvas';
+import {
+  computeProbeSweepFraction,
+  type InitialRevealPlan,
+  PROBE_SWEEP_FAIL_FADE_MS,
+  PROBE_SWEEP_REVEAL_MS,
+  PROBE_SWEEP_SESSION_KEY,
+  readPrefersReducedMotionSync,
+  resolveInitialRevealMode,
+  VERDICT_RISE_SWEEP_THRESHOLD,
+} from './probe-sweep';
 import {
   SELECTION_POPOVER_WIDTH_PX,
   SelectionPopover,
@@ -60,8 +75,39 @@ import {
 export interface WaferMapCanvasProps {
   readonly lot: LotModel;
   readonly byWaferYield: readonly YieldMetrics[];
+  readonly probeOrderByWafer?: readonly Uint32Array[];
+  readonly enableInitialReveal?: boolean;
+  readonly onVerdictRevealTrigger?: () => void;
   readonly store?: StoreApi<SelectionStoreState>;
   readonly className?: string;
+}
+
+const lotRevealPlanCache = new WeakMap<LotModel, InitialRevealPlan>();
+
+export function peekLotInitialRevealPlan(
+  lot: LotModel,
+  prefersReducedMotion: boolean,
+): InitialRevealPlan {
+  if (prefersReducedMotion) {
+    return { mode: 'reduced', fadeDurationMs: 120 };
+  }
+  const cached = lotRevealPlanCache.get(lot);
+  if (cached) {
+    return cached;
+  }
+  let seenInSession = false;
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      seenInSession =
+        window.sessionStorage.getItem(PROBE_SWEEP_SESSION_KEY) === '1';
+    }
+  } catch {
+    seenInSession = false;
+  }
+  return resolveInitialRevealMode({
+    seenInSession,
+    prefersReducedMotion: false,
+  });
 }
 
 type StageToolMode = 'pan' | 'select';
@@ -141,17 +187,23 @@ function isStageHudEventTarget(target: EventTarget | null): boolean {
 export function WaferMapCanvas({
   lot,
   byWaferYield,
+  probeOrderByWafer,
+  enableInitialReveal = false,
+  onVerdictRevealTrigger,
   store = useSelectionStore,
   className,
 }: WaferMapCanvasProps): React.JSX.Element {
   const { t, formatInteger } = useT();
   const shouldReduceMotion = useReducedMotion();
+  const prefersReduced = readPrefersReducedMotionSync(shouldReduceMotion);
   const stageRef = React.useRef<HTMLDivElement>(null);
   const cameraWrapperRef = React.useRef<HTMLDivElement>(null);
   const crossfadeCanvasRef = React.useRef<HTMLCanvasElement>(null);
   const crossfadeAnimRef = React.useRef<Animation | null>(null);
   const topLightRef = React.useRef<HTMLDivElement>(null);
   const zoomPillRef = React.useRef<HTMLButtonElement>(null);
+  const skipHintRef = React.useRef<HTMLParagraphElement>(null);
+  const finishSweepRef = React.useRef<(() => void) | null>(null);
   const baseCanvasRef = React.useRef<BaseCanvasHandle>(null);
   const failCanvasRef = React.useRef<FailCanvasHandle>(null);
   const overlayCanvasRef = React.useRef<OverlayCanvasHandle>(null);
@@ -226,8 +278,13 @@ export function WaferMapCanvas({
     [wafer, stageDims.width, stageDims.height, lot.dies],
   );
 
-  const reducedMotionRef = React.useRef(Boolean(shouldReduceMotion));
-  reducedMotionRef.current = Boolean(shouldReduceMotion);
+  const reducedMotionRef = React.useRef(prefersReduced);
+  reducedMotionRef.current = prefersReduced;
+
+  const probeOrderByWaferRef = React.useRef(probeOrderByWafer);
+  probeOrderByWaferRef.current = probeOrderByWafer;
+  const onVerdictRevealTriggerRef = React.useRef(onVerdictRevealTrigger);
+  onVerdictRevealTriggerRef.current = onVerdictRevealTrigger;
 
   const stageMetricsRef = React.useRef({
     stageWidth: stageDims.width,
@@ -457,18 +514,236 @@ export function WaferMapCanvas({
     }
   }, []);
 
-  // Reset camera cleanly when a new lot is opened; preserve camera across wafers in the same lot (§5.8)
-  const prevLotRef = React.useRef<LotModel>(lot);
-  React.useEffect(() => {
-    if (prevLotRef.current !== lot) {
-      prevLotRef.current = lot;
-      userMovedCameraSinceFindingRef.current = false;
-      cancelCrossfadeImmediately();
-      cancelSnapAnimation();
-      overlayCanvasRef.current?.setLiveBrushScreenRect(null);
-      controllerRef.current?.resetToFit(false);
+  // §5.1 Probe-sweep load reveal (once per session, <= 1,200 ms, skippable by any key/click/tap, 240 ms subsequent fade, 120 ms reduced motion)
+  React.useLayoutEffect(() => {
+    if (
+      !enableInitialReveal ||
+      typeof window === 'undefined' ||
+      typeof requestAnimationFrame !== 'function'
+    ) {
+      baseCanvasRef.current?.setSweepSuppressAutoPaint(false);
+      if (stageRef.current) {
+        stageRef.current.dataset.sweep = 'done';
+      }
+      if (skipHintRef.current) {
+        skipHintRef.current.hidden = true;
+      }
+      onVerdictRevealTriggerRef.current?.();
+      return;
     }
-  }, [lot, cancelCrossfadeImmediately, cancelSnapAnimation]);
+
+    const plan = peekLotInitialRevealPlan(lot, reducedMotionRef.current);
+    lotRevealPlanCache.set(lot, plan);
+    try {
+      if (window.sessionStorage) {
+        window.sessionStorage.setItem(PROBE_SWEEP_SESSION_KEY, '1');
+      }
+    } catch {
+      // Ignore storage restrictions in private sandboxes
+    }
+
+    if (plan.mode !== 'sweep') {
+      finishSweepRef.current = null;
+      baseCanvasRef.current?.setSweepSuppressAutoPaint(false);
+      overlayCanvasRef.current?.setProbeHeadDieIndex(null);
+      failCanvasRef.current?.setOpacity(0);
+      if (skipHintRef.current) {
+        skipHintRef.current.hidden = true;
+      }
+      if (stageRef.current) {
+        stageRef.current.dataset.sweep = 'done';
+      }
+      onVerdictRevealTriggerRef.current?.();
+
+      const baseEl = baseCanvasRef.current?.getCanvasElement();
+      if (
+        baseEl &&
+        typeof baseEl.animate === 'function' &&
+        plan.fadeDurationMs > 0 &&
+        !reducedMotionRef.current
+      ) {
+        const anim = baseEl.animate([{ opacity: 0 }, { opacity: 1 }], {
+          duration: plan.fadeDurationMs,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        });
+        return () => anim.cancel();
+      }
+      return;
+    }
+
+    const waferIdx = waferGeometryRef.current.safeWaferIndex;
+    const probeOrder =
+      probeOrderByWaferRef.current?.[waferIdx] ??
+      buildWaferProbeOrder(lot, waferIdx);
+
+    if (probeOrder.length === 0) {
+      baseCanvasRef.current?.setSweepSuppressAutoPaint(false);
+      if (stageRef.current) {
+        stageRef.current.dataset.sweep = 'done';
+      }
+      onVerdictRevealTriggerRef.current?.();
+      return;
+    }
+
+    if (stageRef.current) {
+      stageRef.current.dataset.sweep = 'running';
+    }
+    if (skipHintRef.current) {
+      skipHintRef.current.hidden = false;
+    }
+
+    baseCanvasRef.current?.setSweepSuppressAutoPaint(true);
+    baseCanvasRef.current?.paintSubstrateOnly();
+    failCanvasRef.current?.paintForCamera(DEFAULT_CAMERA_STATE);
+    failCanvasRef.current?.setOpacity(0);
+
+    let lastStageW = stageMetricsRef.current.stageWidth;
+    let lastStageH = stageMetricsRef.current.stageHeight;
+    let revealedCount = 0;
+    let verdictTriggered = false;
+    let finished = false;
+    let rafId: number | null = null;
+    const startMs =
+      typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const totalSweepMs = PROBE_SWEEP_REVEAL_MS + PROBE_SWEEP_FAIL_FADE_MS;
+
+    const cleanupInputListeners = (): void => {
+      window.removeEventListener('keydown', handleSkipInput, true);
+      window.removeEventListener('pointerdown', handleSkipInput, true);
+    };
+
+    const completeSweep = (): void => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      finishSweepRef.current = null;
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      cleanupInputListeners();
+      lotRevealPlanCache.set(lot, {
+        mode: 'subsequent-fade',
+        fadeDurationMs: 0,
+      });
+
+      baseCanvasRef.current?.setSweepSuppressAutoPaint(false);
+      overlayCanvasRef.current?.setProbeHeadDieIndex(null);
+      failCanvasRef.current?.setOpacity(0);
+      failCanvasRef.current?.clear();
+      baseCanvasRef.current?.paintForCamera(getRasterCamera());
+
+      if (!verdictTriggered) {
+        verdictTriggered = true;
+        onVerdictRevealTriggerRef.current?.();
+      }
+      if (skipHintRef.current) {
+        skipHintRef.current.hidden = true;
+      }
+      if (stageRef.current) {
+        stageRef.current.dataset.sweep = 'done';
+      }
+    };
+
+    function handleSkipInput(): void {
+      completeSweep();
+    }
+
+    finishSweepRef.current = completeSweep;
+    window.addEventListener('keydown', handleSkipInput, true);
+    window.addEventListener('pointerdown', handleSkipInput, true);
+
+    const stepSweep = (nowMs: number): void => {
+      if (finished) {
+        return;
+      }
+      if (reducedMotionRef.current) {
+        completeSweep();
+        return;
+      }
+
+      // Re-sync substrate + revealed batch if ResizeObserver updated stage dimensions on initial layout
+      const curW = stageMetricsRef.current.stageWidth;
+      const curH = stageMetricsRef.current.stageHeight;
+      if (curW !== lastStageW || curH !== lastStageH) {
+        lastStageW = curW;
+        lastStageH = curH;
+        baseCanvasRef.current?.paintSubstrateOnly();
+        if (revealedCount > 0) {
+          baseCanvasRef.current?.paintSweepBatch(probeOrder, 0, revealedCount);
+        }
+        failCanvasRef.current?.paintForCamera(DEFAULT_CAMERA_STATE);
+      }
+
+      const elapsed = Math.max(0, nowMs - startMs);
+      const revealFrac = computeProbeSweepFraction(
+        elapsed,
+        PROBE_SWEEP_REVEAL_MS,
+        1,
+      );
+      const targetCount = Math.min(
+        probeOrder.length,
+        Math.floor(revealFrac * probeOrder.length),
+      );
+
+      if (targetCount > revealedCount) {
+        baseCanvasRef.current?.paintSweepBatch(
+          probeOrder,
+          revealedCount,
+          targetCount,
+        );
+        revealedCount = targetCount;
+      }
+
+      if (!verdictTriggered && revealFrac >= VERDICT_RISE_SWEEP_THRESHOLD) {
+        verdictTriggered = true;
+        onVerdictRevealTriggerRef.current?.();
+      }
+
+      if (elapsed < PROBE_SWEEP_REVEAL_MS) {
+        const headDie =
+          revealedCount > 0 ? probeOrder[revealedCount - 1]! : null;
+        overlayCanvasRef.current?.setProbeHeadDieIndex(headDie);
+        rafId = requestAnimationFrame(stepSweep);
+        return;
+      }
+
+      // Reveal reached 100%: ensure all pass dies drawn, clear probe lamp, fade FailCanvas 0 -> 1 over 280 ms
+      if (revealedCount < probeOrder.length) {
+        baseCanvasRef.current?.paintSweepBatch(
+          probeOrder,
+          revealedCount,
+          probeOrder.length,
+        );
+        revealedCount = probeOrder.length;
+      }
+      overlayCanvasRef.current?.setProbeHeadDieIndex(null);
+
+      if (elapsed >= totalSweepMs) {
+        completeSweep();
+        return;
+      }
+
+      const failFadeT = (elapsed - PROBE_SWEEP_REVEAL_MS) / PROBE_SWEEP_FAIL_FADE_MS;
+      failCanvasRef.current?.setOpacity(sampleCubicEaseOut(failFadeT));
+      rafId = requestAnimationFrame(stepSweep);
+    };
+
+    rafId = requestAnimationFrame(stepSweep);
+
+    return () => {
+      finishSweepRef.current = null;
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      cleanupInputListeners();
+      baseCanvasRef.current?.setSweepSuppressAutoPaint(false);
+      overlayCanvasRef.current?.setProbeHeadDieIndex(null);
+      failCanvasRef.current?.setOpacity(0);
+    };
+  }, [lot, enableInitialReveal, getRasterCamera]);
 
   React.useEffect(() => {
     const controller = controllerRef.current;
@@ -485,6 +760,19 @@ export function WaferMapCanvas({
       controller?.dispose();
     };
   }, [cancelCrossfadeImmediately, cancelSnapAnimation, clearTouchLongPress]);
+
+  // Reset camera cleanly when a new lot is opened; preserve camera across wafers in the same lot (§5.8)
+  const prevLotRef = React.useRef<LotModel>(lot);
+  React.useEffect(() => {
+    if (prevLotRef.current !== lot) {
+      prevLotRef.current = lot;
+      userMovedCameraSinceFindingRef.current = false;
+      cancelCrossfadeImmediately();
+      cancelSnapAnimation();
+      overlayCanvasRef.current?.setLiveBrushScreenRect(null);
+      controllerRef.current?.resetToFit(false);
+    }
+  }, [lot, cancelCrossfadeImmediately, cancelSnapAnimation]);
 
   // §3.5 & §5.4: Finding camera frame on select, return-to-fit on clear, and mobile stage scroll
   const prevClaimIdRef = React.useRef<string | null>(
@@ -631,6 +919,7 @@ export function WaferMapCanvas({
         return;
       }
       event.preventDefault();
+      finishSweepRef.current?.();
       userMovedCameraSinceFindingRef.current = true;
       const bounds = el.getBoundingClientRect();
       controllerRef.current?.handleWheel({
@@ -1734,6 +2023,7 @@ export function WaferMapCanvas({
             fails: formatInteger(failCount),
           })}
           data-testid="wafer-stage"
+          data-sweep="done"
           data-render-count={renderCountRef.current}
           data-wafer-diameter-px={Math.round(fitWaferDiameter)}
           data-stage-tool={stageTool}
@@ -1747,9 +2037,9 @@ export function WaferMapCanvas({
           onDoubleClick={handleDoubleClick}
           onKeyDown={handleStageKeyDown}
           className={cn(
-            'relative isolate aspect-square w-full overflow-hidden bg-bg select-none',
+            'relative isolate h-[456px] w-full overflow-hidden bg-bg select-none',
             stageTool === 'select' ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing',
-            'md:mx-auto md:max-w-[680px] xl:mx-0 xl:aspect-auto xl:min-h-[600px] xl:max-w-none xl:flex-1',
+            'md:mx-auto md:h-auto md:aspect-square md:max-w-[680px] xl:mx-0 xl:aspect-auto xl:min-h-[600px] xl:max-w-none xl:flex-1',
             'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
           )}
         >
@@ -1844,7 +2134,7 @@ export function WaferMapCanvas({
           {/* Stage HUD Top-Left: Pass/Fail | HBIN | SBIN + Pan | Select Segmented Controls (§3.4, §3.6, §4.12) */}
           <div
             data-stage-hud="true"
-            className="absolute top-3 left-3 z-[var(--z-stage-hud)] flex flex-wrap items-center gap-2 md:top-4 md:left-4"
+            className="absolute top-3 left-3 z-[var(--z-stage-hud)] flex flex-nowrap items-center gap-2 md:top-4 md:left-4"
           >
             <SegmentedControl
               data-testid="stage-mode-segmented"
@@ -2002,7 +2292,15 @@ export function WaferMapCanvas({
             )}
           </div>
 
-          {/* Stage HUD Bottom-Centre: Finding Evidence Caption Pill (§3.5) */}
+          {/* Stage HUD Bottom-Centre: Sweep Skip Hint (§3.3) or Finding Evidence Caption Pill (§3.5) */}
+          <p
+            ref={skipHintRef}
+            hidden
+            data-testid="probe-sweep-skip-hint"
+            className="pointer-events-none absolute bottom-3 left-1/2 z-[var(--z-stage-hud)] -translate-x-1/2 type-footnote whitespace-nowrap text-text-tertiary md:bottom-4"
+          >
+            {t('loading.skipHint')}
+          </p>
           {evidenceSummary !== null ? (
             <div
               data-stage-hud="true"
@@ -2060,8 +2358,8 @@ export function WaferMapCanvas({
               </tr>
             </thead>
             <tbody>
-              {failingDieRows.map((row) => (
-                <tr key={row.idx}>
+              {failingDieRows.map((row, rowPos) => (
+                <tr key={rowPos}>
                   <td>
                     ({row.x}, {row.y})
                   </td>

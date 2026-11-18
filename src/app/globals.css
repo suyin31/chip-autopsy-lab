@@ -153,7 +153,7 @@
 
   --size-stat: 40px;
   --leading-stat: 1;
-  --tracking-stat: -0.02em;
+  --tracking-stat: -0.025em;
 
   --size-title-2: 28px;
   --leading-title-2: 1.14;
@@ -199,7 +199,7 @@
     --tracking-display-l: -0.018em;
 
     --size-stat: 28px;
-    --tracking-stat: -0.015em;
+    --tracking-stat: -0.02em;
 
     --size-title-2: 24px;
     --leading-title-2: 1.17;
@@ -438,6 +438,27 @@
     letter-spacing: var(--tracking-stat);
     font-variation-settings: "opsz" 32;
     font-variant-numeric: tabular-nums;
+  }
+
+  :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko)) .type-stat {
+    letter-spacing: -0.02em;
+  }
+
+  .wafer-strip-mask {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0px,
+      #000000 24px,
+      #000000 calc(100% - 24px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0px,
+      #000000 24px,
+      #000000 calc(100% - 24px),
+      transparent 100%
+    );
   }
 
   .type-title-2 {

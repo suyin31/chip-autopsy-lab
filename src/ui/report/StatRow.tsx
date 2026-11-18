@@ -5,16 +5,20 @@ import * as React from 'react';
 import type { RenderedStatFactTuple } from '@/core/report';
 import { useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
+import {
+  readPrefersReducedMotionSync,
+  STAT_INITIAL_COUNTUP_MS,
+  STAT_UPDATE_COUNTUP_MS,
+  sampleStatCountUp,
+} from '@/ui/wafer-map/probe-sweep';
 
 export interface StatRowProps {
   readonly stats: RenderedStatFactTuple;
+  /** When false (during initial 0..85% probe sweep), holds count-up until Verdict rise-in starts (§5.3). */
+  readonly revealStarted?: boolean;
+  /** Delay in ms matching the StatRow's §5.2 rise-in stagger (`180 ms` normal, `0 ms` reduced). */
+  readonly revealDelayMs?: number;
   readonly className?: string;
-}
-
-function easeOutExpo(t: number): number {
-  if (t <= 0) return 0;
-  if (t >= 1) return 1;
-  return 1 - Math.pow(2, -10 * t);
 }
 
 /**
@@ -22,16 +26,29 @@ function easeOutExpo(t: number): number {
  * - `<dl>` with exactly 3 `<div>` items (`168 px` cols + `24 px` gap at 553 px desktop; `111 px` cols + `12 px` gap mobile).
  * - Caption `<dt>` (`footnote` secondary, max 2 lines) precedes `<dd>` in DOM and sits visually
  *   below `<dd>` (`stat` 40 px / 300 weight, 6 px gap) via `flex-direction: column-reverse`.
- * - Animates selection-linked stat transitions over `300 ms` `ease-out-expo` via rAF writing
- *   `textContent` directly to refs (`tabular-nums` during transition, instant under reduced motion).
+ * - §5.3 Count-up:
+ *   - First reveal: `0 -> target` in `700 ms` `ease-out-expo` via one rAF loop writing `textContent`
+ *     to refs (zero React state per frame).
+ *   - Selection-linked updates: `previous -> target` in `300 ms` `ease-out-expo` (interruptible).
+ *   - Accessibility: visible animating `<span>` is `aria-hidden="true"`; sibling `.sr-only` `<span>`
+ *     holds the final value.
+ *   - Reduced motion: shows final values immediately (`0 ms`, never `0`).
  */
 export function StatRow({
   stats,
+  revealStarted = true,
+  revealDelayMs = 0,
   className,
 }: StatRowProps): React.JSX.Element {
   const { formatInteger, formatPercent } = useT();
   const shouldReduceMotion = useReducedMotion();
-  const valueRefs = React.useRef<Array<HTMLElement | null>>([null, null, null]);
+  const prefersReduced = readPrefersReducedMotionSync(shouldReduceMotion);
+
+  const valueRefs = React.useRef<Array<HTMLSpanElement | null>>([
+    null,
+    null,
+    null,
+  ]);
   const displayedValuesRef = React.useRef<[number, number, number]>([
     stats[0].numericValue,
     stats[1].numericValue,
@@ -42,38 +59,27 @@ export function StatRow({
     stats[1].numericValue,
     stats[2].numericValue,
   ]);
+  const hasCompletedInitialRevealRef = React.useRef(false);
   const rafRef = React.useRef<number | null>(null);
 
-  React.useEffect(() => {
+  const cancelRaf = React.useCallback((): void => {
+    if (rafRef.current !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  }, []);
+
+  React.useLayoutEffect(() => {
     const nextTargets: [number, number, number] = [
       stats[0].numericValue,
       stats[1].numericValue,
       stats[2].numericValue,
     ];
-    const prevTargets = prevTargetsRef.current;
-    const changed =
-      Math.abs(nextTargets[0] - prevTargets[0]) > 1e-6 ||
-      Math.abs(nextTargets[1] - prevTargets[1]) > 1e-6 ||
-      Math.abs(nextTargets[2] - prevTargets[2]) > 1e-6;
 
-    prevTargetsRef.current = nextTargets;
-
-    if (!changed) {
-      for (let i = 0; i < 3; i += 1) {
-        const el = valueRefs.current[i];
-        if (el && el.textContent !== stats[i]!.valueText) {
-          el.textContent = stats[i]!.valueText;
-        }
-      }
-      return;
-    }
-
-    if (rafRef.current !== null && typeof cancelAnimationFrame === 'function') {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-
-    if (shouldReduceMotion || typeof requestAnimationFrame !== 'function') {
+    if (prefersReduced || typeof requestAnimationFrame !== 'function') {
+      cancelRaf();
+      hasCompletedInitialRevealRef.current = true;
+      prevTargetsRef.current = nextTargets;
       displayedValuesRef.current = [...nextTargets];
       for (let i = 0; i < 3; i += 1) {
         const el = valueRefs.current[i];
@@ -84,27 +90,93 @@ export function StatRow({
       return;
     }
 
-    const fromValues: [number, number, number] = [
-      displayedValuesRef.current[0],
-      displayedValuesRef.current[1],
-      displayedValuesRef.current[2],
-    ];
+    if (!revealStarted) {
+      cancelRaf();
+      displayedValuesRef.current = [0, 0, 0];
+      for (let i = 0; i < 3; i += 1) {
+        const el = valueRefs.current[i];
+        const stat = stats[i]!;
+        if (el) {
+          el.textContent =
+            stat.format === 'percent' ? formatPercent(0) : formatInteger(0);
+        }
+      }
+      return;
+    }
+
+    const isInitialReveal = !hasCompletedInitialRevealRef.current;
+    const prevTargets = prevTargetsRef.current;
+    const targetsChanged =
+      Math.abs(nextTargets[0] - prevTargets[0]) > 1e-6 ||
+      Math.abs(nextTargets[1] - prevTargets[1]) > 1e-6 ||
+      Math.abs(nextTargets[2] - prevTargets[2]) > 1e-6;
+
+    prevTargetsRef.current = nextTargets;
+
+    if (!isInitialReveal && !targetsChanged) {
+      if (rafRef.current === null) {
+        for (let i = 0; i < 3; i += 1) {
+          const el = valueRefs.current[i];
+          if (el && el.textContent !== stats[i]!.valueText) {
+            el.textContent = stats[i]!.valueText;
+          }
+        }
+      }
+      return;
+    }
+
+    hasCompletedInitialRevealRef.current = true;
+    cancelRaf();
+
+    const fromValues: [number, number, number] = isInitialReveal
+      ? [0, 0, 0]
+      : [
+          displayedValuesRef.current[0],
+          displayedValuesRef.current[1],
+          displayedValuesRef.current[2],
+        ];
+    displayedValuesRef.current = [...fromValues];
+
+    if (isInitialReveal) {
+      for (let i = 0; i < 3; i += 1) {
+        const el = valueRefs.current[i];
+        const stat = stats[i]!;
+        if (el) {
+          el.textContent =
+            stat.format === 'percent' ? formatPercent(0) : formatInteger(0);
+        }
+      }
+    }
+
+    const durationMs = isInitialReveal
+      ? STAT_INITIAL_COUNTUP_MS
+      : STAT_UPDATE_COUNTUP_MS;
+    const delayMs = isInitialReveal ? Math.max(0, revealDelayMs) : 0;
     const startMs =
-      typeof performance !== 'undefined' ? performance.now() : Date.now();
-    const durationMs = 300;
+      (typeof performance !== 'undefined' ? performance.now() : Date.now()) +
+      delayMs;
 
     const tick = (nowMs: number): void => {
-      const t = Math.min(1, Math.max(0, (nowMs - startMs) / durationMs));
-      const eased = easeOutExpo(t);
+      const elapsedMs = nowMs - startMs;
+      if (elapsedMs < 0) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
 
       for (let i = 0; i < 3; i += 1) {
         const stat = stats[i]!;
-        const v = fromValues[i]! + (nextTargets[i]! - fromValues[i]!) * eased;
+        const v = sampleStatCountUp({
+          from: fromValues[i]!,
+          to: nextTargets[i]!,
+          elapsedMs,
+          durationMs,
+          prefersReducedMotion: false,
+        });
         displayedValuesRef.current[i] = v;
         const el = valueRefs.current[i];
         if (el) {
           el.textContent =
-            t >= 1
+            elapsedMs >= durationMs
               ? stat.valueText
               : stat.format === 'percent'
                 ? formatPercent(v)
@@ -112,7 +184,7 @@ export function StatRow({
         }
       }
 
-      if (t < 1) {
+      if (elapsedMs < durationMs) {
         rafRef.current = requestAnimationFrame(tick);
       } else {
         rafRef.current = null;
@@ -120,13 +192,16 @@ export function StatRow({
     };
 
     rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current !== null && typeof cancelAnimationFrame === 'function') {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    };
-  }, [stats, shouldReduceMotion, formatInteger, formatPercent]);
+    return cancelRaf;
+  }, [
+    stats,
+    revealStarted,
+    revealDelayMs,
+    prefersReduced,
+    formatInteger,
+    formatPercent,
+    cancelRaf,
+  ]);
 
   return (
     <dl
@@ -143,18 +218,24 @@ export function StatRow({
             {stat.captionText}
           </dt>
           <dd
-            ref={(el) => {
-              valueRefs.current[idx] = el;
-            }}
-            data-testid="verdict-stat-value"
             data-emphasis={stat.emphasis ? 'true' : 'false'}
-            aria-label={stat.valueText}
             className={cn(
               'type-stat tabular-nums',
               stat.emphasis ? 'text-failure' : 'text-text-primary',
             )}
           >
-            {stat.valueText}
+            <span
+              ref={(el) => {
+                valueRefs.current[idx] = el;
+              }}
+              data-testid="verdict-stat-value"
+              aria-hidden="true"
+            >
+              {stat.valueText}
+            </span>
+            <span data-testid="verdict-stat-sr" className="sr-only">
+              {stat.valueText}
+            </span>
           </dd>
         </div>
       ))}

@@ -140,36 +140,38 @@ export function NavBar({
           ) : null}
         </div>
 
-        {/* Zone 3 (Right): LanguageSwitcher + 8px gap + Open STDF */}
+        {/* Zone 3 (Right): LanguageSwitcher + 8px gap + Open STDF (hidden on landing per visual-acceptance (b)) */}
         <div className="flex items-center justify-self-end gap-2">
           <LanguageSwitcher />
 
-          <button
-            type="button"
-            data-testid="nav-open-stdf"
-            disabled={disabled}
-            aria-disabled={disabled ? 'true' : undefined}
-            aria-label={isMobileViewport ? t('nav.openStdfAria') : undefined}
-            onClick={onOpenFilePicker}
-            className={cn(
-              'relative inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill bg-transparent p-0 whitespace-nowrap text-text-secondary shadow-none select-none',
-              'md:h-8 md:w-auto md:bg-white/10 md:px-[14px] md:type-control md:text-text-primary',
-              "md:after:absolute md:after:inset-x-0 md:after:-inset-y-1 md:after:content-['']",
-              'transition-[transform,background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
-              'enabled:hover:bg-white/6 enabled:hover:text-text-primary enabled:active:scale-[0.94]',
-              'md:enabled:hover:bg-white/14 md:enabled:active:scale-[0.97] md:enabled:active:bg-white/8',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-              'disabled:cursor-not-allowed disabled:opacity-40 aria-disabled:cursor-not-allowed aria-disabled:opacity-40',
-            )}
-          >
-            <FolderOpen
-              className="size-4 shrink-0 md:hidden"
-              strokeWidth={1.5}
-              aria-hidden="true"
-            />
-            <span className="sr-only md:hidden">{t('nav.openStdfAria')}</span>
-            <span className="max-md:hidden">{t('nav.openStdf')}</span>
-          </button>
+          {activeLot !== null ? (
+            <button
+              type="button"
+              data-testid="nav-open-stdf"
+              disabled={disabled}
+              aria-disabled={disabled ? 'true' : undefined}
+              aria-label={isMobileViewport ? t('nav.openStdfAria') : undefined}
+              onClick={onOpenFilePicker}
+              className={cn(
+                'relative inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-pill bg-transparent p-0 type-control whitespace-nowrap text-text-secondary shadow-none select-none',
+                'md:h-8 md:w-auto md:bg-white/10 md:px-[14px] md:text-text-primary',
+                "md:after:absolute md:after:inset-x-0 md:after:-inset-y-1 md:after:content-['']",
+                'transition-[transform,background-color,color,opacity] duration-[120ms] ease-[var(--ease-out)] active:duration-[100ms]',
+                'enabled:hover:bg-white/6 enabled:hover:text-text-primary enabled:active:scale-[0.94]',
+                'md:enabled:hover:bg-white/14 md:enabled:active:scale-[0.97] md:enabled:active:bg-white/8',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                'disabled:cursor-not-allowed disabled:opacity-40 aria-disabled:cursor-not-allowed aria-disabled:opacity-40',
+              )}
+            >
+              <FolderOpen
+                className="size-4 shrink-0 md:hidden"
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+              <span className="sr-only md:hidden">{t('nav.openStdfAria')}</span>
+              <span className="max-md:hidden">{t('nav.openStdf')}</span>
+            </button>
+          ) : null}
         </div>
       </nav>
 

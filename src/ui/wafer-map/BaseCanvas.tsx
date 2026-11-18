@@ -10,7 +10,10 @@ import {
 } from './wafer-camera';
 import {
   computeWaferRenderLayout,
+  DEFAULT_VIEWPORT_TRANSFORM,
   paintWaferBaseLayer,
+  paintWaferSubstrateOnly,
+  paintWaferSweepBatch,
   resolveSupersampledCanvasSize,
   type ViewportTransform,
   type WaferRenderLayout,
@@ -18,6 +21,13 @@ import {
 
 export interface BaseCanvasHandle {
   paintForCamera(rasterCamera: CameraState): void;
+  paintSubstrateOnly(): void;
+  paintSweepBatch(
+    probeOrder: Uint32Array,
+    startOrderIndex: number,
+    endOrderIndex: number,
+  ): void;
+  setSweepSuppressAutoPaint(suppressed: boolean): void;
   getCanvasElement(): HTMLCanvasElement | null;
 }
 
@@ -70,8 +80,8 @@ function areBaseCanvasPropsEqual(
  * `WF_FLAT` V-notch), `72%` `1px`-radius pass squares (`#63666C`), and full-cell minus `1px`
  * street `1.5px`-radius fail dies (`#FF6B2C` or categorical fail palette).
  *
- * Exposes an imperative `paintForCamera` handle so `120 ms` settle re-raster at `scale > 2`
- * and fit-raster restoration execute in `< 3 ms` with zero React re-renders.
+ * Also exposes `paintSubstrateOnly` + `paintSweepBatch` for the O(n) incremental
+ * §5.1 probe-sweep reveal.
  */
 const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
   function BaseCanvas(
@@ -92,6 +102,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
   ): React.JSX.Element {
     const canvasRef = React.useRef<HTMLCanvasElement>(null);
     const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
+    const suppressAutoPaintRef = React.useRef(false);
 
     const safeCssWidth = Math.max(1, Math.round(cssWidth));
     const safeCssHeight = Math.max(1, Math.round(cssHeight));
@@ -105,6 +116,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       safeCssWidth,
       safeCssHeight,
       dpr,
+      layout,
     });
     latestInputsRef.current = {
       lot,
@@ -115,39 +127,47 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       safeCssWidth,
       safeCssHeight,
       dpr,
+      layout,
     };
+
+    const ensureCanvasAndContext = React.useCallback(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        return null;
+      }
+      if (!ctxRef.current || ctxRef.current.canvas !== canvas) {
+        ctxRef.current = canvas.getContext('2d');
+      }
+      const ctx = ctxRef.current;
+      if (!ctx) {
+        return null;
+      }
+      const cur = latestInputsRef.current;
+      const resolvedDpr =
+        cur.dpr ??
+        (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+      const dims = resolveSupersampledCanvasSize(
+        cur.safeCssWidth,
+        cur.safeCssHeight,
+        resolvedDpr,
+        2,
+      );
+      if (canvas.width !== dims.pixelWidth) {
+        canvas.width = dims.pixelWidth;
+      }
+      if (canvas.height !== dims.pixelHeight) {
+        canvas.height = dims.pixelHeight;
+      }
+      return { ctx, dims, cur };
+    }, []);
 
     const paintWithViewport = React.useCallback(
       (vp: ViewportTransform, explicitLayout?: WaferRenderLayout | null): void => {
-        const canvas = canvasRef.current;
-        if (!canvas) {
+        const ready = ensureCanvasAndContext();
+        if (!ready) {
           return;
         }
-        if (!ctxRef.current || ctxRef.current.canvas !== canvas) {
-          ctxRef.current = canvas.getContext('2d');
-        }
-        const ctx = ctxRef.current;
-        if (!ctx) {
-          return;
-        }
-
-        const cur = latestInputsRef.current;
-        const resolvedDpr =
-          cur.dpr ??
-          (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
-        const dims = resolveSupersampledCanvasSize(
-          cur.safeCssWidth,
-          cur.safeCssHeight,
-          resolvedDpr,
-          2,
-        );
-        if (canvas.width !== dims.pixelWidth) {
-          canvas.width = dims.pixelWidth;
-        }
-        if (canvas.height !== dims.pixelHeight) {
-          canvas.height = dims.pixelHeight;
-        }
-
+        const { ctx, dims, cur } = ready;
         const wafer = cur.lot.wafers[cur.waferIndex];
         if (!wafer) {
           ctx.setTransform(dims.dpr, 0, 0, dims.dpr, 0, 0);
@@ -181,7 +201,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           hiddenBins: cur.hiddenBins,
         });
       },
-      [],
+      [ensureCanvasAndContext],
     );
 
     React.useImperativeHandle(
@@ -196,14 +216,83 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           );
           paintWithViewport(vp, null);
         },
+        paintSubstrateOnly(): void {
+          const ready = ensureCanvasAndContext();
+          if (!ready) {
+            return;
+          }
+          const { ctx, dims, cur } = ready;
+          const wafer = cur.lot.wafers[cur.waferIndex];
+          const resolvedLayout =
+            cur.layout &&
+            cur.layout.cssWidth === dims.cssWidth &&
+            cur.layout.cssHeight === dims.cssHeight
+              ? cur.layout
+              : wafer
+                ? computeWaferRenderLayout(
+                    wafer,
+                    dims.cssWidth,
+                    dims.cssHeight,
+                    cur.lot.dies,
+                    DEFAULT_VIEWPORT_TRANSFORM,
+                  )
+                : null;
+          if (!resolvedLayout) {
+            ctx.setTransform(dims.dpr, 0, 0, dims.dpr, 0, 0);
+            ctx.clearRect(0, 0, dims.cssWidth, dims.cssHeight);
+            return;
+          }
+          paintWaferSubstrateOnly(ctx, wafer, resolvedLayout, dims.dpr);
+        },
+        paintSweepBatch(
+          probeOrder: Uint32Array,
+          startOrderIndex: number,
+          endOrderIndex: number,
+        ): void {
+          const ready = ensureCanvasAndContext();
+          if (!ready) {
+            return;
+          }
+          const { ctx, dims, cur } = ready;
+          const wafer = cur.lot.wafers[cur.waferIndex];
+          if (!wafer) {
+            return;
+          }
+          const resolvedLayout =
+            cur.layout &&
+            cur.layout.cssWidth === dims.cssWidth &&
+            cur.layout.cssHeight === dims.cssHeight
+              ? cur.layout
+              : computeWaferRenderLayout(
+                  wafer,
+                  dims.cssWidth,
+                  dims.cssHeight,
+                  cur.lot.dies,
+                  DEFAULT_VIEWPORT_TRANSFORM,
+                );
+          paintWaferSweepBatch(ctx, {
+            lot: cur.lot,
+            layout: resolvedLayout,
+            dpr: dims.dpr,
+            probeOrder,
+            startOrderIndex,
+            endOrderIndex,
+          });
+        },
+        setSweepSuppressAutoPaint(suppressed: boolean): void {
+          suppressAutoPaintRef.current = suppressed;
+        },
         getCanvasElement(): HTMLCanvasElement | null {
           return canvasRef.current;
         },
       }),
-      [paintWithViewport],
+      [ensureCanvasAndContext, paintWithViewport],
     );
 
     React.useEffect(() => {
+      if (suppressAutoPaintRef.current) {
+        return;
+      }
       const rasterCam = getRasterCamera
         ? getRasterCamera()
         : DEFAULT_CAMERA_STATE;

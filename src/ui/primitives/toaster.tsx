@@ -4,10 +4,35 @@ import * as React from 'react';
 import { Toaster, type ToasterProps } from 'sonner';
 import { cn } from './cn';
 
+export const SONNER_TOAST_OPTIONS = {
+  position: 'bottom-center',
+  visibleToasts: 3,
+  gap: 8,
+  duration: 4_000,
+  offset: 24,
+  mobileOffset: 16,
+  classNames: {
+    toast:
+      'surface-material flex w-[360px] max-w-[calc(100vw-2rem)] items-start gap-3 rounded-md px-4 py-3 text-text-primary shadow-none',
+    content: 'flex min-w-0 flex-1 flex-col gap-0.5',
+    title: 'type-callout text-text-primary',
+    description: 'type-footnote text-text-secondary tabular-nums',
+    actionButton:
+      'shrink-0 cursor-pointer self-center rounded-pill bg-transparent px-2 py-1 type-control text-text-secondary shadow-none transition-colors duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+    cancelButton:
+      'shrink-0 cursor-pointer self-center rounded-pill bg-transparent px-2 py-1 type-control text-text-tertiary shadow-none transition-colors duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+    closeButton:
+      'cursor-pointer rounded-pill bg-surface-2 px-1.5 py-0.5 type-caption text-text-secondary shadow-none transition-colors duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+    icon: 'mt-0.5 shrink-0 text-text-secondary',
+  },
+} as const;
+
 /**
- * Owned Sonner toast host styled strictly with Chip Autopsy Lab dark clinical tokens:
- * `#111113` (`bg-panel`) surface, `1 px` `hairline` border, `12 px` panel radius,
- * zero drop shadows (`shadow-none`), and font weights `<= 500` (Requirements 2.3, 17.1, 17.2).
+ * Owned Sonner toast host implementing `redesign.md` §4.13:
+ * - Bottom-centre, `24 px` offset (`16 px` + safe-area inset on mobile), `z: 70` (`--z-toasts`)
+ * - Max width `360 px`, `surface-material`, `16 px` radius (`rounded-md`), `12 x 16 px` padding
+ * - `callout` primary title + optional `footnote` secondary body + right text action
+ * - Max `3` visible stacked with `8 px` gap, `4 s` default duration (errors/warnings persist when specified)
  */
 export function ClinicalToaster({
   className,
@@ -16,22 +41,16 @@ export function ClinicalToaster({
   return (
     <Toaster
       theme="dark"
-      position="bottom-right"
-      closeButton
-      className={cn('shadow-none', className)}
+      position={SONNER_TOAST_OPTIONS.position}
+      visibleToasts={SONNER_TOAST_OPTIONS.visibleToasts}
+      gap={SONNER_TOAST_OPTIONS.gap}
+      offset={SONNER_TOAST_OPTIONS.offset}
+      mobileOffset={SONNER_TOAST_OPTIONS.mobileOffset}
+      className={cn('z-[var(--z-toasts)] shadow-none', className)}
       toastOptions={{
         unstyled: true,
-        classNames: {
-          toast:
-            'flex w-[360px] max-w-[calc(100vw-2rem)] items-start gap-3 rounded-panel border border-hairline bg-panel p-3.5 text-[13px] text-text-primary shadow-none',
-          content: 'flex min-w-0 flex-1 flex-col gap-1',
-          title: 'text-[13px] font-medium text-text-primary leading-snug',
-          description:
-            'font-mono text-[12px] text-text-secondary leading-relaxed tabular-nums',
-          closeButton:
-            'rounded-control border border-hairline bg-raised px-1.5 py-0.5 text-[12px] text-text-secondary shadow-none hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-          icon: 'mt-0.5 shrink-0 text-text-secondary',
-        },
+        duration: SONNER_TOAST_OPTIONS.duration,
+        classNames: { ...SONNER_TOAST_OPTIONS.classNames },
       }}
       {...props}
     />

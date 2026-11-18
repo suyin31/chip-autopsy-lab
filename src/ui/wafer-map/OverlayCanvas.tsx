@@ -23,6 +23,7 @@ import {
   cameraToViewportTransform,
   DEFAULT_CAMERA_STATE,
 } from './wafer-camera';
+import { readPrefersReducedMotionSync } from './probe-sweep';
 import {
   computeWaferRenderLayout,
   type OverlayGlowSequenceOverride,
@@ -35,6 +36,7 @@ import {
 export interface OverlayCanvasHandle {
   paintForCamera(camera: CameraState): void;
   setLiveBrushScreenRect(rect: ScreenBox | null): void;
+  setProbeHeadDieIndex(dieIndex: number | null): void;
 }
 
 export interface OverlayCanvasProps {
@@ -116,6 +118,7 @@ const OverlayCanvasImpl = React.forwardRef<
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
   const liveBrushRectRef = React.useRef<ScreenBox | null>(null);
+  const probeHeadDieIndexRef = React.useRef<number | null>(null);
   const animStateRef = React.useRef<GlowAnimatorState>(
     createIdleAnimatorState(waferIndex),
   );
@@ -153,8 +156,10 @@ const OverlayCanvasImpl = React.forwardRef<
   const safeCssWidth = Math.max(1, Math.round(cssWidth));
   const safeCssHeight = Math.max(1, Math.round(cssHeight));
 
-  const reducedMotionRef = React.useRef(Boolean(shouldReduceMotion));
-  reducedMotionRef.current = Boolean(shouldReduceMotion);
+  const reducedMotionRef = React.useRef(
+    readPrefersReducedMotionSync(shouldReduceMotion),
+  );
+  reducedMotionRef.current = readPrefersReducedMotionSync(shouldReduceMotion);
 
   const latestRef = React.useRef({
     lot,
@@ -343,6 +348,7 @@ const OverlayCanvasImpl = React.forwardRef<
         brush: cur.brush,
         glowOverride: buildCurrentGlowOverride(),
         liveBrushScreenRect: liveBrushRectRef.current,
+        probeHeadDieIndex: probeHeadDieIndexRef.current,
       });
       syncWrapperDebugAttrs();
     },
@@ -588,7 +594,8 @@ const OverlayCanvasImpl = React.forwardRef<
           cur.hoveredDieIndex === null &&
           cur.brush === null &&
           animStateRef.current.phase === 'idle' &&
-          liveBrushRectRef.current === null
+          liveBrushRectRef.current === null &&
+          probeHeadDieIndexRef.current === null
         ) {
           return;
         }
@@ -604,6 +611,13 @@ const OverlayCanvasImpl = React.forwardRef<
           return;
         }
         liveBrushRectRef.current = rect;
+        paintCurrentNow();
+      },
+      setProbeHeadDieIndex(dieIndex: number | null): void {
+        if (probeHeadDieIndexRef.current === dieIndex) {
+          return;
+        }
+        probeHeadDieIndexRef.current = dieIndex;
         paintCurrentNow();
       },
     }),

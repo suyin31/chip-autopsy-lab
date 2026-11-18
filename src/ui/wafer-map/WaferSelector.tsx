@@ -268,9 +268,8 @@ export const WaferSelector = React.memo(function WaferSelector({
       aria-label={t('strip.aria', { lotId })}
       data-testid="wafer-strip"
       className={cn(
-        'flex h-14 w-full flex-nowrap items-center gap-3 overflow-x-auto overflow-y-hidden px-4 md:h-16 md:px-3',
+        'wafer-strip-mask flex h-14 w-full flex-nowrap items-center gap-3 overflow-x-auto overflow-y-hidden px-4 md:h-16 md:px-3',
         '[scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-        '[mask-image:linear-gradient(90deg,transparent,#000_24px,#000_calc(100%-24px),transparent)]',
         className,
       )}
     >
@@ -345,9 +344,7 @@ export const WaferSelector = React.memo(function WaferSelector({
               <span
                 className={cn(
                   'type-caption leading-none tabular-nums',
-                  isSelected
-                    ? 'text-text-primary'
-                    : 'hidden text-text-tertiary md:inline',
+                  isSelected ? 'text-text-primary' : 'text-text-tertiary',
                 )}
               >
                 <Untranslated>{wafer.waferId}</Untranslated>

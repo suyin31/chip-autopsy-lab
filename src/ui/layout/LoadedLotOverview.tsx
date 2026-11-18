@@ -1,5 +1,6 @@
 'use client';
 
+import { useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import type { StoreApi } from 'zustand';
 import type { DemoPresetId, DemoPresetMeta } from '@/core/demo';
@@ -7,7 +8,11 @@ import { sanitizeReportProseText } from '@/core/report';
 import { formatGroupedInt } from '@/ui/format';
 import { AutopsyReportCard } from '@/ui/report';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
-import { WaferMapCanvas } from '@/ui/wafer-map';
+import {
+  readPrefersReducedMotionSync,
+  WaferMapCanvas,
+} from '@/ui/wafer-map';
+import { peekLotInitialRevealPlan } from '@/ui/wafer-map/WaferMapCanvas';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
 import { BinsOnlyNotice } from './BinsOnlyNotice';
 
@@ -26,20 +31,50 @@ export interface LoadedLotOverviewProps {
 }
 
 /**
- * Loaded Verdict & Wafer Stage Workspace (`src/ui/layout/LoadedLotOverview.tsx`, `redesign.md` §3.4):
- * - Desktop (`>= 1280px`, `1440 x 900`): `783fr` boxless Wafer Stage (`783 x 720`, `624 Ø`) +
- *   `64 px` Wafer Strip on columns 1–7, `24 px` gutter, `553fr` independently scrolling Verdict Column
- *   (`padding-top: 56px`, `overflow-y: auto; scrollbar-gutter: stable; overscroll-behavior: contain`)
- *   on columns 8–12. Zero page scroll at `>= 820 px` viewport height.
- * - Mobile (`390 x 844`): single column with Verdict + Confidence + Stats first, full-bleed `390 x 390`
- *   Wafer Stage (`350 Ø`) + `390 x 56` Strip second, and Findings list third.
+ * Loaded Verdict & Wafer Stage Workspace (`src/ui/layout/LoadedLotOverview.tsx`, `redesign.md` §3.4, §5.1–§5.3):
+ * - Coordinates the once-per-session §5.1 probe sweep with the §5.2 Verdict rise-in (triggered when
+ *   the sweep reaches `85%`, or immediately on skip / subsequent lot load / `prefers-reduced-motion`).
+ * - Desktop (`>= 1280px`, `1440 x 900`): `783fr` boxless Wafer Stage + `64 px` Strip on columns 1–7,
+ *   `24 px` gutter, `553fr` Verdict Column on columns 8–12.
+ * - Mobile (`390 x 844`): single column with Verdict + Stats first, full-bleed `390 x 456` Stage +
+ *   Strip second, and Findings list third.
  */
 export function LoadedLotOverview({
   data,
   onParseEverything,
   store = useSelectionStore,
 }: LoadedLotOverviewProps): React.JSX.Element {
-  const { lot, yieldSummary, facts, verdict, report } = data;
+  const { lot, probeOrderByWafer, yieldSummary, facts, verdict, report } = data;
+  const shouldReduceMotion = useReducedMotion();
+  const prefersReduced = readPrefersReducedMotionSync(shouldReduceMotion);
+
+  const [revealedLot, setRevealedLot] = React.useState<typeof lot | null>(() => {
+    if (typeof window === 'undefined') {
+      return lot;
+    }
+    const plan = peekLotInitialRevealPlan(lot, prefersReduced);
+    return plan.mode === 'sweep' ? null : lot;
+  });
+
+  // Sync synchronously when switching to a new lot
+  const prevLotRef = React.useRef(lot);
+  if (prevLotRef.current !== lot) {
+    prevLotRef.current = lot;
+    const plan =
+      typeof window === 'undefined'
+        ? { mode: 'reduced' as const }
+        : peekLotInitialRevealPlan(lot, prefersReduced);
+    const nextRevealed = plan.mode === 'sweep' ? null : lot;
+    if (revealedLot !== nextRevealed) {
+      setRevealedLot(nextRevealed);
+    }
+  }
+
+  const handleVerdictRevealTrigger = React.useCallback((): void => {
+    setRevealedLot((prev) => (prev === lot ? prev : lot));
+  }, [lot]);
+
+  const verdictRevealed = prefersReduced || revealedLot === lot;
 
   React.useEffect(() => {
     store.getState().setLot(lot);
@@ -68,6 +103,7 @@ export function LoadedLotOverview({
         verdict={verdict}
         facts={facts}
         yieldSummary={yieldSummary}
+        verdictRevealed={verdictRevealed}
         store={store}
         splitForMobileStage
         className="xl:col-start-2 xl:row-start-1 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:[scrollbar-gutter:stable]"
@@ -86,6 +122,9 @@ export function LoadedLotOverview({
         <WaferMapCanvas
           lot={lot}
           byWaferYield={yieldSummary.byWafer}
+          probeOrderByWafer={probeOrderByWafer}
+          enableInitialReveal
+          onVerdictRevealTrigger={handleVerdictRevealTrigger}
           store={store}
         />
       </div>

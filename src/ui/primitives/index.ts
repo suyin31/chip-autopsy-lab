@@ -48,4 +48,4 @@ export {
   type SegmentedKeyStepResult,
 } from './segmented-control';
 export { ModalSheet, type ModalSheetProps } from './sheet';
-export { ClinicalToaster } from './toaster';
+export { ClinicalToaster, SONNER_TOAST_OPTIONS } from './toaster';

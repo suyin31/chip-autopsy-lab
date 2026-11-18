@@ -2,99 +2,108 @@
 
 import * as React from 'react';
 import { formatByteSize, formatGroupedInt } from '@/ui/format';
-import {
-  Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Progress,
-} from '@/ui/primitives';
-import type { WorkerParsePhase, WorkerParseProgress } from '@/workers';
+import { Untranslated, useT } from '@/ui/i18n';
+import type { WorkerParseProgress } from '@/workers';
 
 export interface IngestProgressPanelProps {
   readonly label: string;
   readonly progress: WorkerParseProgress;
 }
 
-const PHASE_COPY: Readonly<Record<WorkerParsePhase, string>> = {
-  'generating-demo': 'Generating 25-wafer synthetic sort log',
-  decompressing: 'Decompressing gzip stream in Web Worker',
-  parsing: 'Decoding STDF V4 binary records in Web Worker',
-  modeling: 'Resolving retests, edge-ring classification, and multi-site yield',
-};
-
 /**
- * Live off-main-thread Web Worker parse progress panel showing bytes processed,
- * records decoded, and resolved dies in `Geist Mono` tabular numerals.
- *
- * Validates: Requirements 1.10, 14.4, 15.2, 17.3, 17.4
+ * Loading state matching the loaded two-column grid (`redesign.md` §3.3):
+ * - Left 7 columns (`783fr`): boxless wafer stage with a `624 px` (`350 px` mobile)
+ *   silicon disc outline (`ring` only) so nothing jumps when parsing ends.
+ * - Right 5 columns (`553fr`, top-aligned with verdict position):
+ *   1. `headline` primary: file/lot label (1 line, ellipsis)
+ *   2. `8 px` gap, `body` secondary: `"Reading records"` (`aria-live="polite"`)
+ *   3. `16 px` gap, `2 px` progress track (`rgba(255,255,255,0.12)`) driven by
+ *      `transform: scaleX(p)` (`transform-origin: left`), zero layout animation
+ *   4. `8 px` gap, `footnote` tertiary tabular byte readout (`"4.2 of 9.8 MB"`).
+ * - Zero `uppercase` labels and zero monospace labels (§0 #2).
  */
 export function IngestProgressPanel({
   label,
   progress,
 }: IngestProgressPanelProps): React.JSX.Element {
-  const pct =
-    progress.totalBytes !== null && progress.totalBytes > 0
-      ? Math.min(100, (progress.bytesProcessed / progress.totalBytes) * 100)
-      : null;
+  const { t } = useT();
 
-  const phaseText = PHASE_COPY[progress.phase];
+  const ratio =
+    progress.totalBytes !== null && progress.totalBytes > 0
+      ? Math.min(1, Math.max(0, progress.bytesProcessed / progress.totalBytes))
+      : null;
+  const pct = ratio !== null ? ratio * 100 : null;
+  const pctLabel = pct !== null ? `${pct.toFixed(1)}%` : null;
+
+  const statusCopy = t('loading.readingRecords');
+  const bytesCopy =
+    progress.totalBytes !== null && progress.totalBytes > 0
+      ? t('loading.bytes', {
+          done: formatByteSize(progress.bytesProcessed),
+          total: formatByteSize(progress.totalBytes),
+        })
+      : formatByteSize(progress.bytesProcessed);
+
   const valueText =
-    pct !== null && progress.totalBytes !== null
-      ? `${phaseText}: ${pct.toFixed(1)}% (${formatByteSize(progress.bytesProcessed)} of ${formatByteSize(progress.totalBytes)}, ${formatGroupedInt(progress.diesResolved)} dies resolved)`
-      : `${phaseText}: ${formatByteSize(progress.bytesProcessed)} processed, ${formatGroupedInt(progress.diesResolved)} dies resolved`;
+    pctLabel !== null
+      ? `${statusCopy} · ${pctLabel} (${bytesCopy}, ${formatGroupedInt(progress.diesResolved)} dies)`
+      : `${statusCopy} · ${bytesCopy} (${formatGroupedInt(progress.diesResolved)} dies)`;
 
   return (
-    <Card aria-busy="true" aria-label="STDF V4 Worker Parse Progress">
-      <CardHeader className="border-b border-hairline pb-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-mono text-[12px] tracking-wider text-text-tertiary uppercase">
-            Autopsy Report · Web Worker Ingest
-          </span>
-          <Badge variant="accent">
-            {pct !== null ? `${pct.toFixed(1)}%` : progress.phase}
-          </Badge>
-        </div>
-        <CardTitle className="mt-1 text-[20px]">{label}</CardTitle>
-        <div aria-live="polite" aria-atomic="true">
-          <CardDescription>{phaseText}</CardDescription>
-        </div>
-      </CardHeader>
+    <div
+      data-testid="ingest-loading-view"
+      aria-busy="true"
+      className="flex w-full flex-col xl:grid xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,783fr)_minmax(0,553fr)] xl:gap-6"
+    >
+      {/* Right column on desktop / first on mobile: file name + progress stack (§3.3) */}
+      <div className="order-1 flex w-full flex-col xl:order-none xl:col-start-2 xl:row-start-1 xl:pt-14">
+        <p className="truncate type-headline text-text-primary">
+          <Untranslated>{label}</Untranslated>
+        </p>
 
-      <CardContent className="pt-6">
-        <Progress
-          value={pct}
-          valueText={valueText}
-          label={`STDF V4 worker parse progress for ${label}`}
+        <p
+          aria-live="polite"
+          aria-atomic="true"
+          className="mt-2 type-body text-text-secondary"
+        >
+          {statusCopy}
+          {pctLabel !== null ? (
+            <span className="sr-only"> ({pctLabel})</span>
+          ) : null}
+        </p>
+
+        <div
+          role="progressbar"
+          aria-label={t('loading.progressAria', {
+            percent: pctLabel ?? '0%',
+          })}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct !== null ? Math.round(pct) : undefined}
+          aria-valuetext={valueText}
+          className="mt-4 h-0.5 w-full overflow-hidden rounded-pill bg-white/12"
+        >
+          <div
+            style={{
+              transform: `scaleX(${ratio !== null ? Number(ratio.toFixed(4)) : 0.15})`,
+              transformOrigin: 'left',
+            }}
+            className="h-full w-full rounded-pill bg-text-primary transition-transform duration-[120ms] ease-[var(--ease-out)]"
+          />
+        </div>
+
+        <p className="mt-2 type-footnote text-text-tertiary tabular-nums">
+          {bytesCopy}
+        </p>
+      </div>
+
+      {/* Left column on desktop / second on mobile: 624px / 350px wafer disc outline with ring only (§3.3) */}
+      <div className="order-2 -mx-4 mt-6 flex h-[456px] w-[calc(100%+2rem)] items-center justify-center bg-bg md:mx-0 md:h-auto md:aspect-square md:w-full md:max-w-[680px] xl:order-none xl:col-start-1 xl:row-start-1 xl:mt-0 xl:aspect-auto xl:h-full xl:min-h-[600px] xl:max-w-none">
+        <div
+          aria-hidden="true"
+          className="h-[350px] w-[350px] rounded-full ring-surface xl:h-[624px] xl:w-[624px]"
         />
-
-        <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-control border border-hairline bg-raised p-3.5">
-            <dt className="text-[12px] text-text-tertiary">Bytes Processed</dt>
-            <dd className="mt-1 font-mono text-[16px] text-text-primary tabular-nums">
-              {progress.totalBytes !== null
-                ? `${formatByteSize(progress.bytesProcessed)} / ${formatByteSize(progress.totalBytes)}`
-                : formatByteSize(progress.bytesProcessed)}
-            </dd>
-          </div>
-
-          <div className="rounded-control border border-hairline bg-raised p-3.5">
-            <dt className="text-[12px] text-text-tertiary">Records Decoded</dt>
-            <dd className="mt-1 font-mono text-[16px] text-text-primary tabular-nums">
-              {formatGroupedInt(progress.recordsDecoded)}
-            </dd>
-          </div>
-
-          <div className="rounded-control border border-hairline bg-raised p-3.5">
-            <dt className="text-[12px] text-text-tertiary">Dies Resolved</dt>
-            <dd className="mt-1 font-mono text-[16px] text-text-primary tabular-nums">
-              {formatGroupedInt(progress.diesResolved)}
-            </dd>
-          </div>
-        </dl>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

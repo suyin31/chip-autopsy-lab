@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type { RenderedVerdictHero, ReportClaim } from '@/core/report';
 import { cn } from '@/ui/primitives/cn';
+import type { VerdictRiseBlockId } from '@/ui/wafer-map/probe-sweep';
 import { renderWithUntranslatedTokens } from './render-untranslated';
 
 export interface VerdictHeroProps {
@@ -11,10 +12,14 @@ export interface VerdictHeroProps {
   readonly causeAria: string;
   readonly isActive: boolean;
   readonly onToggleClaim: (claim: ReportClaim) => void;
+  readonly renderRiseBlock?: (
+    id: VerdictRiseBlockId,
+    children: React.ReactNode,
+  ) => React.ReactNode;
 }
 
 /**
- * Verdict Hero (`src/ui/report/VerdictHero.tsx`, `redesign.md` §3.4, §3.5, §4.3, §6.6, §6.7):
+ * Verdict Hero (`src/ui/report/VerdictHero.tsx`, `redesign.md` §3.4, §3.5, §4.3, §5.2, §6.6, §6.7):
  * - `<h1>` (`display-l`, <= 2 lines at 553 px desktop, <= 3 lines mobile) with two spans:
  *   1. Prefix (`"Cause of death:"`) in `text-primary`.
  *   2. Cause phrase `<button>` in `failure` orange (`#FF6B2C`), no underline at rest,
@@ -30,6 +35,7 @@ export function VerdictHero({
   causeAria,
   isActive,
   onToggleClaim,
+  renderRiseBlock,
 }: VerdictHeroProps): React.JSX.Element {
   const headingRef = React.useRef<HTMLHeadingElement | null>(null);
   const [steppedDown, setSteppedDown] = React.useState(false);
@@ -87,65 +93,75 @@ export function VerdictHero({
     }
   };
 
-  return (
-    <div data-testid="verdict-hero">
-      <h1
-        ref={headingRef}
-        data-testid="verdict-headline"
-        data-stepped-down={steppedDown ? 'true' : undefined}
-        className="type-display-l text-text-primary"
-      >
-        {verdict.isHealthy ? (
-          <span>
-            {renderWithUntranslatedTokens(
-              verdict.fullHeadline,
-              verdict.untranslatedTokens,
-            )}
-          </span>
-        ) : (
-          <>
-            <span data-testid="verdict-prefix" className="text-text-primary">
-              {verdict.prefix}
-              {joiner}
-            </span>
-            <span>
-              <button
-                type="button"
-                data-testid="autopsy-headline-button"
-                data-claim-id={headlineClaim.claimId}
-                aria-pressed={isActive}
-                aria-label={`${verdict.cause} — ${causeAria}`}
-                onPointerDown={handlePointerDown}
-                onClick={() => onToggleClaim(headlineClaim)}
-                className={cn(
-                  'inline cursor-pointer appearance-none rounded-xs border-0 bg-transparent p-0 py-1.5 -my-1.5 text-left font-[inherit] text-[length:inherit] leading-[inherit] tracking-[inherit] text-failure',
-                  'decoration-[rgba(255,107,44,0.5)] decoration-1 underline-offset-[6px] transition-opacity duration-120 ease-out',
-                  'hover:underline active:opacity-70',
-                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-                  isActive && 'underline decoration-failure',
-                )}
-              >
-                {renderWithUntranslatedTokens(
-                  verdict.cause,
-                  verdict.untranslatedTokens,
-                )}
-              </button>
-            </span>
-          </>
-        )}
-      </h1>
-
-      {verdict.subline.length > 0 ? (
-        <p
-          data-testid="verdict-subline"
-          className="mt-3 line-clamp-2 type-body text-text-secondary md:mt-4"
-        >
+  const headlineNode = (
+    <h1
+      ref={headingRef}
+      data-testid="verdict-headline"
+      data-stepped-down={steppedDown ? 'true' : undefined}
+      className="type-display-l text-text-primary"
+    >
+      {verdict.isHealthy ? (
+        <span>
           {renderWithUntranslatedTokens(
-            verdict.subline,
+            verdict.fullHeadline,
             verdict.untranslatedTokens,
           )}
-        </p>
-      ) : null}
+        </span>
+      ) : (
+        <>
+          <span data-testid="verdict-prefix" className="text-text-primary">
+            {verdict.prefix}
+            {joiner}
+          </span>
+          <span>
+            <button
+              type="button"
+              data-testid="autopsy-headline-button"
+              data-claim-id={headlineClaim.claimId}
+              aria-pressed={isActive}
+              aria-label={`${verdict.cause} — ${causeAria}`}
+              onPointerDown={handlePointerDown}
+              onClick={() => onToggleClaim(headlineClaim)}
+              className={cn(
+                'inline cursor-pointer appearance-none rounded-xs border-0 bg-transparent p-0 py-1.5 -my-1.5 text-left font-[inherit] text-[length:inherit] leading-[inherit] tracking-[inherit] text-failure',
+                'decoration-[rgba(255,107,44,0.5)] decoration-1 underline-offset-[6px] transition-opacity duration-120 ease-out',
+                'hover:underline active:opacity-70',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+                isActive && 'underline decoration-failure',
+              )}
+            >
+              {renderWithUntranslatedTokens(
+                verdict.cause,
+                verdict.untranslatedTokens,
+              )}
+            </button>
+          </span>
+        </>
+      )}
+    </h1>
+  );
+
+  const sublineNode =
+    verdict.subline.length > 0 ? (
+      <p
+        data-testid="verdict-subline"
+        className="mt-3 line-clamp-2 type-body text-text-secondary md:mt-4"
+      >
+        {renderWithUntranslatedTokens(
+          verdict.subline,
+          verdict.untranslatedTokens,
+        )}
+      </p>
+    ) : null;
+
+  return (
+    <div data-testid="verdict-hero">
+      {renderRiseBlock ? renderRiseBlock('headline', headlineNode) : headlineNode}
+      {sublineNode
+        ? renderRiseBlock
+          ? renderRiseBlock('subline', sublineNode)
+          : sublineNode
+        : null}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
@@ -23,6 +24,13 @@ import {
   type SelectionStoreState,
   useSelectionStore,
 } from '@/ui/state';
+import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
+import {
+  computeVerdictRiseSchedule,
+  readPrefersReducedMotionSync,
+  type VerdictRiseBlockId,
+  type VerdictRiseStepSpec,
+} from '@/ui/wafer-map/probe-sweep';
 import { ConfidencePill } from './ConfidencePill';
 import { FindingsList } from './FindingsList';
 import { StatRow } from './StatRow';
@@ -48,6 +56,11 @@ export interface AutopsyReportCardProps {
    * on mobile (`redesign.md` §3.4) while staying a single scrollable `553 px` column on desktop.
    */
   readonly splitForMobileStage?: boolean;
+  /**
+   * Controls §5.2 Verdict rise-in trigger (`true` once the §5.1 probe sweep reaches `85%`,
+   * or immediately on skip / subsequent load / reduced motion / standalone tests).
+   */
+  readonly verdictRevealed?: boolean;
   readonly className?: string;
 }
 
@@ -269,9 +282,73 @@ export function AutopsyReportCard({
   defaultConfidenceOpen = false,
   binsOnlyNotice,
   splitForMobileStage = false,
+  verdictRevealed = true,
   className,
 }: AutopsyReportCardProps): React.JSX.Element {
   const { locale, t, tPlural } = useT();
+  const shouldReduceMotion = useReducedMotion();
+  const prefersReduced = readPrefersReducedMotionSync(shouldReduceMotion);
+  const effectiveRevealed = prefersReduced || verdictRevealed;
+
+  const riseByBlock = React.useMemo(() => {
+    const schedule = computeVerdictRiseSchedule(prefersReduced);
+    const map = new Map<VerdictRiseBlockId, VerdictRiseStepSpec>();
+    for (const step of schedule) {
+      map.set(step.id, step);
+    }
+    return map;
+  }, [prefersReduced]);
+
+  const buildRiseMotionProps = React.useCallback(
+    (id: VerdictRiseBlockId) => {
+      const step = riseByBlock.get(id)!;
+      if (prefersReduced) {
+        return {
+          'data-verdict-rise-block': id,
+          'data-rise-stagger-ms': 0,
+          initial: false as const,
+          animate: { opacity: 1 },
+          transition: {
+            duration: (step.durationMs ?? 120) / 1000,
+            ease: MOTION_TOKENS.easeOutTuple,
+          },
+        };
+      }
+      return {
+        'data-verdict-rise-block': id,
+        'data-rise-stagger-ms': step.delayMs,
+        initial: {
+          opacity: 0,
+          y: step.initialY,
+          filter: `blur(${step.initialBlurPx}px)`,
+        },
+        animate: effectiveRevealed
+          ? {
+              opacity: 1,
+              y: 0,
+              filter: 'blur(0px)',
+              transitionEnd: { filter: 'none' },
+            }
+          : {
+              opacity: 0,
+              y: step.initialY,
+              filter: `blur(${step.initialBlurPx}px)`,
+            },
+        transition: {
+          ...(step.spring ?? SPRING_TOKENS.ui),
+          delay: effectiveRevealed ? step.delayMs / 1000 : 0,
+        },
+      };
+    },
+    [effectiveRevealed, prefersReduced, riseByBlock],
+  );
+
+  const renderHeroRiseBlock = React.useCallback(
+    (id: VerdictRiseBlockId, children: React.ReactNode): React.ReactNode => (
+      <motion.div {...buildRiseMotionProps(id)}>{children}</motion.div>
+    ),
+    [buildRiseMotionProps],
+  );
 
   const { storeLot, activeClaimId, hasActiveFilter, selectedDieMask } =
     useStore(
@@ -418,34 +495,52 @@ export function AutopsyReportCard({
             effectiveActiveClaimId === report.causeOfDeathHeadline.claimId
           }
           onToggleClaim={handleToggleClaim}
+          renderRiseBlock={renderHeroRiseBlock}
         />
 
-        <ConfidencePill
-          confidence={rendered.confidence}
-          defaultOpen={defaultConfidenceOpen}
+        <motion.div
+          {...buildRiseMotionProps('confidence')}
           className="mt-3 md:mt-5"
-        />
+        >
+          <ConfidencePill
+            confidence={rendered.confidence}
+            defaultOpen={defaultConfidenceOpen}
+          />
+          {binsOnlyNotice ? <div className="mt-3">{binsOnlyNotice}</div> : null}
+        </motion.div>
 
-        {binsOnlyNotice ? <div className="mt-3">{binsOnlyNotice}</div> : null}
-
-        <StatRow stats={renderedStats} className="mt-6 md:mt-10" />
+        <motion.div
+          {...buildRiseMotionProps('stats')}
+          className="mt-6 md:mt-10"
+        >
+          <StatRow
+            key={lot.lotId}
+            stats={renderedStats}
+            revealStarted={effectiveRevealed}
+            revealDelayMs={riseByBlock.get('stats')?.delayMs ?? 0}
+          />
+        </motion.div>
       </div>
 
-      <FindingsList
-        heading={rendered.findingsHeading}
-        clearLabel={rendered.clearLabel}
-        possibleCausesHeading={rendered.possibleCausesHeading}
-        findings={visibleFindings}
-        hypotheses={rendered.hypotheses}
-        activeClaimId={effectiveActiveClaimId}
-        selectionMask={effectiveSelectionMask}
-        defaultHypothesesOpen={defaultHypothesesOpen}
-        onToggleClaim={handleToggleClaim}
+      <motion.div
+        {...buildRiseMotionProps('findings')}
         className={cn(
           'mt-8 md:mt-12',
           splitForMobileStage && 'order-3 xl:order-none',
         )}
-      />
+      >
+        <FindingsList
+          heading={rendered.findingsHeading}
+          clearLabel={rendered.clearLabel}
+          possibleCausesHeading={rendered.possibleCausesHeading}
+          findings={visibleFindings}
+          hypotheses={rendered.hypotheses}
+          activeClaimId={effectiveActiveClaimId}
+          selectionMask={effectiveSelectionMask}
+          defaultHypothesesOpen={defaultHypothesesOpen}
+          onToggleClaim={handleToggleClaim}
+        />
+      </motion.div>
     </section>
   );
 }
