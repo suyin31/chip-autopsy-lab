@@ -15,3 +15,8 @@ Fix in R8 pass:
 
 ## R8 status (verified by e2e/perf-gate.spec.ts visual-acceptance test)
 - Fixed: R4 items (nav Open STDF 14px and hidden on landing, 190px thumbnails), (d) mobile HUD moved to top 8px so gap above disc >= 12px, (e) all 25 strip labels, (f) strip right-edge fade mask, (g) stat tracking < 0 with tabular-nums, (h) nav label <= wordmark.
+
+## R8 pass (assistant, 2026-11-18 17:50) — shots logs/shots/r8-*.png, video r8-demo.mp4
+- Overall pass. Mobile HUD gap fixed (d), strip right fade present (f), finding click lights cited dies + expands row.
+- New minor: selected thumbnail ring (W01) clipped at top on desktop strip; selection label "W01" overlaps ring bottom. Fix in Task 19 polish.
+- Stat numerals (light weight) still look slightly loose; recheck tracking -0.02em in Task 19.
