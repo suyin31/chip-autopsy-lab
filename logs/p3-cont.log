@@ -1,0 +1,75 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=53
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=99
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=87
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=61
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=103
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=65
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now tick the task and log progress.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=215
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+P3 (theme mechanism) is done. The previous session had already committed nearly all of it. The one gap left was a stylesheet rule that set `color-scheme: dark` on every page, light theme included. I changed `src/app/globals.css` so `color-scheme` now follows `data-theme`.
+
+Typecheck and lint pass, and `pnpm test` passes 239 of 239 across 42 files. I rebuilt the app and ran the three related e2e specs (`theme-p3`, `theme-tokens-p2`, `landing-r4`); all 7 of their tests pass. Those tests cover A2 without the menu:
+- **Dark OS:** with Match system, the page is dark from the first frame.
+- **Light OS:** the page is light, and it follows OS changes live.
+- **Stored "light" or "dark":** survives reload and ignores OS changes.
+- **Invalid stored value:** falls back to Match system.
+
+What the earlier commit already did:
+- **First paint:** a script runs before the page renders. It reads `localStorage["cal.theme"]` (default `"system"`) and sets `data-theme`, `color-scheme` and the `theme-color` meta (`#F5F5F7` light, `#000000` dark).
+- **Store and controller:** a Zustand `theme` slice with `useResolvedTheme()`, plus a `ThemeController` that saves preference changes and listens for OS dark/light changes.
+- **Cleanup:** the hard-coded `dark` class, the fixed theme colour and the old fallback styles are gone from `layout.tsx` and `globals.css`. The landing screenshots were updated for the light default.
+
+Two decisions where premium.md is silent, both noted in `logs/progress.md`:
+- **No wafer redraw on theme change yet.** The wafer canvases currently use colours that are the same in both themes. P5–P8 can subscribe to `useResolvedTheme()` when they add theme-dependent drawing.
+- **No syncing between open tabs.** Changing the theme in one tab does not update other open tabs.
+
+I ticked P3 in `tasks.md` and added the progress entry. The changes to `logs/prompt-p3.txt` and `tools/premium_step.sh` and the untracked `logs/p3-cont.log` were already there before this session, so I left them alone.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=146
+

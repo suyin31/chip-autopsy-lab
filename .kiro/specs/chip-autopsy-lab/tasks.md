@@ -222,7 +222,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P2. Colour, elevation, radius, and motion tokens
   - `src/ui/tokens/palette.ts` exports `THEME_TOKENS.light`, `THEME_TOKENS.dark`, `WAFER_TOKENS`, bin palettes (`bin-n`, `bin-n-ink`), and `bar-neutral`; `globals.css` defines the variables under `:root[data-theme]` and maps them in `@theme inline`; contrast tests for every ratio in premium §3.2, §3.3, §3.5 (premium §3.2–§3.12, §7.9).
   - Accept: A1 (tokens), A13 (token ratio); palette tests assert `text-tertiary` >= 4.5:1 on `bg`, `surface`, `surface-sunken` in both themes.
-- [ ] P3. Theme mechanism
+- [x] P3. Theme mechanism
   - Pre-hydration script for `data-theme` and `color-scheme`, `localStorage["cal.theme"]`, `DEFAULT_THEME_PREFERENCE = "system"`, live `matchMedia` listener, `theme-color` meta, Zustand `theme` slice and `useResolvedTheme()` (premium §3.1).
   - Accept: A2 (without the menu, set via `localStorage`).
 - [ ] P4. Typography
