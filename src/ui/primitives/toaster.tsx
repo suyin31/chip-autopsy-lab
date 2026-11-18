@@ -16,7 +16,7 @@ export const SONNER_TOAST_OPTIONS = {
       'surface-material flex w-[360px] max-w-[calc(100vw-2rem)] items-start gap-3 rounded-lg px-4 py-3 text-text-primary shadow-none',
     content: 'flex min-w-0 flex-1 flex-col gap-0.5',
     title: 'type-callout text-text-primary',
-    description: 'type-footnote text-text-secondary tabular-nums',
+    description: 'type-subhead text-text-secondary tabular-nums',
     actionButton:
       'shrink-0 cursor-pointer self-center rounded-pill bg-transparent px-2 py-1 type-control text-text-secondary shadow-none transition-colors duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
     cancelButton:

@@ -152,37 +152,23 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
     }
     expect(TYPOGRAPHY_TOKENS.displayXl.desktop).toEqual({
       sizePx: 80,
-      lineHeight: 1.05,
+      lineHeight: 1.04,
       weight: 600,
       trackingEm: -0.035,
-      opsz: 32,
-    });
-    expect(TYPOGRAPHY_TOKENS.displayXl.mobile).toEqual({
-      sizePx: 48,
-      lineHeight: 1.06,
-      weight: 600,
-      trackingEm: -0.03,
-      opsz: 32,
-    });
-    expect(TYPOGRAPHY_TOKENS.displayL.desktop).toEqual({
-      sizePx: 48,
-      lineHeight: 1.08,
-      weight: 600,
-      trackingEm: -0.022,
       opsz: 32,
     });
     expect(TYPOGRAPHY_TOKENS.displayL.mobile).toEqual({
       sizePx: 32,
       lineHeight: 1.12,
       weight: 600,
-      trackingEm: -0.018,
+      trackingEm: -0.02,
       opsz: 32,
     });
     expect(TYPOGRAPHY_TOKENS.stat.desktop).toEqual({
       sizePx: 40,
       lineHeight: 1.0,
       weight: 300,
-      trackingEm: -0.02,
+      trackingEm: -0.022,
       opsz: 32,
     });
     expect(TYPOGRAPHY_TOKENS.headline.desktop.weight).toBe(590);

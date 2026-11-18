@@ -161,7 +161,7 @@ export function FindingsList({
                   <span className="min-w-0">
                     <span
                       data-testid="finding-row-headline"
-                      className="block type-headline text-text-primary md:truncate"
+                      className="block type-row-title text-text-primary md:truncate"
                     >
                       {renderWithUntranslatedTokens(
                         row.headline,
@@ -171,7 +171,7 @@ export function FindingsList({
                     {row.subline.length > 0 ? (
                       <span
                         data-testid="finding-row-subline"
-                        className="mt-0.5 line-clamp-2 block type-callout text-text-secondary md:line-clamp-none md:truncate"
+                        className="mt-0.5 line-clamp-2 block type-subhead text-text-secondary md:line-clamp-none md:truncate"
                       >
                         {renderWithUntranslatedTokens(
                           row.subline,
@@ -191,7 +191,7 @@ export function FindingsList({
                   ) : (
                     <span
                       data-testid="claim-cited-dies-count"
-                      className="type-footnote whitespace-nowrap text-text-tertiary tabular-nums"
+                      className="type-subhead whitespace-nowrap text-text-tertiary tabular-nums"
                     >
                       {trailingCountLabel}
                     </span>
@@ -310,7 +310,7 @@ export function FindingsList({
                 {hypothesesOpen
                   ? hypotheses.map((item) => (
                       <div key={item.id} data-testid="hypothesis-item">
-                        <p className="type-headline text-text-primary">
+                        <p className="type-row-title text-text-primary">
                           {item.headline}
                         </p>
                         <p className="mt-0.5 type-callout text-text-secondary">

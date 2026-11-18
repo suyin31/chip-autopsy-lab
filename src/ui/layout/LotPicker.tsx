@@ -238,7 +238,7 @@ export function LotPicker({
                   <span className="truncate type-headline text-text-primary">
                     {title}
                   </span>
-                  <span className="type-footnote text-text-tertiary tabular-nums">
+                  <span className="type-subhead text-text-tertiary tabular-nums">
                     {yieldText}
                   </span>
                 </span>
@@ -269,7 +269,7 @@ export function LotPicker({
                     <Untranslated className="truncate type-control text-text-primary">
                       {cleanName}
                     </Untranslated>
-                    <span className="type-footnote text-text-tertiary tabular-nums">
+                    <span className="type-subhead text-text-tertiary tabular-nums">
                       {formatFileSize(entry.byteSize)}
                     </span>
                   </span>

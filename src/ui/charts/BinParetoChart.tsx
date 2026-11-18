@@ -289,7 +289,7 @@ export function BinParetoChart({
                       style={{ transform: 'translateX(-2px)' }}
                     />
                   </svg>
-                  <span className="mt-1.5 block type-footnote text-text-tertiary tabular-nums">
+                  <span className="mt-1.5 block type-subhead text-text-tertiary tabular-nums">
                     {t('pareto.rowDetail', {
                       share: formatPercent(entry.shareOfTested),
                       cumulative: formatPercent(entry.cumulativeFailShare),

@@ -802,7 +802,7 @@ export function DropdownMenuLabel({
   return (
     <div
       className={cn(
-        'px-3 py-1.5 type-footnote text-text-tertiary select-none',
+        'px-3 py-1.5 type-subhead text-text-tertiary select-none',
         className,
       )}
       {...props}

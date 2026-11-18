@@ -225,7 +225,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P3. Theme mechanism
   - Pre-hydration script for `data-theme` and `color-scheme`, `localStorage["cal.theme"]`, `DEFAULT_THEME_PREFERENCE = "system"`, live `matchMedia` listener, `theme-color` meta, Zustand `theme` slice and `useResolvedTheme()` (premium §3.1).
   - Accept: A2 (without the menu, set via `localStorage`).
-- [ ] P4. Typography
+- [x] P4. Typography
   - Type tokens and utilities for every style in premium §4.2, Inter feature settings, `opsz` on display roles, CJK line-heights, sizes, and break rules (premium §4.1–§4.3).
   - Accept: computed styles match §4.2 for `display-l`, `stat`, `row-title`, `subhead` at 1440 and 390; A40 letter-spacing check.
 

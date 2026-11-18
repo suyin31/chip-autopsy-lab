@@ -217,7 +217,7 @@ export function ConfidencePill({
         onPointerCancel={releaseSpringScale}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "relative inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-pill bg-surface-2 px-3 type-footnote text-text-secondary select-none after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']",
+          "relative inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-pill bg-surface-2 px-3 type-subhead text-text-secondary select-none after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']",
           'transition-[background-color,color] duration-120 ease-out',
           'hover:bg-surface-3 hover:text-text-primary',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',

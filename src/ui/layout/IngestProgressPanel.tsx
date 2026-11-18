@@ -92,7 +92,7 @@ export function IngestProgressPanel({
           />
         </div>
 
-        <p className="mt-2 type-footnote text-text-tertiary tabular-nums">
+        <p className="mt-2 type-subhead text-text-tertiary tabular-nums">
           {bytesCopy}
         </p>
       </div>

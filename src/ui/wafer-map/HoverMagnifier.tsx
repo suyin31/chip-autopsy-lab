@@ -737,7 +737,7 @@ const HoverMagnifierImpl = React.forwardRef<
             data-testid="magnifier-readout"
             className="grid auto-rows-[18px] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 px-0.5"
           >
-            <span className="type-footnote leading-[18px] text-text-tertiary">
+            <span className="type-subhead leading-[18px] text-text-tertiary">
               {t('magnifier.coords')}
             </span>
             <span
@@ -747,14 +747,14 @@ const HoverMagnifierImpl = React.forwardRef<
               <Untranslated>{readout.coordsText}</Untranslated>
             </span>
 
-            <span className="type-footnote leading-[18px] text-text-tertiary">
+            <span className="type-subhead leading-[18px] text-text-tertiary">
               {t('magnifier.site')}
             </span>
             <span className="truncate text-right type-mono-data leading-[18px] text-text-primary">
               <Untranslated>{readout.siteText}</Untranslated>
             </span>
 
-            <span className="type-footnote leading-[18px] text-text-tertiary">
+            <span className="type-subhead leading-[18px] text-text-tertiary">
               {t('magnifier.bin')}
             </span>
             <span className="inline-flex min-w-0 items-center justify-end gap-1.5 text-right type-mono-data leading-[18px] text-text-primary">
@@ -774,7 +774,7 @@ const HoverMagnifierImpl = React.forwardRef<
               <Untranslated className="truncate">{readout.binLabel}</Untranslated>
             </span>
 
-            <span className="type-footnote leading-[18px] text-text-tertiary">
+            <span className="type-subhead leading-[18px] text-text-tertiary">
               {t('magnifier.hbin')}
             </span>
             <span className="truncate text-right type-mono-data leading-[18px] text-text-primary">
@@ -783,7 +783,7 @@ const HoverMagnifierImpl = React.forwardRef<
 
             {readout.keyTests.map((kt) => (
               <React.Fragment key={kt.testNum}>
-                <span className="truncate type-footnote leading-[18px] text-text-tertiary">
+                <span className="truncate type-subhead leading-[18px] text-text-tertiary">
                   <Untranslated>{kt.label}</Untranslated>
                 </span>
                 <span
@@ -804,7 +804,7 @@ const HoverMagnifierImpl = React.forwardRef<
 
             {readout.retestCount > 0 ? (
               <>
-                <span className="type-footnote leading-[18px] text-text-tertiary">
+                <span className="type-subhead leading-[18px] text-text-tertiary">
                   {t('magnifier.retested')}
                 </span>
                 <span className="truncate text-right type-mono-data leading-[18px] text-text-primary">
@@ -815,7 +815,7 @@ const HoverMagnifierImpl = React.forwardRef<
               </>
             ) : null}
 
-            <span className="type-footnote leading-[18px] text-text-tertiary">
+            <span className="type-subhead leading-[18px] text-text-tertiary">
               {t('magnifier.notch')}
             </span>
             <span className="truncate text-right type-mono-data leading-[18px] text-text-tertiary">

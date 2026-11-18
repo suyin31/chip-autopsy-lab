@@ -281,7 +281,7 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
 
     expect(SONNER_TOAST_OPTIONS.classNames.title).toContain('type-callout');
     expect(SONNER_TOAST_OPTIONS.classNames.description).toContain(
-      'type-footnote',
+      'type-subhead',
     );
     expect(SONNER_TOAST_OPTIONS.classNames.description).not.toContain(
       'font-mono',

@@ -166,7 +166,7 @@ export function YieldSummaryPanel({
             key={stat.id}
             className="flex min-w-0 flex-col-reverse justify-end gap-1"
           >
-            <dt className="type-footnote text-text-secondary">{stat.label}</dt>
+            <dt className="type-subhead text-text-secondary">{stat.label}</dt>
             <dd
               data-testid={`yield-lot-${stat.id}`}
               className="type-title-3 text-text-primary tabular-nums"
@@ -182,7 +182,7 @@ export function YieldSummaryPanel({
           <div
             className={cn(
               ROW_GRID,
-              'px-4 pb-1 type-footnote text-text-tertiary',
+              'px-4 pb-1 type-subhead text-text-tertiary',
             )}
           >
             <h3 className="min-w-0 truncate font-[inherit]">
@@ -226,7 +226,7 @@ export function YieldSummaryPanel({
                         <span
                           id={noteId}
                           data-testid="yield-site-anomaly"
-                          className="block type-footnote text-text-secondary"
+                          className="block type-subhead text-text-secondary"
                         >
                           {t('yield.siteLow')}
                         </span>
@@ -245,7 +245,7 @@ export function YieldSummaryPanel({
         <div
           className={cn(
             ROW_GRID,
-            'px-4 pb-1 type-footnote text-text-tertiary',
+            'px-4 pb-1 type-subhead text-text-tertiary',
           )}
         >
           <h3 className="min-w-0 truncate font-[inherit]">

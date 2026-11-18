@@ -299,79 +299,93 @@
   --dur-fast: 120ms;
   --dur-base: 160ms;
 
-  /* Responsive typography scale custom properties — desktop defaults (redesign.md §2.2) */
+  /* Type scale (premium.md §4.2): desktop >= 1440, then the 1280 / 1024 steps, mobile < 640 */
   --size-display-xl: 80px;
-  --leading-display-xl: 1.05;
+  --leading-display-xl: 1.04;
   --tracking-display-xl: -0.035em;
-
-  --size-display-l: clamp(40px, 3.33vw, 48px);
+  --size-display-l: 48px;
   --leading-display-l: 1.08;
-  --tracking-display-l: -0.022em;
-
+  --tracking-display-l: -0.024em;
+  --size-title-1: 34px;
+  --leading-title-1: 1.12;
+  --tracking-title-1: -0.02em;
+  --size-title-2: 24px;
+  --leading-title-2: 1.2;
+  --tracking-title-2: -0.016em;
+  --size-title-3: 21px;
+  --leading-title-3: 1.38;
+  --tracking-title-3: -0.01em;
   --size-stat: 40px;
   --leading-stat: 1;
-  --tracking-stat: -0.025em;
-
-  --size-title-2: 28px;
-  --leading-title-2: 1.14;
-  --tracking-title-2: -0.016em;
-
-  --size-title-3: 21px;
-  --leading-title-3: 1.24;
-  --tracking-title-3: -0.01em;
-
+  --tracking-stat: -0.022em;
+  --size-stat-s: 28px;
+  --leading-stat-s: 1;
+  --tracking-stat-s: -0.016em;
   --size-headline: 17px;
   --leading-headline: 1.29;
-  --tracking-headline: -0.008em;
-
+  --tracking-headline: -0.012em;
   --size-body: 17px;
   --leading-body: 1.47;
-  --tracking-body: -0.008em;
-
+  --tracking-body: -0.012em;
+  --size-row-title: 15px;
+  --leading-row-title: 1.33;
+  --tracking-row-title: -0.008em;
   --size-callout: 15px;
   --leading-callout: 1.4;
-  --tracking-callout: -0.004em;
-
+  --tracking-callout: -0.006em;
   --size-control: 14px;
   --leading-control: 1.29;
-  --tracking-control: -0.003em;
-
-  --size-footnote: 13px;
-  --leading-footnote: 1.38;
-  --tracking-footnote: 0em;
-
+  --tracking-control: -0.006em;
+  --size-subhead: 13px;
+  --leading-subhead: 1.38;
+  --tracking-subhead: -0.003em;
   --size-caption: 12px;
   --leading-caption: 1.33;
-  --tracking-caption: 0.01em;
+  --tracking-caption: 0em;
+  --size-mono-data: 13px;
+  --leading-mono-data: 1.45;
+  --tracking-mono-data: 0em;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1439px) {
+  :root {
+    --size-display-l: 44px;
+  }
+}
+
+@media (max-width: 1279px) {
+  :root {
+    --size-display-l: 36px;
+    --size-stat: 32px;
+  }
+}
+
+@media (max-width: 639px) {
   :root {
     --size-display-xl: 48px;
     --leading-display-xl: 1.06;
     --tracking-display-xl: -0.03em;
-
     --size-display-l: 32px;
     --leading-display-l: 1.12;
-    --tracking-display-l: -0.018em;
-
-    --size-stat: 28px;
-    --tracking-stat: -0.02em;
-
-    --size-title-2: 24px;
-    --leading-title-2: 1.17;
-    --tracking-title-2: -0.014em;
-
+    --tracking-display-l: -0.02em;
+    --size-title-1: 28px;
+    --leading-title-1: 1.14;
+    --tracking-title-1: -0.018em;
+    --size-title-2: 21px;
+    --leading-title-2: 1.24;
+    --tracking-title-2: -0.012em;
     --size-title-3: 17px;
-    --leading-title-3: 1.29;
-    --tracking-title-3: -0.008em;
-
+    --leading-title-3: 1.41;
+    --tracking-title-3: -0.006em;
+    --size-stat: 28px;
+    --tracking-stat: -0.016em;
+    --size-stat-s: 24px;
+    --tracking-stat-s: -0.012em;
     --size-headline: 16px;
     --leading-headline: 1.31;
-    --tracking-headline: -0.006em;
-
+    --tracking-headline: -0.01em;
     --size-body: 15px;
-    --tracking-body: -0.004em;
+    --tracking-body: -0.006em;
   }
 }
 
@@ -392,46 +406,57 @@
   --font-cjk: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR";
 }
 
-/* CJK typography token overrides (redesign.md §6.7) */
+/* CJK typography (premium.md §4.3): zero tracking, taller leading, CJK display sizes, no italics */
 :root:is([lang="zh-CN"], [lang="zh-TW"], [lang="ja"], [lang="ko"]),
 :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko)) {
   --size-display-xl: 64px;
+  --size-display-l: 44px;
   --leading-display-xl: 1.2;
-  --tracking-display-xl: 0em;
-
-  --size-display-l: clamp(38px, 3.05vw, 44px);
   --leading-display-l: 1.25;
-  --tracking-display-l: 0em;
-
-  --tracking-stat: 0em;
-
-  --leading-title-2: 1.25;
-  --tracking-title-2: 0em;
-
+  --leading-title-1: 1.35;
+  --leading-title-2: 1.35;
   --leading-title-3: 1.35;
-  --tracking-title-3: 0em;
-
   --leading-headline: 1.4;
+  --leading-body: 1.7;
+  --leading-row-title: 1.4;
+  --leading-callout: 1.7;
+  --leading-subhead: 1.55;
+  --leading-caption: 1.55;
+  --tracking-display-xl: 0em;
+  --tracking-display-l: 0em;
+  --tracking-title-1: 0em;
+  --tracking-title-2: 0em;
+  --tracking-title-3: 0em;
+  --tracking-stat: 0em;
+  --tracking-stat-s: 0em;
   --tracking-headline: 0em;
-
-  --leading-body: 1.65;
   --tracking-body: 0em;
-
-  --leading-callout: 1.65;
+  --tracking-row-title: 0em;
   --tracking-callout: 0em;
-
   --tracking-control: 0em;
-
-  --leading-footnote: 1.5;
-  --tracking-footnote: 0em;
-
+  --tracking-subhead: 0em;
   --tracking-caption: 0em;
+  --tracking-mono-data: 0em;
 
   letter-spacing: 0;
   font-style: normal;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1439px) {
+  :root:is([lang="zh-CN"], [lang="zh-TW"], [lang="ja"], [lang="ko"]),
+  :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko)) {
+    --size-display-l: 40px;
+  }
+}
+
+@media (max-width: 1279px) {
+  :root:is([lang="zh-CN"], [lang="zh-TW"], [lang="ja"], [lang="ko"]),
+  :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko)) {
+    --size-display-l: 32px;
+  }
+}
+
+@media (max-width: 639px) {
   :root:is([lang="zh-CN"], [lang="zh-TW"], [lang="ja"], [lang="ko"]),
   :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko)) {
     --size-display-xl: 40px;
@@ -454,9 +479,15 @@
     border-color: var(--color-separator);
   }
 
+  /* Global Inter settings (premium.md §4.1) */
   html {
     background-color: var(--bg);
     color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-optical-sizing: auto;
+    font-feature-settings: "cv11", "ss03";
+    text-rendering: optimizeLegibility;
   }
 
   body {
@@ -467,10 +498,6 @@
     font-weight: 400;
     line-height: var(--leading-body);
     letter-spacing: var(--tracking-body);
-    font-optical-sizing: auto;
-    font-feature-settings: "cv11", "ss01";
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Headings use Inter optical sizing, balance wrapping, weights <= 600 (never >= 700) */
@@ -487,11 +514,12 @@
     text-wrap: balance;
   }
 
-  p {
+  p,
+  li {
     text-wrap: pretty;
   }
 
-  :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko)) p {
+  :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko)) :is(p, li) {
     text-wrap: wrap;
   }
 
@@ -551,7 +579,7 @@
 }
 
 @layer components {
-  /* Typography scale utilities (redesign.md §2.2) — placed in @layer components so @layer utilities (e.g. truncate, whitespace-nowrap) compose cleanly */
+  /* Type styles (premium.md §4.2), in @layer components so @layer utilities (truncate, whitespace-nowrap) compose cleanly. Display roles set opsz 32; numerals are tabular except on display-xl / display-l. */
   .type-display-xl {
     font-size: var(--size-display-xl);
     line-height: var(--leading-display-xl);
@@ -570,26 +598,46 @@
     text-wrap: balance;
   }
 
+  /* Verdict step-down (premium.md §4.3: display-l -> 40); never grows past the breakpoint size */
   .type-display-l[data-stepped-down="true"] {
-    font-size: 40px;
+    font-size: min(40px, var(--size-display-l));
   }
 
-  @media (max-width: 767px) {
+  @media (max-width: 639px) {
     .type-display-l[data-stepped-down="true"] {
       font-size: 28px;
     }
-  }
 
-  :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko))
-    .type-display-l[data-stepped-down="true"] {
-    font-size: 38px;
-  }
-
-  @media (max-width: 767px) {
     :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko))
       .type-display-l[data-stepped-down="true"] {
       font-size: 26px;
     }
+  }
+
+  .type-title-1 {
+    font-size: var(--size-title-1);
+    line-height: var(--leading-title-1);
+    font-weight: 600;
+    letter-spacing: var(--tracking-title-1);
+    font-variation-settings: "opsz" 32;
+    text-wrap: balance;
+  }
+
+  .type-title-2 {
+    font-size: var(--size-title-2);
+    line-height: var(--leading-title-2);
+    font-weight: 600;
+    letter-spacing: var(--tracking-title-2);
+    font-variation-settings: "opsz" 32;
+    text-wrap: balance;
+  }
+
+  .type-title-3 {
+    font-size: var(--size-title-3);
+    line-height: var(--leading-title-3);
+    font-weight: 400;
+    letter-spacing: var(--tracking-title-3);
+    text-wrap: pretty;
   }
 
   .type-stat {
@@ -601,8 +649,80 @@
     font-variant-numeric: tabular-nums;
   }
 
-  :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko)) .type-stat {
-    letter-spacing: -0.02em;
+  .type-stat-s {
+    font-size: var(--size-stat-s);
+    line-height: var(--leading-stat-s);
+    font-weight: 300;
+    letter-spacing: var(--tracking-stat-s);
+    font-variation-settings: "opsz" 32;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .type-headline {
+    font-size: var(--size-headline);
+    line-height: var(--leading-headline);
+    font-weight: 590;
+    letter-spacing: var(--tracking-headline);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .type-body {
+    font-size: var(--size-body);
+    line-height: var(--leading-body);
+    font-weight: 400;
+    letter-spacing: var(--tracking-body);
+    font-variant-numeric: tabular-nums;
+    text-wrap: pretty;
+  }
+
+  .type-row-title {
+    font-size: var(--size-row-title);
+    line-height: var(--leading-row-title);
+    font-weight: 590;
+    letter-spacing: var(--tracking-row-title);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .type-callout {
+    font-size: var(--size-callout);
+    line-height: var(--leading-callout);
+    font-weight: 400;
+    letter-spacing: var(--tracking-callout);
+    font-variant-numeric: tabular-nums;
+    text-wrap: pretty;
+  }
+
+  .type-control {
+    font-size: var(--size-control);
+    line-height: var(--leading-control);
+    font-weight: 500;
+    letter-spacing: var(--tracking-control);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .type-subhead {
+    font-size: var(--size-subhead);
+    line-height: var(--leading-subhead);
+    font-weight: 400;
+    letter-spacing: var(--tracking-subhead);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .type-caption {
+    font-size: var(--size-caption);
+    line-height: var(--leading-caption);
+    font-weight: 500;
+    letter-spacing: var(--tracking-caption);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .type-mono-data {
+    font-family: var(--font-mono);
+    font-size: var(--size-mono-data);
+    line-height: var(--leading-mono-data);
+    font-weight: 400;
+    letter-spacing: var(--tracking-mono-data);
+    font-variant-numeric: tabular-nums;
   }
 
   .wafer-strip-mask {
@@ -620,76 +740,6 @@
       #000000 calc(100% - 24px),
       transparent 100%
     );
-  }
-
-  .type-title-2 {
-    font-size: var(--size-title-2);
-    line-height: var(--leading-title-2);
-    font-weight: 600;
-    letter-spacing: var(--tracking-title-2);
-    font-variation-settings: "opsz" 32;
-    text-wrap: balance;
-  }
-
-  .type-title-3 {
-    font-size: var(--size-title-3);
-    line-height: var(--leading-title-3);
-    font-weight: 500;
-    letter-spacing: var(--tracking-title-3);
-    text-wrap: pretty;
-  }
-
-  .type-headline {
-    font-size: var(--size-headline);
-    line-height: var(--leading-headline);
-    font-weight: 590;
-    letter-spacing: var(--tracking-headline);
-  }
-
-  .type-body {
-    font-size: var(--size-body);
-    line-height: var(--leading-body);
-    font-weight: 400;
-    letter-spacing: var(--tracking-body);
-    text-wrap: pretty;
-  }
-
-  .type-callout {
-    font-size: var(--size-callout);
-    line-height: var(--leading-callout);
-    font-weight: 400;
-    letter-spacing: var(--tracking-callout);
-    text-wrap: pretty;
-  }
-
-  .type-control {
-    font-size: var(--size-control);
-    line-height: var(--leading-control);
-    font-weight: 500;
-    letter-spacing: var(--tracking-control);
-  }
-
-  .type-footnote {
-    font-size: var(--size-footnote);
-    line-height: var(--leading-footnote);
-    font-weight: 400;
-    letter-spacing: var(--tracking-footnote);
-  }
-
-  .type-caption {
-    font-size: var(--size-caption);
-    line-height: var(--leading-caption);
-    font-weight: 500;
-    letter-spacing: var(--tracking-caption);
-  }
-
-  .type-mono-data {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    line-height: 1.38;
-    font-weight: 400;
-    letter-spacing: 0;
-    font-variant-numeric: tabular-nums;
   }
 
   /* Translucent material + shadow-as-border ring, zero drop shadows (redesign.md §2.1, §2.4) */

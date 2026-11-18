@@ -299,7 +299,7 @@ function DemoLotCardButton({
         <span className="mt-1 truncate type-callout text-text-secondary">
           {description}
         </span>
-        <span className="mt-2 truncate type-footnote text-text-tertiary">
+        <span className="mt-2 truncate type-subhead text-text-tertiary">
           {meta}
         </span>
       </div>
@@ -506,7 +506,7 @@ export function EmptyStateCard({
             </Button>
           </div>
 
-          <p className="mt-2 type-footnote text-text-tertiary md:mt-3">
+          <p className="mt-2 type-subhead text-text-tertiary md:mt-3">
             {t('landing.formats')}
           </p>
         </div>
@@ -547,7 +547,7 @@ export function EmptyStateCard({
 
           {/* §3.1 Footer line: privacy left, Download demo files menu right */}
           <footer className="mt-8 flex flex-wrap items-center justify-between gap-4 md:mt-14">
-            <p className="type-footnote text-text-tertiary">
+            <p className="type-subhead text-text-tertiary">
               {t('landing.privacy')}
             </p>
 
@@ -556,7 +556,7 @@ export function EmptyStateCard({
                 data-testid="landing-download-demos-trigger"
                 disabled={disabled}
                 className={cn(
-                  'relative cursor-pointer rounded-pill bg-transparent p-0 type-footnote text-text-tertiary shadow-none select-none',
+                  'relative cursor-pointer rounded-pill bg-transparent p-0 type-subhead text-text-tertiary shadow-none select-none',
                   "after:absolute after:-inset-2.5 after:content-['']",
                   'transition-colors duration-[120ms] ease-[var(--ease-out)] enabled:hover:text-text-primary enabled:active:opacity-70',
                   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',

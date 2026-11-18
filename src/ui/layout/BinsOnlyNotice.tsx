@@ -29,7 +29,7 @@ export function BinsOnlyNotice({
       role="status"
       data-testid="bins-only-notice"
       className={cn(
-        'flex flex-wrap items-center gap-x-2 gap-y-1 type-footnote text-text-secondary',
+        'flex flex-wrap items-center gap-x-2 gap-y-1 type-subhead text-text-secondary',
         className,
       )}
     >
@@ -45,7 +45,7 @@ export function BinsOnlyNotice({
           disabled={disabled}
           data-testid="bins-only-parse-everything-inline"
           onClick={onParseEverything}
-          className="type-footnote font-medium text-text-primary enabled:hover:underline"
+          className="type-subhead font-medium text-text-primary enabled:hover:underline"
         >
           {t('binsOnly.parseAll')}
         </Button>

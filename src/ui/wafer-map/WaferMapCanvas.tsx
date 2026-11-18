@@ -2209,7 +2209,7 @@ function WaferMapCanvasImpl({
             ref={skipHintRef}
             hidden
             data-testid="probe-sweep-skip-hint"
-            className="pointer-events-none absolute bottom-3 left-1/2 z-[var(--z-stage-hud)] -translate-x-1/2 type-footnote whitespace-nowrap text-text-tertiary md:bottom-4"
+            className="pointer-events-none absolute bottom-3 left-1/2 z-[var(--z-stage-hud)] -translate-x-1/2 type-subhead whitespace-nowrap text-text-tertiary md:bottom-4"
           >
             {t('loading.skipHint')}
           </p>
@@ -2217,7 +2217,7 @@ function WaferMapCanvasImpl({
             <div
               data-stage-hud="true"
               data-testid="stage-evidence-caption"
-              className="surface-material pointer-events-none absolute bottom-3 left-1/2 z-[var(--z-stage-hud)] -translate-x-1/2 rounded-pill px-3 py-1 type-footnote whitespace-nowrap text-text-primary tabular-nums md:bottom-4"
+              className="surface-material pointer-events-none absolute bottom-3 left-1/2 z-[var(--z-stage-hud)] -translate-x-1/2 rounded-pill px-3 py-1 type-subhead whitespace-nowrap text-text-primary tabular-nums md:bottom-4"
             >
               {t('stage.evidenceCaption', {
                 dies: formatInteger(evidenceSummary.totalDies),

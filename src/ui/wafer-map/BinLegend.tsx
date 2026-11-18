@@ -120,7 +120,7 @@ export function BinLegend({
   return (
     <>
         {colorMode === 'pass-fail' || colorMode === 'parametric' ? (
-          <div className="flex flex-wrap items-center gap-3 type-footnote text-text-tertiary tabular-nums">
+          <div className="flex flex-wrap items-center gap-3 type-subhead text-text-tertiary tabular-nums">
             <span className="inline-flex items-center gap-1.5">
               <span
                 aria-hidden="true"
@@ -147,7 +147,7 @@ export function BinLegend({
             </span>
           </div>
         ) : (
-          <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1 type-footnote tabular-nums">
+          <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1 type-subhead tabular-nums">
             {visibleBinItems.map((item) => {
               const isHidden = hiddenBins.has(item.code);
               return (
@@ -215,7 +215,7 @@ export function BinLegend({
                         toggle(item.code)
                       }
                       className={cn(
-                        'flex w-full cursor-pointer items-center justify-between gap-3 rounded-xs px-2 py-1 text-left type-footnote tabular-nums',
+                        'flex w-full cursor-pointer items-center justify-between gap-3 rounded-xs px-2 py-1 text-left type-subhead tabular-nums',
                         isHidden
                           ? 'text-text-disabled line-through'
                           : 'text-text-secondary hover:bg-surface-2 hover:text-text-primary',
