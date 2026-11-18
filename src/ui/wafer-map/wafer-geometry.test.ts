@@ -580,5 +580,10 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(html).toContain('Fail 110');
     expect(html.match(/data-testid="wafer-lot-strip-thumb"/g)).toHaveLength(25);
     expect(html).toContain('Failing dies on wafer W01');
+    // visual-acceptance (d), (e), (f) + §5.10 data-sweep attribute
+    expect(html).toContain('data-sweep=');
+    expect(html).toContain('h-[456px]');
+    expect(html).toContain('wafer-strip-mask');
+    expect(html).not.toContain('hidden text-text-tertiary md:inline');
   });
 });

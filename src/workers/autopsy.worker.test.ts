@@ -259,8 +259,14 @@ describe('autopsy.worker plain testable pipeline (without a real Worker)', () =>
 
     const transfers = collectWorkerResponseTransferables(res);
     const expectedColumnarDieArrays = 13;
+    expect(res.probeOrderByWafer).toHaveLength(DEMO_WAFER_COUNT);
+    expect(res.probeOrderByWafer[0]).toBeInstanceOf(Uint32Array);
+    expect(res.probeOrderByWafer[0]).toHaveLength(DEMO_DIES_PER_WAFER);
     expect(transfers.length).toBe(
-      expectedColumnarDieArrays + res.lot.tests.size + res.siteAnomalies.length,
+      expectedColumnarDieArrays +
+        res.lot.tests.size +
+        res.siteAnomalies.length +
+        res.probeOrderByWafer.length,
     );
     expect(new Set(transfers).size).toBe(transfers.length);
   });

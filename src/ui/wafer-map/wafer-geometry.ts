@@ -571,6 +571,22 @@ export interface Canvas2DContextLike {
   ): void;
 }
 
+function appendDieToPath(
+  ctx: Canvas2DContextLike,
+  x: number,
+  y: number,
+  size: number,
+  radius: number,
+): boolean {
+  if (typeof ctx.roundRect === 'function' && size >= 3.5 && radius > 0) {
+    const clampedR = Math.min(radius, size * 0.45);
+    ctx.roundRect(x, y, size, size, clampedR);
+    return true;
+  }
+  ctx.fillRect(x, y, size, size);
+  return false;
+}
+
 function drawDieRoundedRect(
   ctx: Canvas2DContextLike,
   x: number,
@@ -586,6 +602,113 @@ function drawDieRoundedRect(
     return;
   }
   ctx.fillRect(x, y, size, size);
+}
+
+/**
+ * Clears the canvas and paints ONLY the silicon wafer disc (`#0B0B0C` fill +
+ * `1 px` `rgba(255,255,255,0.10)` ring + SEMI V-notch), used as frame 0 of the
+ * incremental probe-sweep reveal (`redesign.md` §3.3, §5.1).
+ */
+export function paintWaferSubstrateOnly(
+  ctx: Canvas2DContextLike,
+  wafer: WaferSummaryMeta | undefined,
+  layout: WaferRenderLayout,
+  dpr: number,
+): void {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, layout.cssWidth, layout.cssHeight);
+  if (!wafer) {
+    return;
+  }
+
+  const notch = computeWaferNotchGeometry(
+    layout.centerXCss,
+    layout.centerYCss,
+    layout.waferRadiusPx,
+    wafer.geometry.wfFlat,
+  );
+
+  ctx.beginPath();
+  ctx.arc(
+    layout.centerXCss,
+    layout.centerYCss,
+    layout.waferRadiusPx,
+    notch.arcStartRad,
+    notch.arcEndRad,
+    false,
+  );
+  ctx.lineTo(notch.apexX, notch.apexY);
+  ctx.closePath();
+
+  ctx.fillStyle = COLOR_TOKENS.waferDisc;
+  ctx.fill();
+  ctx.lineWidth = 1;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = WAFER_DISC_RING_STROKE;
+  ctx.stroke();
+}
+
+export interface PaintWaferSweepBatchParams {
+  readonly lot: LotModel;
+  readonly layout: WaferRenderLayout;
+  readonly dpr: number;
+  readonly probeOrder: Uint32Array;
+  readonly startOrderIndex: number;
+  readonly endOrderIndex: number;
+}
+
+/**
+ * Incrementally draws newly revealed dies `probeOrder[startOrderIndex .. endOrderIndex)`
+ * onto `BaseCanvas` in pass colour (`#63666C`, `72%` square, `1 px` radius) without clearing
+ * previously revealed dies (`redesign.md` §5.1: total O(n) across the sweep).
+ */
+export function paintWaferSweepBatch(
+  ctx: Canvas2DContextLike,
+  params: PaintWaferSweepBatchParams,
+): void {
+  const { lot, layout, dpr, probeOrder, startOrderIndex, endOrderIndex } =
+    params;
+  const from = Math.max(0, startOrderIndex);
+  const to = Math.min(probeOrder.length, endOrderIndex);
+  if (to <= from) {
+    return;
+  }
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = COLOR_TOKENS.passDie;
+
+  const { x: xArr, y: yArr, hasValidCoords: validArr } = lot.dies;
+  const passSize = layout.passDieSizePx;
+  const passHalf = passSize / 2;
+  const useBatchedRoundRect =
+    typeof ctx.roundRect === 'function' && passSize >= 3.5;
+  const clampedR = Math.min(PASS_DIE_RADIUS_PX, passSize * 0.45);
+
+  if (useBatchedRoundRect) {
+    ctx.beginPath();
+  }
+  let hasAnyPath = false;
+  for (let k = from; k < to; k += 1) {
+    const i = probeOrder[k]!;
+    if (i >= lot.dies.count || validArr[i] === 0) {
+      continue;
+    }
+    const cx =
+      layout.centerXCss +
+      (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+    const cy =
+      layout.centerYCss +
+      (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+    if (useBatchedRoundRect) {
+      ctx.roundRect!(cx - passHalf, cy - passHalf, passSize, passSize, clampedR);
+      hasAnyPath = true;
+    } else {
+      ctx.fillRect(cx - passHalf, cy - passHalf, passSize, passSize);
+    }
+  }
+  if (useBatchedRoundRect && hasAnyPath) {
+    ctx.fill();
+  }
 }
 
 export interface PaintWaferBaseParams {
@@ -667,8 +790,10 @@ export function paintWaferBaseLayer(
   const failHalf = failSize / 2;
 
   if (colorMode === 'pass-fail') {
-    // Pass 1: Passing dies (#63666C), centred 72% square with 1 px radius
+    // Pass 1: Passing dies (#63666C), centred 72% square with 1 px radius (batched single fill)
     ctx.fillStyle = COLOR_TOKENS.passDie;
+    ctx.beginPath();
+    let anyPassPath = false;
     for (let i = start; i < end; i += 1) {
       if (validArr[i] === 0 || passArr[i] === 0) {
         continue;
@@ -682,17 +807,26 @@ export function paintWaferBaseLayer(
       if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
         continue;
       }
-      drawDieRoundedRect(
-        ctx,
-        cx - passHalf,
-        cy - passHalf,
-        passSize,
-        PASS_DIE_RADIUS_PX,
-      );
+      if (
+        appendDieToPath(
+          ctx,
+          cx - passHalf,
+          cy - passHalf,
+          passSize,
+          PASS_DIE_RADIUS_PX,
+        )
+      ) {
+        anyPassPath = true;
+      }
+    }
+    if (anyPassPath) {
+      ctx.fill();
     }
 
-    // Pass 2: Failing dies (#FF6B2C), full cell minus 1 px street with 1.5 px radius
+    // Pass 2: Failing dies (#FF6B2C), full cell minus 1 px street with 1.5 px radius (batched single fill)
     ctx.fillStyle = COLOR_TOKENS.failure;
+    ctx.beginPath();
+    let anyFailPath = false;
     for (let i = start; i < end; i += 1) {
       if (validArr[i] === 0 || passArr[i] !== 0) {
         continue;
@@ -706,13 +840,20 @@ export function paintWaferBaseLayer(
       if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
         continue;
       }
-      drawDieRoundedRect(
-        ctx,
-        cx - failHalf,
-        cy - failHalf,
-        failSize,
-        FAIL_DIE_RADIUS_PX,
-      );
+      if (
+        appendDieToPath(
+          ctx,
+          cx - failHalf,
+          cy - failHalf,
+          failSize,
+          FAIL_DIE_RADIUS_PX,
+        )
+      ) {
+        anyFailPath = true;
+      }
+    }
+    if (anyFailPath) {
+      ctx.fill();
     }
     return;
   }
@@ -814,6 +955,41 @@ export function paintWaferFailLayer(
   const minCullY = -layout.diePitchPx;
   const maxCullY = layout.cssHeight + layout.diePitchPx;
 
+  if (colorMode === 'pass-fail') {
+    ctx.fillStyle = COLOR_TOKENS.failure;
+    ctx.beginPath();
+    let anyFailPath = false;
+    for (let i = start; i < end; i += 1) {
+      if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] !== 0) {
+        continue;
+      }
+      const cx =
+        layout.centerXCss +
+        (dies.x[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+      const cy =
+        layout.centerYCss +
+        (dies.y[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+      if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+        continue;
+      }
+      if (
+        appendDieToPath(
+          ctx,
+          cx - failHalf,
+          cy - failHalf,
+          failSize,
+          FAIL_DIE_RADIUS_PX,
+        )
+      ) {
+        anyFailPath = true;
+      }
+    }
+    if (anyFailPath) {
+      ctx.fill();
+    }
+    return;
+  }
+
   for (let i = start; i < end; i += 1) {
     if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] !== 0) {
       continue;
@@ -833,10 +1009,7 @@ export function paintWaferFailLayer(
     if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
       continue;
     }
-    ctx.fillStyle =
-      colorMode === 'pass-fail'
-        ? COLOR_TOKENS.failure
-        : resolveDieFillColor(i, dies, colorMode, failRankMap);
+    ctx.fillStyle = resolveDieFillColor(i, dies, colorMode, failRankMap);
     drawDieRoundedRect(
       ctx,
       cx - failHalf,
@@ -848,6 +1021,30 @@ export function paintWaferFailLayer(
 }
 
 let cachedGlowSprite: CanvasImageSource | null | undefined;
+let cachedProbeHeadSprite: CanvasImageSource | null | undefined;
+
+function getProbeHeadSprite(): CanvasImageSource | null {
+  if (cachedProbeHeadSprite !== undefined) {
+    return cachedProbeHeadSprite;
+  }
+  if (typeof OffscreenCanvas !== 'undefined') {
+    const size = 64;
+    const canvas = new OffscreenCanvas(size, size);
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, 'rgba(214, 230, 255, 0.35)');
+      g.addColorStop(0.45, 'rgba(214, 230, 255, 0.14)');
+      g.addColorStop(1, 'rgba(214, 230, 255, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, size, size);
+      cachedProbeHeadSprite = canvas;
+      return cachedProbeHeadSprite;
+    }
+  }
+  cachedProbeHeadSprite = null;
+  return null;
+}
 
 function getEvidenceGlowSprite(): CanvasImageSource | null {
   if (cachedGlowSprite !== undefined) {
@@ -899,6 +1096,8 @@ export interface PaintWaferOverlayParams {
     readonly width: number;
     readonly height: number;
   } | null;
+  /** Optional last-revealed die index for the §5.1 probe-head examination light (3 die widths, 35% alpha). */
+  readonly probeHeadDieIndex?: number | null;
 }
 
 /**
@@ -922,6 +1121,7 @@ export function paintWaferOverlayLayer(
     brush,
     glowOverride = null,
     liveBrushScreenRect = null,
+    probeHeadDieIndex = null,
   } = params;
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1033,54 +1233,45 @@ export function paintWaferOverlayLayer(
       ctx.globalAlpha = 1;
     }
 
-    // Fast path when all alphas === 1: batch into one path
-    let allFull = indices.length > 0;
-    for (let r = 0; r < alphas.length; r += 1) {
-      if (alphas[r]! < 0.999) {
-        allFull = false;
-        break;
+    // Batch all fully-settled dies (alpha >= 0.999) into one path, and draw partial-alpha dies individually
+    ctx.beginPath();
+    let anyFullVisible = false;
+    for (let r = 0; r < indices.length; r += 1) {
+      if (alphas[r]! < 0.999) continue;
+      const i = indices[r]!;
+      if (i < start || i >= end || validArr[i] === 0) continue;
+      const cx =
+        layout.centerXCss +
+        (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
+      const cy =
+        layout.centerYCss +
+        (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
+      if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
+        continue;
       }
+      anyFullVisible = true;
+      const size = passArr[i] !== 0 ? layout.passDieSizePx : layout.dieSizePx;
+      const half = size / 2;
+      ctx.rect(cx - half, cy - half, size, size);
     }
-
-    if (allFull) {
-      let anyVisible = false;
-      ctx.beginPath();
-      for (let r = 0; r < indices.length; r += 1) {
-        const i = indices[r]!;
-        if (i < start || i >= end || validArr[i] === 0) continue;
-        const cx =
-          layout.centerXCss +
-          (xArr[i]! - layout.gridCenterX) * layout.dirX * layout.diePitchPx;
-        const cy =
-          layout.centerYCss +
-          (yArr[i]! - layout.gridCenterY) * layout.dirY * layout.diePitchPx;
-        if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
-          continue;
-        }
-        anyVisible = true;
-        const size = passArr[i] !== 0 ? layout.passDieSizePx : layout.dieSizePx;
-        const half = size / 2;
-        ctx.rect(cx - half, cy - half, size, size);
-      }
-      if (anyVisible) {
-        if (!canSprite) {
-          ctx.strokeStyle = OVERLAY_HALO_STROKE;
-          ctx.lineWidth = haloW;
-          ctx.stroke();
-        }
-        ctx.strokeStyle = OVERLAY_KEYLINE_STROKE;
-        ctx.lineWidth = keylineW;
-        ctx.stroke();
-        ctx.strokeStyle = COLOR_TOKENS.accent;
-        ctx.lineWidth = strokeW;
+    if (anyFullVisible) {
+      ctx.globalAlpha = 1;
+      if (!canSprite) {
+        ctx.strokeStyle = OVERLAY_HALO_STROKE;
+        ctx.lineWidth = haloW;
         ctx.stroke();
       }
-      return;
+      ctx.strokeStyle = OVERLAY_KEYLINE_STROKE;
+      ctx.lineWidth = keylineW;
+      ctx.stroke();
+      ctx.strokeStyle = COLOR_TOKENS.accent;
+      ctx.lineWidth = strokeW;
+      ctx.stroke();
     }
 
     for (let r = 0; r < indices.length; r += 1) {
       const a = alphas[r]!;
-      if (a <= 0.005) continue;
+      if (a <= 0.005 || a >= 0.999) continue;
       const i = indices[r]!;
       if (i < start || i >= end || validArr[i] === 0) continue;
       const cx =
@@ -1218,6 +1409,44 @@ export function paintWaferOverlayLayer(
     ctx.strokeStyle = OVERLAY_HOVER_STROKE;
     ctx.lineWidth = 1.5;
     ctx.strokeRect(cx - half - 0.5, cy - half - 0.5, size + 1, size + 1);
+  }
+
+  // 4. Probe-sweep examination lamp at the last revealed die (3 die widths, 35% ice alpha, §5.1)
+  if (
+    probeHeadDieIndex !== null &&
+    probeHeadDieIndex >= start &&
+    probeHeadDieIndex < end &&
+    dies.hasValidCoords[probeHeadDieIndex] !== 0
+  ) {
+    const cx =
+      layout.centerXCss +
+      (dies.x[probeHeadDieIndex]! - layout.gridCenterX) *
+        layout.dirX *
+        layout.diePitchPx;
+    const cy =
+      layout.centerYCss +
+      (dies.y[probeHeadDieIndex]! - layout.gridCenterY) *
+        layout.dirY *
+        layout.diePitchPx;
+    const diameter = Math.max(12, layout.diePitchPx * 3);
+    const probeSprite = getProbeHeadSprite();
+    if (probeSprite !== null && typeof ctx.drawImage === 'function') {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 1;
+      ctx.drawImage(
+        probeSprite,
+        cx - diameter / 2,
+        cy - diameter / 2,
+        diameter,
+        diameter,
+      );
+      ctx.globalCompositeOperation = 'source-over';
+    } else {
+      ctx.beginPath();
+      ctx.arc(cx, cy, diameter / 2, 0, Math.PI * 2, false);
+      ctx.fillStyle = 'rgba(214, 230, 255, 0.35)';
+      ctx.fill();
+    }
   }
 }
 

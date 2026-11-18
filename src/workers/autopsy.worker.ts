@@ -29,7 +29,11 @@ import {
   getDemoPresetPreview,
   listDemoPresets,
 } from '@/core/demo';
-import { buildLotModel, type LotModel } from '@/core/model';
+import {
+  buildLotModel,
+  buildWaferProbeOrder,
+  type LotModel,
+} from '@/core/model';
 import {
   classifyStackedPattern,
   classifyWaferPattern,
@@ -86,6 +90,8 @@ export interface AutopsyWorkerLoadedPayload {
   readonly skippedRecordCount: number;
   readonly elapsedMs: number;
   readonly lot: LotModel;
+  /** Pre-sorted `PRR` sequence die indices per wafer for the §5.1 probe-sweep reveal. */
+  readonly probeOrderByWafer: readonly Uint32Array[];
   readonly yieldSummary: YieldSummary;
   readonly siteAnomalies: readonly SiteAnomalyFactInput[];
   readonly facts: readonly EngineFact[];
@@ -258,6 +264,10 @@ export function collectWorkerResponseTransferables(
     addView(anomaly.failingDieIndices);
   }
 
+  for (const probeOrder of response.probeOrderByWafer) {
+    addView(probeOrder);
+  }
+
   return Array.from(uniqueBuffers);
 }
 
@@ -392,6 +402,12 @@ async function runIngestPipeline(
   );
 
   const lot = buildLotModel(parsed.value);
+  const probeOrderByWafer: Uint32Array[] = new Array<Uint32Array>(
+    lot.wafers.length,
+  );
+  for (let w = 0; w < lot.wafers.length; w += 1) {
+    probeOrderByWafer[w] = buildWaferProbeOrder(lot, w);
+  }
   const yieldSummary = computeYieldSummary(lot);
   const siteAnomalies = detectSiteAnomalies(lot);
   const waferCount = lot.wafers.length;
@@ -426,6 +442,7 @@ async function runIngestPipeline(
       skippedRecordCount: parsed.value.skippedRecordCount,
       elapsedMs,
       lot,
+      probeOrderByWafer,
       yieldSummary,
       siteAnomalies,
       facts,

@@ -11,6 +11,7 @@ import {
 } from '../stdf/types';
 import {
   buildLotModel,
+  buildWaferProbeOrder,
   computeWaferEdgeRingIndices,
   resolvePartPassFail,
 } from './lot-builder';
@@ -345,5 +346,95 @@ describe('buildLotModel (Requirements 4.2, 7.1, 7.2)', () => {
     const leLot = buildLotModel(leParsed.value);
 
     expect({ ...beLot, endianness: 'little' }).toEqual(leLot);
+  });
+
+  it('sorts wafer coordinate-bearing dies by firstPrrOrder in buildWaferProbeOrder (§5.1)', () => {
+    const spec = {
+      endianness: 'little' as const,
+      mir: { lotId: 'SWEEP-01', partTyp: 'CAL', jobNam: 'SORT' },
+      wafers: [
+        {
+          wir: { headNum: 1, siteGrp: 1, startT: 100, waferId: 'W01' },
+          touchdowns: [
+            [
+              {
+                headNum: 1,
+                siteNum: 1,
+                partFlg: 0,
+                hardBin: 1,
+                softBin: 1,
+                xCoord: 5,
+                yCoord: -2,
+              },
+              {
+                headNum: 1,
+                siteNum: 2,
+                partFlg: 0,
+                hardBin: 1,
+                softBin: 1,
+                xCoord: -32768,
+                yCoord: 0,
+              },
+            ],
+            [
+              {
+                headNum: 1,
+                siteNum: 1,
+                partFlg: PRR_PART_FLG.FAILED,
+                hardBin: 3,
+                softBin: 7,
+                xCoord: -4,
+                yCoord: 3,
+              },
+              {
+                headNum: 1,
+                siteNum: 2,
+                partFlg: 0,
+                hardBin: 1,
+                softBin: 1,
+                xCoord: 0,
+                yCoord: 0,
+              },
+            ],
+            [
+              // Retest of (5, -2): must preserve its FIRST PRR touchdown order (index 0)
+              {
+                headNum: 1,
+                siteNum: 1,
+                partFlg: PRR_PART_FLG.FAILED,
+                hardBin: 3,
+                softBin: 7,
+                xCoord: 5,
+                yCoord: -2,
+              },
+            ],
+          ],
+          wrr: { headNum: 1, siteGrp: 1, finishT: 110, partCnt: 5, waferId: 'W01' },
+        },
+      ],
+      mrr: { finishT: 120 },
+    };
+
+    const parsed = parseStdfBytes(writeStdfBytes(spec), { mode: 'full' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const lot = buildLotModel(parsed.value);
+    const order = buildWaferProbeOrder(lot, 0);
+    expect(order).toBeInstanceOf(Uint32Array);
+    // Excludes missing-coord part (-32768, 0) and orders (5,-2), (-4,3), (0,0) by firstPrrOrder
+    expect(order.length).toBe(3);
+    const coords = Array.from(order, (idx) => [lot.dies.x[idx], lot.dies.y[idx]]);
+    expect(coords).toEqual([
+      [5, -2],
+      [-4, 3],
+      [0, 0],
+    ]);
+    for (let i = 1; i < order.length; i += 1) {
+      expect(lot.dies.firstPrrOrder[order[i]!]).toBeGreaterThanOrEqual(
+        lot.dies.firstPrrOrder[order[i - 1]!],
+      );
+    }
+    expect(buildWaferProbeOrder(lot, 99)).toEqual(new Uint32Array(0));
   });
 });

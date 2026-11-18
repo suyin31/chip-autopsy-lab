@@ -124,12 +124,12 @@ describe('NavBar, LotPicker, LanguageSwitcher, and legacy chrome removal (Task R
     expect(landingNavHtml).toContain('opacity-0');
     expect(landingNavHtml).toContain('Chip Autopsy Lab');
     expect(landingNavHtml).toContain('Autopsy Lab');
-    // Lot picker hidden on landing state (§4.1)
+    // Lot picker and duplicate Open STDF hidden on landing state (§4.1 + visual-acceptance (b))
     expect(landingNavHtml).not.toContain('data-testid="lot-picker-trigger"');
+    expect(landingNavHtml).not.toContain('data-testid="nav-open-stdf"');
     expect(extractButtonTestIds(landingNavHtml)).toEqual([
       'nav-wordmark',
       'language-switcher-trigger',
-      'nav-open-stdf',
     ]);
 
     const loadedNavHtml = renderToStaticMarkup(
@@ -158,6 +158,12 @@ describe('NavBar, LotPicker, LanguageSwitcher, and legacy chrome removal (Task R
       'language-switcher-trigger',
       'nav-open-stdf',
     ]);
+
+    // visual-acceptance (a)/(h): nav Open STDF uses 14px type-control directly (never uncompiled md:type-control)
+    expect(loadedNavHtml).not.toContain('md:type-control');
+    expect(loadedNavHtml).toMatch(
+      /data-testid="nav-open-stdf"[^>]*\btype-control\b/,
+    );
 
     // Every nav button has ice 2px focus ring and remains in Tab order (zero tabindex="-1")
     const buttonTags = Array.from(

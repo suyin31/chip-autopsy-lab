@@ -19,6 +19,7 @@ import {
   resolveSegmentedKeyStep,
   SegmentedControl,
 } from './segmented-control';
+import { ClinicalToaster, SONNER_TOAST_OPTIONS } from './toaster';
 
 describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () => {
   it('restyles Button across §4.11 variants with pill radius, ice 2px focus rings, optical icon padding, and zero transition:all', () => {
@@ -257,5 +258,33 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
     expect(mobilePos.top).toBe(48);
     expect(mobilePos.left).toBeGreaterThanOrEqual(8);
     expect(mobilePos.left + 360).toBeLessThanOrEqual(382);
+  });
+
+  it('styles ClinicalToaster (§4.13) at bottom-center with material surface, radius-16, callout/footnote sans tokens, max 3 visible, 8px gap, and 4s duration', () => {
+    const html = renderToStaticMarkup(React.createElement(ClinicalToaster));
+    expect(html).toBeTruthy();
+
+    expect(SONNER_TOAST_OPTIONS.position).toBe('bottom-center');
+    expect(SONNER_TOAST_OPTIONS.visibleToasts).toBe(3);
+    expect(SONNER_TOAST_OPTIONS.gap).toBe(8);
+    expect(SONNER_TOAST_OPTIONS.duration).toBe(4_000);
+    expect(SONNER_TOAST_OPTIONS.offset).toBe(24);
+    expect(SONNER_TOAST_OPTIONS.mobileOffset).toBe(16);
+
+    const toastClass = SONNER_TOAST_OPTIONS.classNames.toast;
+    expect(toastClass).toContain('surface-material');
+    expect(toastClass).toContain('rounded-md');
+    expect(toastClass).toContain('w-[360px]');
+    expect(toastClass).toContain('px-4');
+    expect(toastClass).toContain('py-3');
+    expect(toastClass).not.toContain('border-hairline');
+
+    expect(SONNER_TOAST_OPTIONS.classNames.title).toContain('type-callout');
+    expect(SONNER_TOAST_OPTIONS.classNames.description).toContain(
+      'type-footnote',
+    );
+    expect(SONNER_TOAST_OPTIONS.classNames.description).not.toContain(
+      'font-mono',
+    );
   });
 });

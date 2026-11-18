@@ -755,3 +755,29 @@ export function buildLotModel(input: ParsedLotBuildInput): LotModel {
     warnings,
   };
 }
+
+/**
+ * Returns coordinate-bearing die indices on `waferIndex` pre-sorted in chronological
+ * `PRR` touchdown order (`firstPrrOrder`) as a transferable `Uint32Array` (`redesign.md` §5.1).
+ */
+export function buildWaferProbeOrder(
+  lot: LotModel,
+  waferIndex: number,
+): Uint32Array {
+  const wafer = lot.wafers[waferIndex];
+  if (!wafer) {
+    return new Uint32Array(0);
+  }
+  const { hasValidCoords, firstPrrOrder } = lot.dies;
+  const indices: number[] = [];
+  for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
+    if (hasValidCoords[i] !== 0) {
+      indices.push(i);
+    }
+  }
+  indices.sort((a, b) => {
+    const diff = firstPrrOrder[a]! - firstPrrOrder[b]!;
+    return diff !== 0 ? diff : a - b;
+  });
+  return Uint32Array.from(indices);
+}

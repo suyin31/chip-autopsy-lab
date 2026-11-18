@@ -241,11 +241,15 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
         'Every number comes from the on-device analysis engine. The text is the built-in template.',
       );
 
-      // StatRow: exactly 3 stats, at most 1 orange emphasis
+      // StatRow: exactly 3 stats, at most 1 orange emphasis, §5.3 aria-hidden visible span + sr-only final-value sibling
       const statItemMatches = cardHtml.match(
         /data-testid="verdict-stat-item"/g,
       );
       expect(statItemMatches).toHaveLength(3);
+      expect(cardHtml.match(/data-testid="verdict-stat-sr"/g)).toHaveLength(3);
+      expect(cardHtml.match(/data-testid="verdict-stat-value"[^>]*aria-hidden="true"/g)).toHaveLength(3);
+      expect(cardHtml).toContain('data-verdict-rise-block="headline"');
+      expect(cardHtml).toContain('data-verdict-rise-block="findings"');
       const emphasisMatches = cardHtml.match(/data-emphasis="true"/g) ?? [];
       expect(emphasisMatches.length).toBe(1);
 

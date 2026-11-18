@@ -102,9 +102,12 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     );
     expect(html).toContain('Download demo files');
 
-    // Restraint checks: zero drop-shadow utilities, zero bold >= 700 classes
+    // Restraint checks: zero drop-shadow utilities, zero bold >= 700 classes, softened demo thumbnail (no boxed bg-bg cutout, ~190px desktop wafer)
     expect(html).not.toMatch(/\bshadow-(?!none\b)[a-z0-9]+\b/);
     expect(html).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
+    expect(html).toContain('md:h-[190px]');
+    expect(html).toContain('md:w-[190px]');
+    expect(html).not.toContain('rounded-md bg-bg');
   });
 
   it('maps all 7 §3.7 error codes cleanly and renders icon-free parse-failed hero above demo cards', () => {
@@ -461,6 +464,9 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(determinateHtml).toContain('50.0%');
     expect(determinateHtml).toContain('aria-live="polite"');
     expect(determinateHtml).toContain('aria-valuenow="50"');
+    expect(determinateHtml).toContain('scaleX(0.5)');
+    expect(determinateHtml).not.toContain('uppercase');
+    expect(determinateHtml).not.toContain('font-mono');
 
     const site2Res = await ingestDemoPreset('site2-probe-contact');
     expect(site2Res.kind).toBe('ok');
