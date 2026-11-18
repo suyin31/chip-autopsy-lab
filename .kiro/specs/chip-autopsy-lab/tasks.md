@@ -206,5 +206,6 @@ Specification: `.kiro/specs/chip-autopsy-lab/redesign.md`. Each task is a <= 15-
   - Hover magnifier (§4.8), finding select with scrim, ordered glow, and camera frame (§5.4), box select with live stats popover (§3.6, §5.7), wafer strip with scroll-snap, roving keyboard, crossfade, and evidence dots (§4.9, §5.8).
   - Accept: the edge-band finding lights ring dies clockwise within 600 ms and a second click clears; Shift+drag stats update during the drag; held ArrowRight swaps wafers instantly; magnifier placement never covers the hovered die (unit test).
 - [ ] R8. Reveal motion, reduced motion, and perf gate
+  - Also fix every open item (a)–(h) in logs/visual-acceptance.md (R4 landing + R6 stage visual issues) and mark each fixed there.
   - Probe sweep (§5.1), verdict rise-in (§5.2), count-up (§5.3), toast styling (§4.13), reduced-motion paths, and `e2e/perf-gate.spec.ts` (§5.10); record measurements in `logs/`.
   - Accept: first load sweeps in <= 1.2 s and any key skips it; with `reducedMotion: "reduce"` there is no sweep or stagger and stats show final values; perf gate shows 0 frames > 50 ms, median rAF < 20 ms, p95 < 34 ms; demo time-to-verdict < 3 s.
