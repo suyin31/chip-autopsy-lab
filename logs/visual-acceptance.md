@@ -24,3 +24,4 @@ Fix in R8 pass:
 ## Task 10 pass (assistant, 2026-11-18 18:15) — logs/shots/t10-*.png
 - SBIN mode colours distinct (orange/cyan/violet, good die grey); legend shows name+count. Pareto "Yield loss by bin" under Findings, quiet bars, cumulative tick. Pass.
 - Minor: legend wraps to 2 lines at 1440 and sits tight under the disc; consider single-line with overflow fade (Task 19).
+- P26b (11-19 00:16): 暖纸底+斜体 body 效果好。瑕疵：顶部导航条仍是冷白 #FAFAFA 材质，与暖纸底不搭，应改暖（留 P26a/P20 顺手改或 Task 19）。
