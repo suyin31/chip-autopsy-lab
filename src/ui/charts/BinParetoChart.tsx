@@ -1,7 +1,5 @@
 'use client';
 
-import { scaleLinear } from '@visx/scale';
-import { Bar } from '@visx/shape';
 import * as React from 'react';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
@@ -10,13 +8,18 @@ import { computeBinPareto } from '@/core/analytics';
 import type { BinMode, LotModel } from '@/core/model';
 import { Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
+import { Button } from '@/ui/primitives/button';
 import { SegmentedControl } from '@/ui/primitives/segmented-control';
+import { Tooltip } from '@/ui/primitives/tooltip';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
-import { COLOR_TOKENS, getFailBinColor } from '@/ui/tokens';
 import { buildFailBinRankMap } from '@/ui/wafer-map/wafer-geometry';
 import {
   PARETO_COLLAPSED_ROW_COUNT,
+  type ParetoBarTone,
+  resolveClaimMatchedBinCode,
   resolveClaimParetoMode,
+  resolveParetoBarPercent,
+  resolveParetoBarTone,
   resolveParetoMask,
   selectParetoRows,
 } from './bin-pareto-view';
@@ -28,22 +31,22 @@ export interface BinParetoChartProps {
   readonly className?: string;
 }
 
-const TRACK_HEIGHT_PX = 6;
-/** Narrowest bar, so a single failing die stays visible. */
-const MIN_BAR_PERCENT = 0.6;
-
 /**
- * Quiet Bin Pareto (`src/ui/charts/BinParetoChart.tsx`, Requirements 6.1 to 6.5, 10.4),
- * placed below Findings in the verdict column (`redesign.md` 3.4 has no Pareto slot).
+ * "Where the yield went" (premium §7.9 with the §11.3 inspiration delta), placed below Findings
+ * in the verdict column.
  *
- * - One borderless row per failing bin: bin code and name, grouped die count, a visx bar sharing
- *   one axis with a cumulative-share tick, and a one-line `x% of tested, y% cumulative`.
- * - Bars use the wafer-map bin colours (dominant yield-loss bin `#FF6B2C`, then the
- *   equal-lightness LCH palette); the row text always names the bin, so colour is never the
- *   only cue.
- * - A bar click toggles the store's bin filter. The chart counts over the brush, site, and
- *   filter-DSL selection without its own bin filter, so the other bars stay available.
- * - A finding that cites a bin highlights the matching bar with an ice outline.
+ * - `surface` section card (`r-2xl`, `shadow-card`, padding 24, 16 on mobile): `title-2` title with
+ *   the bin-type segmented control right, a one-line takeaway, the lot yield loss as the one big
+ *   number, then "Yield loss by bin" / "Share of all dies" labels over the rows.
+ * - Rows are 40 px `88px 1fr 56px 88px 56px` grids: bin code (name in a 600 ms tooltip), an 8 px
+ *   bar scaled to the largest loss share, share of all dies, die count, and a share-of-fails pill.
+ *   The count column drops out when the card is narrower than 448 px.
+ * - Only the top-loss bin (fail-bin rank 0, the disc's ember bin) is solid `ember-mark`; the rest
+ *   are ghosted `bar-neutral` with a `hairline-strong` outline. No track, gridlines, or axis.
+ * - A row click toggles the store's bin filter. A finding that cites a bin selects its row too.
+ *   Selected rows get `fill-2` and `aria-pressed`; a selected non-dominant bar turns solid `ink`.
+ * - The chart counts over the brush, site, and filter-DSL selection without its own bin filter,
+ *   so the other rows stay available.
  */
 export function BinParetoChart({
   lot,
@@ -52,6 +55,7 @@ export function BinParetoChart({
 }: BinParetoChartProps): React.JSX.Element | null {
   const { t, tPlural, formatInteger, formatPercent } = useT();
   const headingId = React.useId();
+  const chartLabelId = React.useId();
 
   const {
     storeLot,
@@ -135,15 +139,26 @@ export function BinParetoChart({
       : null;
   const highlightedCodes = React.useMemo(() => {
     const codes = new Set<number>();
-    if (synced && claimHighlight?.citedBins) {
-      for (const bin of claimHighlight.citedBins) {
-        if (bin.mode === mode) {
-          codes.add(bin.code);
-        }
+    if (!synced || claimHighlight === null) {
+      return codes;
+    }
+    for (const bin of claimHighlight.citedBins ?? []) {
+      if (bin.mode === mode) {
+        codes.add(bin.code);
       }
     }
+    if (codes.size === 0) {
+      // A claim without a bin of this kind (e.g. the Edge-Ring finding) matches the bin
+      // holding most of its failing dies
+      const matched = resolveClaimMatchedBinCode(
+        lot.dies,
+        mode,
+        claimHighlight.dieIndices,
+      );
+      if (matched !== null) codes.add(matched);
+    }
     return codes;
-  }, [synced, claimHighlight, mode]);
+  }, [synced, claimHighlight, mode, lot.dies]);
 
   const rows = selectParetoRows(
     pareto.entries,
@@ -152,15 +167,7 @@ export function BinParetoChart({
       entry.binCode === activeFilterCode || highlightedCodes.has(entry.binCode),
   );
 
-  const xScale = React.useMemo(
-    () =>
-      scaleLinear<number>({
-        domain: [0, Math.max(1, pareto.failCount)],
-        range: [0, 100],
-        clamp: true,
-      }),
-    [pareto.failCount],
-  );
+  const maxCount = pareto.entries[0]?.count ?? 0;
 
   const modeOptions = React.useMemo(
     () => [
@@ -177,16 +184,26 @@ export function BinParetoChart({
     [store, mode],
   );
 
+  const hasLoss = pareto.failCount > 0 && rows.length > 0;
+  const lossRatio =
+    pareto.testedCount > 0 ? pareto.failCount / pareto.testedCount : 0;
+
   return (
     <section
       aria-labelledby={headingId}
       data-testid="bin-pareto"
       data-mode={mode}
-      className={className}
+      className={cn(
+        'rounded-2xl bg-surface p-4 shadow-card sm:p-6',
+        className,
+      )}
     >
-      <div className="flex items-center justify-between gap-4">
-        <h2 id={headingId} className="type-headline text-text-primary">
-          {t('pareto.heading')}
+      <div className="flex items-start justify-between gap-4">
+        <h2
+          id={headingId}
+          className="min-w-0 type-title-2 text-balance text-text-primary"
+        >
+          {t('pareto.title')}
         </h2>
         <SegmentedControl
           data-testid="bin-pareto-mode"
@@ -198,125 +215,148 @@ export function BinParetoChart({
         />
       </div>
 
-      {rows.length === 0 ? (
+      {!hasLoss ? (
         <p
           data-testid="bin-pareto-empty"
-          className="mt-3 type-callout text-text-secondary"
+          className="mt-2 type-callout text-pretty text-text-secondary"
         >
           {t('pareto.empty')}
         </p>
       ) : (
-        <ul data-testid="bin-pareto-rows" className="mt-2 flex flex-col">
-          {rows.map((entry) => {
-            const isFiltered = entry.binCode === activeFilterCode;
-            const isHighlighted = highlightedCodes.has(entry.binCode);
-            const label = `${mode} ${entry.binCode}${
-              entry.binName ? ` ${entry.binName}` : ''
-            }`;
-            const color = getFailBinColor(rankByCode.get(entry.binCode) ?? 0);
-            const barPercent = Math.max(
-              MIN_BAR_PERCENT,
-              xScale(entry.count),
-            );
-            const cumulativePercent = xScale(
-              entry.cumulativeFailShare * pareto.failCount,
-            );
-            const diesLabel = tPlural('findings.dieCount', entry.count);
-            return (
-              <li key={entry.binCode} className="list-none">
-                <button
-                  type="button"
-                  data-testid="bin-pareto-row"
-                  data-bin-mode={mode}
-                  data-bin-code={entry.binCode}
-                  data-highlighted={isHighlighted ? 'true' : undefined}
-                  aria-pressed={isFiltered}
-                  aria-label={t('pareto.rowAria', {
-                    bin: label,
-                    dies: diesLabel,
-                    share: formatPercent(entry.shareOfTested),
-                  })}
-                  onClick={() => handleToggle(entry.binCode)}
-                  className={cn(
-                    'block w-full cursor-pointer appearance-none rounded-lg border-0 px-4 py-3 text-left transition-[background-color] duration-120 ease-out',
-                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-                    isFiltered || isHighlighted
-                      ? 'bg-surface-2'
-                      : 'bg-transparent hover:bg-surface-1',
-                  )}
-                >
-                  <span className="flex items-baseline justify-between gap-4">
-                    <span className="min-w-0 truncate type-callout text-text-primary">
-                      <Untranslated>{label}</Untranslated>
-                    </span>
-                    <span className="type-callout whitespace-nowrap text-text-secondary tabular-nums">
-                      {formatInteger(entry.count)}
-                    </span>
-                  </span>
-                  <svg
-                    aria-hidden="true"
-                    focusable="false"
-                    width="100%"
-                    height={TRACK_HEIGHT_PX}
-                    className="mt-2 block overflow-visible"
-                  >
-                    <Bar
-                      x={0}
-                      y={0}
-                      width="100%"
-                      height={TRACK_HEIGHT_PX}
-                      rx={TRACK_HEIGHT_PX / 2}
-                      fill="rgba(255,255,255,0.08)"
-                    />
-                    <Bar
-                      data-testid="bin-pareto-bar"
-                      x={0}
-                      y={0}
-                      width={`${barPercent}%`}
-                      height={TRACK_HEIGHT_PX}
-                      rx={TRACK_HEIGHT_PX / 2}
-                      fill={color}
-                      stroke={isHighlighted ? COLOR_TOKENS.accent : 'none'}
-                      strokeWidth={isHighlighted ? 1.5 : 0}
-                    />
-                    <rect
-                      x={`${cumulativePercent}%`}
-                      y={-2}
-                      width={2}
-                      height={TRACK_HEIGHT_PX + 4}
-                      rx={1}
-                      fill={COLOR_TOKENS.textSecondary}
-                      style={{ transform: 'translateX(-2px)' }}
-                    />
-                  </svg>
-                  <span className="mt-1.5 block type-subhead text-text-tertiary tabular-nums">
-                    {t('pareto.rowDetail', {
-                      share: formatPercent(entry.shareOfTested),
-                      cumulative: formatPercent(entry.cumulativeFailShare),
-                    })}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+        <>
+          <p
+            data-testid="bin-pareto-takeaway"
+            className="mt-2 line-clamp-2 max-w-[520px] type-body text-pretty text-text-secondary"
+          >
+            {t('pareto.takeaway', {
+              share: formatPercent(pareto.entries[0]!.shareOfFailures),
+            })}
+          </p>
 
-      {pareto.entries.length > PARETO_COLLAPSED_ROW_COUNT ? (
-        <button
-          type="button"
-          data-testid="bin-pareto-expand"
-          aria-expanded={expanded}
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-1 cursor-pointer rounded-lg px-4 py-2 type-control text-text-secondary transition-colors duration-120 ease-out hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        >
-          {expanded
-            ? t('pareto.showFewer')
-            : t('pareto.showAll', {
-                count: formatInteger(pareto.entries.length),
-              })}
-        </button>
-      ) : null}
+          <p
+            data-testid="bin-pareto-loss"
+            className="mt-6 flex items-baseline gap-2"
+          >
+            <span className="type-stat-s text-text-primary tabular-nums">
+              {formatPercent(lossRatio)}
+            </span>
+            <span className="type-subhead text-text-tertiary">
+              {t('pareto.lossLabel')}
+            </span>
+          </p>
+
+          <div className="mt-6 flex items-baseline justify-between gap-4 type-subhead text-text-tertiary">
+            <span id={chartLabelId}>{t('pareto.chartLabel')}</span>
+            <span>{t('pareto.axisLabel')}</span>
+          </div>
+
+          <ul
+            data-testid="bin-pareto-rows"
+            aria-labelledby={chartLabelId}
+            className="@container mt-2 -mx-3 flex flex-col"
+          >
+            {rows.map((entry) => {
+              const isFiltered = entry.binCode === activeFilterCode;
+              const isHighlighted = highlightedCodes.has(entry.binCode);
+              const isSelected = isFiltered || isHighlighted;
+              const code = `${mode} ${entry.binCode}`;
+              const label = `${code}${entry.binName ? ` ${entry.binName}` : ''}`;
+              const tone = resolveParetoBarTone(
+                rankByCode.get(entry.binCode),
+                isSelected,
+              );
+              const diesLabel = tPlural('findings.dieCount', entry.count);
+              const codeText = (
+                <Untranslated className="block truncate type-row-title text-text-primary">
+                  {code}
+                </Untranslated>
+              );
+              return (
+                <li key={entry.binCode} className="list-none">
+                  <button
+                    type="button"
+                    data-testid="bin-pareto-row"
+                    data-bin-mode={mode}
+                    data-bin-code={entry.binCode}
+                    data-highlighted={isHighlighted ? 'true' : undefined}
+                    data-selected={isSelected ? 'true' : undefined}
+                    aria-pressed={isSelected}
+                    aria-label={t('pareto.rowAria', {
+                      bin: label,
+                      dies: diesLabel,
+                      share: formatPercent(entry.shareOfTested),
+                    })}
+                    onClick={() => handleToggle(entry.binCode)}
+                    className={cn(
+                      'grid h-10 w-full origin-center cursor-pointer appearance-none items-center gap-3 rounded-md border-0 px-3 text-left pointer-coarse:h-11',
+                      'grid-cols-[88px_minmax(0,1fr)_56px_88px_56px] @max-md:grid-cols-[88px_minmax(0,1fr)_56px_56px]',
+                      'transition-[background-color,scale] duration-120 ease-out active:scale-[0.985] active:bg-fill-2 motion-reduce:active:scale-100',
+                      'focus-visible:shadow-focus-ring focus-visible:outline-none',
+                      isSelected ? 'bg-fill-2' : 'bg-transparent hover:bg-fill-1',
+                    )}
+                  >
+                    {entry.binName ? (
+                      <Tooltip content={<Untranslated>{entry.binName}</Untranslated>}>
+                        {codeText}
+                      </Tooltip>
+                    ) : (
+                      codeText
+                    )}
+                    <span aria-hidden="true" className="block h-2">
+                      <span
+                        data-testid="bin-pareto-bar"
+                        data-bar-tone={tone}
+                        className={cn(
+                          'block h-full rounded-xs transition-[background-color] duration-120 ease-out',
+                          BAR_TONE_CLASS[tone],
+                        )}
+                        style={{
+                          width: `${resolveParetoBarPercent(entry.count, maxCount)}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="text-right type-subhead text-text-primary tabular-nums">
+                      {formatPercent(entry.shareOfTested)}
+                    </span>
+                    <span className="truncate text-right type-subhead text-text-tertiary tabular-nums @max-md:hidden">
+                      {diesLabel}
+                    </span>
+                    <span
+                      data-testid="bin-pareto-pill"
+                      className="inline-flex h-6 items-center justify-self-end rounded-pill bg-fill-2 px-2 type-caption text-text-primary tabular-nums"
+                    >
+                      {formatPercent(entry.shareOfFailures)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          {pareto.entries.length > PARETO_COLLAPSED_ROW_COUNT ? (
+            <Button
+              variant="text"
+              data-testid="bin-pareto-expand"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((v) => !v)}
+              className="mt-4"
+            >
+              {expanded
+                ? t('pareto.showFewer')
+                : t('pareto.showAll', {
+                    count: formatInteger(pareto.entries.length),
+                  })}
+            </Button>
+          ) : null}
+        </>
+      )}
     </section>
   );
 }
+
+/** Bar fills per tone (premium §7.9, §11.3). */
+const BAR_TONE_CLASS: Readonly<Record<ParetoBarTone, string>> = {
+  dominant: 'bg-ember-mark',
+  selected: 'bg-ink dark:bg-text-primary',
+  neutral: 'border border-hairline-strong bg-bar-neutral/40',
+};

@@ -1,5 +1,5 @@
 import type { BinParetoEntry } from '@/core/analytics';
-import type { BinMode, LotModel } from '@/core/model';
+import type { BinMode, ColumnarDies, LotModel } from '@/core/model';
 import {
   type BinSelectionFilter,
   deriveSelectionMasks,
@@ -7,8 +7,32 @@ import {
   type SpatialBrushRect,
 } from '@/ui/state';
 
-/** Rows shown before "Show all N bins". */
-export const PARETO_COLLAPSED_ROW_COUNT = 8;
+/** Rows shown before "Show all N bins" (premium §7.9: the top 6 loss bins). */
+export const PARETO_COLLAPSED_ROW_COUNT = 6;
+
+/** Narrowest bar, so a single failing die stays visible. */
+export const PARETO_MIN_BAR_PERCENT = 0.6;
+
+/**
+ * Bar tone (premium §7.9, §11.3): the top-loss bin (fail-bin rank 0, the disc's ember bin) is
+ * solid `ember-mark`, selected or linked; any other selected bin is solid `ink`; the rest are
+ * ghosted `bar-neutral` with a hairline outline.
+ */
+export type ParetoBarTone = 'dominant' | 'selected' | 'neutral';
+
+export function resolveParetoBarTone(
+  failBinRank: number | undefined,
+  selected: boolean,
+): ParetoBarTone {
+  if (failBinRank === 0) return 'dominant';
+  return selected ? 'selected' : 'neutral';
+}
+
+/** Bar width in percent: loss share over the largest loss share, so the top bar fills the column. */
+export function resolveParetoBarPercent(count: number, maxCount: number): number {
+  if (maxCount <= 0 || count <= 0) return 0;
+  return Math.max(PARETO_MIN_BAR_PERCENT, Math.min(100, (count / maxCount) * 100));
+}
 
 export interface ParetoMaskInputs {
   readonly brush: SpatialBrushRect | null;
@@ -77,4 +101,32 @@ export function resolveClaimParetoMode(
     return null;
   }
   return citedBins[0]!.mode;
+}
+
+/**
+ * Pareto row a claim without a cited bin of `mode` matches (premium §7.9, §8.3): the bin holding
+ * most of the claim's failing dies, lowest code on a tie. `null` when the claim cites no failing die.
+ */
+export function resolveClaimMatchedBinCode(
+  dies: ColumnarDies,
+  mode: BinMode,
+  dieIndices: Uint32Array,
+): number | null {
+  const binArr = mode === 'SBIN' ? dies.sbin : dies.hbin;
+  const counts = new Map<number, number>();
+  for (let i = 0; i < dieIndices.length; i += 1) {
+    const index = dieIndices[i]!;
+    if (index >= dies.count || dies.finalPass[index] !== 0) continue;
+    const code = binArr[index]!;
+    counts.set(code, (counts.get(code) ?? 0) + 1);
+  }
+  let best: number | null = null;
+  let bestCount = 0;
+  for (const [code, count] of counts) {
+    if (count > bestCount || (count === bestCount && best !== null && code < best)) {
+      best = code;
+      bestCount = count;
+    }
+  }
+  return best;
 }

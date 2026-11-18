@@ -282,7 +282,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P19. Findings and possible causes
   - Card, rows (rest, hover, pressed, selected), kind icons, expanded body, "Show N more", Possible causes disclosure, finding title templates (premium §7.6, §9.3).
   - Accept: A27.
-- [ ] P20. "Where the yield went"
+- [x] P20. "Where the yield went"
   - Section card, takeaway, bar rows with `bar-neutral`, selected state linked to the store, show-all, empty state (premium §7.9).
   - Accept: A32, A43 (also apply premium §11.3).
 - [ ] P21. Yield summary panel

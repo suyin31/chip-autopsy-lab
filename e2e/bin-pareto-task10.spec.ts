@@ -69,14 +69,14 @@ test.describe('Task 10 - HBIN/SBIN legend and Bin Pareto', () => {
       rendersBefore,
     );
 
-    // The dominant bin bar is orange and the row names the bin
+    // The dominant bin bar is ember (premium §7.9) and the row names the bin
     const rows = page.getByTestId('bin-pareto-row');
     const topRow = rows.first();
-    await expect(topRow).toContainText('SBIN 7 IDDQ_EDGE_LEAK');
-    await expect(topRow).toContainText('of tested');
+    await expect(topRow).toContainText('SBIN 7');
+    await expect(topRow).toHaveAttribute('aria-label', /SBIN 7 IDDQ_EDGE_LEAK/);
     await expect(topRow.getByTestId('bin-pareto-bar')).toHaveAttribute(
-      'fill',
-      '#FF6B2C',
+      'data-bar-tone',
+      'dominant',
     );
 
     // Bar click toggles the bin filter and lights the matching dies

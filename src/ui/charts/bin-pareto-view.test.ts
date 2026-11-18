@@ -8,6 +8,10 @@ import { computeBinPareto } from '@/core/analytics';
 import { createSelectionStore } from '@/ui/state';
 import {
   PARETO_COLLAPSED_ROW_COUNT,
+  PARETO_MIN_BAR_PERCENT,
+  resolveParetoBarPercent,
+  resolveParetoBarTone,
+  resolveClaimMatchedBinCode,
   resolveClaimParetoMode,
   resolveParetoMask,
   selectParetoRows,
@@ -115,7 +119,27 @@ describe('selectParetoRows', () => {
 
   it('keeps pinned rows beyond the cut-off, in rank order', () => {
     const rows = selectParetoRows(entries, false, (e) => e.binCode === 11);
-    expect(rows.map((e) => e.binCode)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 11]);
+    expect(rows.map((e) => e.binCode)).toEqual([1, 2, 3, 4, 5, 6, 11]);
+  });
+});
+
+describe('resolveParetoBarTone', () => {
+  it('keeps the top-loss bin ember, inks a selected bin, and ghosts the rest', () => {
+    expect(resolveParetoBarTone(0, false)).toBe('dominant');
+    expect(resolveParetoBarTone(0, true)).toBe('dominant');
+    expect(resolveParetoBarTone(3, true)).toBe('selected');
+    expect(resolveParetoBarTone(3, false)).toBe('neutral');
+    expect(resolveParetoBarTone(undefined, false)).toBe('neutral');
+  });
+});
+
+describe('resolveParetoBarPercent', () => {
+  it('scales to the largest loss share with a visible floor', () => {
+    expect(resolveParetoBarPercent(50, 50)).toBe(100);
+    expect(resolveParetoBarPercent(25, 50)).toBe(50);
+    expect(resolveParetoBarPercent(1, 100_000)).toBe(PARETO_MIN_BAR_PERCENT);
+    expect(resolveParetoBarPercent(0, 50)).toBe(0);
+    expect(resolveParetoBarPercent(3, 0)).toBe(0);
   });
 });
 
@@ -131,5 +155,21 @@ describe('resolveClaimParetoMode', () => {
         { mode: 'SBIN', code: 7 },
       ]),
     ).toBeNull();
+  });
+});
+
+describe('resolveClaimMatchedBinCode', () => {
+  it('returns the bin holding most of the cited failing dies, ignoring passing dies', () => {
+    const lot = loadLot();
+    const { dies } = lot;
+    const all = Uint32Array.from({ length: dies.count }, (_, i) => i);
+    const top = computeBinPareto(lot, 'SBIN').entries[0]!.binCode;
+    expect(resolveClaimMatchedBinCode(dies, 'SBIN', all)).toBe(top);
+
+    const passing = Uint32Array.from(
+      Array.from(all).filter((i) => dies.finalPass[i] !== 0).slice(0, 10),
+    );
+    expect(resolveClaimMatchedBinCode(dies, 'SBIN', passing)).toBeNull();
+    expect(resolveClaimMatchedBinCode(dies, 'SBIN', new Uint32Array())).toBeNull();
   });
 });
