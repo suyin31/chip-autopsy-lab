@@ -18,6 +18,10 @@ async function open(page: Page, locale: string, loaded: boolean) {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/?nohints=1");
   await expect(page.getByTestId("landing-headline")).toBeVisible();
+  // The server renders English; wait for the stored locale to apply after hydration
+  if (locale !== "en") {
+    await expect(page.getByTestId("landing-headline")).not.toHaveText("Drop the body.");
+  }
   if (loaded) {
     await page.getByTestId("landing-open-sample-button").click();
     await expect(page.getByTestId("verdict-headline")).toBeVisible({ timeout: 5_000 });

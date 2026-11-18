@@ -95,7 +95,9 @@ export function VerdictHero({
       const lineHeight = Number.isFinite(rawLineHeight)
         ? rawLineHeight
         : fontSize * 1.12;
-      if (el.scrollHeight > Math.ceil(maxLines * lineHeight + 6)) {
+      // clientHeight follows the line boxes; scrollHeight would also count the taller content
+      // area of the §12.2 serif accent glyphs, which overflows its line without adding a line.
+      if (el.clientHeight > Math.ceil(maxLines * lineHeight + 6)) {
         setStep((prev) => (prev === 0 ? 1 : 2));
       }
     };
