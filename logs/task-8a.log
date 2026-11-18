@@ -1,0 +1,18 @@
+root agent idle; waiting for 1 background task(s) to finish
+Running `tsc --noEmit`, `eslint .`, `next build`, and `playwright test` now; I will verify the results and run the full Vitest suite once the build and E2E run complete.
+Playwright server started and `scaffold.spec.ts` passed; waiting a moment for `vertical-slice.spec.ts` output to finish so I can inspect the assertion details.
+Rebuilding Next.js and re-running the Playwright end-to-end suite now; waiting for the run to complete.
+Running the full verification gate (`tsc --noEmit`, `eslint .`, `vitest run`, `next build`, and `playwright test`) now; waiting for it to finish.
+Implemented **Task 8 (vertical-slice end-to-end checkpoint)**:
+
+- **Overlay highlight data attributes**: Wrapped the overlay canvas in [OverlayCanvas.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/wafer-map/OverlayCanvas.tsx#L200-L219) (`data-testid="wafer-overlay-wrapper"`) exposing deterministic `data-highlight-count`, `data-outer-band-highlight-count`, `data-interior-highlight-count`, `data-wafer-highlight-count`, and `data-wafer-outer-band-highlight-count` without repainting or re-rendering `BaseCanvas`, and tagged the headline count element in [ClaimInlineButton.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/report/ClaimInlineButton.tsx#L101-L106). Added unit coverage in [autopsy-report-card.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/report/autopsy-report-card.test.ts#L376-L394).
+- **Playwright config & `e2e` script**: Updated [playwright.config.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/playwright.config.ts#L1-L39) (`webServer` starting `next start` on port `3130` with loopback `NO_PROXY`) and added the `"e2e"` script in [package.json](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/package.json#L13-L17).
+- **Vertical-slice E2E spec**: Added [vertical-slice.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/vertical-slice.spec.ts) verifying `edge-ring-etch`, `handling-scratch`, and `site2-probe-contact` with external host requests aborted at the browser context layer, asserting each verdict headline renders within `3 s` (`~0.9 s` actual), clicking the headline, asserting `data-highlight-count` equals the cited-dies count shown, and verifying outer 3-die band membership on `edge-ring-etch`.
+- **Tracking**: Ticked Task 8 in [tasks.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/specs/chip-autopsy-lab/tasks.md#L87-L90) and appended 1 summary line to [progress.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/progress.md#L27).
+
+### Verification
+- `npx tsc --noEmit`: 0 errors
+- `npx eslint .`: 0 warnings / 0 errors
+- `npx vitest run`: 22/22 files, 122/122 tests pass
+- `npx next build`: clean production build
+- `npx playwright test` & `npm run e2e`: 4/4 specs pass

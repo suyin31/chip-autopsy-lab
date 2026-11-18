@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { LotModel } from '@/core/model';
+import { CLASSIFIER_THRESHOLDS } from '@/core/patterns';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
   computeWaferRenderLayout,
@@ -72,6 +73,57 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
 
   const safeCssWidth = Math.max(1, Math.round(cssWidth));
   const safeCssHeight = Math.max(1, Math.round(cssHeight));
+
+  const lotHighlightStats = React.useMemo(() => {
+    if (
+      overlayHighlightCount === 0 ||
+      overlayHighlightMask.length < lot.dies.count
+    ) {
+      return { outerBandCount: 0, interiorCount: 0 };
+    }
+    const { hasValidCoords, ringIndex, count } = lot.dies;
+    const maxEdgeRing = CLASSIFIER_THRESHOLDS.EDGE_RING_BAND;
+    let outerBandCount = 0;
+    let interiorCount = 0;
+    for (let i = 0; i < count; i += 1) {
+      if (overlayHighlightMask[i] === 0 || hasValidCoords[i] === 0) {
+        continue;
+      }
+      const ring = ringIndex[i]!;
+      if (ring >= 1 && ring <= maxEdgeRing) {
+        outerBandCount += 1;
+      } else if (ring > maxEdgeRing) {
+        interiorCount += 1;
+      }
+    }
+    return { outerBandCount, interiorCount };
+  }, [lot, overlayHighlightMask, overlayHighlightCount]);
+
+  const waferHighlightStats = React.useMemo(() => {
+    const wafer = lot.wafers[waferIndex];
+    if (
+      overlayHighlightCount === 0 ||
+      !wafer ||
+      overlayHighlightMask.length < wafer.dieEndIndex
+    ) {
+      return { waferCount: 0, waferOuterBandCount: 0 };
+    }
+    const { hasValidCoords, ringIndex } = lot.dies;
+    const maxEdgeRing = CLASSIFIER_THRESHOLDS.EDGE_RING_BAND;
+    let waferCount = 0;
+    let waferOuterBandCount = 0;
+    for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
+      if (overlayHighlightMask[i] === 0 || hasValidCoords[i] === 0) {
+        continue;
+      }
+      waferCount += 1;
+      const ring = ringIndex[i]!;
+      if (ring >= 1 && ring <= maxEdgeRing) {
+        waferOuterBandCount += 1;
+      }
+    }
+    return { waferCount, waferOuterBandCount };
+  }, [lot, waferIndex, overlayHighlightMask, overlayHighlightCount]);
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -145,12 +197,25 @@ export const OverlayCanvas = React.memo(function OverlayCanvas({
   ]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      data-testid="wafer-overlay-canvas"
+    <div
+      data-testid="wafer-overlay-wrapper"
+      data-highlight-count={overlayHighlightCount}
+      data-outer-band-highlight-count={lotHighlightStats.outerBandCount}
+      data-interior-highlight-count={lotHighlightStats.interiorCount}
+      data-wafer-highlight-count={waferHighlightStats.waferCount}
+      data-wafer-outer-band-highlight-count={
+        waferHighlightStats.waferOuterBandCount
+      }
       aria-hidden="true"
-      style={{ width: `${safeCssWidth}px`, height: `${safeCssHeight}px` }}
-      className="pointer-events-none absolute top-0 left-0 block select-none"
-    />
+      className="pointer-events-none absolute inset-0"
+    >
+      <canvas
+        ref={canvasRef}
+        data-testid="wafer-overlay-canvas"
+        aria-hidden="true"
+        style={{ width: `${safeCssWidth}px`, height: `${safeCssHeight}px` }}
+        className="pointer-events-none absolute top-0 left-0 block select-none"
+      />
+    </div>
   );
 });

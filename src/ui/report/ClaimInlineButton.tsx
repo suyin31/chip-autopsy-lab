@@ -98,7 +98,10 @@ export function ClaimInlineButton({
 
         <span className="flex w-full flex-wrap items-center justify-between gap-2">
           <span className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[12px] text-text-secondary tabular-nums">
+            <span
+              data-testid="claim-cited-dies-count"
+              className="font-mono text-[12px] text-text-secondary tabular-nums"
+            >
               {formatGroupedInt(dieCount)} cited {dieNoun}
             </span>
 

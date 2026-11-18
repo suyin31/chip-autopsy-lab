@@ -14,6 +14,7 @@ import {
   computeWaferRenderLayout,
   DEFAULT_VIEWPORT_TRANSFORM,
   OVERLAY_HALO_STROKE,
+  OverlayCanvas,
   paintWaferOverlayLayer,
 } from '@/ui/wafer-map';
 import { ingestDemoPreset } from '@/workers';
@@ -371,6 +372,26 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
     expect(accentStrokes.length).toBeGreaterThanOrEqual(1);
     expect(haloStrokes.length).toBeGreaterThanOrEqual(1);
     expect(getRectCount()).toBeGreaterThan(40);
+
+    // OverlayCanvas wrapper exposes deterministic highlight and outer-band counts
+    const overlayHtml = renderToStaticMarkup(
+      React.createElement(OverlayCanvas, {
+        lot,
+        waferIndex: afterFirstClick.activeWaferIndex,
+        cssWidth: 520,
+        cssHeight: 520,
+        transform: DEFAULT_VIEWPORT_TRANSFORM,
+        store,
+      }),
+    );
+    expect(overlayHtml).toContain('data-testid="wafer-overlay-wrapper"');
+    expect(overlayHtml).toContain(
+      `data-highlight-count="${headlineClaim.resolvedDieIndices.length}"`,
+    );
+    expect(overlayHtml).toContain(
+      `data-outer-band-highlight-count="${headlineClaim.resolvedDieIndices.length}"`,
+    );
+    expect(overlayHtml).toContain('data-interior-highlight-count="0"');
 
     // Second click on the active headline button clears the selection store mask
     const buttonWhileActive = ClaimInlineButton({

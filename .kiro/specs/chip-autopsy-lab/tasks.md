@@ -84,7 +84,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - **Property 10** in `src/core/report/autopsy-report.prop.test.ts`
     - _Requirements: 10.1, 10.2, 10.3, 10.5_
 
-- [ ] 8. Checkpoint: vertical slice end to end
+- [x] 8. Checkpoint: vertical slice end to end
   - Playwright spec: click `"Load demo lot"` on `edge-ring-etch`, see `Cause of death: Edge-Ring` within 3 s offline, click the headline, and assert the outer-ring dies are highlighted. Repeat for the other two presets.
   - Ensure all unit and property tests pass; ask the user if questions arise.
   - _Requirements: 3.2, 10.4, 15.6, 16.2_
