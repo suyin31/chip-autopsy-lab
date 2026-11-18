@@ -11,8 +11,13 @@ import { paintWaferThumbnail, resolveCanvasPixelSize } from './wafer-geometry';
 export const WAFER_THUMB_BUTTON_PX = 48 as const;
 export const WAFER_THUMB_CANVAS_PX = 48 as const;
 
+/** Idle time after the last keyboard step before the strip commits the wafer to the store. */
+export const WAFER_KEY_COMMIT_DELAY_MS = 140 as const;
+
 export interface WaferSelectOptions {
   readonly instant?: boolean;
+  /** True when `onPreviewWafer` already painted this wafer; only the store commit remains. */
+  readonly previewed?: boolean;
 }
 
 export interface WaferSelectorProps {
@@ -32,6 +37,15 @@ export interface WaferSelectorProps {
     waferIndex: number,
     options?: WaferSelectOptions,
   ) => void;
+  /**
+   * Keyboard stepping paints the stage imperatively through this callback inside the
+   * keydown handler; the store commit (`onSelectWafer` with `previewed: true`) follows once
+   * stepping pauses for `WAFER_KEY_COMMIT_DELAY_MS`, on blur, or on a pointer selection.
+   */
+  readonly onPreviewWafer?: (
+    waferIndex: number,
+    options?: WaferSelectOptions,
+  ) => void;
   readonly className?: string;
 }
 
@@ -46,6 +60,9 @@ export interface WaferSelectorProps {
  *   render a `4 px` `#D6E6FF` dot beneath them
  * - Roving `tabIndex`: `ArrowLeft`/`ArrowRight` ±1, `PageUp`/`PageDown` ±5, `Home`/`End`;
  *   held key-repeat (`event.repeat === true`) passes `{ instant: true }` for `0 ms` stage swap
+ * - Keyboard steps never render React or read layout in the keydown handler: selection
+ *   attributes flip imperatively, the stage repaints via `onPreviewWafer`, the strip scrolls in
+ *   the next frame from cached item offsets, and the store commit is deferred until stepping pauses
  */
 export const WaferSelector = React.memo(function WaferSelector({
   lotId = 'LOT',
@@ -56,6 +73,7 @@ export const WaferSelector = React.memo(function WaferSelector({
   evidencePresence = null,
   dpr,
   onSelectWafer,
+  onPreviewWafer,
   className,
 }: WaferSelectorProps): React.JSX.Element | null {
   const { t, formatPercent } = useT();
@@ -65,7 +83,20 @@ export const WaferSelector = React.memo(function WaferSelector({
   const canvasRefs = React.useRef<Array<HTMLCanvasElement | null>>([]);
   const ctxRefs = React.useRef<Array<CanvasRenderingContext2D | null>>([]);
   const didMountRef = React.useRef(false);
-  const lastSelectWasRepeatRef = React.useRef(false);
+  /** Strip index the list has already been scrolled to (skips redundant effect scrolls). */
+  const scrolledIndexRef = React.useRef(-1);
+  const scrollRafRef = React.useRef<number | null>(null);
+  /** Cached `offsetLeft`/`offsetWidth` per item, measured outside input handlers. */
+  const itemGeometryRef = React.useRef<Array<{ left: number; width: number }>>(
+    [],
+  );
+  const listWidthRef = React.useRef(0);
+  const pendingCommitRef = React.useRef<{
+    index: number;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+  const onSelectWaferRef = React.useRef(onSelectWafer);
+  onSelectWaferRef.current = onSelectWafer;
 
   const count = wafers.length;
   const safeActive =
@@ -180,25 +211,104 @@ export const WaferSelector = React.memo(function WaferSelector({
     };
   }, [count, wafers, dies, dpr]);
 
-  React.useEffect(() => {
-    if (!didMountRef.current) {
-      didMountRef.current = true;
+  const measureGeometry = React.useCallback((): void => {
+    const listEl = listRef.current;
+    if (!listEl) {
       return;
     }
-    const listEl = listRef.current;
-    const itemEl = itemRefs.current[safeActive];
-    const instant = Boolean(shouldReduceMotion) || lastSelectWasRepeatRef.current;
-    lastSelectWasRepeatRef.current = false;
+    listWidthRef.current = listEl.clientWidth;
+    itemGeometryRef.current = itemRefs.current.map((el) =>
+      el ? { left: el.offsetLeft, width: el.offsetWidth } : { left: 0, width: 0 },
+    );
+  }, []);
 
-    if (listEl && itemEl && typeof listEl.scrollTo === 'function') {
-      const targetLeft =
-        itemEl.offsetLeft - listEl.clientWidth / 2 + itemEl.offsetWidth / 2;
+  // Measure item offsets after layout (mount, wafer list change, resize) so input handlers never force layout
+  React.useEffect(() => {
+    const listEl = listRef.current;
+    if (!listEl) {
+      return;
+    }
+    measureGeometry();
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver(() => measureGeometry());
+    observer.observe(listEl);
+    return () => observer.disconnect();
+  }, [count, measureGeometry]);
+
+  const scrollToIndex = React.useCallback(
+    (index: number, instant: boolean): void => {
+      const listEl = listRef.current;
+      const geom = itemGeometryRef.current[index];
+      if (!listEl || !geom || typeof listEl.scrollTo !== 'function') {
+        return;
+      }
+      scrolledIndexRef.current = index;
+      const targetLeft = geom.left - listWidthRef.current / 2 + geom.width / 2;
       listEl.scrollTo({
         left: Math.max(0, targetLeft),
         behavior: instant ? 'instant' : 'smooth',
       });
+    },
+    [],
+  );
+
+  // Defer strip scrolling to the next frame so the keydown task stays free of layout work
+  const scheduleScrollToIndex = React.useCallback(
+    (index: number, instant: boolean): void => {
+      if (typeof requestAnimationFrame !== 'function') {
+        scrollToIndex(index, instant);
+        return;
+      }
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        scrollToIndex(index, instant);
+      });
+    },
+    [scrollToIndex],
+  );
+
+  const flushPendingCommit = React.useCallback((): void => {
+    const pending = pendingCommitRef.current;
+    if (!pending) {
+      return;
     }
-  }, [safeActive, shouldReduceMotion]);
+    clearTimeout(pending.timer);
+    pendingCommitRef.current = null;
+    onSelectWaferRef.current(pending.index, { instant: true, previewed: true });
+  }, []);
+
+  // Cancel deferred work when the lot changes or the strip unmounts
+  React.useEffect(() => {
+    return () => {
+      const pending = pendingCommitRef.current;
+      if (pending) {
+        clearTimeout(pending.timer);
+        pendingCommitRef.current = null;
+      }
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+    };
+  }, [wafers]);
+
+  // Scroll the active wafer into view when the selection changes from outside the strip
+  React.useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      scrolledIndexRef.current = safeActive;
+      return;
+    }
+    if (scrolledIndexRef.current === safeActive) {
+      return;
+    }
+    scheduleScrollToIndex(safeActive, Boolean(shouldReduceMotion));
+  }, [safeActive, shouldReduceMotion, scheduleScrollToIndex]);
 
   if (count === 0) {
     return null;
@@ -206,12 +316,41 @@ export const WaferSelector = React.memo(function WaferSelector({
 
   const focusAndSelect = (nextIndex: number, isRepeat: boolean): void => {
     const clamped = Math.min(count - 1, Math.max(0, nextIndex));
+    const prevIndex = liveActiveRef.current;
+    if (clamped === prevIndex) {
+      return;
+    }
+    const instant = isRepeat || Boolean(shouldReduceMotion);
+    const nextEl = itemRefs.current[clamped];
+    const prevEl = itemRefs.current[prevIndex];
+    // Focus before mutating attributes so focus() finds clean style and forces no recalc
+    nextEl?.focus({ preventScroll: true });
+    if (prevEl) {
+      prevEl.setAttribute('aria-selected', 'false');
+      prevEl.tabIndex = -1;
+    }
+    if (nextEl) {
+      nextEl.setAttribute('aria-selected', 'true');
+      nextEl.tabIndex = 0;
+    }
     liveActiveRef.current = clamped;
-    lastSelectWasRepeatRef.current = isRepeat;
-    onSelectWafer(clamped, {
-      instant: isRepeat || Boolean(shouldReduceMotion),
-    });
-    itemRefs.current[clamped]?.focus({ preventScroll: true });
+
+    if (!onPreviewWafer) {
+      onSelectWafer(clamped, { instant });
+      scheduleScrollToIndex(clamped, instant);
+      return;
+    }
+
+    onPreviewWafer(clamped, { instant });
+    scheduleScrollToIndex(clamped, instant);
+    const pending = pendingCommitRef.current;
+    if (pending) {
+      clearTimeout(pending.timer);
+    }
+    pendingCommitRef.current = {
+      index: clamped,
+      timer: setTimeout(flushPendingCommit, WAFER_KEY_COMMIT_DELAY_MS),
+    };
   };
 
   const handleItemKeyDown = (
@@ -267,6 +406,12 @@ export const WaferSelector = React.memo(function WaferSelector({
       aria-orientation="horizontal"
       aria-label={t('strip.aria', { lotId })}
       data-testid="wafer-strip"
+      onBlur={(event) => {
+        const next = event.relatedTarget;
+        if (!(next instanceof Node) || !event.currentTarget.contains(next)) {
+          flushPendingCommit();
+        }
+      }}
       className={cn(
         'wafer-strip-mask flex h-14 w-full flex-nowrap items-center gap-3 overflow-x-auto overflow-y-hidden px-4 md:h-16 md:px-3',
         '[scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
@@ -307,9 +452,16 @@ export const WaferSelector = React.memo(function WaferSelector({
               }
             }}
             onClick={() => {
+              flushPendingCommit();
+              const instant = Boolean(shouldReduceMotion);
+              const prevEl = itemRefs.current[liveActiveRef.current];
+              if (prevEl && liveActiveRef.current !== idx) {
+                prevEl.setAttribute('aria-selected', 'false');
+                prevEl.tabIndex = -1;
+              }
               liveActiveRef.current = idx;
-              lastSelectWasRepeatRef.current = false;
-              onSelectWafer(idx, { instant: Boolean(shouldReduceMotion) });
+              onSelectWafer(idx, { instant });
+              scheduleScrollToIndex(idx, instant);
             }}
             onKeyDown={handleItemKeyDown}
             className={cn(
@@ -322,13 +474,13 @@ export const WaferSelector = React.memo(function WaferSelector({
               data-testid="wafer-strip-thumb-ring"
               className={cn(
                 'relative inline-flex h-10 w-10 items-center justify-center rounded-full transition-opacity duration-[120ms] ease-[var(--ease-out)] md:h-12 md:w-12',
-                isSelected
-                  ? isZeroEvidenceDimmed
-                    ? 'opacity-40 ring-2 ring-accent ring-offset-[3px] ring-offset-bg'
-                    : 'opacity-100 ring-2 ring-accent ring-offset-[3px] ring-offset-bg'
-                  : isZeroEvidenceDimmed
-                    ? 'opacity-40 hover:opacity-70 hover:ring-2 hover:ring-[var(--color-accent-soft)]'
-                    : 'opacity-[0.72] hover:opacity-100 hover:ring-2 hover:ring-[var(--color-accent-soft)]',
+                // Selection styling keys off the button's `aria-selected` so keyboard steps can
+                // flip it imperatively without a React render (§5.8, §5.10)
+                'group-aria-selected:ring-2 group-aria-selected:ring-accent group-aria-selected:ring-offset-[3px] group-aria-selected:ring-offset-bg',
+                'group-aria-[selected=false]:hover:ring-2 group-aria-[selected=false]:hover:ring-[var(--color-accent-soft)]',
+                isZeroEvidenceDimmed
+                  ? 'opacity-40 group-aria-[selected=false]:hover:opacity-70'
+                  : 'opacity-[0.72] group-aria-selected:opacity-100 group-aria-[selected=false]:hover:opacity-100',
               )}
             >
               <canvas
@@ -343,8 +495,7 @@ export const WaferSelector = React.memo(function WaferSelector({
             <span className="flex items-center gap-1">
               <span
                 className={cn(
-                  'type-caption leading-none tabular-nums',
-                  isSelected ? 'text-text-primary' : 'text-text-tertiary',
+                  'type-caption leading-none tabular-nums text-text-tertiary group-aria-selected:text-text-primary',
                 )}
               >
                 <Untranslated>{wafer.waferId}</Untranslated>

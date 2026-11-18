@@ -37,6 +37,11 @@ export interface OverlayCanvasHandle {
   paintForCamera(camera: CameraState): void;
   setLiveBrushScreenRect(rect: ScreenBox | null): void;
   setProbeHeadDieIndex(dieIndex: number | null): void;
+  /**
+   * Repaints the overlay for `waferIndex` before React commits it (§5.8 keyboard wafer
+   * stepping): clears hover and settles any active finding glow on the new wafer at once.
+   */
+  previewWafer(waferIndex: number): void;
 }
 
 export interface OverlayCanvasProps {
@@ -620,8 +625,61 @@ const OverlayCanvasImpl = React.forwardRef<
         probeHeadDieIndexRef.current = dieIndex;
         paintCurrentNow();
       },
+      previewWafer(waferIndex: number): void {
+        const cur = latestRef.current;
+        if (
+          waferIndex === cur.waferIndex ||
+          waferIndex < 0 ||
+          waferIndex >= cur.lot.wafers.length
+        ) {
+          return;
+        }
+        latestRef.current = {
+          ...cur,
+          waferIndex,
+          layout: null,
+          hoveredDieIndex: null,
+        };
+        const anim = animStateRef.current;
+        const claimId = cur.claimHighlight?.claimId ?? null;
+        if (anim.phase !== 'idle' || claimId !== null) {
+          stopGlowRaf();
+          if (claimId === null) {
+            animStateRef.current = createIdleAnimatorState(waferIndex);
+          } else {
+            // Same finding, new wafer: show its evidence settled immediately (0 ms keyboard swap)
+            const schedule = computeOrderedGlowSchedule({
+              lot: cur.lot,
+              waferIndex,
+              evidenceMask: cur.claimHighlightMask,
+              mode: cur.claimHighlight?.glowOrderMode ?? 'centroid-distance',
+            });
+            const alphas = new Float32Array(schedule.dieIndices.length);
+            alphas.fill(1);
+            animStateRef.current = {
+              phase: 'settled',
+              claimId,
+              waferIndex,
+              schedule,
+              startTimeMs:
+                typeof performance !== 'undefined'
+                  ? performance.now()
+                  : Date.now(),
+              scrimStartAlpha: DIM_SCRIM_MAX_ALPHA,
+              liveScrimAlpha: DIM_SCRIM_MAX_ALPHA,
+              liveDieIndices: schedule.dieIndices,
+              liveDieAlphas: alphas,
+              outgoingIndices: null,
+              outgoingStartAlphas: null,
+              outgoingLiveAlphas: null,
+              outgoingStartTimeMs: 0,
+            };
+          }
+        }
+        paintCurrentNow();
+      },
     }),
-    [paintCurrentNow, paintWithViewport],
+    [paintCurrentNow, paintWithViewport, stopGlowRaf],
   );
 
   React.useEffect(() => {

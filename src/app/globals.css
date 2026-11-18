@@ -78,6 +78,8 @@
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-clinical: cubic-bezier(0.22, 1, 0.36, 1);
+  /* spring-ui (stiffness 300, damping 30, mass 1) sampled over 450 ms for CSS-only surfaces */
+  --ease-spring-ui: linear(0, 0.073, 0.228, 0.401, 0.561, 0.693, 0.796, 0.871, 0.923, 0.958, 0.979, 0.992, 1, 1.003, 1.004, 1.004, 1.004, 1.003, 1);
 }
 
 :root {
@@ -604,5 +606,54 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Sonner toast motion (redesign.md §4.13). Unlayered with repeated classes so it outranks
+ * Sonner's injected stylesheet while leaving its stack/expand positions intact: enter
+ * y 16 -> 0 + fade on spring-ui; exit fade + y -> 8 in 160 ms (inside Sonner's 200 ms
+ * unmount delay); stack moves keep the spring.
+ */
+.cal-toaster.cal-toaster [data-sonner-toast] {
+  transition:
+    transform 450ms var(--ease-spring-ui),
+    opacity 200ms var(--ease-out),
+    height 450ms var(--ease-spring-ui);
+}
+
+.cal-toaster.cal-toaster [data-sonner-toast][data-mounted='false'][data-y-position='bottom'] {
+  --y: translateY(16px);
+}
+
+.cal-toaster.cal-toaster [data-sonner-toast][data-mounted='false'][data-y-position='top'] {
+  --y: translateY(-16px);
+}
+
+.cal-toaster.cal-toaster.cal-toaster [data-sonner-toast][data-removed='true'][data-swipe-out='false'] {
+  opacity: 0;
+  transition:
+    transform 160ms var(--ease-out),
+    opacity 160ms var(--ease-out);
+}
+
+.cal-toaster.cal-toaster.cal-toaster [data-sonner-toast][data-removed='true'][data-front='true'][data-swipe-out='false'][data-expanded='false'] {
+  --y: translateY(8px);
+}
+
+.cal-toaster.cal-toaster.cal-toaster [data-sonner-toast][data-removed='true'][data-swipe-out='false'][data-expanded='true'] {
+  --y: translateY(calc(var(--lift) * var(--offset) + 8px));
+}
+
+.cal-toaster.cal-toaster.cal-toaster [data-sonner-toast][data-swiping='true'] {
+  transition: none;
+}
+
+/* Reduced motion: opacity-only fades <= 120 ms, no travel (redesign.md §5) */
+@media (prefers-reduced-motion: reduce) {
+  .cal-toaster.cal-toaster.cal-toaster [data-sonner-toast] {
+    --y: none;
+    transform: none !important;
+    transition: opacity 120ms var(--ease-out) !important;
   }
 }

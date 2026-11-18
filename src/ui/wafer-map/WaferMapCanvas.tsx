@@ -1772,6 +1772,86 @@ function WaferMapCanvasImpl({
     ],
   );
 
+  // §5.8: snapshot the outgoing wafer into the crossfade layer and fade it out over 160 ms
+  const startWaferCrossfade = React.useCallback((): void => {
+    const baseEl = baseCanvasRef.current?.getCanvasElement();
+    const cfEl = crossfadeCanvasRef.current;
+    if (!baseEl || !cfEl || baseEl.width === 0 || baseEl.height === 0) {
+      return;
+    }
+    if (cfEl.width !== baseEl.width) {
+      cfEl.width = baseEl.width;
+    }
+    if (cfEl.height !== baseEl.height) {
+      cfEl.height = baseEl.height;
+    }
+    const cfCtx = cfEl.getContext('2d');
+    if (!cfCtx) {
+      return;
+    }
+    cfCtx.setTransform(1, 0, 0, 1, 0, 0);
+    cfCtx.clearRect(0, 0, cfEl.width, cfEl.height);
+    cfCtx.drawImage(baseEl, 0, 0);
+    if (crossfadeAnimRef.current) {
+      crossfadeAnimRef.current.cancel();
+      crossfadeAnimRef.current = null;
+    }
+    cfEl.style.visibility = 'visible';
+    cfEl.style.opacity = '1';
+    cfEl.dataset.crossfading = 'true';
+
+    if (typeof cfEl.animate !== 'function') {
+      cfEl.style.opacity = '0';
+      cfEl.style.visibility = 'hidden';
+      cfEl.dataset.crossfading = 'false';
+      return;
+    }
+    const anim = cfEl.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 160,
+      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      fill: 'forwards',
+    });
+    crossfadeAnimRef.current = anim;
+    anim.onfinish = () => {
+      if (crossfadeAnimRef.current === anim) {
+        crossfadeAnimRef.current = null;
+        cfEl.style.opacity = '0';
+        cfEl.style.visibility = 'hidden';
+        cfEl.dataset.crossfading = 'false';
+      }
+    };
+  }, []);
+
+  // Wafer currently painted on the stage canvases; runs ahead of the store during keyboard previews
+  const displayedWaferIndexRef = React.useRef(safeWaferIndex);
+  displayedWaferIndexRef.current = safeWaferIndex;
+
+  /**
+   * §5.8 keyboard wafer stepping: repaint base + overlay canvases imperatively inside the
+   * keydown handler (no React render, no layout reads). `WaferSelector` commits the index to
+   * the store once stepping pauses, and that single render then skips the duplicate raster.
+   */
+  const handlePreviewWafer = React.useCallback(
+    (waferIndex: number, options?: WaferSelectOptions): void => {
+      if (waferIndex === displayedWaferIndexRef.current) {
+        return;
+      }
+      if (waferIndex < 0 || waferIndex >= lot.wafers.length) {
+        return;
+      }
+      const instant = Boolean(options?.instant) || reducedMotionRef.current;
+      if (instant) {
+        cancelCrossfadeImmediately();
+      } else {
+        startWaferCrossfade();
+      }
+      displayedWaferIndexRef.current = waferIndex;
+      baseCanvasRef.current?.paintWafer(waferIndex, getRasterCamera());
+      overlayCanvasRef.current?.previewWafer(waferIndex);
+    },
+    [cancelCrossfadeImmediately, getRasterCamera, lot, startWaferCrossfade],
+  );
+
   // §5.8: 160 ms ease-out wafer crossfade on click/single-step; 0 ms instant swap on key-repeat or reduced motion
   const handleSelectWafer = React.useCallback(
     (waferIndex: number, options?: WaferSelectOptions): void => {
@@ -1779,61 +1859,20 @@ function WaferMapCanvasImpl({
       if (waferIndex === currentIdx) {
         return;
       }
-      const instant = Boolean(options?.instant) || reducedMotionRef.current;
-      if (instant) {
-        cancelCrossfadeImmediately();
+      if (options?.previewed) {
+        // Canvases already show this wafer (handlePreviewWafer); only commit the store
         store.getState().setActiveWaferIndex(waferIndex);
         return;
       }
-
-      const baseEl = baseCanvasRef.current?.getCanvasElement();
-      const cfEl = crossfadeCanvasRef.current;
-      if (baseEl && cfEl && baseEl.width > 0 && baseEl.height > 0) {
-        if (cfEl.width !== baseEl.width) {
-          cfEl.width = baseEl.width;
-        }
-        if (cfEl.height !== baseEl.height) {
-          cfEl.height = baseEl.height;
-        }
-        const cfCtx = cfEl.getContext('2d');
-        if (cfCtx) {
-          cfCtx.setTransform(1, 0, 0, 1, 0, 0);
-          cfCtx.clearRect(0, 0, cfEl.width, cfEl.height);
-          cfCtx.drawImage(baseEl, 0, 0);
-          if (crossfadeAnimRef.current) {
-            crossfadeAnimRef.current.cancel();
-            crossfadeAnimRef.current = null;
-          }
-          cfEl.style.visibility = 'visible';
-          cfEl.style.opacity = '1';
-          cfEl.dataset.crossfading = 'true';
-
-          if (typeof cfEl.animate === 'function') {
-            const anim = cfEl.animate([{ opacity: 1 }, { opacity: 0 }], {
-              duration: 160,
-              easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-              fill: 'forwards',
-            });
-            crossfadeAnimRef.current = anim;
-            anim.onfinish = () => {
-              if (crossfadeAnimRef.current === anim) {
-                crossfadeAnimRef.current = null;
-                cfEl.style.opacity = '0';
-                cfEl.style.visibility = 'hidden';
-                cfEl.dataset.crossfading = 'false';
-              }
-            };
-          } else {
-            cfEl.style.opacity = '0';
-            cfEl.style.visibility = 'hidden';
-            cfEl.dataset.crossfading = 'false';
-          }
-        }
+      const instant = Boolean(options?.instant) || reducedMotionRef.current;
+      if (instant) {
+        cancelCrossfadeImmediately();
+      } else if (displayedWaferIndexRef.current !== waferIndex) {
+        startWaferCrossfade();
       }
-
       store.getState().setActiveWaferIndex(waferIndex);
     },
-    [cancelCrossfadeImmediately, store],
+    [cancelCrossfadeImmediately, startWaferCrossfade, store],
   );
 
   const modeOptions = React.useMemo<
@@ -2406,6 +2445,7 @@ function WaferMapCanvasImpl({
         evidencePresence={evidencePresence}
         dpr={dpr}
         onSelectWafer={handleSelectWafer}
+        onPreviewWafer={handlePreviewWafer}
         className="mt-3 xl:mt-4"
       />
     </div>

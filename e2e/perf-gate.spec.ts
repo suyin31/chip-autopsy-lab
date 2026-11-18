@@ -18,6 +18,7 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
   test('passes §5.10 perf gate (0 frames > 50 ms, median rAF < 20 ms, p95 < 34 ms, ack < 100 ms) and sweeps in <= 1.2 s with verdict < 3 s', async ({
     page,
   }) => {
+    page.on('console', (m) => { if (m.text().startsWith('[LOAF]')) console.log(m.text()); });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
 
@@ -123,6 +124,10 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
         observerType = targetType;
         observer = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
+            if (entry.duration > 45) {
+              const e = entry as PerformanceEntry & { renderStart?: number; styleAndLayoutStart?: number; scripts?: Array<{ invoker: string; duration: number; forcedStyleAndLayoutDuration: number; sourceFunctionName: string; sourceCharPosition: number; startTime: number }> };
+              console.log('[LOAF]', JSON.stringify({ t: Math.round(entry.startTime - startMs), d: Math.round(entry.duration), renderStart: Math.round((e.renderStart ?? 0) - entry.startTime), styleStart: Math.round((e.styleAndLayoutStart ?? 0) - entry.startTime), scripts: (e.scripts ?? []).map((x) => ({ inv: x.invoker, at: Math.round(x.startTime - entry.startTime), d: Math.round(x.duration), fl: Math.round(x.forcedStyleAndLayoutDuration), fn: x.sourceFunctionName + ':' + x.sourceCharPosition })) }));
+            }
             longDurations.push({
               startTime: entry.startTime,
               duration: entry.duration,

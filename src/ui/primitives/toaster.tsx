@@ -33,6 +33,8 @@ export const SONNER_TOAST_OPTIONS = {
  * - Max width `360 px`, `surface-material`, `16 px` radius (`rounded-md`), `12 x 16 px` padding
  * - `callout` primary title + optional `footnote` secondary body + right text action
  * - Max `3` visible stacked with `8 px` gap, `4 s` default duration (errors/warnings persist when specified)
+ * - Motion (`.cal-toaster` rules in `globals.css`): enter `y 16 -> 0` + fade on `spring-ui`,
+ *   exit fade + `y -> 8` in `160 ms`; reduced motion fades opacity only in `120 ms`
  */
 export function ClinicalToaster({
   className,
@@ -46,7 +48,7 @@ export function ClinicalToaster({
       gap={SONNER_TOAST_OPTIONS.gap}
       offset={SONNER_TOAST_OPTIONS.offset}
       mobileOffset={SONNER_TOAST_OPTIONS.mobileOffset}
-      className={cn('z-[var(--z-toasts)] shadow-none', className)}
+      className={cn('cal-toaster z-[var(--z-toasts)] shadow-none', className)}
       toastOptions={{
         unstyled: true,
         duration: SONNER_TOAST_OPTIONS.duration,

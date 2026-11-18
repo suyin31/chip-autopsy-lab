@@ -28,6 +28,11 @@ export interface BaseCanvasHandle {
     endOrderIndex: number,
   ): void;
   setSweepSuppressAutoPaint(suppressed: boolean): void;
+  /**
+   * Imperatively repaints `waferIndex` at `rasterCamera` without a React render (§5.8
+   * keyboard wafer stepping). The next React commit for the same inputs skips its repaint.
+   */
+  paintWafer(waferIndex: number, rasterCamera: CameraState): void;
   getCanvasElement(): HTMLCanvasElement | null;
 }
 
@@ -43,6 +48,20 @@ export interface BaseCanvasProps {
   readonly getRasterCamera?: () => CameraState;
   readonly dpr?: number;
   readonly layout?: WaferRenderLayout | null;
+}
+
+interface LastBasePaint {
+  readonly lot: LotModel;
+  readonly waferIndex: number;
+  readonly colorMode: WaferColorMode;
+  readonly activeTestNum: number | null;
+  readonly hiddenBins: ReadonlySet<number>;
+  readonly cssWidth: number;
+  readonly cssHeight: number;
+  readonly dpr: number | undefined;
+  readonly scale: number;
+  readonly panX: number;
+  readonly panY: number;
 }
 
 function areBaseCanvasPropsEqual(
@@ -103,6 +122,8 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
     const canvasRef = React.useRef<HTMLCanvasElement>(null);
     const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
     const suppressAutoPaintRef = React.useRef(false);
+    /** Inputs of the last full base-layer paint; lets the effect skip repainting identical content. */
+    const lastPaintRef = React.useRef<LastBasePaint | null>(null);
 
     const safeCssWidth = Math.max(1, Math.round(cssWidth));
     const safeCssHeight = Math.max(1, Math.round(cssHeight));
@@ -170,6 +191,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
         const { ctx, dims, cur } = ready;
         const wafer = cur.lot.wafers[cur.waferIndex];
         if (!wafer) {
+          lastPaintRef.current = null;
           ctx.setTransform(dims.dpr, 0, 0, dims.dpr, 0, 0);
           ctx.clearRect(0, 0, dims.cssWidth, dims.cssHeight);
           return;
@@ -200,6 +222,19 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           activeTestNum: cur.activeTestNum,
           hiddenBins: cur.hiddenBins,
         });
+        lastPaintRef.current = {
+          lot: cur.lot,
+          waferIndex: cur.waferIndex,
+          colorMode: cur.colorMode,
+          activeTestNum: cur.activeTestNum,
+          hiddenBins: cur.hiddenBins,
+          cssWidth: cur.safeCssWidth,
+          cssHeight: cur.safeCssHeight,
+          dpr: cur.dpr,
+          scale: vp.scale,
+          panX: vp.panX,
+          panY: vp.panY,
+        };
       },
       [ensureCanvasAndContext],
     );
@@ -222,6 +257,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
             return;
           }
           const { ctx, dims, cur } = ready;
+          lastPaintRef.current = null;
           const wafer = cur.lot.wafers[cur.waferIndex];
           const resolvedLayout =
             cur.layout &&
@@ -254,6 +290,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
             return;
           }
           const { ctx, dims, cur } = ready;
+          lastPaintRef.current = null;
           const wafer = cur.lot.wafers[cur.waferIndex];
           if (!wafer) {
             return;
@@ -282,6 +319,20 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
         setSweepSuppressAutoPaint(suppressed: boolean): void {
           suppressAutoPaintRef.current = suppressed;
         },
+        paintWafer(waferIndex: number, rasterCamera: CameraState): void {
+          const cur = latestInputsRef.current;
+          if (waferIndex < 0 || waferIndex >= cur.lot.wafers.length) {
+            return;
+          }
+          // Until React commits the same index, every imperative paint path uses the previewed wafer
+          latestInputsRef.current = { ...cur, waferIndex, layout: null };
+          const vp = cameraToViewportTransform(
+            rasterCamera,
+            cur.safeCssWidth,
+            cur.safeCssHeight,
+          );
+          paintWithViewport(vp, null);
+        },
         getCanvasElement(): HTMLCanvasElement | null {
           return canvasRef.current;
         },
@@ -299,6 +350,24 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       const vp =
         transform ??
         cameraToViewportTransform(rasterCam, safeCssWidth, safeCssHeight);
+      const last = lastPaintRef.current;
+      if (
+        last &&
+        last.lot === lot &&
+        last.waferIndex === waferIndex &&
+        last.colorMode === colorMode &&
+        last.activeTestNum === activeTestNum &&
+        last.cssWidth === safeCssWidth &&
+        last.cssHeight === safeCssHeight &&
+        last.dpr === dpr &&
+        last.scale === vp.scale &&
+        last.panX === vp.panX &&
+        last.panY === vp.panY &&
+        areHiddenBinSetsEqual(last.hiddenBins, hiddenBins)
+      ) {
+        // Already painted imperatively (e.g. keyboard wafer preview); skip the duplicate raster
+        return;
+      }
       paintWithViewport(vp, layout);
     }, [
       lot,

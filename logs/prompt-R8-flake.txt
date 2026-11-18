@@ -1,0 +1,4 @@
+Finish task R8 in .kiro/specs/chip-autopsy-lab/tasks.md. Read logs/progress.md first.
+Remaining issue: e2e perf gate is flaky. LoAF attribution shows #document.onkeydown during the wafer strip ArrowRight swap (31 ms script + 8 ms forced layout, ~70 ms frame).
+Fix: make key-repeat wafer swap repaint the canvas imperatively without a React re-render in the handler; remove synchronous getBoundingClientRect/scrollIntoView from the keydown path (defer to rAF or use scroll-snap / cached rects). Also finish toaster exit animation (Sonner) and reveal motion polish if not done.
+Do not weaken perf thresholds. Verify: pnpm typecheck, pnpm lint, pnpm test, pnpm build, then pnpm e2e run 3 times in a row; all must pass. Then tick R8 in tasks.md and update logs/progress.md. Do not use web fetch.
