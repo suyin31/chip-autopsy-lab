@@ -322,7 +322,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P29. Evidence ignite and camera focus
   - Veil fade, pattern-ordered rim and bloom stagger, camera targeting rules, strip dimming, clear and switch behaviour, mobile scroll then ignite (premium §8.3).
   - Accept: A38, A9 (animated).
-- [ ] P30. Hover, magnifier, zoom, and pan motion
+- [x] P30. Hover, magnifier, zoom, and pan motion
   - Magnifier show and hide, wheel and pinch factors, rubber-band curve, inertia, `spring-throw`, double-click, reduced-motion paths (premium §8.4, §8.5).
   - Accept: A10; perf gate wheel and drag steps stay within A39 limits.
 - [ ] P31. Disclosure, wafer switching, toasts, overlays

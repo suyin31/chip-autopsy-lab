@@ -1,0 +1,186 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=68
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=71
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=61
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=37
+[tool] status: Completed
+[tool] Read File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=158
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=295
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=153
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=81
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=110
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=42
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=86
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=35
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=242
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=99
+[tool] status: Completed
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=2674
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=175
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=775
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=172
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=212
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1303
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=97
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=33
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=256
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=642
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=73
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the perf gate (wheel and drag steps) and other camera-related specs.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=70
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Perf gate passes (0 frames > 50 ms, median 16.7 ms, p95 33.2 ms). The r7 failure is the known 780 ms settle step. Now tick the task and log.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=369
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+I've implemented P30 per premium §8.4 and §8.5 and ticked it in `tasks.md`. Typecheck and lint are clean, and `pnpm test` passes 347/347 across 54 files, including 8 new camera tests.
+
+**Zoom and pan** (`wafer-camera.ts`)
+- **Wheel:** a mouse wheel notch now springs to `exp(−deltaY × 0.0015)` about the cursor instead of jumping. Quick notches add up on the running target. A trackpad pinch (`ctrlKey`) stays 1:1 with factor `0.01`.
+- **Release:** the flick now slows down by × 0.998 per ms and stops below 0.02 px/ms. If it ends out of bounds, `spring-throw` brings it back and keeps the release speed. A pinch released past the scale or pan limits also returns on `spring-throw`.
+- **Rubber-band:** the drag overshoot uses the spec curve with b = half the stage size.
+- **Drag pans only at zoom > 1.** At scale 1, a mouse drag no longer moves the wafer.
+- **Double-click:** zooms 2.5× at scale 1, otherwise returns to fit.
+- **Reduced motion:** the wheel and double-click jump, and drag and pinch stop hard at the bounds with no rubber-band or coasting.
+
+**Magnifier** (`HoverMagnifier.tsx`, `WaferMapCanvas.tsx`)
+- It now hides while a drag, spring, or coast moves the camera, and comes back only after the next pointer move.
+- Hiding is now an opacity fade over 120 ms with no scale change, so moving back in mid-fade reverses from the current opacity. The fade now also runs in full under reduced motion; before, it was cut off after 20 ms.
+
+**E2E**
+- I added `e2e/zoom-pan-p30.spec.ts` (3/3 pass). It checks that the wheel springs about the cursor, the magnifier stays hidden until the pointer moves, a drag at zoom 1 does nothing, and the reduced-motion paths.
+- `wafer-stage-r6` now waits for the wheel spring to finish before measuring, because the zoom is no longer instant.
+- The perf gate passes: 0 frames > 50 ms, median rAF 16.7 ms, p95 33.2 ms.
+- `magnifier-p23` (A10), `stage-controls-p10`, `evidence-ignite-p29`, `overlay-states-p8` and `coach-marks-p25` also pass.
+- `linked-interactions-r7` failed only its known 780 ms settle step (821 ms).
+- No snapshots changed and no locale keys were added.
+
+**Decisions** (recorded in `logs/progress.md`)
+- **Pan bounds unchanged:** read literally, "the disc centre must stay inside the stage" would make edge dies unreachable once zoomed past about 2× and would break evidence framing for edge findings. The current bounds already keep the disc centre in the stage at scale 1 and keep the stage centre on the disc when zoomed.
+- **Trackpad pinch:** it clamps to [1, 8] rather than rubber-banding, because it has no release event to spring back from.
+
+`logs/p29.out`, `logs/p30.log`, `logs/p30.out` and `logs/prompt-p30.txt` also show changes, but I didn't write them, so I left them alone.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=197
+

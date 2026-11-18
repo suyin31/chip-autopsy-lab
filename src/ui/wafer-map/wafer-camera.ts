@@ -2,13 +2,17 @@
  * Pure Wafer Stage Camera Physics & Imperative Gesture Controller
  * (`src/ui/wafer-map/wafer-camera.ts`).
  *
- * Implements `redesign.md` §2.6, §4.7, §5.5, §5.10 without React imports:
- * - Cursor-anchored wheel zoom (`k = 0.0015`, `ctrlKey` pinch `0.01`, `deltaMode` lines x 16)
- * - Two-pointer pinch centroid zoom + pan with log-space rubber-banding outside `[1, 8]`
- * - One-pointer drag pan (4 px threshold, grab-offset 1:1 tracking, 5-sample <= 100 ms velocity)
- * - Apple `0.998/ms` scroll inertia projection into independent `spring-camera` (`170 / 26`)
- *   or `spring-throw` (`260 / 22`) analytical damped harmonic oscillator integrators
- * - Double-click / double-tap reset (`spring-camera`), or `2.5x` zoom when already at fit
+ * Implements `premium.md` §8.4, §8.5 (and `redesign.md` §4.7, §5.10) without React imports:
+ * - Discrete mouse wheel: target scale x `exp(-deltaY x 0.0015)` anchored at the cursor, reached
+ *   on `spring-camera`; `ctrlKey` trackpad pinch `exp(-deltaY x 0.01)` applied 1:1 (no spring)
+ * - Two-pointer pinch centroid zoom + pan with log-space rubber-banding outside `[1, 8]`,
+ *   returned on release by `spring-throw`
+ * - One-pointer drag pan at zoom > 1 (4 px threshold, 1:1 grab offset, 5-sample <= 100 ms
+ *   velocity); past the bounds the offset follows `b x (1 - 1 / (x x 0.55 / b + 1))`, b = stage half-size
+ * - Release inertia: velocity x `0.998` per ms until < `0.02 px/ms`; an out-of-bounds end point
+ *   is returned by `spring-throw` (`260 / 22`) keeping the release velocity
+ * - Double-click / double-tap: `2.5x` about the point at scale 1, otherwise fit (`spring-camera`)
+ * - Reduced motion: wheel and double-click jump, no inertia, bounds clamp without rubber-band
  * - CSS `transform: translate3d(tx, ty, 0) scale(s)` relative to active base raster, plus
  *   `120 ms` settle re-raster at `scale > 2` and instant fit-raster restore when panning outside
  */
@@ -35,6 +39,12 @@ export const DRAG_THRESHOLD_PX = 4 as const;
 export const RUBBER_BAND_CONSTANT = 0.55 as const;
 export const SETTLE_RERASTER_DELAY_MS = 120 as const;
 export const SETTLE_RERASTER_SCALE_MIN = 2 as const;
+/** Wheel zoom factor per `deltaY` px for a discrete mouse wheel (premium §8.5). */
+export const WHEEL_ZOOM_K = 0.0015 as const;
+/** Wheel zoom factor per `deltaY` px for a `ctrlKey` trackpad pinch (premium §8.5). */
+export const PINCH_WHEEL_ZOOM_K = 0.01 as const;
+/** Inertia stops once the speed falls below this (premium §8.5). */
+export const INERTIA_STOP_PX_PER_MS = 0.02 as const;
 
 export interface StageCameraMetrics {
   readonly stageWidth: number;
@@ -54,8 +64,8 @@ function clamp(v: number, lo: number, hi: number): number {
 }
 
 /**
- * Progressive boundary resistance (`redesign.md` §5.5):
- * `(o * d * 0.55) / (d + 0.55 * |o|)`
+ * Progressive boundary resistance (premium §8.5): `b x (1 - 1 / (x x 0.55 / b + 1))`, the same
+ * curve as `(x * b * 0.55) / (b + 0.55 * |x|)`, mirrored for negative overshoot.
  */
 export function projectRubberBand(
   overshoot: number,
@@ -150,18 +160,21 @@ export function applyPanWithRubberBand(
     stageHeight,
     fitRadiusPx,
   );
+  // b = stage half-size per axis (premium §8.5)
+  const bX = stageWidth / 2;
+  const bY = stageHeight / 2;
   let tx = rawCamera.tx;
   if (tx < bounds.minTx) {
-    tx = bounds.minTx + projectRubberBand(tx - bounds.minTx, stageWidth);
+    tx = bounds.minTx + projectRubberBand(tx - bounds.minTx, bX);
   } else if (tx > bounds.maxTx) {
-    tx = bounds.maxTx + projectRubberBand(tx - bounds.maxTx, stageWidth);
+    tx = bounds.maxTx + projectRubberBand(tx - bounds.maxTx, bX);
   }
 
   let ty = rawCamera.ty;
   if (ty < bounds.minTy) {
-    ty = bounds.minTy + projectRubberBand(ty - bounds.minTy, stageHeight);
+    ty = bounds.minTy + projectRubberBand(ty - bounds.minTy, bY);
   } else if (ty > bounds.maxTy) {
-    ty = bounds.maxTy + projectRubberBand(ty - bounds.maxTy, stageHeight);
+    ty = bounds.maxTy + projectRubberBand(ty - bounds.maxTy, bY);
   }
 
   return { scale: rawCamera.scale, tx, ty };
@@ -175,14 +188,10 @@ export interface WheelZoomInput extends StageCameraMetrics {
   readonly pointerY: number;
 }
 
-/**
- * Applies cursor-anchored wheel zoom (`redesign.md` §5.5):
- * `scale *= exp(-deltaY * k)` with `k = 0.0015` (`0.01` when `ctrlKey`), `deltaMode === 1` x `16`.
- */
-export function applyCursorWheelZoom(
-  current: CameraState,
-  input: WheelZoomInput,
-): CameraState {
+/** Wheel zoom factor `exp(-deltaY x k)`; `deltaMode` lines x 16, pages x stage height. */
+export function computeWheelZoomFactor(
+  input: Pick<WheelZoomInput, 'deltaY' | 'deltaMode' | 'ctrlKey' | 'stageHeight'>,
+): number {
   const modeMultiplier =
     input.deltaMode === 1
       ? 16
@@ -190,9 +199,23 @@ export function applyCursorWheelZoom(
         ? Math.max(240, input.stageHeight)
         : 1;
   const normalizedDeltaY = input.deltaY * modeMultiplier;
-  const k = input.ctrlKey ? 0.01 : 0.0015;
+  const k = input.ctrlKey ? PINCH_WHEEL_ZOOM_K : WHEEL_ZOOM_K;
+  return Math.exp(-normalizedDeltaY * k);
+}
+
+/**
+ * Applies cursor-anchored wheel zoom (premium §8.5):
+ * `scale *= exp(-deltaY * k)` with `k = 0.0015` (`0.01` when `ctrlKey`), `deltaMode === 1` x `16`.
+ * `fromScale` overrides the scale the factor multiplies (the running wheel target), while the
+ * anchor stays the fit point under the cursor in the presented `current` camera.
+ */
+export function applyCursorWheelZoom(
+  current: CameraState,
+  input: WheelZoomInput,
+  fromScale: number = current.scale,
+): CameraState {
   const nextScale = clamp(
-    current.scale * Math.exp(-normalizedDeltaY * k),
+    fromScale * computeWheelZoomFactor(input),
     MIN_CAMERA_SCALE,
     MAX_CAMERA_SCALE,
   );
@@ -220,12 +243,20 @@ export interface PinchGestureInput extends StageCameraMetrics {
   readonly currentDistance: number;
 }
 
-export function applyPinchGesture(input: PinchGestureInput): CameraState {
+/**
+ * Two-pointer pinch, 1:1 about the centroid. `rubberBand = false` (reduced motion) clamps
+ * scale and pan to the bounds instead of rubber-banding (premium §8.5).
+ */
+export function applyPinchGesture(
+  input: PinchGestureInput,
+  rubberBand = true,
+): CameraState {
   const safeStartDist = Math.max(1, input.startDistance);
   const ratio = Math.max(0.05, input.currentDistance) / safeStartDist;
-  const effectiveScale = computePinchRubberBandScale(
-    input.startCamera.scale * ratio,
-  );
+  const rawScale = input.startCamera.scale * ratio;
+  const effectiveScale = rubberBand
+    ? computePinchRubberBandScale(rawScale)
+    : clamp(rawScale, MIN_CAMERA_SCALE, MAX_CAMERA_SCALE);
 
   const fitX =
     (input.startCentroidX - input.startCamera.tx) / input.startCamera.scale;
@@ -234,6 +265,14 @@ export function applyPinchGesture(input: PinchGestureInput): CameraState {
   const rawTx = input.currentCentroidX - fitX * effectiveScale;
   const rawTy = input.currentCentroidY - fitY * effectiveScale;
 
+  if (!rubberBand) {
+    return clampCameraToBounds(
+      { scale: effectiveScale, tx: rawTx, ty: rawTy },
+      input.stageWidth,
+      input.stageHeight,
+      input.fitRadiusPx,
+    );
+  }
   return applyPanWithRubberBand(
     { scale: effectiveScale, tx: rawTx, ty: rawTy },
     input.stageWidth,
@@ -303,6 +342,27 @@ export function computeProjectedInertiaEnd(
   decelPerMs: number = MOTION_TOKENS.decelPerMs,
 ): number {
   return position + (velocityPxPerSec / 1000) * (decelPerMs / (1 - decelPerMs));
+}
+
+/**
+ * One inertia step (premium §8.5): velocity x `0.998` per ms, integrated exactly over `dtMs`.
+ * Returns `stopped` once the speed is below `0.02 px/ms`.
+ */
+export function stepInertia1D(
+  position: number,
+  velocityPxPerSec: number,
+  dtMs: number,
+  decelPerMs: number = MOTION_TOKENS.decelPerMs,
+): { readonly position: number; readonly velocity: number; readonly stopped: boolean } {
+  const safeDt = clamp(dtMs, 0, 64);
+  const decay = Math.pow(decelPerMs, safeDt);
+  const vPerMs = velocityPxPerSec / 1000;
+  const nextPosition = position + (vPerMs * (decay - 1)) / Math.log(decelPerMs);
+  const nextVelocity = velocityPxPerSec * decay;
+  if (Math.abs(nextVelocity) / 1000 < INERTIA_STOP_PX_PER_MS) {
+    return { position: nextPosition, velocity: 0, stopped: true };
+  }
+  return { position: nextPosition, velocity: nextVelocity, stopped: false };
 }
 
 export interface SpringParams1D {
@@ -388,11 +448,12 @@ export function isCameraAtFit(camera: CameraState): boolean {
   );
 }
 
+/** Double-click / double-tap (premium §8.5): at scale 1, 2.5x about the point; otherwise fit. */
 export function applyDoubleClickCamera(
   current: CameraState,
   input: StageCameraMetrics & { readonly pointerX: number; readonly pointerY: number },
 ): CameraState {
-  if (!isCameraAtFit(current)) {
+  if (Math.abs(current.scale - 1) >= 0.01) {
     return DEFAULT_CAMERA_STATE;
   }
   const targetScale = DOUBLE_CLICK_ZOOM_SCALE;
@@ -574,6 +635,8 @@ export interface WaferCameraController {
 }
 
 interface AxisAnimation {
+  /** `decay` runs the release inertia; `spring` runs toward `target`. */
+  mode: 'spring' | 'decay';
   target: number;
   velocity: number;
   spring: SpringParams1D;
@@ -608,6 +671,7 @@ export function createWaferCameraController(
   let rasterCamera: CameraState = DEFAULT_CAMERA_STATE;
 
   const animX: AxisAnimation = {
+    mode: 'spring',
     target: 0,
     velocity: 0,
     spring: SPRING_TOKENS.camera,
@@ -616,6 +680,7 @@ export function createWaferCameraController(
     active: false,
   };
   const animY: AxisAnimation = {
+    mode: 'spring',
     target: 0,
     velocity: 0,
     spring: SPRING_TOKENS.camera,
@@ -624,6 +689,7 @@ export function createWaferCameraController(
     active: false,
   };
   const animScale: AxisAnimation = {
+    mode: 'spring',
     target: 1,
     velocity: 0,
     spring: SPRING_TOKENS.camera,
@@ -759,7 +825,12 @@ export function createWaferCameraController(
       animScale.active = !res.settled;
     }
 
-    if (animX.active) {
+    if (animX.active && animX.mode === 'decay') {
+      const res = stepInertia1D(camera.tx, animX.velocity, dtSec * 1000);
+      nextTx = res.position;
+      animX.velocity = res.velocity;
+      animX.active = !res.stopped;
+    } else if (animX.active) {
       const res = stepSpring1D(
         camera.tx,
         animX.velocity,
@@ -774,7 +845,12 @@ export function createWaferCameraController(
       animX.active = !res.settled;
     }
 
-    if (animY.active) {
+    if (animY.active && animY.mode === 'decay') {
+      const res = stepInertia1D(camera.ty, animY.velocity, dtSec * 1000);
+      nextTy = res.position;
+      animY.velocity = res.velocity;
+      animY.active = !res.stopped;
+    } else if (animY.active) {
       const res = stepSpring1D(
         camera.ty,
         animY.velocity,
@@ -823,7 +899,14 @@ export function createWaferCameraController(
     dragState = null;
   };
 
-  const animateToCamera = (target: CameraState): void => {
+  /**
+   * Springs each axis to `target` from the presented value. A running axis hands over its
+   * velocity (retarget); an idle axis starts at rest (premium §8.5 Interrupt).
+   */
+  const animateToCamera = (
+    target: CameraState,
+    spring: SpringParams1D = SPRING_TOKENS.camera,
+  ): void => {
     clearSettleTimer();
     if (options.getPrefersReducedMotion()) {
       stopRaf();
@@ -832,12 +915,18 @@ export function createWaferCameraController(
       scheduleSettleCheck();
       return;
     }
+    for (const axis of [animScale, animX, animY]) {
+      if (!axis.active) {
+        axis.velocity = 0;
+      }
+    }
     if (
       Math.abs(target.scale - camera.scale) > 0.0005 ||
       Math.abs(animScale.velocity) > 0.005
     ) {
+      animScale.mode = 'spring';
       animScale.target = target.scale;
-      animScale.spring = SPRING_TOKENS.camera;
+      animScale.spring = spring;
       animScale.active = true;
     } else {
       animScale.active = false;
@@ -845,8 +934,9 @@ export function createWaferCameraController(
     }
 
     if (Math.abs(target.tx - camera.tx) > 0.05 || Math.abs(animX.velocity) > 0.5) {
+      animX.mode = 'spring';
       animX.target = target.tx;
-      animX.spring = SPRING_TOKENS.camera;
+      animX.spring = spring;
       animX.active = true;
     } else {
       animX.active = false;
@@ -854,8 +944,9 @@ export function createWaferCameraController(
     }
 
     if (Math.abs(target.ty - camera.ty) > 0.05 || Math.abs(animY.velocity) > 0.5) {
+      animY.mode = 'spring';
       animY.target = target.ty;
-      animY.spring = SPRING_TOKENS.camera;
+      animY.spring = spring;
       animY.active = true;
     } else {
       animY.active = false;
@@ -909,12 +1000,28 @@ export function createWaferCameraController(
     },
 
     handleWheel(input) {
-      stopRaf();
-      clearSettleTimer();
       const metrics = options.getStageMetrics();
-      camera = applyCursorWheelZoom(camera, { ...metrics, ...input });
-      emitFrame();
-      scheduleSettleCheck();
+      // Trackpad pinch (`ctrlKey`) is direct 1:1 manipulation; reduced motion jumps (premium §8.5)
+      if (input.ctrlKey || options.getPrefersReducedMotion()) {
+        stopRaf();
+        clearSettleTimer();
+        camera = applyCursorWheelZoom(camera, { ...metrics, ...input });
+        emitFrame();
+        scheduleSettleCheck();
+        return;
+      }
+      // Discrete wheel: consecutive notches compound on the running target, then
+      // `spring-camera` carries the presented camera toward it
+      const fromScale =
+        animScale.active && animScale.mode === 'spring'
+          ? animScale.target
+          : camera.scale;
+      const target = applyCursorWheelZoom(
+        camera,
+        { ...metrics, ...input },
+        fromScale,
+      );
+      animateToCamera(target);
     },
 
     handleDoubleClick(pointerX, pointerY) {
@@ -946,7 +1053,8 @@ export function createWaferCameraController(
         return true;
       }
 
-      if (input.pointerType === 'touch' && camera.scale <= 1.001) {
+      // Drag pan only at zoom > 1 (premium §8.5); touch at 1 also leaves page scroll to the browser
+      if (camera.scale <= 1.001) {
         return false;
       }
 
@@ -987,7 +1095,8 @@ export function createWaferCameraController(
         const p0 = pts[0]!;
         const p1 = pts[1]!;
         const metrics = options.getStageMetrics();
-        camera = applyPinchGesture({
+        camera = applyPinchGesture(
+          {
           ...metrics,
           startCamera: pinchState.startCamera,
           startCentroidX: pinchState.startCentroidX,
@@ -996,7 +1105,9 @@ export function createWaferCameraController(
           currentCentroidX: (p0.x + p1.x) / 2,
           currentCentroidY: (p0.y + p1.y) / 2,
           currentDistance: Math.hypot(p1.x - p0.x, p1.y - p0.y),
-        });
+          },
+          !options.getPrefersReducedMotion(),
+        );
         emitFrame();
         return true;
       }
@@ -1029,16 +1140,25 @@ export function createWaferCameraController(
       }
 
       const metrics = options.getStageMetrics();
-      camera = applyPanWithRubberBand(
-        {
-          scale: camera.scale,
-          tx: input.x + dragState.grabTxOffset,
-          ty: input.y + dragState.grabTyOffset,
-        },
-        metrics.stageWidth,
-        metrics.stageHeight,
-        metrics.fitRadiusPx,
-      );
+      const rawPan = {
+        scale: camera.scale,
+        tx: input.x + dragState.grabTxOffset,
+        ty: input.y + dragState.grabTyOffset,
+      };
+      // Reduced motion: bounds clamp without rubber-band (premium §8.5)
+      camera = options.getPrefersReducedMotion()
+        ? clampCameraToBounds(
+            rawPan,
+            metrics.stageWidth,
+            metrics.stageHeight,
+            metrics.fitRadiusPx,
+          )
+        : applyPanWithRubberBand(
+            rawPan,
+            metrics.stageWidth,
+            metrics.stageHeight,
+            metrics.fitRadiusPx,
+          );
       emitFrame();
       return true;
     },
@@ -1061,7 +1181,8 @@ export function createWaferCameraController(
             Math.abs(clamped.tx - camera.tx) > 0.5 ||
             Math.abs(clamped.ty - camera.ty) > 0.5
           ) {
-            animateToCamera(clamped);
+            // Rubber-band return past the scale or pan bounds (premium §8.5)
+            animateToCamera(clamped, SPRING_TOKENS.throw);
           } else {
             camera = clamped;
             emitFrame();
@@ -1122,21 +1243,29 @@ export function createWaferCameraController(
       const targetX = clamp(projX, bounds.minTx, bounds.maxTx);
       const targetY = clamp(projY, bounds.minTy, bounds.maxTy);
 
+      // In bounds: inertia decays the release velocity (x 0.998 per ms). Out of bounds:
+      // `spring-throw` returns to the bound, keeping the release velocity (premium §8.5)
+      const minSpeedPxPerSec = INERTIA_STOP_PX_PER_MS * 1000;
+      animX.mode = outX ? 'spring' : 'decay';
       animX.target = targetX;
       animX.velocity = vx;
-      animX.spring = outX ? SPRING_TOKENS.throw : SPRING_TOKENS.camera;
-      animX.active = Math.abs(targetX - camera.tx) > 0.05 || Math.abs(vx) > 2;
+      animX.spring = SPRING_TOKENS.throw;
+      animX.active = outX
+        ? Math.abs(targetX - camera.tx) > 0.05 || Math.abs(vx) > 2
+        : Math.abs(vx) >= minSpeedPxPerSec;
 
+      animY.mode = outY ? 'spring' : 'decay';
       animY.target = targetY;
       animY.velocity = vy;
-      animY.spring = outY ? SPRING_TOKENS.throw : SPRING_TOKENS.camera;
-      animY.active = Math.abs(targetY - camera.ty) > 0.05 || Math.abs(vy) > 2;
+      animY.spring = SPRING_TOKENS.throw;
+      animY.active = outY
+        ? Math.abs(targetY - camera.ty) > 0.05 || Math.abs(vy) > 2
+        : Math.abs(vy) >= minSpeedPxPerSec;
 
       if (animX.active || animY.active) {
         emitFrame();
         ensureRaf();
       } else {
-        camera = { scale: camera.scale, tx: targetX, ty: targetY };
         emitFrame();
         scheduleSettleCheck();
       }

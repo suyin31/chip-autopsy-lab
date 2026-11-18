@@ -10,6 +10,7 @@ import {
   computePinchRubberBandScale,
   computeProjectedInertiaEnd,
   computeReleaseVelocity,
+  computeWheelZoomFactor,
   computeRelativeWrapperTransform,
   createWaferCameraController,
   DEFAULT_CAMERA_STATE,
@@ -18,8 +19,173 @@ import {
   MAX_CAMERA_SCALE,
   MIN_CAMERA_SCALE,
   projectRubberBand,
+  stepInertia1D,
   stepSpring1D,
+  type WaferCameraController,
 } from './wafer-camera';
+
+const METRICS = { stageWidth: 783, stageHeight: 720, fitRadiusPx: 312 } as const;
+
+function makeController(reducedMotion = false): {
+  readonly controller: WaferCameraController;
+  readonly flush: (maxFrames?: number) => number;
+  readonly hasFrame: () => boolean;
+} {
+  let nowMs = 1000;
+  let pending: FrameRequestCallback | null = null;
+  const controller = createWaferCameraController({
+    getStageMetrics: () => METRICS,
+    getPrefersReducedMotion: () => reducedMotion,
+    onTransformFrame: () => {},
+    requestFrame: (cb) => {
+      pending = cb;
+      return 1;
+    },
+    cancelFrame: () => {
+      pending = null;
+    },
+    now: () => nowMs,
+  });
+  const flush = (maxFrames = 600): number => {
+    let frames = 0;
+    while (pending !== null && frames < maxFrames) {
+      nowMs += 16;
+      const cb = pending;
+      pending = null;
+      cb(nowMs);
+      frames += 1;
+    }
+    return frames;
+  };
+  return { controller, flush, hasFrame: () => pending !== null };
+}
+
+describe('Premium P30 zoom and pan motion (premium §8.4, §8.5)', () => {
+  it('rubber-bands drag overshoot with b x (1 - 1 / (x x 0.55 / b + 1)), b = stage half-size', () => {
+    const bounds = computeCameraPanBounds(2, 783, 720, 312);
+    const overshoot = 120;
+    const b = 783 / 2;
+    const expected = b * (1 - 1 / ((overshoot * 0.55) / b + 1));
+    const banded = applyPanWithRubberBand(
+      { scale: 2, tx: bounds.maxTx + overshoot, ty: bounds.minTy },
+      783,
+      720,
+      312,
+    );
+    expect(banded.tx - bounds.maxTx).toBeCloseTo(expected, 6);
+    expect(projectRubberBand(overshoot, b)).toBeCloseTo(expected, 6);
+  });
+
+  it('springs a discrete wheel notch toward exp(-deltaY x 0.0015), anchored at the cursor', () => {
+    const { controller, flush } = makeController();
+    controller.handleWheel({ deltaY: -240, deltaMode: 0, ctrlKey: false, pointerX: 540, pointerY: 260 });
+    // Not applied in the same call: the camera springs toward the target
+    expect(controller.getCamera().scale).toBeCloseTo(1, 6);
+    // A second notch compounds on the running target
+    flush(3);
+    controller.handleWheel({ deltaY: -240, deltaMode: 0, ctrlKey: false, pointerX: 540, pointerY: 260 });
+    expect(flush()).toBeGreaterThan(5);
+    const cam = controller.getCamera();
+    expect(cam.scale).toBeCloseTo(Math.exp(480 * 0.0015), 3);
+    expect(540 * cam.scale + cam.tx).toBeCloseTo(540, 0);
+    expect(260 * cam.scale + cam.ty).toBeCloseTo(260, 0);
+    controller.dispose();
+  });
+
+  it('applies ctrlKey trackpad pinch 1:1 with exp(-deltaY x 0.01), and wheel jumps under reduced motion', () => {
+    expect(computeWheelZoomFactor({ deltaY: -10, deltaMode: 0, ctrlKey: true, stageHeight: 720 })).toBeCloseTo(
+      Math.exp(0.1),
+      9,
+    );
+    const pinch = makeController();
+    pinch.controller.handleWheel({ deltaY: -10, deltaMode: 0, ctrlKey: true, pointerX: 400, pointerY: 300 });
+    expect(pinch.controller.getCamera().scale).toBeCloseTo(Math.exp(0.1), 6);
+    expect(pinch.hasFrame()).toBe(false);
+
+    const reduced = makeController(true);
+    reduced.controller.handleWheel({ deltaY: -240, deltaMode: 0, ctrlKey: false, pointerX: 400, pointerY: 300 });
+    expect(reduced.controller.getCamera().scale).toBeCloseTo(Math.exp(240 * 0.0015), 6);
+    expect(reduced.hasFrame()).toBe(false);
+  });
+
+  it('decays release inertia by 0.998 per ms and stops below 0.02 px/ms', () => {
+    const step = stepInertia1D(0, 1000, 16);
+    expect(step.velocity).toBeCloseTo(1000 * Math.pow(0.998, 16), 6);
+    expect(step.position).toBeCloseTo((1 * (Math.pow(0.998, 16) - 1)) / Math.log(0.998), 6);
+    expect(stepInertia1D(0, 20.2, 16).stopped).toBe(true);
+    expect(stepInertia1D(0, 40, 16).stopped).toBe(false);
+
+    // Integrating to rest lands on the projected end point
+    let pos = 0;
+    let vel = 1000;
+    for (let i = 0; i < 2000; i += 1) {
+      const next = stepInertia1D(pos, vel, 16);
+      pos = next.position;
+      vel = next.velocity;
+      if (next.stopped) break;
+    }
+    expect(vel).toBe(0);
+    expect(pos).toBeGreaterThan(computeProjectedInertiaEnd(0, 1000) - 12);
+    expect(pos).toBeLessThanOrEqual(computeProjectedInertiaEnd(0, 1000));
+  });
+
+  it('pans only at zoom > 1, and reduced motion clamps a drag without rubber-band or inertia', () => {
+    const { controller, hasFrame } = makeController();
+    controller.handlePointerDown({ pointerId: 1, pointerType: 'mouse', button: 0, shiftKey: false, x: 300, y: 300, timeMs: 0 });
+    expect(controller.handlePointerMove({ pointerId: 1, x: 360, y: 300, timeMs: 16 })).toBe(false);
+    expect(controller.getCamera()).toEqual(DEFAULT_CAMERA_STATE);
+    controller.handlePointerUp({ pointerId: 1, x: 360, y: 300, timeMs: 20 });
+
+    const reduced = makeController(true);
+    reduced.controller.setCameraImmediate({ scale: 2, tx: -391.5, ty: -360 });
+    const bounds = computeCameraPanBounds(2, 783, 720, 312);
+    reduced.controller.handlePointerDown({ pointerId: 2, pointerType: 'mouse', button: 0, shiftKey: false, x: 300, y: 300, timeMs: 0 });
+    reduced.controller.handlePointerMove({ pointerId: 2, x: 310, y: 300, timeMs: 8 });
+    reduced.controller.handlePointerMove({ pointerId: 2, x: 2000, y: 300, timeMs: 16 });
+    expect(reduced.controller.getCamera().tx).toBeCloseTo(bounds.maxTx, 6);
+    reduced.controller.handlePointerUp({ pointerId: 2, x: 2000, y: 300, timeMs: 18 });
+    expect(reduced.hasFrame()).toBe(false);
+    expect(hasFrame()).toBe(false);
+  });
+
+  it('returns an out-of-bounds release to the bound with spring-throw', () => {
+    const { controller, flush } = makeController();
+    controller.setCameraImmediate({ scale: 2, tx: -391.5, ty: -360 });
+    const bounds = computeCameraPanBounds(2, 783, 720, 312);
+    controller.handlePointerDown({ pointerId: 1, pointerType: 'mouse', button: 0, shiftKey: false, x: 300, y: 300, timeMs: 0 });
+    controller.handlePointerMove({ pointerId: 1, x: 310, y: 300, timeMs: 8 });
+    controller.handlePointerMove({ pointerId: 1, x: 1400, y: 300, timeMs: 400 });
+    expect(controller.getCamera().tx).toBeGreaterThan(bounds.maxTx);
+    controller.handlePointerUp({ pointerId: 1, x: 1400, y: 300, timeMs: 600 });
+    expect(flush()).toBeGreaterThan(3);
+    expect(controller.getCamera().tx).toBeCloseTo(bounds.maxTx, 1);
+  });
+
+  it('clamps a reduced-motion pinch to [1, 8] without rubber-band', () => {
+    const pinch = applyPinchGesture(
+      {
+        ...METRICS,
+        startCamera: DEFAULT_CAMERA_STATE,
+        startCentroidX: 391.5,
+        startCentroidY: 360,
+        startDistance: 200,
+        currentCentroidX: 391.5,
+        currentCentroidY: 360,
+        currentDistance: 100,
+      },
+      false,
+    );
+    expect(pinch.scale).toBe(1);
+  });
+
+  it('double-click zooms 2.5x at scale 1 even off-centre, otherwise fits', () => {
+    const offCentre = applyDoubleClickCamera({ scale: 1, tx: 20, ty: 0 }, { ...METRICS, pointerX: 300, pointerY: 300 });
+    expect(offCentre.scale).toBeCloseTo(2.5, 6);
+    expect(applyDoubleClickCamera({ scale: 1.6, tx: -100, ty: -80 }, { ...METRICS, pointerX: 300, pointerY: 300 })).toEqual(
+      DEFAULT_CAMERA_STATE,
+    );
+  });
+});
 
 describe('Wafer Camera Physics & Gesture Controller (Task R6, redesign.md §4.7, §5.5, §5.10)', () => {
   it('computes progressive rubber-band resistance matching (o * d * 0.55) / (d + 0.55 * |o|)', () => {
@@ -234,7 +400,7 @@ describe('Wafer Camera Physics & Gesture Controller (Task R6, redesign.md §4.7,
         now: () => nowMs,
       });
 
-      // Zoom past 2x via wheel
+      // Zoom past 2x via wheel, then let `spring-camera` settle (premium §8.5)
       controller.handleWheel({
         deltaY: -600,
         deltaMode: 0,
@@ -242,6 +408,12 @@ describe('Wafer Camera Physics & Gesture Controller (Task R6, redesign.md §4.7,
         pointerX: 391.5,
         pointerY: 360,
       });
+      for (let step = 0; step < 240 && rafQueue.cb !== null; step += 1) {
+        nowMs += 16;
+        const cb = rafQueue.cb;
+        rafQueue.cb = null;
+        cb(nowMs);
+      }
 
       const zoomedCam = controller.getCamera();
       expect(zoomedCam.scale).toBeGreaterThan(2.4);

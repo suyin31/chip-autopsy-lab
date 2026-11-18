@@ -68,8 +68,11 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
     await expect(page.getByTestId('stage-reset-view-button')).toBeVisible();
     const zoomValue = page.getByTestId('stage-zoom-value');
     await expect(zoomValue).toBeVisible();
-    const zoomLabel = (await zoomValue.textContent()) ?? '';
-    expect(Number.parseInt(zoomLabel, 10)).toBeGreaterThan(130);
+    // Premium §8.5: the wheel springs (`spring-camera`) to its target, so wait for it to settle
+    await expect
+      .poll(async () => Number.parseInt((await zoomValue.textContent()) ?? '', 10))
+      .toBeGreaterThan(130);
+    await expect(page.getByTestId('wafer-camera-wrapper')).toHaveCSS('will-change', 'auto');
 
     // Verify exact cursor-anchored zoom invariance: fit-space point (540, 260) stays at (540, 260)
     const wheelTransform = await page

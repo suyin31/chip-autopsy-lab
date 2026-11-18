@@ -546,6 +546,7 @@ function WaferMapCanvasImpl({
   );
 
   const controllerRef = React.useRef<WaferCameraController | null>(null);
+  const cameraMotionActiveRef = React.useRef(false);
   if (controllerRef.current === null) {
     controllerRef.current = createWaferCameraController({
       getStageMetrics: () => stageMetricsRef.current,
@@ -586,6 +587,11 @@ function WaferMapCanvasImpl({
           }
         }
         overlayCanvasRef.current?.paintForCamera(camera);
+        // Premium §8.4: the magnifier hides while a gesture, spring, or inertia moves the camera
+        if (cameraMotionActiveRef.current !== motionActive) {
+          cameraMotionActiveRef.current = motionActive;
+          magnifierRef.current?.setCameraMotion(motionActive);
+        }
         magnifierRef.current?.syncPositionForCamera();
         syncCommittedPopoverForCamera(camera);
       },

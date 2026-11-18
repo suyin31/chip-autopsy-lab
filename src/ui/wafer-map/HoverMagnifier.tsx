@@ -19,7 +19,12 @@ import {
   useSelectionStore,
   type WaferColorMode,
 } from '@/ui/state';
-import { SPRING_TOKENS, THEME_TOKENS, WAFER_TOKENS } from '@/ui/tokens';
+import {
+  MOTION_TOKENS,
+  SPRING_TOKENS,
+  THEME_TOKENS,
+  WAFER_TOKENS,
+} from '@/ui/tokens';
 import {
   computeMagnifierPlacement,
   computePinnedReadoutPlacement,
@@ -48,8 +53,16 @@ export interface HoverMagnifierHandle {
   ): void;
   /** Starts the 80 ms leave delay when pointer exits the stage (unless pinned). */
   notifyStagePointerLeave(): void;
-  /** Suppresses hover display while dragging/panning or box-selecting. */
+  /**
+   * Suppresses hover display while dragging/panning or box-selecting. On release the hover
+   * readout returns at the next pointer move over a die (premium §8.4).
+   */
   setGestureSuppressed(suppressed: boolean): void;
+  /**
+   * Hides the magnifier while a camera gesture, spring, or inertia runs; it returns after the
+   * camera settles and the pointer moves (premium §8.4).
+   */
+  setCameraMotion(active: boolean): void;
   /** Repositions the magnifier when camera zooms/pans or keyboard steps dies. */
   syncPositionForCamera(): void;
   /** Positions relative to a keyboard-stepped die's screen centre. */
@@ -225,10 +238,14 @@ const HoverMagnifierImpl = React.forwardRef<
   pinSourceRef.current = pinnedDieIndex !== null ? pinSource : null;
   const touchPinned = pinnedDieIndex !== null && pinSource === 'touch';
   const [hoverActive, setHoverActive] = React.useState(false);
-  const [gestureSuppressed, setGestureSuppressedState] = React.useState(false);
+  const [gestureSuppressedFlag, setGestureSuppressedState] = React.useState(false);
+  const [cameraMoving, setCameraMovingState] = React.useState(false);
+  const gestureSuppressed = gestureSuppressedFlag || cameraMoving;
 
   const pinnedRef = React.useRef<number | null>(null);
   pinnedRef.current = pinnedDieIndex;
+  const gestureFlagRef = React.useRef(false);
+  const cameraMovingRef = React.useRef(false);
   const suppressedRef = React.useRef(false);
   suppressedRef.current = gestureSuppressed;
 
@@ -471,14 +488,30 @@ const HoverMagnifierImpl = React.forwardRef<
         }, HIDE_DELAY_MS);
       },
       setGestureSuppressed(suppressed: boolean): void {
-        if (suppressedRef.current === suppressed) {
+        if (gestureFlagRef.current === suppressed) {
           return;
         }
-        suppressedRef.current = suppressed;
-        if (suppressed) {
-          clearHideTimer();
+        gestureFlagRef.current = suppressed;
+        suppressedRef.current = suppressed || cameraMovingRef.current;
+        clearHideTimer();
+        if (!suppressed && pinnedRef.current === null) {
+          // Returns on the next pointer move over a die, not at release (§8.4)
+          setHoverActive(false);
         }
         setGestureSuppressedState(suppressed);
+      },
+      setCameraMotion(active: boolean): void {
+        if (cameraMovingRef.current === active) {
+          return;
+        }
+        cameraMovingRef.current = active;
+        suppressedRef.current = active || gestureFlagRef.current;
+        clearHideTimer();
+        if (!active && pinnedRef.current === null) {
+          // Returns after the camera settles and the pointer moves (§8.4)
+          setHoverActive(false);
+        }
+        setCameraMovingState(active);
       },
       syncPositionForCamera(): void {
         const target =
@@ -725,15 +758,23 @@ const HoverMagnifierImpl = React.forwardRef<
     if (isShown || !domVisible) {
       return;
     }
+    // Keep the layer visible through the `dur-1` fade (also under reduced motion, §8.4)
     const timer = setTimeout(
       () => setDomVisible(false),
-      shouldReduceMotion ? 20 : 130,
+      MOTION_TOKENS.dur1Ms + 10,
     );
     return () => clearTimeout(timer);
-  }, [isShown, domVisible, shouldReduceMotion]);
+  }, [isShown, domVisible]);
 
   // Touch pin and reduced motion: opacity only, 120 ms (premium §8.4)
   const opacityOnly = Boolean(shouldReduceMotion) || touchPinned;
+  // Show: opacity 0 -> 1 and scale 0.96 -> 1 on `spring-snappy`. Hide: opacity -> 0 over
+  // `dur-1` at the current scale, so re-entering mid-fade reverses from the current opacity;
+  // the scale resets to 0.96 only once fully hidden (premium §8.4)
+  const fadeTransition = {
+    duration: MOTION_TOKENS.dur1Ms / 1000,
+    ease: MOTION_TOKENS.easeOutTuple,
+  };
 
   return (
     <div
@@ -755,14 +796,16 @@ const HoverMagnifierImpl = React.forwardRef<
         animate={
           isShown
             ? { opacity: 1, scale: 1 }
-            : { opacity: 0, scale: opacityOnly ? 1 : 0.96 }
+            : domVisible || opacityOnly
+              ? { opacity: 0, scale: 1 }
+              : { opacity: 0, scale: 0.96 }
         }
         transition={
-          opacityOnly
-            ? { duration: 0.12 }
-            : isShown
-              ? SPRING_TOKENS.snappy
-              : { duration: 0.12 }
+          isShown && !opacityOnly
+            ? SPRING_TOKENS.snappy
+            : !isShown && !domVisible
+              ? { duration: 0 }
+              : fadeTransition
         }
         style={{ transformOrigin: 'inherit' }}
         className={cn(MATERIAL_THICK_CLASS, 'flex flex-col gap-2 rounded-lg p-2')}
