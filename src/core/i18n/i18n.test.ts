@@ -183,9 +183,12 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
       const dict = getDictionary(locale);
       expect(dict['app.title']).toBe('Chip Autopsy Lab');
       expect(dict['nav.wordmark']).toBe('Chip Autopsy Lab');
+      expect(dict['nav.wordmarkShort']).toBe('Autopsy Lab');
       expect(dict['stage.mode.hbin']).toBe('HBIN');
       expect(dict['stage.mode.sbin']).toBe('SBIN');
       expect(dict['magnifier.hbin']).toBe('HBIN');
+      expect(dict['demo.edgeRing.title']).toContain('Edge-Ring');
+      expect(dict['demo.edgeRing.description']).toContain('IDDQ');
       expect(dict['error.notStdf.body']).toContain('FAR (0, 10)');
       expect(dict['error.version.body']).toContain('STDF_VER');
       expect(dict['error.version.body']).toContain('Chip Autopsy Lab');
@@ -194,6 +197,48 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
       expect(dict['error.gzip.body']).toContain('1F 8B');
       expect(dict['error.noParts.body']).toContain('PRR');
       expect(dict['findings.capability.headline']).toContain('Cpk');
+
+      // Interpolated bin codes/names, test numbers/names, WM-811K classes, and IDs pass through verbatim (§6.6)
+      expect(
+        t(locale, 'findings.dominantBin.headline', {
+          bin: 'SBIN 7 IDDQ_EDGE_LEAK',
+        }),
+      ).toContain('SBIN 7 IDDQ_EDGE_LEAK');
+      expect(
+        t(locale, 'findings.capability.headline', {
+          test: '204 IDDQ_LEAK',
+          cpk: formatDecimal2(locale, 0.14),
+        }),
+      ).toContain('204 IDDQ_LEAK');
+      expect(
+        t(locale, 'verdict.pattern', { pattern: 'Edge-Ring' }),
+      ).toContain('Edge-Ring');
+      expect(
+        t(locale, 'strip.aria', { lotId: 'CAL-ER-2401' }),
+      ).toContain('CAL-ER-2401');
+
+      // Stat captions stand alone as clean noun phrases and compose cleanly with stats.inSelection
+      const statCaptions = [
+        t(locale, 'stats.edgeShare', { rings: formatInteger(locale, 3) }),
+        t(locale, 'stats.scratchShare'),
+        t(locale, 'stats.siteRate', {
+          site: formatInteger(locale, 2),
+          other: formatPercent(locale, 0.021),
+        }),
+        t(locale, 'stats.finalYield', {
+          firstPass: formatPercent(locale, 0.815),
+        }),
+        t(locale, 'stats.failingDies', {
+          tested: formatInteger(locale, 15825),
+        }),
+      ];
+      for (const caption of statCaptions) {
+        expect(caption).not.toMatch(/^(的|颗|顆|の)/);
+        const inSel = t(locale, 'stats.inSelection', { caption });
+        expect(inSel).not.toContain('のの');
+        expect(inSel).not.toContain('内颗');
+        expect(inSel).not.toContain('內顆');
+      }
     }
 
     for (const locale of cjkLocales) {
@@ -234,19 +279,31 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(tPlural('en', 'selection.dies', 148, { count: '148' })).toBe('148 dies');
 
     for (const locale of SUPPORTED_LOCALES) {
-      const first = t(locale, 'findings.edgeBand.sub', {
+      const detA = t(locale, 'findings.edgeBand.sub', {
         edgeRate: formatPercent(locale, 0.464),
         interiorRate: formatPercent(locale, 0.016),
         wafers: formatInteger(locale, 25),
         total: formatInteger(locale, 25),
       });
-      const second = t(locale, 'findings.edgeBand.sub', {
+      const detB = t(locale, 'findings.edgeBand.sub', {
         edgeRate: formatPercent(locale, 0.464),
         interiorRate: formatPercent(locale, 0.016),
         wafers: formatInteger(locale, 25),
         total: formatInteger(locale, 25),
       });
-      expect(first).toBe(second);
+      expect(detA).toBe(detB);
+    }
+
+    // Compile-time type safety assertions for t() (§6.3)
+    if (Math.random() < -1) {
+      // @ts-expect-error unknown message key is rejected at compile time
+      t('en', 'nonexistent.key');
+      // @ts-expect-error missing required params object is rejected at compile time
+      t('en', 'verdict.subline');
+      // @ts-expect-error incomplete params object is rejected at compile time
+      t('en', 'verdict.subline', { yield: '82.8%', wafers: '25' });
+      // @ts-expect-error unexpected params on parameterless key is rejected at compile time
+      t('en', 'landing.headline', { extra: 'x' });
     }
   });
 

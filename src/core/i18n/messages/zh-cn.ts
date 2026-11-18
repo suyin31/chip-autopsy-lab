@@ -33,15 +33,15 @@ export const zhCN = {
   'landing.primary': '打开 STDF 文件',
   'landing.formats': '.stdf、.std 或 gzip',
   'landing.demoHeading': '或打开示例批次',
-  'landing.privacy': '全程在浏览器本地运行。原始 STDF 字节绝不离开此设备。',
+  'landing.privacy': '全程在浏览器本地运行。原始 STDF 数据绝不离开此设备。',
   'landing.downloadDemos': '下载示例文件',
   'landing.demoMeta': '{wafers} 片晶圆，{dies} 颗晶粒',
-  'demo.edgeRing.title': 'Edge-Ring 等离子体刻蚀异常',
+  'demo.edgeRing.title': 'Edge-Ring 等离子体刻蚀',
   'demo.edgeRing.description': '聚焦环侵蚀导致外环 IDDQ 漏电',
   'demo.scratch.title': '机械手传输划伤',
   'demo.scratch.description': '传输叶片划痕横跨第 5 至第 22 片晶圆',
-  'demo.site2.title': '第 2 工位探针接触不良',
-  'demo.site2.description': '第 2 工位探针氧化引发开路与复测',
+  'demo.site2.title': '工位 2 探针接触',
+  'demo.site2.description': '工位 2 探针氧化引发开路与复测',
   'demo.openAria': '打开示例批次 {title}',
 
   // Drag overlay
@@ -61,7 +61,7 @@ export const zhCN = {
   'verdict.pattern': '{pattern} 失效。',
   'verdict.site': '测试工位 {site} 接触失效。',
   'verdict.random': '随机缺陷，无空间分布特征。',
-  'verdict.healthy': '无致死异常。良率为 {yield}。',
+  'verdict.healthy': '无死因。良率为 {yield}。',
   'verdict.subline': '共 {wafers} 片晶圆，良率 {yield}。主要损失位于 {bin}。',
   'verdict.causeAria': '显示此结论对应的晶粒',
   'verdict.confidence': '置信度 {value}',
@@ -69,14 +69,14 @@ export const zhCN = {
   'verdict.methodTemplate':
     '所有数值均由本机分析引擎计算，文本采用内置模板生成。',
   'verdict.methodLlm':
-    '所有数值均由本机分析引擎计算。AI 模型仅对表述进行润色，且每句话均引用引擎事实。',
+    '所有数值均由本机分析引擎计算。AI 模型仅润色表述，每句话均引用引擎事实。',
 
   // Stats
-  'stats.edgeShare': '的失效位于外侧 {rings} 环',
-  'stats.scratchShare': '的失效位于划痕路径上',
+  'stats.edgeShare': '外侧 {rings} 环失效占比',
+  'stats.scratchShare': '划痕路径失效占比',
   'stats.siteRate': '工位 {site} 失效率（其余工位 {other}）',
   'stats.finalYield': '最终良率，初测 {firstPass}',
-  'stats.failingDies': '颗失效晶粒（共测 {tested} 颗）',
+  'stats.failingDies': '失效晶粒（共测 {tested} 颗）',
   'stats.inSelection': '选区内{caption}',
 
   // Findings
@@ -98,7 +98,7 @@ export const zhCN = {
   'findings.secondaryBin.sub': '分布在 {wafers} 片晶圆上的 {dies} 颗晶粒',
   'findings.capability.headline': '测试项 {test} 的 Cpk 为 {cpk}',
   'findings.capability.sub': '均值 {mean}，规格限 {lo} 至 {hi}',
-  'findings.site.headline': '工位 {site} 失效率高出 {ratio} 倍',
+  'findings.site.headline': '工位 {site} 失效率为其他工位的 {ratio} 倍',
   'findings.site.sub':
     '工位 {site} 失效率 {rate}，其余工位 {other}，复测 {retests} 次',
   'findings.excursion.headline': '晶圆 {wafer} 良率跌至 {yield}',
@@ -137,7 +137,7 @@ export const zhCN = {
   'magnifier.hbin': 'HBIN',
   'magnifier.outOfLimits': '超出规格限',
   'magnifier.retested': '已复测',
-  'magnifier.retestedValue': '是，共 {count} 次测试',
+  'magnifier.retestedValue': '是，共测 {count} 次',
   'magnifier.notch': '切口',
   'magnifier.notchValue': '{clock} 点钟方向',
 

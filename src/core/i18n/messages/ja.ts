@@ -35,15 +35,15 @@ export const ja = {
   'landing.formats': '.stdf、.std、または gzip',
   'landing.demoHeading': 'またはデモロットを開く',
   'landing.privacy':
-    'すべてブラウザ内で動作します。生の STDF バイトがこの端末から外部へ出ることはありません。',
+    'すべてブラウザ内で完結します。STDF の生データがこの端末から外部へ送信されることはありません。',
   'landing.downloadDemos': 'デモファイルをダウンロード',
   'landing.demoMeta': '{wafers} ウェハ、{dies} ダイ',
-  'demo.edgeRing.title': 'Edge-Ring プラズマエッチング異常',
+  'demo.edgeRing.title': 'Edge-Ring プラズマエッチング',
   'demo.edgeRing.description': 'フォーカスリング摩耗による外周 IDDQ リーク',
-  'demo.scratch.title': '搬送ロボットのハンドリング傷',
-  'demo.scratch.description': 'ウェハ 5〜22 を横断する搬送ブレード傷',
-  'demo.site2.title': 'サイト 2 プローブ接触不良',
-  'demo.site2.description': 'サイト 2 針先の酸化によるオープン不良と再測定',
+  'demo.scratch.title': 'ロボット搬送スクラッチ',
+  'demo.scratch.description': 'ウェハ 5〜22 を横断する搬送ブレードのスクラッチ',
+  'demo.site2.title': 'サイト 2 プローブ接触',
+  'demo.site2.description': 'サイト 2 プローブ針の酸化によるオープン不良と再測定',
   'demo.openAria': 'デモロット {title} を開く',
 
   // Drag overlay
@@ -75,11 +75,11 @@ export const ja = {
     'すべての数値は端末内の解析エンジンで算出されています。AI モデルが表現を整え、すべての文がエンジンの事実を引用しています。',
 
   // Stats
-  'stats.edgeShare': 'の不良が外周 {rings} リングに集中',
-  'stats.scratchShare': 'の不良がスクラッチ経路上に集中',
-  'stats.siteRate': 'サイト {site} 不良率（他サイト {other}）',
+  'stats.edgeShare': '外周 {rings} リング不良割合',
+  'stats.scratchShare': 'スクラッチ経路不良割合',
+  'stats.siteRate': 'サイト {site} 不良率、他サイト {other}',
   'stats.finalYield': '最終歩留まり、初回 {firstPass}',
-  'stats.failingDies': '不良ダイ / {tested} 測定ダイ',
+  'stats.failingDies': '不良ダイ / 測定 {tested}',
   'stats.inSelection': '選択範囲内の{caption}',
 
   // Findings

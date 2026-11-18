@@ -145,8 +145,28 @@ export function persistAndApplyLocale(
 }
 
 export interface I18nProviderProps {
-  readonly children: React.ReactNode;
+  readonly children?: React.ReactNode;
   readonly initialLocale?: Locale;
+}
+
+export interface UntranslatedProps {
+  readonly children?: React.ReactNode;
+  readonly className?: string;
+}
+
+/**
+ * Wraps technical tokens (bin names/codes, test names, STDF identifiers, lot/wafer IDs,
+ * WM-811K classes) in `<bdi translate="no">` when embedded in localized copy (§6.6).
+ */
+export function Untranslated({
+  children,
+  className,
+}: UntranslatedProps): React.ReactElement {
+  return (
+    <bdi translate="no" className={className}>
+      {children}
+    </bdi>
+  );
 }
 
 export function I18nProvider({

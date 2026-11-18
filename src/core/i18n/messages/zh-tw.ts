@@ -10,7 +10,7 @@ import type { Dictionary } from '../dictionary';
 export const zhTW = {
   // App + nav
   'app.title': 'Chip Autopsy Lab',
-  'app.description': '查明晶圓批號良率損失原因。在瀏覽器本機執行的 STDF V4 分析工具。',
+  'app.description': '查明晶圓批次良率損失原因。在瀏覽器本機執行的 STDF V4 分析工具。',
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
   'nav.openStdf': '開啟 STDF',
@@ -19,12 +19,12 @@ export const zhTW = {
   'nav.home': '返回起始頁',
 
   // Lot picker
-  'lotPicker.triggerAria': '選擇批號，目前批號 {lotId}',
-  'lotPicker.demoSection': '範例批號',
+  'lotPicker.triggerAria': '選擇批次，目前批次 {lotId}',
+  'lotPicker.demoSection': '範例批次',
   'lotPicker.recentSection': '最近開啟',
   'lotPicker.openFile': '開啟 STDF 檔案…',
   'lotPicker.yield': '良率 {yield}',
-  'lotPicker.current': '目前批號',
+  'lotPicker.current': '目前批次',
 
   // Landing
   'landing.headline': '把遺體放這裡。',
@@ -32,17 +32,17 @@ export const zhTW = {
     '將 STDF V4 晶圓測試記錄拖放至此頁任意位置。檔案僅在本機解析，絕不外傳。',
   'landing.primary': '開啟 STDF 檔案',
   'landing.formats': '.stdf、.std 或 gzip',
-  'landing.demoHeading': '或開啟範例批號',
-  'landing.privacy': '全程在瀏覽器本機執行。原始 STDF 位元組絕不離開此裝置。',
+  'landing.demoHeading': '或開啟範例批次',
+  'landing.privacy': '全程在瀏覽器本機執行。原始 STDF 資料絕不離開此裝置。',
   'landing.downloadDemos': '下載範例檔案',
   'landing.demoMeta': '{wafers} 片晶圓，{dies} 顆晶粒',
-  'demo.edgeRing.title': 'Edge-Ring 電漿蝕刻異常',
+  'demo.edgeRing.title': 'Edge-Ring 電漿蝕刻',
   'demo.edgeRing.description': '聚焦環耗損導致外環 IDDQ 漏電',
   'demo.scratch.title': '機械手臂傳送刮傷',
   'demo.scratch.description': '傳送葉片刮痕橫跨第 5 至第 22 片晶圓',
-  'demo.site2.title': '第 2 站點探針接觸不良',
-  'demo.site2.description': '第 2 站點探針氧化引發開路與重測',
-  'demo.openAria': '開啟範例批號 {title}',
+  'demo.site2.title': '站點 2 探針接觸',
+  'demo.site2.description': '站點 2 探針氧化引發開路與重測',
+  'demo.openAria': '開啟範例批次 {title}',
 
   // Drag overlay
   'drop.headline': '把遺體放這裡。',
@@ -61,7 +61,7 @@ export const zhTW = {
   'verdict.pattern': '{pattern} 失效。',
   'verdict.site': '測試站點 {site} 接觸失效。',
   'verdict.random': '隨機缺陷，無空間分佈特徵。',
-  'verdict.healthy': '無致死異常。良率為 {yield}。',
+  'verdict.healthy': '無死因。良率為 {yield}。',
   'verdict.subline': '共 {wafers} 片晶圓，良率 {yield}。主要損失集中於 {bin}。',
   'verdict.causeAria': '顯示此結論對應的晶粒',
   'verdict.confidence': '信心度 {value}',
@@ -69,14 +69,14 @@ export const zhTW = {
   'verdict.methodTemplate':
     '所有數值皆由本機分析引擎計算，文字採用內建範本產生。',
   'verdict.methodLlm':
-    '所有數值皆由本機分析引擎計算。AI 模型僅重組語句，且每句皆引用引擎事實。',
+    '所有數值皆由本機分析引擎計算。AI 模型僅潤飾語句，每句話皆引用引擎事實。',
 
   // Stats
-  'stats.edgeShare': '的失效位於外側 {rings} 環',
-  'stats.scratchShare': '的失效位於刮痕路徑上',
+  'stats.edgeShare': '外側 {rings} 環失效佔比',
+  'stats.scratchShare': '刮痕路徑失效佔比',
   'stats.siteRate': '站點 {site} 失效率（其餘站點 {other}）',
   'stats.finalYield': '最終良率，初測 {firstPass}',
-  'stats.failingDies': '顆失效晶粒（共測 {tested} 顆）',
+  'stats.failingDies': '失效晶粒（共測 {tested} 顆）',
   'stats.inSelection': '選取範圍內{caption}',
 
   // Findings
@@ -98,11 +98,11 @@ export const zhTW = {
   'findings.secondaryBin.sub': '分佈於 {wafers} 片晶圓上的 {dies} 顆晶粒',
   'findings.capability.headline': '測試項 {test} 的 Cpk 為 {cpk}',
   'findings.capability.sub': '平均值 {mean}，規格限 {lo} 至 {hi}',
-  'findings.site.headline': '站點 {site} 失效率高出 {ratio} 倍',
+  'findings.site.headline': '站點 {site} 失效率為其他站點的 {ratio} 倍',
   'findings.site.sub':
     '站點 {site} 失效率 {rate}，其餘站點 {other}，重測 {retests} 次',
   'findings.excursion.headline': '晶圓 {wafer} 良率降至 {yield}',
-  'findings.excursion.sub': '低於批號中位數 {delta}',
+  'findings.excursion.sub': '低於批次中位數 {delta}',
   'findings.lotYield.headline': '最終良率 {yield}',
   'findings.lotYield.sub': '初測良率 {firstPass}，重測晶粒 {retests} 顆',
   'hypothesis.etchUniformity': '沉積或蝕刻均勻度異常',
@@ -113,7 +113,7 @@ export const zhTW = {
   'hypothesis.probeCard': '探針卡或測試機站點問題，非製程異常',
   'hypothesis.probeCard.check': '清潔或更換站點 {site} 探針並抽樣重測。',
   'hypothesis.random': '隨機微粒缺陷',
-  'hypothesis.random.check': '檢視該批號的微粒計數與缺陷檢測記錄。',
+  'hypothesis.random.check': '檢視該批次的微粒計數與缺陷檢測記錄。',
 
   // Wafer stage
   'stage.aria': '晶圓 {wafer}，共 {dies} 顆晶粒，{fails} 顆失效',
@@ -137,7 +137,7 @@ export const zhTW = {
   'magnifier.hbin': 'HBIN',
   'magnifier.outOfLimits': '超出規格限',
   'magnifier.retested': '已重測',
-  'magnifier.retestedValue': '是，共 {count} 次測試',
+  'magnifier.retestedValue': '是，共測 {count} 次',
   'magnifier.notch': '缺口',
   'magnifier.notchValue': '{clock} 點鐘方向',
 
@@ -152,7 +152,7 @@ export const zhTW = {
   'selection.zoom': '縮放至選取範圍',
 
   // Strip
-  'strip.aria': '批號 {lotId} 中的晶圓',
+  'strip.aria': '批次 {lotId} 中的晶圓',
   'strip.itemAria': '晶圓 {wafer}，良率 {yield}',
 
   // Errors
@@ -176,7 +176,7 @@ export const zhTW = {
   'error.noParts.title': '找不到已測晶粒。',
   'error.noParts.body': '記錄檔中沒有 PRR 記錄，無法繪製晶圓圖。',
   'error.openAnother': '開啟其他檔案',
-  'error.loadDemo': '載入範例批號',
+  'error.loadDemo': '載入範例批次',
   'error.showDetails': '顯示詳細資訊',
   'error.detailsTitle': '詳細資訊',
 

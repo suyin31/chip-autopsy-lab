@@ -11,7 +11,7 @@ export const ko = {
   // App + nav
   'app.title': 'Chip Autopsy Lab',
   'app.description':
-    '웨이퍼 로트의 수율 손실 원인을 규명합니다. 브라우저에서 바로 실행되는 STDF V4 분석 도구입니다.',
+    '웨이퍼 로트의 수율 저하 원인을 규명합니다. 브라우저에서 바로 실행되는 STDF V4 분석 도구입니다.',
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
   'nav.openStdf': 'STDF 열기',
@@ -35,15 +35,15 @@ export const ko = {
   'landing.formats': '.stdf, .std 또는 gzip',
   'landing.demoHeading': '또는 데모 로트 열기',
   'landing.privacy':
-    '전 과정이 브라우저에서 실행됩니다. 원본 STDF 바이트는 이 기기를 떠나지 않습니다.',
+    '전 과정이 브라우저에서 실행됩니다. 원본 STDF 데이터는 이 기기 밖으로 전송되지 않습니다.',
   'landing.downloadDemos': '데모 파일 다운로드',
   'landing.demoMeta': '웨이퍼 {wafers}장, 다이 {dies}개',
-  'demo.edgeRing.title': 'Edge-Ring 플라즈마 식각 이상',
+  'demo.edgeRing.title': 'Edge-Ring 플라즈마 식각',
   'demo.edgeRing.description': '포커스 링 마모로 인한 외곽 링 IDDQ 누설',
   'demo.scratch.title': '로봇 반송 스크래치',
   'demo.scratch.description': '웨이퍼 5~22번을 가로지르는 이송 블레이드 스크래치',
-  'demo.site2.title': '사이트 2 프로브 접촉 불량',
-  'demo.site2.description': '산화된 사이트 2 탐침으로 인한 오픈 불량 및 재측정',
+  'demo.site2.title': '사이트 2 프로브 접촉',
+  'demo.site2.description': '산화된 사이트 2 프로브 침으로 인한 오픈 불량 및 재측정',
   'demo.openAria': '데모 로트 {title} 열기',
 
   // Drag overlay
@@ -75,11 +75,11 @@ export const ko = {
     '모든 수치는 기기 내 분석 엔진에서 계산됩니다. AI 모델이 표현만 다듬었으며 모든 문장은 엔진 사실을 인용합니다.',
 
   // Stats
-  'stats.edgeShare': '불량이 외곽 {rings}개 링에 위치',
-  'stats.scratchShare': '불량이 스크래치 경로에 위치',
-  'stats.siteRate': '사이트 {site} 불량률 (타 사이트 {other})',
+  'stats.edgeShare': '외곽 {rings}개 링 불량 비중',
+  'stats.scratchShare': '스크래치 경로 불량 비중',
+  'stats.siteRate': '사이트 {site} 불량률, 타 사이트 {other}',
   'stats.finalYield': '최종 수율, 초도 {firstPass}',
-  'stats.failingDies': '불량 다이 (측정 {tested}개 중)',
+  'stats.failingDies': '불량 다이 (측정 {tested}개)',
   'stats.inSelection': '선택 영역 내 {caption}',
 
   // Findings
@@ -97,7 +97,7 @@ export const ko = {
   'findings.scratch.sub': '동일 경로의 다이 {dies}개, 전체 불량의 {share}',
   'findings.dominantBin.headline': '{bin}에서 최대 손실 발생',
   'findings.dominantBin.sub': '다이 {dies}개, 전체 불량의 {share}',
-  'findings.secondaryBin.headline': '{bin}이 전체 불량의 {share} 차지',
+  'findings.secondaryBin.headline': '{bin}에서 전체 불량의 {share} 발생',
   'findings.secondaryBin.sub': '웨이퍼 {wafers}장에 걸쳐 다이 {dies}개',
   'findings.capability.headline': '테스트 {test}의 Cpk는 {cpk}',
   'findings.capability.sub': '평균 {mean}, 규격 한계 {lo} ~ {hi}',
@@ -116,7 +116,7 @@ export const ko = {
     '해당 슬롯의 이송 블레이드 정렬 상태를 점검하세요.',
   'hypothesis.probeCard': '공정이 아닌 프로브 카드 또는 테스터 사이트 문제',
   'hypothesis.probeCard.check':
-    '사이트 {site} 탐침을 세정하거나 교체한 뒤 샘플을 재측정하세요.',
+    '사이트 {site} 프로브 침을 세정하거나 교체한 뒤 샘플을 재측정하세요.',
   'hypothesis.random': '무작위 파티클 결함',
   'hypothesis.random.check':
     '해당 로트의 파티클 수와 결함 검사 기록을 검토하세요.',

@@ -13,6 +13,7 @@ import {
   LOCALE_INIT_SCRIPT,
   persistAndApplyLocale,
   readClientInitialLocale,
+  Untranslated,
   useT,
 } from './index';
 
@@ -246,5 +247,19 @@ describe('UI I18nProvider, useT hook, pre-hydration script, and persistence (Tas
     });
     expect(env.docEl.lang).toBe('en');
     expect(fallbackAnnouncement).toBe('Language changed to English.');
+
+    // §6.6 Untranslated wrapper renders <bdi translate="no"> around bin & test names
+    const bdiHtml = renderToStaticMarkup(
+      React.createElement(
+        'p',
+        null,
+        React.createElement(Untranslated, null, 'SBIN 7 IDDQ_EDGE_LEAK'),
+        ' · ',
+        React.createElement(Untranslated, null, '204 IDDQ_LEAK'),
+      ),
+    );
+    expect(bdiHtml).toBe(
+      '<p><bdi translate="no">SBIN 7 IDDQ_EDGE_LEAK</bdi> · <bdi translate="no">204 IDDQ_LEAK</bdi></p>',
+    );
   });
 });

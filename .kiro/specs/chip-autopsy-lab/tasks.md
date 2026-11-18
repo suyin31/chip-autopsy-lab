@@ -187,7 +187,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/redesign.md`. Each task is a <= 15-
 - [x] R1. Tokens and globals
   - Apply redesign §2 to `src/ui/tokens/palette.ts`, `tokens.ts`, and `src/app/globals.css` (`bg #000000`, ice `accent #D6E6FF`, `failure #FF6B2C`, `pass-die #63666C`, type scale, radii, springs, z-layers, CJK font variables and `:lang()` overrides); update palette tests.
   - Accept: `pass-die` >= 3:1 on `#000` and `#141416`; `text-tertiary` >= 4.5:1 on `#000` and `#1A1A1C`; no `7CF2C1` or `FF7A1A` left in `src/`.
-- [ ] R2. i18n core and provider
+- [x] R2. i18n core and provider
   - Add `src/core/i18n/` (locales, typed `t`, `Intl` formatters, `en` table from redesign §6.8, `zh-CN`, `zh-TW`, `ja`, `ko`) and `src/ui/i18n/` (provider, `useT`, pre-hydration locale script, `localStorage["cal.locale"]`).
   - Accept: key and placeholder parity across all 5 locales; `matchLocale` maps `zh-HK` to `zh-TW`, `zh` to `zh-CN`, `fr` to `en`; core isolation lint passes.
 - [ ] R3. Primitives and nav

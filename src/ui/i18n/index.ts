@@ -9,6 +9,8 @@ export {
   readClientInitialLocale,
   type StorageLike,
   syncDocumentLocale,
+  Untranslated,
+  type UntranslatedProps,
 } from './I18nProvider';
 export { LOCALE_INIT_SCRIPT } from './locale-script';
 export {
