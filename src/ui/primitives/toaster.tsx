@@ -35,10 +35,10 @@ export const SONNER_TOAST_OPTIONS = {
     actionButton:
       "relative shrink-0 cursor-pointer rounded-xs bg-transparent type-control text-text-primary transition-opacity duration-[120ms] ease-[var(--ease-out)] after:absolute after:-inset-2 after:content-[''] active:opacity-70 focus-visible:shadow-focus-ring focus-visible:outline-none",
     cancelButton:
-      "relative shrink-0 cursor-pointer rounded-xs bg-transparent type-control text-text-secondary transition-colors duration-[120ms] ease-[var(--ease-out)] after:absolute after:-inset-2 after:content-[''] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none",
+      "relative shrink-0 cursor-pointer rounded-xs bg-transparent type-control text-text-secondary transition-[color] duration-[120ms] ease-[var(--ease-out)] after:absolute after:-inset-2 after:content-[''] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none",
     // Error toasts: icon button "Dismiss" (`x`), 24 x 24 with a 40 px hit area
     closeButton:
-      "relative order-last flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-transparent text-text-secondary transition-colors duration-[120ms] ease-[var(--ease-out)] after:absolute after:-inset-2 after:content-[''] hover:bg-fill-1 hover:text-text-primary active:bg-fill-2 focus-visible:shadow-focus-ring focus-visible:outline-none [&_svg]:size-4",
+      "relative order-last flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-pill bg-transparent text-text-secondary transition-[background-color,color] duration-[120ms] ease-[var(--ease-out)] after:absolute after:-inset-2 after:content-[''] hover:bg-fill-1 hover:text-text-primary active:bg-fill-2 focus-visible:shadow-focus-ring focus-visible:outline-none [&_svg]:size-4",
     icon: 'flex size-4 shrink-0 items-center justify-center text-text-secondary [&_svg]:size-4',
   },
 } as const;

@@ -334,7 +334,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 
 **Polish**
 
-- [ ] P33. Accent and hover audit
+- [x] P33. Accent and hover audit
   - Automated check counting ember-family elements per viewport; remove stray orange; verify every hover uses the §8.9 properties and no `transition: all` remains (premium §3.4, §8.9, §1.3).
   - Accept: A3, A4.
 - [ ] P34. Reduced motion and perf gate

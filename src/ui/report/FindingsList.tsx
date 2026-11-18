@@ -443,7 +443,7 @@ export function FindingsList({
                         data-testid="finding-kind-icon"
                         strokeWidth={1.5}
                         className={cn(
-                          'mt-0.5 size-4 transition-colors duration-120 ease-out',
+                          'mt-0.5 size-4 transition-[color] duration-120 ease-out',
                           row.kind === 'scratch' && 'rotate-30',
                           isSelected ? 'text-text-primary' : 'text-text-tertiary',
                         )}
@@ -494,7 +494,7 @@ export function FindingsList({
                           open={isSelected}
                           reduced={reduced}
                           className={cn(
-                            'transition-colors duration-120 ease-out',
+                            'transition-[color] duration-120 ease-out',
                             isSelected
                               ? 'text-text-secondary'
                               : 'text-text-tertiary group-hover/finding:text-text-secondary',

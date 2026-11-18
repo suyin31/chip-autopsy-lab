@@ -291,7 +291,7 @@ export function ConfidencePill({
           )}
         </span>
         <Info
-          className="size-3.5 shrink-0 text-text-tertiary transition-colors duration-[120ms] ease-[var(--ease-out)] group-hover:text-text-secondary"
+          className="size-3.5 shrink-0 text-text-tertiary transition-[color] duration-[120ms] ease-[var(--ease-out)] group-hover:text-text-secondary"
           strokeWidth={1.75}
           aria-hidden="true"
         />

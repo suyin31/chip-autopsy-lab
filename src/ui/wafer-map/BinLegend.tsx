@@ -92,7 +92,7 @@ function LegendEntry({
       <span
         data-legend-label=""
         className={cn(
-          'ml-1.5 transition-colors duration-[120ms] ease-[var(--ease-out)]',
+          'ml-1.5 transition-[color] duration-[120ms] ease-[var(--ease-out)]',
           hidden
             ? 'text-text-disabled line-through'
             : primaryLabel
@@ -293,7 +293,7 @@ export function BinLegend({
           onClick={() => setMoreOpen((v) => !v)}
           className={cn(
             'relative cursor-pointer rounded-xs whitespace-nowrap text-text-secondary tabular-nums',
-            'transition-colors duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary active:opacity-64',
+            'transition-[color] duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary active:opacity-64',
             "after:absolute after:-inset-x-2 after:-inset-y-3 after:content-['']",
             'focus-visible:shadow-focus-ring focus-visible:outline-none',
           )}
@@ -336,7 +336,7 @@ export function BinLegend({
                 onClick={() => toggle(bin.code)}
                 className={cn(
                   'flex h-10 w-full shrink-0 cursor-pointer items-center gap-2 rounded-md px-3 text-left type-control',
-                  'transition-colors duration-[120ms] ease-[var(--ease-out)] hover:bg-fill-1 active:bg-fill-2',
+                  'transition-[background-color] duration-[120ms] ease-[var(--ease-out)] hover:bg-fill-1 active:bg-fill-2',
                   'focus-visible:shadow-focus-ring focus-visible:outline-none',
                   isHidden ? 'text-text-disabled line-through' : 'text-text-primary',
                 )}

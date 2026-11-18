@@ -1,4 +1,9 @@
-@import "tailwindcss";
+/*
+ * Utilities come from the app source only. Docs, logs, specs, and test files are not UI, and
+ * class names they mention or assert as absent must not emit CSS (premium §8.9).
+ */
+@import "tailwindcss" source("..");
+@source not "../**/*.test.{ts,tsx}";
 
 /* Dark utilities follow the data-theme attribute, not the OS media query (premium.md §3.1) */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

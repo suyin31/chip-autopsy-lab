@@ -308,7 +308,7 @@ export function StatRow({
             >
               <span
                 data-testid="verdict-stat-caption"
-                className="line-clamp-2 block text-text-secondary transition-colors duration-120 ease-out group-hover/stat:text-text-primary max-xl:line-clamp-3"
+                className="line-clamp-2 block text-text-secondary transition-[color] duration-120 ease-out group-hover/stat:text-text-primary max-xl:line-clamp-3"
               >
                 <GlossaryText
                   text={stat.captionText}

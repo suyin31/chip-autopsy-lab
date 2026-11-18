@@ -569,7 +569,7 @@ export const WaferSelector = React.memo(function WaferSelector({
               </span>
               <span
                 className={cn(
-                  "type-caption leading-none tabular-nums text-text-tertiary transition-colors duration-[var(--dur-2)] ease-[var(--ease-out)]",
+                  "type-caption leading-none tabular-nums text-text-tertiary transition-[color] duration-[var(--dur-2)] ease-[var(--ease-out)]",
                   "group-aria-[selected=false]:group-hover:text-text-secondary group-aria-selected:font-[590] group-aria-selected:text-text-primary",
                   "max-sm:group-aria-[selected=false]:hidden",
                 )}
