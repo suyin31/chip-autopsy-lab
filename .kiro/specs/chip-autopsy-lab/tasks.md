@@ -216,7 +216,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 
 **Tokens and theme**
 
-- [ ] P1. Steering and requirement amendments
+- [x] P1. Steering and requirement amendments
   - Rewrite `.kiro/steering/design-language.md` as the short form of premium §1, §3, §4, §8 (light default, one accent, new tokens); record the pass-die contrast amendment to Requirement 14.1 in `requirements.md` (premium §5.3).
   - Accept: no steering rule contradicts premium.md; `requirements.md` 14.1 names the `prefers-contrast: more` fallback.
 - [ ] P2. Colour, elevation, radius, and motion tokens

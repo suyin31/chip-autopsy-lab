@@ -74,3 +74,8 @@
 - Tests: `yield-summary-view.test.ts`, `yield-summary-panel.test.ts` (SSR, 5 locales), wafer-scope cases in `selection-store.test.ts` and `bin-pareto-view.test.ts`, and `e2e/yield-summary-task11.spec.ts` (below Pareto, site 1:2 flagged, site and wafer scoping, combined scope, Escape clears).
 - Verified: typecheck 0 errors, lint clean, `pnpm test` 211/211 (39 files), build OK, `pnpm e2e` 15/15 on the final run. One earlier full run had `linked-interactions-r7` fail; it passed alone and in the next full run, so I treated it as timing flake on this 2-CPU sandbox.
 - Note: `logs/prompt-task11.txt` and `logs/task11.log` were already untracked and were left alone.
+
+## 2026-11-18 — Premium P1 complete
+- Rewrote `.kiro/steering/design-language.md` as the short form of premium.md §1, §3, §4, §8 (light default via `"system"`, ink focus/selection instead of the ice accent, ember budget, wafer tokens, new type scale, motion tokens and rules); it now names premium.md as the winning spec. Amended Requirement 14.1 in `requirements.md` with the pass-tile contrast exemption and the `prefers-contrast: more` `pass-tile-hc` (3.1:1) fallback (premium §5.3).
+- Docs only, no code or locale changes. Verified: typecheck and lint clean, `pnpm test` 211/211 (39 files); one earlier run had a single intermittent failure that did not reproduce in two reruns. e2e not run (no layout or interaction change).
+- Decision (restrained): left Requirement 14.2/14.3 (`#7CF2C1` outlines and focus rings) and `product.md` (mobile layouts listed as a non-goal) untouched because P1 cites only 14.1 and design-language.md; both disagree with premium.md and need a later amendment.
