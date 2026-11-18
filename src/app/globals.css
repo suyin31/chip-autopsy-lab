@@ -52,11 +52,11 @@
 }
 
 :root[data-theme="light"] {
-  --bg: #f5f5f7;
+  --bg: #f6f3ee;
   --surface: #ffffff;
   --surface-sunken: #ebebef;
-  --fill-1: rgba(0, 0, 0, 0.035);
-  --fill-2: rgba(0, 0, 0, 0.055);
+  --fill-1: #efebe4;
+  --fill-2: #e6e1d8;
   --fill-3: rgba(0, 0, 0, 0.08);
   --material: rgba(250, 250, 252, 0.80);
   --material-filter: blur(20px) saturate(180%);
@@ -64,18 +64,18 @@
   --material-thick-filter: blur(24px) saturate(180%);
   --scrim: rgba(245, 245, 247, 0.60);
   --scrim-filter: blur(24px);
-  --hairline: rgba(0, 0, 0, 0.08);
-  --hairline-strong: rgba(0, 0, 0, 0.14);
-  --text-primary: #1d1d1f;
-  --text-secondary: #515154;
-  --text-tertiary: #6a6a70;
+  --hairline: rgba(32, 30, 31, 0.10);
+  --hairline-strong: rgba(32, 30, 31, 0.18);
+  --text-primary: #201e1f;
+  --text-secondary: #534f49;
+  --text-tertiary: #6d6963;
   --text-disabled: rgba(29, 29, 31, 0.32);
-  --ink: #1d1d1f;
+  --ink: #201e1f;
   --on-ink: #ffffff;
   --ember: #ff6b2c;
   --ember-mark: #e8591e;
   --ember-ink: #d94e14;
-  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px #1d1d1f;
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px #201e1f;
   --selection: rgba(29, 29, 31, 0.14);
   --bar-neutral: rgba(0, 0, 0, 0.16);
   --bin-ink-0: #e8591e;
@@ -194,8 +194,12 @@
   --font-display:
     var(--font-inter), "Inter", var(--font-cjk, sans-serif), -apple-system,
     BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  /* Instrument notes and error details (premium.md §12.4 overrides §3: JetBrains Mono 400) */
   --font-mono:
-    var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+    var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  /* One italic serif accent word per screen (premium.md §12.2) */
+  --font-accent:
+    var(--font-instrument-serif), "Instrument Serif", ui-serif, Georgia, serif;
 
   /* Concentric border radii (premium.md §3.9): inner = outer - padding when padding <= 24 px */
   --radius-xs: 4px;
@@ -750,6 +754,42 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Editorial accent word (premium.md §12.2): Instrument Serif italic 400 in ember-ink, about
+     6 % larger than the display line it sits in, on the shared baseline. Latin locales only. */
+  .type-accent {
+    font-family: var(--font-accent);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.06em;
+    /* The larger italic must not grow the display line box (the verdict counts its lines) */
+    line-height: 1;
+    font-variation-settings: normal;
+    color: var(--ember-ink);
+  }
+
+  /* Instrument notes (premium.md §12.4): mono 12/16, tracking +0.02em; numbers stay Inter elsewhere */
+  .type-mono-note {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    font-synthesis: none;
+  }
+
+  /* Eyebrow: a mono note in uppercase after a 6 px ember dot (premium.md §12.4) */
+  .type-eyebrow {
+    text-transform: uppercase;
+  }
+
+  /* Lot and wafer IDs inline in other text: the mono family and tracking at the line's own size (§12.4) */
+  .font-mono-id {
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+    font-synthesis: none;
+  }
+
   /* Side-aware strip edge fade (premium §5.8): only a side that can scroll fades */
   .wafer-strip-mask[data-fade-start="true"] {
     -webkit-mask-image: linear-gradient(90deg, transparent 0, #000000 32px, #000000 100%);
@@ -898,7 +938,7 @@
   }
 }
 
-/* Landing headline step between xl and mobile (premium.md §6.1: 64 px at 1024) */
+/* Landing headline step between xl and mobile (premium.md §6.1: 64 px at 1024); CJK keeps it */
 @media (min-width: 640px) and (max-width: 1279px) {
   .landing-headline {
     --size-display-xl: 64px;
@@ -911,5 +951,21 @@
     font-size: var(--size-callout);
     line-height: var(--leading-callout);
     letter-spacing: var(--tracking-callout);
+  }
+}
+
+/* Editorial landing display (premium.md §12.3), Latin locales; CJK keeps the §4.3 display-xl sizes */
+:root:not(:is([lang="zh-CN"], [lang="zh-TW"], [lang="ja"], [lang="ko"])) .landing-headline.landing-headline {
+  --size-display-xl: clamp(56px, 6.4vw, 104px);
+  --leading-display-xl: 0.98;
+  --tracking-display-xl: -0.035em;
+}
+
+/* Landing subline (premium.md §12.3): title-3 at 20/28, max 560 px, from 640 */
+@media (min-width: 640px) {
+  .landing-subline {
+    font-size: 20px;
+    line-height: 28px;
+    max-width: 560px;
   }
 }

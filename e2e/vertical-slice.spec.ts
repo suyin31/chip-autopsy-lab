@@ -136,8 +136,10 @@ test.describe('Vertical slice & R5 Verdict Column checkpoint', () => {
           const uppercaseElements: string[] = [];
           for (const el of Array.from(col.querySelectorAll<HTMLElement>('*'))) {
             const st = window.getComputedStyle(el);
+            // premium §12.4: lot and wafer IDs (`.font-mono-id`) are the only mono text here
             if (
-              /mono|menlo|consolas|courier/i.test(st.fontFamily)
+              /mono|menlo|consolas|courier/i.test(st.fontFamily) &&
+              !el.closest('.font-mono-id')
             ) {
               monoElements.push(el.tagName);
             }

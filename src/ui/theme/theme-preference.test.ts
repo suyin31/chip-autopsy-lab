@@ -114,8 +114,8 @@ describe('theme preference (premium.md §3.1)', () => {
     expect(resolveTheme('dark', false)).toBe('dark');
   });
 
-  it('theme-color meta values are #F5F5F7 light and #000000 dark', () => {
-    expect(THEME_COLOR_META).toEqual({ light: '#F5F5F7', dark: '#000000' });
+  it('theme-color meta values are #F6F3EE light and #000000 dark', () => {
+    expect(THEME_COLOR_META).toEqual({ light: '#F6F3EE', dark: '#000000' });
   });
 
   it('reads and writes storage, tolerating storage errors', () => {
@@ -152,12 +152,12 @@ describe('theme preference (premium.md §3.1)', () => {
     applyResolvedTheme('light', doc);
     expect(fake.attrs.get('data-theme')).toBe('light');
     expect(fake.headChildren).toHaveLength(1);
-    expect(fake.headChildren[0]?.attrs.get('content')).toBe('#F5F5F7');
+    expect(fake.headChildren[0]?.attrs.get('content')).toBe('#F6F3EE');
 
     const existing = createFakeDocument(true);
     applyResolvedTheme('light', existing.doc as unknown as ThemeDocumentLike);
     expect(existing.headChildren).toHaveLength(1);
-    expect(existing.headChildren[0]?.attrs.get('content')).toBe('#F5F5F7');
+    expect(existing.headChildren[0]?.attrs.get('content')).toBe('#F6F3EE');
     expect(() => applyResolvedTheme('light', null)).not.toThrow();
   });
 });
@@ -173,7 +173,7 @@ describe('THEME_INIT_SCRIPT (pre-hydration)', () => {
     expect(runScript({ prefersDark: false })).toEqual({
       theme: 'light',
       colorScheme: 'light',
-      themeColor: '#F5F5F7',
+      themeColor: '#F6F3EE',
       metaCount: 1,
     });
     expect(runScript({ stored: 'system', prefersDark: true }).theme).toBe(

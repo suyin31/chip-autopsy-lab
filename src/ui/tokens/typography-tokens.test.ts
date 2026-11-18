@@ -146,13 +146,16 @@ describe("type styles (premium.md §4.2)", () => {
     }
   });
 
-  it("sets the Inter feature settings globally and no text-transform", () => {
+  it("sets the Inter feature settings globally and uppercases eyebrows only (premium §12.4)", () => {
     const html = blockAfter("  html {");
     expect(html).toContain('font-feature-settings: "cv11", "ss03";');
     expect(html).toContain("font-optical-sizing: auto;");
     expect(html).toContain("-webkit-font-smoothing: antialiased;");
     expect(html).toContain("text-rendering: optimizeLegibility;");
-    expect(css).not.toMatch(/text-transform\s*:\s*uppercase/);
+    const uppercaseRules = css.match(/[^{}]*\{[^{}]*text-transform\s*:\s*uppercase[^{}]*\}/g) ?? [];
+    expect(uppercaseRules.map((rule) => rule.slice(0, rule.indexOf("{")).trim().split("\n").pop()?.trim())).toEqual([
+      ".type-eyebrow",
+    ]);
   });
 });
 

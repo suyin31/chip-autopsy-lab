@@ -42,6 +42,7 @@ export const ko = {
 
   // Landing
   'landing.headline': '시신을 여기에.',
+  'landing.headlineAccent': '시신',
   'landing.subline': '웨이퍼 로트의 수율이 떨어진 이유를 찾습니다. STDF 테스트 로그를 놓으면 다이와 연결된 원인을 보여 줍니다.',
   'landing.primary': '샘플 로트 열기',
   'landing.secondary': '파일 열기',

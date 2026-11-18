@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import { isCjkLocale } from '@/core/i18n';
 import type { RenderedVerdictHero, ReportClaim } from '@/core/report';
+import { AccentWord } from '@/ui/primitives/accent-word';
 import { cn } from '@/ui/primitives/cn';
 import type { VerdictRiseBlockId } from '@/ui/wafer-map/probe-sweep';
 import { useT } from '@/ui/i18n/use-t';
@@ -28,7 +30,8 @@ export function resolveVerdictMaxLines(locale: string): number {
  * Verdict headline and takeaway (`src/ui/report/VerdictHero.tsx`, premium §7.3, §9.3):
  * - `<h1>` `display-l`, max 520 px, `text-wrap: balance`, 2 lines max (3 in CJK); beyond that the
  *   size steps down `display-l` -> 40 -> 36 (`data-stepped-down="1" | "2"`).
- * - "Cause of death:" in `text-primary`, a `<wbr>`, then the cause phrase `<button>` in `ember-ink`.
+ * - "Cause of death:" in `text-primary`, a `<wbr>`, then the cause phrase `<button>` in `ember-ink`,
+ *   set as the screen's one Instrument Serif italic accent in Latin locales (premium §12.2).
  *   It is `inline-block`, so it wraps as one unit when it fits on a line. Hover underline 1.5 px at
  *   6 px offset (40 % mix), pressed opacity 0.72, selected (`aria-pressed`) underline at 70 % mix,
  *   `focus-ring` at `r-md` with 4 px padding absorbed by a negative margin.
@@ -58,6 +61,23 @@ export function VerdictHero({
       setStep(0);
     }
   }
+
+  // Web fonts (the §12.2 serif accent) can swap in after the first measure; measure again from
+  // display-l once they finish loading so a fallback face never leaves the verdict stepped down.
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || !document.fonts) {
+      return;
+    }
+    let cancelled = false;
+    void document.fonts.ready.then(() => {
+      if (!cancelled) {
+        setStep(0);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [measureKey]);
 
   React.useLayoutEffect(() => {
     const el = headingRef.current;
@@ -137,9 +157,18 @@ export function VerdictHero({
                 'focus-visible:shadow-focus-ring focus-visible:outline-none',
               )}
             >
-              {renderWithUntranslatedTokens(
-                verdict.cause,
-                verdict.untranslatedTokens,
+              {isCjkLocale(locale) ? (
+                renderWithUntranslatedTokens(
+                  verdict.cause,
+                  verdict.untranslatedTokens,
+                )
+              ) : (
+                <AccentWord>
+                  {renderWithUntranslatedTokens(
+                    verdict.cause,
+                    verdict.untranslatedTokens,
+                  )}
+                </AccentWord>
               )}
             </button>
           </span>

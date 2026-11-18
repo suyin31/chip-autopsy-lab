@@ -39,6 +39,7 @@ export const en = {
 
   // Landing
   'landing.headline': 'Drop the body.',
+  'landing.headlineAccent': 'body',
   'landing.subline': 'Find out why a wafer lot lost yield. Drop an STDF test log and get the cause, linked to the dies.',
   'landing.primary': 'Open the sample lot',
   'landing.secondary': 'Open file',

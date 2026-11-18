@@ -90,7 +90,7 @@ test('A2 (menu path): choosing Light on a dark OS turns the page light and persi
     .poll(() =>
       page.evaluate(() => getComputedStyle(document.body).backgroundColor),
     )
-    .toBe('rgb(245, 245, 247)');
+    .toBe('rgb(246, 243, 238)');
   await expect(trigger).toHaveAttribute('data-preference', 'light');
   await expect(trigger).toHaveAttribute('aria-label', 'Appearance: Light');
 

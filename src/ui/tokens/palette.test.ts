@@ -315,7 +315,8 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
     );
     expect(layoutTsx).toContain("from 'next/font/local'");
     expect(layoutTsx).toContain('--font-inter');
-    expect(layoutTsx).toContain('--font-geist-mono');
+    expect(layoutTsx).toContain('--font-jetbrains-mono');
+    expect(layoutTsx).toContain('--font-instrument-serif');
     expect(layoutTsx).not.toContain('fonts.googleapis.com');
     expect(layoutTsx).not.toContain('fonts.gstatic.com');
   });

@@ -1,3 +1,4 @@
+export { AccentWord, type AccentWordProps, renderAccentPhrase } from './accent-word';
 export { Badge, type BadgeProps, type BadgeVariant } from './badge';
 export {
   Button,

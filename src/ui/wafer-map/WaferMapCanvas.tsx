@@ -2114,7 +2114,7 @@ function WaferMapCanvasImpl({
       >
         <h2 className="type-headline text-text-primary">
           {titleParts[0]}
-          <Untranslated>{waferId}</Untranslated>
+          <Untranslated className="font-mono-id">{waferId}</Untranslated>
           {titleParts.slice(1).join('')}
         </h2>
         <p className="grid type-subhead text-text-secondary tabular-nums">

@@ -42,6 +42,7 @@ export const ja = {
 
   // Landing
   'landing.headline': '遺体をここに。',
+  'landing.headlineAccent': '遺体',
   'landing.subline': 'ウェハロットの歩留まりが落ちた理由を調べます。STDF テストログをドロップすると、ダイに結び付いた原因がわかります。',
   'landing.primary': 'サンプルロットを開く',
   'landing.secondary': 'ファイルを開く',

@@ -54,15 +54,15 @@ test.describe("Premium P15 - primitives", () => {
   }) => {
     await openDemo(page, "light");
     const s = await readSegmented(page);
-    expect(s.trackBg).toBe("rgba(0, 0, 0, 0.055)");
+    expect(s.trackBg).toBe("rgb(230, 225, 216)");
     expect(Math.round(s.trackHeight)).toBe(32);
     expect(s.trackBorder).toBe("0px");
     expect(Math.round(s.segmentHeight)).toBe(28);
     expect(s.thumbBg).toBe("rgb(255, 255, 255)");
     expect(s.thumbShadow).toContain("rgba(0, 0, 0, 0.1) 0px 1px 3px");
     expect(s.thumbRadius).toBe("999px");
-    expect(s.activeColor).toBe("rgb(29, 29, 31)");
-    expect(s.inactiveColor).toBe("rgb(81, 81, 84)");
+    expect(s.activeColor).toBe("rgb(32, 30, 31)");
+    expect(s.inactiveColor).toBe("rgb(83, 79, 73)");
     await page
       .getByTestId("stage-control-row")
       .screenshot({ path: path.join(SHOTS, "p15-segmented-light.png") });
@@ -93,9 +93,9 @@ test.describe("Premium P15 - primitives", () => {
     const primary = page.getByTestId("landing-open-sample-button");
     const secondary = page.getByTestId("landing-open-stdf-button");
     await expect(primary).toHaveAttribute("data-variant", "primary");
-    await expect(primary).toHaveCSS("background-color", "rgb(29, 29, 31)");
+    await expect(primary).toHaveCSS("background-color", "rgb(32, 30, 31)");
     await expect(primary).toHaveCSS("color", "rgb(255, 255, 255)");
-    await expect(secondary).toHaveCSS("background-color", "rgba(0, 0, 0, 0.055)");
+    await expect(secondary).toHaveCSS("background-color", "rgb(230, 225, 216)");
     expect(await page.locator('button[data-variant="primary"]:visible').count()).toBe(1);
 
     // Mouse focus shows no ring; keyboard focus shows the 2 + 2 px focus-ring token
@@ -107,6 +107,6 @@ test.describe("Premium P15 - primitives", () => {
     await expect(primary).toBeFocused();
     await expect(primary).toHaveCSS("outline-style", "none");
     const shadow = await primary.evaluate((el) => getComputedStyle(el).boxShadow);
-    expect(shadow).toContain("rgb(29, 29, 31) 0px 0px 0px 4px");
+    expect(shadow).toContain("rgb(32, 30, 31) 0px 0px 0px 4px");
   });
 });

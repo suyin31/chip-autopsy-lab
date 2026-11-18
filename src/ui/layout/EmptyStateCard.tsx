@@ -11,12 +11,13 @@ import {
   getDemoPresetPreview,
   getDemoStdfFileName,
 } from '@/core/demo';
-import type { MessageKey } from '@/core/i18n';
+import { isCjkLocale, type MessageKey } from '@/core/i18n';
 import type { ParseFatalError } from '@/core/stdf';
 import { Untranslated, useT } from '@/ui/i18n';
 import {
   Button,
   cn,
+  renderAccentPhrase,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -558,12 +559,16 @@ export function EmptyStateCard({
             data-testid="landing-headline"
             className="landing-headline type-display-xl text-text-primary"
           >
-            {t('landing.headline')}
+            {renderAccentPhrase(
+              t('landing.headline'),
+              t('landing.headlineAccent'),
+              !isCjkLocale(locale),
+            )}
           </h1>
 
           <p
             data-testid="landing-subline"
-            className="mt-4 line-clamp-3 type-title-3 text-text-secondary sm:max-w-[640px] lg:mx-auto min-[90rem]:mt-5"
+            className="landing-subline mt-4 line-clamp-3 type-title-3 text-text-secondary lg:mx-auto min-[90rem]:mt-5"
           >
             {t('landing.subline')}
           </p>
@@ -609,15 +614,21 @@ export function EmptyStateCard({
           <section
             aria-labelledby={sampleHeadingId}
             className={cn(
-              'mt-6 sm:mt-10 lg:mt-8 min-[90rem]:mt-14',
-              cause === 'parse-failed' && 'md:mt-10',
+              // premium §12.5: landing sections >= 72 px apart
+              'mt-[72px]',
             )}
           >
+            {/* premium §12.4 eyebrow: 6 px ember dot, then a mono 12/16 uppercase note */}
             <h2
               id={sampleHeadingId}
               data-testid="landing-sample-heading"
-              className="type-headline text-text-primary"
+              className="flex items-center gap-2 type-mono-note type-eyebrow text-text-primary"
             >
+              <span
+                aria-hidden="true"
+                data-testid="landing-eyebrow-dot"
+                className="size-1.5 shrink-0 rounded-full bg-ember"
+              />
               {t('landing.demoHeading')}
             </h2>
 
@@ -644,7 +655,7 @@ export function EmptyStateCard({
           </section>
 
           {/* premium §6.1 footer line: privacy left (subhead tertiary), "Download sample files" text button right */}
-          <footer className="mt-8 flex flex-wrap items-center justify-between gap-4 lg:mt-6 min-[90rem]:mt-14">
+          <footer className="mt-[72px] flex flex-wrap items-center justify-between gap-4">
             <p
               data-testid="landing-privacy"
               className="type-subhead text-text-tertiary"

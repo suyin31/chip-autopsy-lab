@@ -277,7 +277,7 @@ export function YieldSummaryPanel({
                   className={rowClass(pressed)}
                 >
                   <span className="min-w-0 truncate type-callout text-text-primary">
-                    <Untranslated>{wafer.waferId}</Untranslated>
+                    <Untranslated className="font-mono-id">{wafer.waferId}</Untranslated>
                   </span>
                   {renderValues(metrics)}
                 </button>

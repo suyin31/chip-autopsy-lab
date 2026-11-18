@@ -573,7 +573,7 @@ export const WaferSelector = React.memo(function WaferSelector({
                   "max-sm:group-aria-[selected=false]:hidden",
                 )}
               >
-                <Untranslated>{wafer.waferId}</Untranslated>
+                <Untranslated className="font-mono-id">{wafer.waferId}</Untranslated>
               </span>
             </button>
           );

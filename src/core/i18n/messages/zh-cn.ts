@@ -41,6 +41,7 @@ export const zhCN = {
 
   // Landing
   'landing.headline': '把遗体放这里。',
+  'landing.headlineAccent': '遗体',
   'landing.subline': '找出晶圆批次良率损失的原因。拖入 STDF 测试日志，即可得到与晶粒关联的原因。',
   'landing.primary': '打开示例批次',
   'landing.secondary': '打开文件',

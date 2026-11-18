@@ -45,6 +45,11 @@ export const LOCALE_SHORT_LABELS: Readonly<Record<Locale, string>> = {
   ko: '한',
 };
 
+/** CJK locales: no italic and no serif accent word (premium.md §4.3, §12.2). */
+export function isCjkLocale(locale: Locale): boolean {
+  return locale === 'zh-CN' || locale === 'zh-TW' || locale === 'ja' || locale === 'ko';
+}
+
 export function isSupportedLocale(value: unknown): value is Locale {
   return typeof value === 'string' && SUPPORTED_LOCALE_SET.has(value);
 }

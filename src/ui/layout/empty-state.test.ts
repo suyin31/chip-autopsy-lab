@@ -69,7 +69,8 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
       }),
     );
 
-    expect(html).toContain('Drop the body.');
+    // premium §12.2: "body" is the one Instrument Serif accent word
+    expect(html).toContain('Drop the <span data-accent="" class="type-accent">body</span>.');
     expect(html).toContain(
       'Find out why a wafer lot lost yield. Drop an STDF test log and get the cause, linked to the dies.',
     );
@@ -122,9 +123,12 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(html).toContain('>Runs entirely in your browser.<');
     expect(html).toContain('Download sample files');
 
-    // Restraint: no weights >= 700, no ember on the landing chrome
+    // Restraint: no weights >= 700; the only ember chrome is the §12.4 eyebrow dot (the §12.2
+    // accent word takes ember-ink from `.type-accent`)
     expect(html).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
-    expect(html).not.toMatch(/ember/);
+    expect(html.match(/ember/g)).toEqual(['ember']);
+    expect(html).toContain('data-testid="landing-eyebrow-dot" class="size-1.5 shrink-0 rounded-full bg-ember"');
+    expect(html).toMatch(/data-testid="landing-sample-heading" class="[^"]*type-mono-note type-eyebrow/);
   });
 
   it('maps all 7 §3.7 error codes cleanly and renders icon-free parse-failed hero above demo cards', () => {

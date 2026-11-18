@@ -192,7 +192,7 @@ export function LotPicker({
             className,
           )}
         >
-          <Untranslated className="shrink-0 whitespace-nowrap type-control text-text-primary group-disabled:text-text-disabled">
+          <Untranslated className="shrink-0 whitespace-nowrap type-control font-mono-id text-text-primary group-disabled:text-text-disabled">
             {cleanLotId}
           </Untranslated>
 

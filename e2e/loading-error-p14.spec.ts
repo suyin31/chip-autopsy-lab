@@ -7,7 +7,7 @@ import { expect, type Page, test } from "@playwright/test";
  */
 
 const SHOTS = path.join(__dirname, "..", "logs", "shots");
-const INK_LIGHT = "rgb(29, 29, 31)";
+const INK_LIGHT = "rgb(32, 30, 31)";
 
 async function open(page: Page, width: number, height: number) {
   await page.addInitScript(() => {
@@ -145,7 +145,7 @@ test.describe("P14 loading, error, drag overlay, bins-only (premium §6.3–§6.
     await expect(frame).toHaveCSS("border-top-left-radius", "28px");
     await expect(frame).toHaveCSS(
       "box-shadow",
-      "rgba(0, 0, 0, 0.14) 0px 0px 0px 1.5px inset",
+      "rgba(32, 30, 31, 0.18) 0px 0px 0px 1.5px inset",
     );
     expect(
       await frame.evaluate(
@@ -165,7 +165,7 @@ test.describe("P14 loading, error, drag overlay, bins-only (premium §6.3–§6.
     await expect(overlay).toContainText("Only files can be opened here.");
     await expect(frame).toHaveCSS(
       "box-shadow",
-      "rgba(0, 0, 0, 0.14) 0px 0px 0px 1.5px inset",
+      "rgba(32, 30, 31, 0.18) 0px 0px 0px 1.5px inset",
     );
     await page.evaluate(() => window.dispatchEvent(new Event("dragend")));
     await expect(overlay).toBeHidden();

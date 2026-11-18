@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
  * attribute switches the page variables. Task P3 sets the attribute (dark here: the
  * Playwright OS scheme is dark and the preference is Match system); then it is forced.
  */
-test('data-theme switches page tokens: light #F5F5F7 / #1D1D1F, dark #000000', async ({
+test('data-theme switches page tokens: light #F6F3EE / #201E1F, dark #000000', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -45,10 +45,10 @@ test('data-theme switches page tokens: light #F5F5F7 / #1D1D1F, dark #000000', a
 
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
   const light = await read();
-  expect(light.bodyBg).toBe('rgb(245, 245, 247)');
-  expect(light.bodyColor).toBe('rgb(29, 29, 31)');
+  expect(light.bodyBg).toBe('rgb(246, 243, 238)');
+  expect(light.bodyColor).toBe('rgb(32, 30, 31)');
   expect(light.surface).toBe('rgb(255, 255, 255)');
-  expect(light.tertiary).toBe('rgb(106, 106, 112)');
+  expect(light.tertiary).toBe('rgb(109, 105, 99)');
   expect(light.shadow).toContain('rgba(0, 0, 0, 0.05) 0px 8px 24px 0px');
   expect(light.barNeutral).toBe('rgba(0, 0, 0, 0.16)');
 

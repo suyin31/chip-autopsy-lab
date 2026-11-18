@@ -235,6 +235,9 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       expect(cardHtml).toContain('data-testid="autopsy-headline-button"');
       expect(cardHtml).toContain('text-ember-ink');
       expect(cardHtml).toMatch(/<span data-testid="verdict-prefix"[^>]*>[^<]*<\/span><wbr\/>/);
+      // premium §12.2: the cause phrase is the one serif accent (en)
+      expect(cardHtml.match(/data-accent=""/g)?.length).toBe(1);
+      expect(cardHtml).toMatch(/data-testid="autopsy-headline-button"[^>]*><span data-accent="" class="type-accent">/);
       const takeaway =
         /<p data-testid="verdict-subline"[^>]*>(.*?)<\/p>/.exec(cardHtml)?.[1] ?? '';
       expect(takeaway).toContain('Final yield is');
@@ -363,6 +366,7 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
     expect(html).toContain('>No cause of death.<');
     expect(html).not.toContain('data-testid="autopsy-headline-button"');
     expect(html).not.toContain('text-ember');
+    expect(html).not.toContain('data-accent');
     expect(html).toContain('2 of 2 dies passed every test.');
     expect(countPrimaryButtons(html)).toBe(1);
   });

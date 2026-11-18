@@ -18,7 +18,7 @@ async function loadDemo(page: Page, presetId: string) {
   await expect(page.getByTestId('verdict-stat-row')).toBeVisible();
 }
 
-const TEXT_PRIMARY = { light: 'rgb(29, 29, 31)', dark: 'rgba(255, 255, 255, 0.92)' } as const;
+const TEXT_PRIMARY = { light: 'rgb(32, 30, 31)', dark: 'rgba(255, 255, 255, 0.92)' } as const;
 
 for (const scheme of ['light', 'dark'] as const) {
   test.describe(`Premium P18 - stats (${scheme})`, () => {
@@ -85,7 +85,7 @@ for (const scheme of ['light', 'dark'] as const) {
         expect(c).not.toMatch(emberLike);
       }
       expect(audit.secondaryColor).toBe(
-        scheme === 'light' ? 'rgb(106, 106, 112)' : 'rgba(255, 255, 255, 0.56)',
+        scheme === 'light' ? 'rgb(109, 105, 99)' : 'rgba(255, 255, 255, 0.56)',
       );
       expect(audit.radius).toBe('16px');
       expect(audit.inset).toEqual({ left: 12, top: 12, right: 12, bottom: 12 });
@@ -111,7 +111,7 @@ test.describe('Premium P18 - stat evidence', () => {
     await edge.hover();
     await expect
       .poll(() => edge.evaluate((el) => getComputedStyle(el).backgroundColor))
-      .toBe('rgba(0, 0, 0, 0.035)');
+      .toBe('rgb(239, 235, 228)');
     await expect
       .poll(() =>
         page
@@ -119,7 +119,7 @@ test.describe('Premium P18 - stat evidence', () => {
           .nth(0)
           .evaluate((el) => getComputedStyle(el).color),
       )
-      .toBe('rgb(29, 29, 31)');
+      .toBe('rgb(32, 30, 31)');
 
     await edge.click();
     await expect(edge).toHaveAttribute('aria-pressed', 'true');
@@ -137,7 +137,7 @@ test.describe('Premium P18 - stat evidence', () => {
     await page.mouse.move(0, 0);
     await expect
       .poll(() => failing.evaluate((el) => getComputedStyle(el).backgroundColor))
-      .toBe('rgba(0, 0, 0, 0.055)');
+      .toBe('rgb(230, 225, 216)');
 
     await failing.click();
     await expect(failing).toHaveAttribute('aria-pressed', 'false');

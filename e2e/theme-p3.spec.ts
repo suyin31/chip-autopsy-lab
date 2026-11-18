@@ -63,8 +63,8 @@ test('Match system on a light OS paints light, and follows OS changes live', asy
     atBody: 'light',
     theme: 'light',
     colorScheme: 'light',
-    themeColor: ['#F5F5F7'],
-    bodyBg: 'rgb(245, 245, 247)',
+    themeColor: ['#F6F3EE'],
+    bodyBg: 'rgb(246, 243, 238)',
   });
 
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -92,8 +92,8 @@ test('localStorage "light" on a dark OS persists across reload and ignores OS ch
     atBody: 'light',
     theme: 'light',
     colorScheme: 'light',
-    themeColor: ['#F5F5F7'],
-    bodyBg: 'rgb(245, 245, 247)',
+    themeColor: ['#F6F3EE'],
+    bodyBg: 'rgb(246, 243, 238)',
   });
 
   await page.emulateMedia({ colorScheme: 'light' });
@@ -123,6 +123,6 @@ test('localStorage "dark" on a light OS paints dark; invalid values fall back to
   expect(await readTheme(page)).toMatchObject({
     atBody: 'light',
     theme: 'light',
-    themeColor: ['#F5F5F7'],
+    themeColor: ['#F6F3EE'],
   });
 });

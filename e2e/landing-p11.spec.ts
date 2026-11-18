@@ -65,10 +65,13 @@ test.describe("P11 landing (premium §6.1)", () => {
       "landing-privacy",
       "landing-download-demos-trigger",
     ];
+    // premium §12.3 / §12.5: the larger headline and 72 px section gaps move the footer line
+    // below the 900 px fold; everything above it stays above the fold
+    const footerIds = new Set(["landing-privacy", "landing-download-demos-trigger"]);
     for (const id of ids) {
       const b = await box(page, id);
       // A14: above the 900 px fold and at least 16 px from every viewport edge
-      expect(b.y + b.height, id).toBeLessThanOrEqual(900 - 4);
+      if (!footerIds.has(id)) expect(b.y + b.height, id).toBeLessThanOrEqual(900 - 4);
       expect(b.x, id).toBeGreaterThanOrEqual(16);
       expect(b.x + b.width, id).toBeLessThanOrEqual(1440 - 16);
     }
@@ -105,13 +108,13 @@ test.describe("P11 landing (premium §6.1)", () => {
       ).color,
     }));
     expect(colours).toEqual({
-      body: "rgb(245, 245, 247)",
+      body: "rgb(246, 243, 238)",
       card: "rgb(255, 255, 255)",
-      headline: "rgb(29, 29, 31)",
+      headline: "rgb(32, 30, 31)",
     });
 
     // A20: exactly one filled ink button, and it is "Open the sample lot"
-    expect(await countInkFilledButtons(page, "rgb(29, 29, 31)")).toBe(1);
+    expect(await countInkFilledButtons(page, "rgb(32, 30, 31)")).toBe(1);
     await expect(page.getByTestId("landing-open-sample-button")).toHaveText(
       "Open the sample lot",
     );
@@ -142,8 +145,9 @@ test.describe("P11 landing (premium §6.1)", () => {
     page,
   }) => {
     for (const vp of [
-      { width: 1280, height: 800, top: 116, wafer: 140, card: 272, font: "80px" },
-      { width: 1024, height: 768, top: 104, wafer: 120, card: 256, font: "64px" },
+      // premium §12.3: clamp(56px, 6.4vw, 104px)
+      { width: 1280, height: 800, top: 116, wafer: 140, card: 272, font: "81.92px" },
+      { width: 1024, height: 768, top: 104, wafer: 120, card: 256, font: "65.536px" },
     ]) {
       await openLanding(page, vp.width, vp.height);
       const headline = await box(page, "landing-headline");
@@ -160,8 +164,8 @@ test.describe("P11 landing (premium §6.1)", () => {
         expect(cards[i]!.height).toBeGreaterThanOrEqual(vp.card);
         expect(Math.round((await box(page, `landing-demo-wafer-${id}`)).width)).toBe(vp.wafer);
       }
-      const footer = await box(page, "landing-download-demos-trigger");
-      expect(footer.y + footer.height).toBeLessThanOrEqual(vp.height);
+      // §12.5 72 px gaps: the cards stay above the fold; the footer line may sit below it
+      expect(cards[0]!.y + cards[0]!.height).toBeLessThanOrEqual(vp.height);
       await page.screenshot({
         path: path.join(SHOTS, `p11-landing-${vp.width}-light.png`),
       });

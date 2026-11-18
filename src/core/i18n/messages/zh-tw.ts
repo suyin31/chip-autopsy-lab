@@ -41,6 +41,7 @@ export const zhTW = {
 
   // Landing
   'landing.headline': '把遺體放這裡。',
+  'landing.headlineAccent': '遺體',
   'landing.subline': '找出晶圓批次良率損失的原因。拖入 STDF 測試記錄，即可得到與晶粒連結的原因。',
   'landing.primary': '開啟範例批次',
   'landing.secondary': '開啟檔案',

@@ -23,15 +23,30 @@ const inter = localFont({
   preload: true,
 });
 
-const geistMono = localFont({
+// Editorial accent word (premium.md §12.2): Instrument Serif italic 400, latin, OFL
+const instrumentSerif = localFont({
   src: [
     {
-      path: './fonts/GeistMono-Variable.woff2',
-      weight: '100 600',
+      path: '../../node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2',
+      weight: '400',
+      style: 'italic',
+    },
+  ],
+  variable: '--font-instrument-serif',
+  display: 'swap',
+  preload: true,
+});
+
+// Instrument notes (premium.md §12.4): JetBrains Mono 400, latin, OFL
+const jetbrainsMono = localFont({
+  src: [
+    {
+      path: '../../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2',
+      weight: '400',
       style: 'normal',
     },
   ],
-  variable: '--font-geist-mono',
+  variable: '--font-jetbrains-mono',
   display: 'swap',
   preload: true,
 });
@@ -55,7 +70,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${geistMono.variable}`}
+      className={`${inter.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
