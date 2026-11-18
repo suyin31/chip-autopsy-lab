@@ -83,33 +83,94 @@ export const WaferSelector = React.memo(function WaferSelector({
       resolvedDpr,
     );
 
-    for (let i = 0; i < count; i += 1) {
-      const canvas = canvasRefs.current[i];
-      const wafer = wafers[i];
-      if (!canvas || !wafer) {
-        continue;
+    const drawIndices = (startIdx: number, endIdx: number): void => {
+      for (let i = startIdx; i < endIdx && i < count; i += 1) {
+        const canvas = canvasRefs.current[i];
+        const wafer = wafers[i];
+        if (!canvas || !wafer) {
+          continue;
+        }
+        let ctx = ctxRefs.current[i] ?? null;
+        if (!ctx || ctx.canvas !== canvas) {
+          ctx = canvas.getContext('2d');
+          ctxRefs.current[i] = ctx;
+        }
+        if (!ctx) {
+          continue;
+        }
+        if (canvas.width !== dims.pixelWidth) {
+          canvas.width = dims.pixelWidth;
+        }
+        if (canvas.height !== dims.pixelHeight) {
+          canvas.height = dims.pixelHeight;
+        }
+        paintWaferThumbnail(ctx, {
+          wafer,
+          dies,
+          cssSize: dims.cssWidth,
+          dpr: dims.dpr,
+        });
       }
-      let ctx = ctxRefs.current[i] ?? null;
-      if (!ctx || ctx.canvas !== canvas) {
-        ctx = canvas.getContext('2d');
-        ctxRefs.current[i] = ctx;
-      }
-      if (!ctx) {
-        continue;
-      }
-      if (canvas.width !== dims.pixelWidth) {
-        canvas.width = dims.pixelWidth;
-      }
-      if (canvas.height !== dims.pixelHeight) {
-        canvas.height = dims.pixelHeight;
-      }
-      paintWaferThumbnail(ctx, {
-        wafer,
-        dies,
-        cssSize: dims.cssWidth,
-        dpr: dims.dpr,
-      });
+    };
+
+    // Draw initial visible thumbnails immediately; batch remaining in 5-item idle slices (§5.10)
+    const immediateEnd = Math.min(count, 15);
+    drawIndices(0, immediateEnd);
+
+    if (immediateEnd >= count) {
+      return;
     }
+
+    let nextStart = immediateEnd;
+    let cancelled = false;
+    let idleHandle: number | null = null;
+    const ric =
+      typeof window !== 'undefined' &&
+      typeof (
+        window as Window & {
+          requestIdleCallback?: (cb: () => void) => number;
+        }
+      ).requestIdleCallback === 'function'
+        ? (
+            window as Window & {
+              requestIdleCallback: (cb: () => void) => number;
+              cancelIdleCallback: (id: number) => void;
+            }
+          )
+        : null;
+
+    const scheduleBatch = (): void => {
+      const runBatch = (): void => {
+        if (cancelled) {
+          return;
+        }
+        drawIndices(nextStart, nextStart + 5);
+        nextStart += 5;
+        if (nextStart < count) {
+          scheduleBatch();
+        }
+      };
+      if (ric) {
+        idleHandle = ric.requestIdleCallback(runBatch);
+      } else if (typeof requestAnimationFrame === 'function') {
+        idleHandle = requestAnimationFrame(runBatch);
+      } else {
+        drawIndices(nextStart, count);
+      }
+    };
+
+    scheduleBatch();
+
+    return () => {
+      cancelled = true;
+      if (idleHandle !== null) {
+        if (ric) {
+          ric.cancelIdleCallback(idleHandle);
+        } else if (typeof cancelAnimationFrame === 'function') {
+          cancelAnimationFrame(idleHandle);
+        }
+      }
+    };
   }, [count, wafers, dies, dpr]);
 
   React.useEffect(() => {
@@ -244,7 +305,7 @@ export const WaferSelector = React.memo(function WaferSelector({
             }}
             onKeyDown={(e) => handleItemKeyDown(e, idx)}
             className={cn(
-              'group relative inline-flex h-14 w-12 shrink-0 [scroll-snap-align:center] cursor-pointer flex-col items-center justify-center gap-1 rounded-xs select-none md:h-16 md:w-14',
+              'group relative inline-flex h-14 w-12 shrink-0 [scroll-snap-align:center] cursor-pointer flex-col items-center justify-center gap-0.5 pt-1 rounded-xs select-none md:h-16 md:w-14',
               'transition-transform duration-[100ms] ease-[var(--ease-out)] active:scale-[0.94]',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
             )}
@@ -255,8 +316,8 @@ export const WaferSelector = React.memo(function WaferSelector({
                 'relative inline-flex h-10 w-10 items-center justify-center rounded-full transition-opacity duration-[120ms] ease-[var(--ease-out)] md:h-12 md:w-12',
                 isSelected
                   ? isZeroEvidenceDimmed
-                    ? 'opacity-40 ring-2 ring-accent ring-offset-[3px] ring-offset-bg'
-                    : 'opacity-100 ring-2 ring-accent ring-offset-[3px] ring-offset-bg'
+                    ? 'opacity-40 ring-2 ring-accent ring-offset-2 ring-offset-bg'
+                    : 'opacity-100 ring-2 ring-accent ring-offset-2 ring-offset-bg'
                   : isZeroEvidenceDimmed
                     ? 'opacity-40 hover:opacity-70 hover:ring-2 hover:ring-[var(--color-accent-soft)]'
                     : 'opacity-[0.72] hover:opacity-100 hover:ring-2 hover:ring-[var(--color-accent-soft)]',

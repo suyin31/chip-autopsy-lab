@@ -1,5 +1,6 @@
 'use client';
 
+import { useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
@@ -7,12 +8,24 @@ import type { LotModel } from '@/core/model';
 import { CLASSIFIER_THRESHOLDS } from '@/core/patterns';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
+  computeOrderedGlowSchedule,
+  DIM_SCRIM_MAX_ALPHA,
+  GLOW_DIE_FADE_DURATION_MS,
+  GLOW_EXIT_DURATION_MS,
+  GLOW_TOTAL_DURATION_MS,
+  type OrderedGlowSchedule,
+  SCRIM_ENTER_DURATION_MS,
+  type ScreenBox,
+  sampleCubicEaseOut,
+} from './linked-interactions';
+import {
   type CameraState,
   cameraToViewportTransform,
   DEFAULT_CAMERA_STATE,
 } from './wafer-camera';
 import {
   computeWaferRenderLayout,
+  type OverlayGlowSequenceOverride,
   paintWaferOverlayLayer,
   resolveCanvasPixelSize,
   type ViewportTransform,
@@ -21,6 +34,7 @@ import {
 
 export interface OverlayCanvasHandle {
   paintForCamera(camera: CameraState): void;
+  setLiveBrushScreenRect(rect: ScreenBox | null): void;
 }
 
 export interface OverlayCanvasProps {
@@ -37,13 +51,48 @@ export interface OverlayCanvasProps {
 
 const EMPTY_MASK = new Uint8Array(0);
 
+interface GlowAnimatorState {
+  phase: 'idle' | 'entering' | 'settled' | 'exiting';
+  claimId: string | null;
+  waferIndex: number;
+  schedule: OrderedGlowSchedule | null;
+  startTimeMs: number;
+  scrimStartAlpha: number;
+  liveScrimAlpha: number;
+  liveDieIndices: Uint32Array;
+  liveDieAlphas: Float32Array;
+  outgoingIndices: Uint32Array | null;
+  outgoingStartAlphas: Float32Array | null;
+  outgoingLiveAlphas: Float32Array | null;
+  outgoingStartTimeMs: number;
+}
+
+function createIdleAnimatorState(waferIndex: number): GlowAnimatorState {
+  return {
+    phase: 'idle',
+    claimId: null,
+    waferIndex,
+    schedule: null,
+    startTimeMs: 0,
+    scrimStartAlpha: 0,
+    liveScrimAlpha: 0,
+    liveDieIndices: new Uint32Array(0),
+    liveDieAlphas: new Float32Array(0),
+    outgoingIndices: null,
+    outgoingStartAlphas: null,
+    outgoingLiveAlphas: null,
+    outgoingStartTimeMs: 0,
+  };
+}
+
 /**
- * DPR-scaled screen-space Canvas2D overlay layer (`z: 3`, `pointer-events: none`, `redesign.md` §4.7).
+ * DPR-scaled screen-space Canvas2D overlay layer (`z: 3`, `pointer-events: none`, `redesign.md` §4.7, §5.4, §5.7).
  *
- * Subscribes via a single `useShallow` selector to `SelectionStore` highlight,
- * brush, and hover slices AND exposes an imperative `paintForCamera` handle so
- * camera gestures/springs redraw screen-space strokes every animated frame with
- * zero React re-renders and zero `BaseCanvas` repaints (Requirements 4.3, 10.4, 15.4).
+ * - Drives the §5.4 finding `dim-scrim` (`0 -> 0.62` in `200 ms`, punched out at evidence dies),
+ *   ordered glow sequence (`polar-cw` / `principal-axis` / `centroid-distance`, `<= 600 ms` total),
+ *   `160 ms` clear fade, and mid-animation finding retargeting in a self-terminating rAF loop.
+ * - Exposes `setLiveBrushScreenRect` and `paintForCamera` so `Shift+drag` box selection and
+ *   camera springs repaint at 60/120 fps with zero React re-renders and zero `BaseCanvas` repaints.
  */
 const OverlayCanvasImpl = React.forwardRef<
   OverlayCanvasHandle,
@@ -62,11 +111,20 @@ const OverlayCanvasImpl = React.forwardRef<
   },
   ref,
 ): React.JSX.Element {
+  const shouldReduceMotion = useReducedMotion();
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
+  const liveBrushRectRef = React.useRef<ScreenBox | null>(null);
+  const animStateRef = React.useRef<GlowAnimatorState>(
+    createIdleAnimatorState(waferIndex),
+  );
+  const rafIdRef = React.useRef<number | null>(null);
 
   const {
     storeLot,
+    rawClaimHighlight,
+    rawClaimMask,
     rawOverlayMask,
     rawOverlayCount,
     rawHoveredDieIndex,
@@ -75,6 +133,8 @@ const OverlayCanvasImpl = React.forwardRef<
     store,
     useShallow((s) => ({
       storeLot: s.lot,
+      rawClaimHighlight: s.claimHighlight,
+      rawClaimMask: s.claimHighlightMask,
       rawOverlayMask: s.overlayHighlightMask,
       rawOverlayCount: s.overlayHighlightCount,
       rawHoveredDieIndex: s.hoveredDieIndex,
@@ -83,6 +143,8 @@ const OverlayCanvasImpl = React.forwardRef<
   );
 
   const isSynced = storeLot === lot;
+  const claimHighlight = isSynced ? rawClaimHighlight : null;
+  const claimHighlightMask = isSynced ? rawClaimMask : EMPTY_MASK;
   const overlayHighlightMask = isSynced ? rawOverlayMask : EMPTY_MASK;
   const overlayHighlightCount = isSynced ? rawOverlayCount : 0;
   const hoveredDieIndex = isSynced ? rawHoveredDieIndex : null;
@@ -91,12 +153,20 @@ const OverlayCanvasImpl = React.forwardRef<
   const safeCssWidth = Math.max(1, Math.round(cssWidth));
   const safeCssHeight = Math.max(1, Math.round(cssHeight));
 
+  const reducedMotionRef = React.useRef(Boolean(shouldReduceMotion));
+  reducedMotionRef.current = Boolean(shouldReduceMotion);
+
   const latestRef = React.useRef({
     lot,
     waferIndex,
     safeCssWidth,
     safeCssHeight,
     dpr,
+    transform,
+    getCamera,
+    layout,
+    claimHighlight,
+    claimHighlightMask,
     overlayHighlightMask,
     overlayHighlightCount,
     hoveredDieIndex,
@@ -108,6 +178,11 @@ const OverlayCanvasImpl = React.forwardRef<
     safeCssWidth,
     safeCssHeight,
     dpr,
+    transform,
+    getCamera,
+    layout,
+    claimHighlight,
+    claimHighlightMask,
     overlayHighlightMask,
     overlayHighlightCount,
     hoveredDieIndex,
@@ -164,6 +239,44 @@ const OverlayCanvasImpl = React.forwardRef<
     }
     return { waferCount, waferOuterBandCount };
   }, [lot, waferIndex, overlayHighlightMask, overlayHighlightCount]);
+
+  const syncWrapperDebugAttrs = React.useCallback((): void => {
+    const wrapperEl = wrapperRef.current;
+    if (!wrapperEl) {
+      return;
+    }
+    const anim = animStateRef.current;
+    wrapperEl.dataset.glowPhase = anim.phase;
+    wrapperEl.dataset.scrimAlpha = anim.liveScrimAlpha.toFixed(3);
+    let litCount = 0;
+    for (let i = 0; i < anim.liveDieAlphas.length; i += 1) {
+      if (anim.liveDieAlphas[i]! > 0.05) {
+        litCount += 1;
+      }
+    }
+    wrapperEl.dataset.litDieCount = String(litCount);
+    wrapperEl.dataset.firstOrderedDie =
+      anim.liveDieIndices.length > 0 ? String(anim.liveDieIndices[0]) : '';
+  }, []);
+
+  const buildCurrentGlowOverride =
+    React.useCallback((): OverlayGlowSequenceOverride | null => {
+      const anim = animStateRef.current;
+      if (anim.phase === 'idle') {
+        return null;
+      }
+      return {
+        scrimAlpha: anim.liveScrimAlpha,
+        dieIndices: anim.liveDieIndices,
+        dieAlphas: anim.liveDieAlphas,
+        ...(anim.outgoingIndices && anim.outgoingLiveAlphas
+          ? {
+              outgoingIndices: anim.outgoingIndices,
+              outgoingAlphas: anim.outgoingLiveAlphas,
+            }
+          : {}),
+      };
+    }, []);
 
   const paintWithViewport = React.useCallback(
     (vp: ViewportTransform, explicitLayout?: WaferRenderLayout | null): void => {
@@ -227,10 +340,242 @@ const OverlayCanvasImpl = React.forwardRef<
         overlayHighlightCount: cur.overlayHighlightCount,
         hoveredDieIndex: cur.hoveredDieIndex,
         brush: cur.brush,
+        glowOverride: buildCurrentGlowOverride(),
+        liveBrushScreenRect: liveBrushRectRef.current,
       });
+      syncWrapperDebugAttrs();
     },
-    [],
+    [buildCurrentGlowOverride, syncWrapperDebugAttrs],
   );
+
+  const paintCurrentNow = React.useCallback((): void => {
+    const cur = latestRef.current;
+    const cam = cur.getCamera ? cur.getCamera() : DEFAULT_CAMERA_STATE;
+    const vp =
+      cur.transform ??
+      cameraToViewportTransform(cam, cur.safeCssWidth, cur.safeCssHeight);
+    paintWithViewport(vp, cur.layout);
+  }, [paintWithViewport]);
+
+  const stopGlowRaf = React.useCallback((): void => {
+    if (rafIdRef.current !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+  }, []);
+
+  const stepGlowFrame = React.useCallback(
+    (nowMs: number): void => {
+      rafIdRef.current = null;
+      const anim = animStateRef.current;
+      let needsMoreFrames = false;
+
+      // Update outgoing mid-switch fade if present (§5.4 step 7)
+      if (
+        anim.outgoingIndices &&
+        anim.outgoingStartAlphas &&
+        anim.outgoingLiveAlphas
+      ) {
+        const outElapsed = Math.max(0, nowMs - anim.outgoingStartTimeMs);
+        if (outElapsed >= GLOW_EXIT_DURATION_MS) {
+          anim.outgoingIndices = null;
+          anim.outgoingStartAlphas = null;
+          anim.outgoingLiveAlphas = null;
+        } else {
+          const k = 1 - sampleCubicEaseOut(outElapsed / GLOW_EXIT_DURATION_MS);
+          for (let i = 0; i < anim.outgoingLiveAlphas.length; i += 1) {
+            anim.outgoingLiveAlphas[i] = anim.outgoingStartAlphas[i]! * k;
+          }
+          needsMoreFrames = true;
+        }
+      }
+
+      if (anim.phase === 'entering' && anim.schedule) {
+        const elapsed = Math.max(0, nowMs - anim.startTimeMs);
+        const scrimT = Math.min(1, elapsed / SCRIM_ENTER_DURATION_MS);
+        anim.liveScrimAlpha =
+          anim.scrimStartAlpha +
+          (DIM_SCRIM_MAX_ALPHA - anim.scrimStartAlpha) *
+            sampleCubicEaseOut(scrimT);
+
+        let allSettled = scrimT >= 1 && elapsed >= GLOW_TOTAL_DURATION_MS;
+        const n = anim.schedule.dieIndices.length;
+        if (n > 0 && elapsed < GLOW_TOTAL_DURATION_MS) {
+          let everyDieFull = scrimT >= 1;
+          for (let r = 0; r < n; r += 1) {
+            const localMs = elapsed - anim.schedule.delaysMs[r]!;
+            if (localMs <= 0) {
+              anim.liveDieAlphas[r] = 0;
+              everyDieFull = false;
+            } else if (localMs >= GLOW_DIE_FADE_DURATION_MS) {
+              anim.liveDieAlphas[r] = 1;
+            } else {
+              anim.liveDieAlphas[r] = sampleCubicEaseOut(
+                localMs / GLOW_DIE_FADE_DURATION_MS,
+              );
+              everyDieFull = false;
+            }
+          }
+          allSettled = everyDieFull;
+        } else {
+          anim.liveDieAlphas.fill(1);
+        }
+
+        if (allSettled) {
+          anim.liveScrimAlpha = DIM_SCRIM_MAX_ALPHA;
+          anim.liveDieAlphas.fill(1);
+          anim.phase = 'settled';
+        } else {
+          needsMoreFrames = true;
+        }
+      } else if (anim.phase === 'exiting') {
+        const elapsed = Math.max(0, nowMs - anim.startTimeMs);
+        if (elapsed >= GLOW_EXIT_DURATION_MS) {
+          animStateRef.current = createIdleAnimatorState(
+            latestRef.current.waferIndex,
+          );
+        } else {
+          const k = 1 - sampleCubicEaseOut(elapsed / GLOW_EXIT_DURATION_MS);
+          anim.liveScrimAlpha = anim.scrimStartAlpha * k;
+          if (anim.outgoingStartAlphas) {
+            for (let i = 0; i < anim.liveDieAlphas.length; i += 1) {
+              anim.liveDieAlphas[i] = anim.outgoingStartAlphas[i]! * k;
+            }
+          }
+          needsMoreFrames = true;
+        }
+      }
+
+      paintCurrentNow();
+
+      if (needsMoreFrames && typeof requestAnimationFrame === 'function') {
+        rafIdRef.current = requestAnimationFrame(stepGlowFrame);
+      }
+    },
+    [paintCurrentNow],
+  );
+
+  // Transition glow/scrim state when claimHighlight or waferIndex changes (§5.4)
+  React.useEffect(() => {
+    const now =
+      typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const anim = animStateRef.current;
+    const nextClaimId = claimHighlight?.claimId ?? null;
+    const reduced =
+      reducedMotionRef.current || typeof requestAnimationFrame !== 'function';
+
+    if (nextClaimId === null) {
+      if (anim.phase === 'idle') {
+        return;
+      }
+      stopGlowRaf();
+      if (reduced || anim.liveScrimAlpha <= 0.005) {
+        animStateRef.current = createIdleAnimatorState(waferIndex);
+        paintCurrentNow();
+        return;
+      }
+      const snapshotAlphas = new Float32Array(anim.liveDieAlphas);
+      anim.phase = 'exiting';
+      anim.claimId = null;
+      anim.startTimeMs = now;
+      anim.scrimStartAlpha = anim.liveScrimAlpha;
+      anim.outgoingStartAlphas = snapshotAlphas;
+      anim.outgoingIndices = null;
+      anim.outgoingLiveAlphas = null;
+      rafIdRef.current = requestAnimationFrame(stepGlowFrame);
+      return;
+    }
+
+    const mode = claimHighlight?.glowOrderMode ?? 'centroid-distance';
+    const schedule = computeOrderedGlowSchedule({
+      lot,
+      waferIndex,
+      evidenceMask: claimHighlightMask,
+      mode,
+    });
+
+    const isSameClaimNewWafer =
+      anim.claimId === nextClaimId && anim.waferIndex !== waferIndex;
+
+    if (reduced || (isSameClaimNewWafer && anim.phase === 'settled')) {
+      stopGlowRaf();
+      const alphas = new Float32Array(schedule.dieIndices.length);
+      alphas.fill(1);
+      animStateRef.current = {
+        phase: 'settled',
+        claimId: nextClaimId,
+        waferIndex,
+        schedule,
+        startTimeMs: now,
+        scrimStartAlpha: DIM_SCRIM_MAX_ALPHA,
+        liveScrimAlpha: DIM_SCRIM_MAX_ALPHA,
+        liveDieIndices: schedule.dieIndices,
+        liveDieAlphas: alphas,
+        outgoingIndices: null,
+        outgoingStartAlphas: null,
+        outgoingLiveAlphas: null,
+        outgoingStartTimeMs: 0,
+      };
+      paintCurrentNow();
+      return;
+    }
+
+    if (anim.claimId === nextClaimId && anim.waferIndex === waferIndex) {
+      return;
+    }
+
+    stopGlowRaf();
+
+    // §5.4 step 7: preserve outgoing glow fade when switching findings on the same wafer
+    let outgoingIndices: Uint32Array | null = null;
+    let outgoingStartAlphas: Float32Array | null = null;
+    let outgoingLiveAlphas: Float32Array | null = null;
+    if (
+      anim.claimId !== null &&
+      anim.claimId !== nextClaimId &&
+      anim.waferIndex === waferIndex &&
+      anim.liveDieIndices.length > 0
+    ) {
+      outgoingIndices = anim.liveDieIndices;
+      outgoingStartAlphas = new Float32Array(anim.liveDieAlphas);
+      outgoingLiveAlphas = new Float32Array(anim.liveDieAlphas);
+    }
+
+    const startScrim =
+      anim.waferIndex === waferIndex ? anim.liveScrimAlpha : 0;
+    const nextAlphas = new Float32Array(schedule.dieIndices.length);
+
+    animStateRef.current = {
+      phase: 'entering',
+      claimId: nextClaimId,
+      waferIndex,
+      schedule,
+      startTimeMs: now,
+      scrimStartAlpha: startScrim,
+      liveScrimAlpha: startScrim,
+      liveDieIndices: schedule.dieIndices,
+      liveDieAlphas: nextAlphas,
+      outgoingIndices,
+      outgoingStartAlphas,
+      outgoingLiveAlphas,
+      outgoingStartTimeMs: now,
+    };
+
+    paintCurrentNow();
+    rafIdRef.current = requestAnimationFrame(stepGlowFrame);
+  }, [
+    claimHighlight,
+    claimHighlightMask,
+    lot,
+    waferIndex,
+    paintCurrentNow,
+    stepGlowFrame,
+    stopGlowRaf,
+  ]);
+
+  React.useEffect(() => {
+    return () => stopGlowRaf();
+  }, [stopGlowRaf]);
 
   React.useImperativeHandle(
     ref,
@@ -240,7 +585,9 @@ const OverlayCanvasImpl = React.forwardRef<
         if (
           cur.overlayHighlightCount === 0 &&
           cur.hoveredDieIndex === null &&
-          cur.brush === null
+          cur.brush === null &&
+          animStateRef.current.phase === 'idle' &&
+          liveBrushRectRef.current === null
         ) {
           return;
         }
@@ -251,15 +598,19 @@ const OverlayCanvasImpl = React.forwardRef<
         );
         paintWithViewport(vp, null);
       },
+      setLiveBrushScreenRect(rect: ScreenBox | null): void {
+        if (liveBrushRectRef.current === null && rect === null) {
+          return;
+        }
+        liveBrushRectRef.current = rect;
+        paintCurrentNow();
+      },
     }),
-    [paintWithViewport],
+    [paintCurrentNow, paintWithViewport],
   );
 
   React.useEffect(() => {
-    const cam = getCamera ? getCamera() : DEFAULT_CAMERA_STATE;
-    const vp =
-      transform ?? cameraToViewportTransform(cam, safeCssWidth, safeCssHeight);
-    paintWithViewport(vp, layout);
+    paintCurrentNow();
   }, [
     lot,
     waferIndex,
@@ -273,11 +624,12 @@ const OverlayCanvasImpl = React.forwardRef<
     overlayHighlightCount,
     hoveredDieIndex,
     brush,
-    paintWithViewport,
+    paintCurrentNow,
   ]);
 
   return (
     <div
+      ref={wrapperRef}
       data-testid="wafer-overlay-wrapper"
       data-highlight-count={overlayHighlightCount}
       data-hovered-die={hoveredDieIndex !== null ? hoveredDieIndex : ''}
@@ -287,6 +639,8 @@ const OverlayCanvasImpl = React.forwardRef<
       data-wafer-outer-band-highlight-count={
         waferHighlightStats.waferOuterBandCount
       }
+      data-glow-phase="idle"
+      data-scrim-alpha="0.000"
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-[var(--z-canvas-overlay)]"
     >

@@ -1,0 +1,3 @@
+root agent idle; waiting for 1 background task(s) to finish
+Running the full unit (`pnpm test`) and Playwright E2E (`pnpm e2e`) suites now; I will update `tasks.md` and `logs/progress.md` once verification completes.
+error: interrupted

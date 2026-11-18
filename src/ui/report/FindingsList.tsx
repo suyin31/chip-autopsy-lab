@@ -133,12 +133,12 @@ export function FindingsList({
 
               <div
                 className={cn(
-                  'group/finding rounded-md transition-[background-color,transform] duration-120 ease-out',
+                  'group/finding rounded-md transition-[background-color,transform] ease-out',
                   isPressed
-                    ? 'bg-surface-3 scale-[0.99]'
+                    ? 'bg-surface-2 duration-0 scale-[0.99]'
                     : isSelected
-                      ? 'bg-surface-2'
-                      : 'bg-transparent hover:bg-surface-1',
+                      ? 'bg-surface-2 duration-120'
+                      : 'bg-transparent duration-120 hover:bg-surface-1',
                 )}
               >
                 <button

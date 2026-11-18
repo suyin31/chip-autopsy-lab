@@ -9,14 +9,61 @@ export {
   type FailCanvasProps,
 } from './FailCanvas';
 export {
+  HoverMagnifier,
+  type HoverMagnifierHandle,
+  type HoverMagnifierProps,
+  LOUPE_HEIGHT_PX,
+  LOUPE_WIDTH_PX,
+  MAGNIFIER_WIDTH_PX,
+} from './HoverMagnifier';
+export {
+  type ComputeEvidenceFramingCameraParams,
+  type ComputeOrderedGlowScheduleParams,
+  computeEvidenceFramingCamera,
+  computeLiveBoxSelectStats,
+  computeMagnifierPlacement,
+  computeOrderedGlowSchedule,
+  computePopoverPlacement,
+  computeWaferEvidencePresence,
+  DIM_SCRIM_MAX_ALPHA,
+  evaluateGlowSequenceFrame,
+  GLOW_DIE_FADE_DURATION_MS,
+  GLOW_EXIT_DURATION_MS,
+  GLOW_STAGGER_WINDOW_MS,
+  GLOW_TOTAL_DURATION_MS,
+  type GlowOrderMode,
+  type GlowSequenceFrameState,
+  inferGlowOrderMode,
+  type LiveBoxSelectStats,
+  type LiveBoxSelectTopBin,
+  type MagnifierPlacementInput,
+  type MagnifierPlacementResult,
+  type OrderedGlowSchedule,
+  type PopoverPlacementInput,
+  type PopoverPlacementResult,
+  rectsOverlap,
+  SCRIM_ENTER_DURATION_MS,
+  type ScreenBox,
+  sampleCubicEaseOut,
+  screenRectToWaferGridBounds,
+  type WaferGridBounds,
+} from './linked-interactions';
+export {
   OverlayCanvas,
   type OverlayCanvasHandle,
   type OverlayCanvasProps,
 } from './OverlayCanvas';
+export {
+  SELECTION_POPOVER_WIDTH_PX,
+  SelectionPopover,
+  type SelectionPopoverHandle,
+  type SelectionPopoverProps,
+} from './SelectionPopover';
 export { WaferMapCanvas, type WaferMapCanvasProps } from './WaferMapCanvas';
 export {
   WAFER_THUMB_BUTTON_PX,
   WAFER_THUMB_CANVAS_PX,
+  type WaferSelectOptions,
   WaferSelector,
   type WaferSelectorProps,
 } from './WaferSelector';
@@ -77,6 +124,7 @@ export {
   OVERLAY_HALO_STROKE,
   OVERLAY_HOVER_STROKE,
   OVERLAY_KEYLINE_STROKE,
+  type OverlayGlowSequenceOverride,
   type PaintWaferBaseParams,
   type PaintWaferFailParams,
   type PaintWaferOverlayParams,
