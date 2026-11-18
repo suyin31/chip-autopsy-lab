@@ -63,3 +63,4 @@ __pycache__/
 !tests/fixtures/**/*.std
 !tests/fixtures/**/*.stdf.gz
 !tests/fixtures/**/*.std.gz
+test-results/
