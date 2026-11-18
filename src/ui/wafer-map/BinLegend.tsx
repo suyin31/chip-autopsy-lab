@@ -11,35 +11,139 @@ import {
   type SelectionStoreState,
   type WaferColorMode,
 } from '@/ui/state';
-import { COLOR_TOKENS, getFailBinColor } from '@/ui/tokens';
-import { buildFailBinRankMap } from './wafer-geometry';
-
-interface BinLegendItem {
-  readonly code: number;
-  readonly label: string;
-  readonly count: number;
-  readonly isPass: boolean;
-  readonly color: string;
-}
+import {
+  buildStageLegendModel,
+  INLINE_FAIL_BIN_ENTRIES,
+  LEGEND_FAILED_KEY,
+  LEGEND_PASSED_KEY,
+  resolveGroupToggleCodes,
+  type StageLegendBin,
+} from './stage-legend';
 
 export interface BinLegendProps {
   readonly lot: LotModel;
   readonly waferIndex: number;
   readonly colorMode: WaferColorMode;
-  /** Final-state pass and fail die counts of the active wafer (Pass/Fail legend). */
+  /** Final-state pass and fail die counts of the active wafer (Pass/fail legend). */
   readonly passCount: number;
   readonly failCount: number;
   readonly store: StoreApi<SelectionStoreState>;
+  readonly className?: string;
 }
 
-/** Number of bin entries shown inline before the "+N more" popover (redesign.md 3.4). */
-const INLINE_BIN_ENTRIES = 6;
+type SwatchKind = 'fail-tile' | 'hollow-tile' | 'dot';
+
+function LegendSwatch({
+  kind,
+  inkIndex = 0,
+  hidden,
+}: {
+  readonly kind: SwatchKind;
+  readonly inkIndex?: number;
+  readonly hidden: boolean;
+}): React.JSX.Element {
+  return (
+    <span
+      aria-hidden="true"
+      data-legend-swatch={kind}
+      style={
+        kind === 'dot' ? { backgroundColor: `var(--bin-ink-${inkIndex})` } : undefined
+      }
+      className={cn(
+        'inline-block shrink-0 transition-opacity duration-[120ms] ease-[var(--ease-out)]',
+        kind === 'fail-tile' && 'size-3 rounded-xs bg-ember-mark',
+        kind === 'hollow-tile' &&
+          'size-3 rounded-xs shadow-[inset_0_0_0_1px_var(--hairline-strong)]',
+        kind === 'dot' && 'size-2 rounded-full',
+        hidden ? 'opacity-40' : 'opacity-100',
+      )}
+    />
+  );
+}
+
+interface LegendEntryProps {
+  readonly swatch: SwatchKind;
+  readonly inkIndex?: number;
+  readonly label: React.ReactNode;
+  readonly count: string;
+  readonly hidden: boolean;
+  readonly primaryLabel?: boolean;
+  readonly ariaLabel: string;
+  readonly title?: string;
+  readonly onToggle?: () => void;
+}
+
+/** One legend entry: swatch, label, and tabular count; a `button` with `aria-pressed` when it toggles (premium §5.7). */
+function LegendEntry({
+  swatch,
+  inkIndex,
+  label,
+  count,
+  hidden,
+  primaryLabel = false,
+  ariaLabel,
+  title,
+  onToggle,
+}: LegendEntryProps): React.JSX.Element {
+  const content = (
+    <>
+      <LegendSwatch kind={swatch} inkIndex={inkIndex ?? 0} hidden={hidden} />
+      <span
+        data-legend-label=""
+        className={cn(
+          'ml-1.5 transition-colors duration-[120ms] ease-[var(--ease-out)]',
+          hidden
+            ? 'text-text-disabled line-through'
+            : primaryLabel
+              ? 'font-medium text-text-primary'
+              : 'text-text-secondary group-hover:text-text-primary',
+        )}
+      >
+        {label}
+      </span>
+      <span
+        data-legend-count=""
+        className={cn(
+          'ml-1 tabular-nums',
+          hidden ? 'text-text-disabled line-through' : 'text-text-tertiary',
+        )}
+      >
+        {count}
+      </span>
+    </>
+  );
+  if (!onToggle) {
+    return (
+      <span className="inline-flex items-center whitespace-nowrap">{content}</span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      aria-pressed={!hidden}
+      aria-label={ariaLabel}
+      title={title}
+      onClick={onToggle}
+      className={cn(
+        'group relative inline-flex cursor-pointer items-center rounded-xs whitespace-nowrap',
+        "after:absolute after:-inset-x-1 after:-inset-y-3 after:content-['']",
+        'focus-visible:shadow-focus-ring focus-visible:outline-none',
+      )}
+    >
+      {content}
+    </button>
+  );
+}
+
+function binTitle(bin: StageLegendBin): string {
+  return bin.name ? `${bin.codeLabel} ${bin.name}` : bin.codeLabel;
+}
 
 /**
- * Stage legend (`redesign.md` 2.1, 3.4). Pass/Fail mode draws the pass and fail die shapes.
- * HBIN/SBIN modes list the active wafer's bins as toggles. Clicking one updates the store's
- * `hiddenBins`; the canvas layers repaint imperatively, and only this component re-renders,
- * never the stage.
+ * Stage legend in the control row (premium §5.7). Pass/fail: "Failed" and "Passed" tiles.
+ * Bins: up to 4 fail bins by count, a "+N more" popover listing every bin with its name, and
+ * the good bins grouped as "Good". Every entry toggles visibility through the store's
+ * `hiddenBins`; the canvas layers repaint imperatively, so only this component re-renders.
  */
 export function BinLegend({
   lot,
@@ -48,9 +152,12 @@ export function BinLegend({
   passCount,
   failCount,
   store,
+  className,
 }: BinLegendProps): React.JSX.Element {
   const { t, formatInteger } = useT();
-  const [moreBinsOpen, setMoreBinsOpen] = React.useState(false);
+  const [moreOpen, setMoreOpen] = React.useState(false);
+  const moreButtonRef = React.useRef<HTMLButtonElement>(null);
+  const popoverRef = React.useRef<HTMLDivElement>(null);
 
   const storeLot = useStore(store, (s) => s.lot);
   const storeHiddenBins = useStore(store, (s) => s.hiddenBins);
@@ -60,189 +167,200 @@ export function BinLegend({
     (code: number): void => store.getState().toggleHiddenBin(code),
     [store],
   );
-
-  const wafer = lot.wafers[waferIndex];
-  const binLegendItems = React.useMemo<readonly BinLegendItem[]>(() => {
-    if ((colorMode !== 'hbin' && colorMode !== 'sbin') || !wafer) {
-      return [];
-    }
-    const isSbin = colorMode === 'sbin';
-    const rankMap = buildFailBinRankMap(lot.dies, isSbin ? 'SBIN' : 'HBIN');
-    const counts = new Map<number, { count: number; passCount: number }>();
-    const binArr = isSbin ? lot.dies.sbin : lot.dies.hbin;
-    for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
-      if (lot.dies.hasValidCoords[i] === 0) {
-        continue;
+  const toggleGroup = React.useCallback(
+    (codes: readonly number[]): void => {
+      const state = store.getState();
+      for (const code of resolveGroupToggleCodes(state.hiddenBins, codes)) {
+        state.toggleHiddenBin(code);
       }
-      const code = binArr[i]!;
-      const entry = counts.get(code) ?? { count: 0, passCount: 0 };
-      entry.count += 1;
-      if (lot.dies.finalPass[i] !== 0) {
-        entry.passCount += 1;
-      }
-      counts.set(code, entry);
-    }
-    const items: BinLegendItem[] = [];
-    for (const [code, stats] of counts.entries()) {
-      const meta = isSbin ? lot.sbins.get(code) : lot.hbins.get(code);
-      const isPass = stats.passCount * 2 >= stats.count;
-      const prefix = isSbin ? 'SBIN' : 'HBIN';
-      const nameSuffix = meta?.name ? ` ${meta.name}` : '';
-      const rank = rankMap.get(code) ?? 0;
-      items.push({
-        code,
-        label: `${prefix} ${code}${nameSuffix}`,
-        count: stats.count,
-        isPass,
-        color: isPass ? COLOR_TOKENS.passDie : getFailBinColor(rank),
-      });
-    }
-    items.sort((a, b) => {
-      if (a.isPass !== b.isPass) return a.isPass ? 1 : -1;
-      if (b.count !== a.count) return b.count - a.count;
-      return a.code - b.code;
-    });
-    return items;
-  }, [colorMode, wafer, lot.dies, lot.sbins, lot.hbins]);
+    },
+    [store],
+  );
 
-  // Close the full list when the colour mode changes
+  const model = React.useMemo(
+    () => buildStageLegendModel(lot, waferIndex, colorMode),
+    [lot, waferIndex, colorMode],
+  );
+
+  // Close the popover when the colour mode changes
   const lastModeRef = React.useRef(colorMode);
   if (lastModeRef.current !== colorMode) {
     lastModeRef.current = colorMode;
-    if (moreBinsOpen) {
-      setMoreBinsOpen(false);
+    if (moreOpen) {
+      setMoreOpen(false);
     }
   }
 
-  const visibleBinItems = binLegendItems.slice(0, INLINE_BIN_ENTRIES);
-  const overflowBinItems = binLegendItems.slice(INLINE_BIN_ENTRIES);
+  // Menus close on Esc (focus returns to the trigger) and on outside click (premium §7.12)
+  React.useEffect(() => {
+    if (!moreOpen) {
+      return undefined;
+    }
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        setMoreOpen(false);
+        moreButtonRef.current?.focus();
+      }
+    };
+    const onPointerDown = (event: PointerEvent): void => {
+      const target = event.target as Node | null;
+      if (
+        target &&
+        !popoverRef.current?.contains(target) &&
+        !moreButtonRef.current?.contains(target)
+      ) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+    };
+  }, [moreOpen]);
+
+  if (colorMode !== 'hbin' && colorMode !== 'sbin') {
+    const interactive = colorMode === 'pass-fail';
+    const failedHidden = interactive && hiddenBins.has(LEGEND_FAILED_KEY);
+    const passedHidden = interactive && hiddenBins.has(LEGEND_PASSED_KEY);
+    const failedLabel = t('legend.failed');
+    const passedLabel = t('legend.passed');
+    return (
+      <div
+        data-testid="stage-legend"
+        className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 type-subhead', className)}
+      >
+        <LegendEntry
+          swatch="fail-tile"
+          label={failedLabel}
+          count={formatInteger(failCount)}
+          hidden={failedHidden}
+          ariaLabel={t('stage.legend.toggleAria', { bin: failedLabel })}
+          {...(interactive ? { onToggle: () => toggle(LEGEND_FAILED_KEY) } : {})}
+        />
+        <LegendEntry
+          swatch="hollow-tile"
+          label={passedLabel}
+          count={formatInteger(passCount)}
+          hidden={passedHidden}
+          ariaLabel={t('stage.legend.toggleAria', { bin: passedLabel })}
+          {...(interactive ? { onToggle: () => toggle(LEGEND_PASSED_KEY) } : {})}
+        />
+      </div>
+    );
+  }
+
+  const inlineFail = model.failBins.slice(0, INLINE_FAIL_BIN_ENTRIES);
+  const overflowCount = model.failBins.length - inlineFail.length;
+  const goodCodes = model.goodBins.map((b) => b.code);
+  const goodHidden =
+    goodCodes.length > 0 && goodCodes.every((c) => hiddenBins.has(c));
+  const goodLabel = t('legend.good');
+  const allBins = [...model.failBins, ...model.goodBins];
 
   return (
-    <>
-        {colorMode === 'pass-fail' || colorMode === 'parametric' ? (
-          <div className="flex flex-wrap items-center gap-3 type-subhead text-text-tertiary tabular-nums">
-            <span className="inline-flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="inline-flex h-2.5 w-2.5 items-center justify-center"
+    <div
+      data-testid="stage-legend"
+      className={cn(
+        'relative flex flex-wrap items-center gap-x-4 gap-y-2 type-subhead',
+        className,
+      )}
+    >
+      {inlineFail.map((bin) => (
+        <LegendEntry
+          key={bin.code}
+          swatch="dot"
+          inkIndex={bin.inkIndex}
+          label={<Untranslated>{bin.codeLabel}</Untranslated>}
+          count={formatInteger(bin.count)}
+          hidden={hiddenBins.has(bin.code)}
+          primaryLabel
+          ariaLabel={t('stage.legend.toggleAria', { bin: binTitle(bin) })}
+          title={binTitle(bin)}
+          onToggle={() => toggle(bin.code)}
+        />
+      ))}
+      {overflowCount > 0 ? (
+        <button
+          ref={moreButtonRef}
+          type="button"
+          aria-expanded={moreOpen}
+          aria-haspopup="dialog"
+          onClick={() => setMoreOpen((v) => !v)}
+          className={cn(
+            'relative cursor-pointer rounded-xs whitespace-nowrap text-text-secondary tabular-nums',
+            'transition-colors duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary active:opacity-64',
+            "after:absolute after:-inset-x-2 after:-inset-y-3 after:content-['']",
+            'focus-visible:shadow-focus-ring focus-visible:outline-none',
+          )}
+        >
+          {t('legend.more', { count: formatInteger(overflowCount) })}
+        </button>
+      ) : null}
+      {model.goodBins.length > 0 ? (
+        <LegendEntry
+          swatch="hollow-tile"
+          label={goodLabel}
+          count={formatInteger(model.goodCount)}
+          hidden={goodHidden}
+          ariaLabel={t('stage.legend.toggleAria', { bin: goodLabel })}
+          title={model.goodBins.map(binTitle).join(', ')}
+          onToggle={() => toggleGroup(goodCodes)}
+        />
+      ) : null}
+
+      {moreOpen && overflowCount > 0 ? (
+        <div
+          ref={popoverRef}
+          role="dialog"
+          aria-label={t('legend.more', { count: formatInteger(overflowCount) })}
+          data-testid="stage-legend-popover"
+          className={cn(
+            'absolute bottom-full left-0 z-[var(--z-menus)] mb-2 flex max-h-80 w-60 flex-col overflow-y-auto rounded-2xl p-3',
+            'bg-material-thick shadow-popover [backdrop-filter:var(--material-thick-filter)] [-webkit-backdrop-filter:var(--material-thick-filter)]',
+          )}
+        >
+          {allBins.map((bin) => {
+            const isHidden = hiddenBins.has(bin.code);
+            return (
+              <button
+                key={bin.code}
+                type="button"
+                aria-pressed={!isHidden}
+                aria-label={t('stage.legend.toggleAria', { bin: binTitle(bin) })}
+                title={binTitle(bin)}
+                onClick={() => toggle(bin.code)}
+                className={cn(
+                  'flex h-10 w-full shrink-0 cursor-pointer items-center gap-2 rounded-md px-3 text-left type-control',
+                  'transition-colors duration-[120ms] ease-[var(--ease-out)] hover:bg-fill-1 active:bg-fill-2',
+                  'focus-visible:shadow-focus-ring focus-visible:outline-none',
+                  isHidden ? 'text-text-disabled line-through' : 'text-text-primary',
+                )}
               >
-                <span className="h-[7px] w-[7px] rounded-[1px] bg-pass-die" />
-              </span>
-              <span>
-                {t('stage.legend.pass', {
-                  count: formatInteger(passCount),
-                })}
-              </span>
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="inline-block h-2.5 w-2.5 rounded-[1.5px] bg-failure"
-              />
-              <span>
-                {t('stage.legend.fail', {
-                  count: formatInteger(failCount),
-                })}
-              </span>
-            </span>
-          </div>
-        ) : (
-          <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1 type-subhead tabular-nums">
-            {visibleBinItems.map((item) => {
-              const isHidden = hiddenBins.has(item.code);
-              return (
-                <button
-                  key={item.code}
-                  type="button"
-                  aria-pressed={!isHidden}
-                  aria-label={t('stage.legend.toggleAria', { bin: item.label })}
-                  onClick={() => toggle(item.code)}
+                <LegendSwatch
+                  kind={bin.isPass ? 'hollow-tile' : 'dot'}
+                  inkIndex={bin.inkIndex}
+                  hidden={isHidden}
+                />
+                <Untranslated className="min-w-0 flex-1 truncate">
+                  {binTitle(bin)}
+                </Untranslated>
+                <span
                   className={cn(
-                    'inline-flex cursor-pointer items-center gap-1.5 rounded-xs py-0.5 transition-colors duration-[120ms] ease-[var(--ease-out)]',
-                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-                    isHidden
-                      ? 'text-text-disabled line-through'
-                      : 'text-text-tertiary hover:text-text-primary',
+                    'tabular-nums',
+                    isHidden ? 'text-text-disabled' : 'text-text-tertiary',
                   )}
                 >
-                  <span
-                    aria-hidden="true"
-                    className="inline-flex h-2.5 w-2.5 items-center justify-center"
-                  >
-                    <span
-                      style={{ backgroundColor: item.color }}
-                      className={
-                        item.isPass
-                          ? 'h-[7px] w-[7px] rounded-[1px]'
-                          : 'h-2.5 w-2.5 rounded-[1.5px]'
-                      }
-                    />
-                  </span>
-                  <Untranslated>{item.label}</Untranslated>
-                  <span>{formatInteger(item.count)}</span>
-                </button>
-              );
-            })}
-            {overflowBinItems.length > 0 ? (
-              <button
-                type="button"
-                aria-expanded={moreBinsOpen}
-                onClick={() => setMoreBinsOpen((v) => !v)}
-                className="cursor-pointer rounded-xs px-1 py-0.5 text-text-tertiary hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-              >
-                {t('stage.legend.more', {
-                  count: formatInteger(overflowBinItems.length),
-                })}
+                  {formatInteger(bin.count)}
+                </span>
               </button>
-            ) : null}
-
-            {moreBinsOpen && overflowBinItems.length > 0 ? (
-              <div
-                role="dialog"
-                className="surface-material absolute bottom-full left-0 mb-2 flex max-h-56 min-w-[220px] flex-col gap-1 overflow-y-auto rounded-lg p-2.5"
-              >
-                {binLegendItems.map((item) => {
-                  const isHidden = hiddenBins.has(item.code);
-                  return (
-                    <button
-                      key={item.code}
-                      type="button"
-                      aria-pressed={!isHidden}
-                      aria-label={t('stage.legend.toggleAria', {
-                        bin: item.label,
-                      })}
-                      onClick={() =>
-                        toggle(item.code)
-                      }
-                      className={cn(
-                        'flex w-full cursor-pointer items-center justify-between gap-3 rounded-xs px-2 py-1 text-left type-subhead tabular-nums',
-                        isHidden
-                          ? 'text-text-disabled line-through'
-                          : 'text-text-secondary hover:bg-surface-2 hover:text-text-primary',
-                      )}
-                    >
-                      <span className="inline-flex items-center gap-1.5 truncate">
-                        <span
-                          aria-hidden="true"
-                          style={{ backgroundColor: item.color }}
-                          className={
-                            item.isPass
-                              ? 'h-[7px] w-[7px] shrink-0 rounded-[1px]'
-                              : 'h-2.5 w-2.5 shrink-0 rounded-[1.5px]'
-                          }
-                        />
-                        <Untranslated className="truncate">
-                          {item.label}
-                        </Untranslated>
-                      </span>
-                      <span>{formatInteger(item.count)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-        )}
-    </>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -51,7 +51,7 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
     expect(desktopMetrics.stageBorders).toEqual(['0px', '0px', '0px', '0px']);
     expect(desktopMetrics.docScrollOverflow).toBeLessThanOrEqual(1);
 
-    // 2. Wheel zoom anchored at cursor + HUD zoom pill updates without React re-render
+    // 2. Wheel zoom anchored at cursor + control-row zoom value updates without React re-render
     const stageBox = (await stage.boundingBox())!;
     const cursorClientX = stageBox.x + 540;
     const cursorClientY = stageBox.y + 260;
@@ -62,9 +62,11 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
     );
 
     await page.mouse.wheel(0, -240);
-    const zoomPill = page.getByTestId('stage-zoom-pill');
-    await expect(zoomPill).toBeVisible();
-    const zoomLabel = (await zoomPill.textContent()) ?? '';
+    // Premium §7.7: the zoom value and Reset view appear in the control row once zoomed
+    await expect(page.getByTestId('stage-reset-view-button')).toBeVisible();
+    const zoomValue = page.getByTestId('stage-zoom-value');
+    await expect(zoomValue).toBeVisible();
+    const zoomLabel = (await zoomValue.textContent()) ?? '';
     expect(Number.parseInt(zoomLabel, 10)).toBeGreaterThan(130);
 
     // Verify exact cursor-anchored zoom invariance: fit-space point (540, 260) stays at (540, 260)
@@ -118,9 +120,9 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
     );
     expect(rendersAfterDrag).toBe(rendersBeforeDrag);
 
-    // 4. Double-click resets camera back to fit (zoom pill hides again)
+    // 4. Double-click resets camera back to fit (Reset view hides again)
     await stage.dblclick({ position: { x: 390, y: 360 } });
-    await expect(zoomPill).toBeHidden({ timeout: 1_500 });
+    await expect(page.getByTestId('stage-reset-view')).toBeHidden({ timeout: 1_500 });
 
     // 5. Arrow-key die stepping moves hovered die cursor
     await stage.focus();

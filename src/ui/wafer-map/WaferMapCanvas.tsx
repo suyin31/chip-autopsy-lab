@@ -1,5 +1,6 @@
 'use client';
 
+import { SquareDashed } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
@@ -11,7 +12,11 @@ import {
   packWaferCoord,
 } from '@/core/model';
 import { Untranslated, useT } from '@/ui/i18n';
-import { SegmentedControl, type SegmentedControlOption } from '@/ui/primitives';
+import {
+  Button,
+  SegmentedControl,
+  type SegmentedControlOption,
+} from '@/ui/primitives';
 import { cn } from '@/ui/primitives/cn';
 import {
   type SelectionStoreState,
@@ -269,7 +274,7 @@ function WaferMapCanvasImpl({
   store = useSelectionStore,
   className,
 }: WaferMapCanvasProps): React.JSX.Element {
-  const { t, formatInteger } = useT();
+  const { t, tPlural, formatInteger } = useT();
   const shouldReduceMotion = useReducedMotion();
   const prefersReduced = readPrefersReducedMotionSync(shouldReduceMotion);
   const stageRef = React.useRef<HTMLDivElement>(null);
@@ -280,7 +285,7 @@ function WaferMapCanvasImpl({
   const contactShadowRef = React.useRef<HTMLDivElement>(null);
   const haloRef = React.useRef<HTMLDivElement>(null);
   const sheenRef = React.useRef<HTMLDivElement>(null);
-  const zoomPillRef = React.useRef<HTMLButtonElement>(null);
+  const resetViewRef = React.useRef<HTMLDivElement>(null);
   const skipHintRef = React.useRef<HTMLParagraphElement>(null);
   const finishSweepRef = React.useRef<(() => void) | null>(null);
   const baseCanvasRef = React.useRef<BaseCanvasHandle>(null);
@@ -537,15 +542,26 @@ function WaferMapCanvasImpl({
               ? 'none'
               : 'pan-y';
         }
-        const zoomPillEl = zoomPillRef.current;
-        if (zoomPillEl) {
-          const atFit = isCameraAtFit(camera);
-          zoomPillEl.hidden = atFit;
+        // Premium §7.7: Reset view hidden at zoom 1; zoom value and cursor set without a React render
+        const atFit = isCameraAtFit(camera);
+        if (stageEl) {
+          const zoomed = camera.scale > 1.001 ? 'true' : 'false';
+          if (stageEl.dataset.zoomed !== zoomed) {
+            stageEl.dataset.zoomed = zoomed;
+          }
+        }
+        const resetViewEl = resetViewRef.current;
+        if (resetViewEl) {
+          resetViewEl.hidden = atFit;
           if (!atFit) {
             const label = `${Math.round(camera.scale * 100)}%`;
-            if (zoomPillEl.textContent !== label) {
-              zoomPillEl.textContent = label;
-            }
+            resetViewEl
+              .querySelectorAll<HTMLElement>('[data-zoom-value]')
+              .forEach((el) => {
+                if (el.textContent !== label) {
+                  el.textContent = label;
+                }
+              });
           }
         }
         overlayCanvasRef.current?.paintForCamera(camera);
@@ -1976,19 +1992,9 @@ function WaferMapCanvasImpl({
     readonly SegmentedControlOption<'pass-fail' | 'hbin' | 'sbin'>[]
   >(
     () => [
-      { value: 'pass-fail', label: t('stage.mode.passFail') },
-      { value: 'hbin', label: t('stage.mode.hbin') },
-      { value: 'sbin', label: t('stage.mode.sbin') },
-    ],
-    [t],
-  );
-
-  const toolOptions = React.useMemo<
-    readonly SegmentedControlOption<StageToolMode>[]
-  >(
-    () => [
-      { value: 'pan', label: t('stage.tool.pan') },
-      { value: 'select', label: t('stage.tool.select') },
+      { value: 'pass-fail', label: t('mode.passFail') },
+      { value: 'hbin', label: t('mode.hardBins') },
+      { value: 'sbin', label: t('mode.softBins') },
     ],
     [t],
   );
@@ -2059,6 +2065,42 @@ function WaferMapCanvasImpl({
   const testedCount = waferYield?.testedDies ?? 0;
   const passCount = waferYield?.finalPassDies ?? 0;
   const failCount = waferYield?.finalFailDies ?? 0;
+
+  // The wafer ID stays untranslated inside the localized title (premium §9.2)
+  const titleParts = t('stage.title', { wafer: '\u0001' }).split('\u0001');
+  // Premium §5.5: the stage caption; box select wins over evidence, evidence over the default
+  const captionKind: 'default' | 'evidence' | 'selected' =
+    committedBrushStats !== null
+      ? 'selected'
+      : evidenceSummary !== null
+        ? 'evidence'
+        : 'default';
+  const defaultCaption = t('stage.caption', {
+    failed: formatInteger(failCount),
+    total: formatInteger(testedCount),
+  });
+  const evidenceText =
+    evidenceSummary !== null
+      ? t('stage.evidenceCaption', {
+          dies: formatInteger(evidenceSummary.totalDies),
+          wafers: formatInteger(evidenceSummary.wafersWithEvidence),
+          here: formatInteger(evidenceSummary.hereCount),
+        })
+      : null;
+  // Keep the last text mounted so it can fade out (120 ms opacity) after evidence clears
+  const lastEvidenceTextRef = React.useRef('');
+  if (evidenceText !== null) {
+    lastEvidenceTextRef.current = evidenceText;
+  }
+  const evidenceCaption = evidenceText ?? lastEvidenceTextRef.current;
+  const lastSelectedTextRef = React.useRef('');
+  if (committedBrushStats !== null) {
+    lastSelectedTextRef.current = tPlural(
+      'stage.selected',
+      committedBrushStats.dieCount,
+    );
+  }
+  const selectedCaption = lastSelectedTextRef.current;
   const fitWaferDiameter = (fitLayout?.fitWaferRadiusPx ?? 312) * 2;
   const discLayerRects = computeStageDiscLayerRects(
     fitLayout?.centerXCss ?? stageDims.width / 2,
@@ -2079,6 +2121,40 @@ function WaferMapCanvasImpl({
 
   return (
     <div className={cn('flex w-full flex-col xl:h-full', className)}>
+      {/* Stage header (premium §5.5): wafer title + caption that cross-fades for evidence and box select */}
+      <div
+        data-testid="stage-header"
+        className="flex flex-wrap items-baseline gap-x-3 px-4 pb-2 md:h-10 md:items-end md:px-0"
+      >
+        <h2 className="type-headline text-text-primary">
+          {titleParts[0]}
+          <Untranslated>{waferId}</Untranslated>
+          {titleParts.slice(1).join('')}
+        </h2>
+        <p className="grid type-subhead text-text-secondary tabular-nums">
+          {(
+            [
+              ['default', defaultCaption],
+              ['evidence', evidenceCaption],
+              ['selected', selectedCaption],
+            ] as const
+          ).map(([kind, text]) => (
+            <span
+              key={kind}
+              data-testid={`stage-${kind === 'default' ? 'caption' : kind === 'evidence' ? 'evidence-caption' : 'selected-caption'}`}
+              data-active={captionKind === kind}
+              aria-hidden={captionKind === kind ? undefined : true}
+              className={cn(
+                '[grid-area:1/1] transition-opacity duration-[120ms] ease-[var(--ease-out)]',
+                captionKind === kind ? 'opacity-100' : 'opacity-0',
+              )}
+            >
+              {text}
+            </span>
+          ))}
+        </p>
+      </div>
+
       {/* Unclipped floating anchor wrapper so magnifier/popover can place above stage edge (§4.8) */}
       <div className="relative flex w-full flex-col xl:min-h-[600px] xl:flex-1">
         {/* Boxless Wafer Stage (§3.4: 783x720 desktop / 390x390 mobile; §4.7 role="application") */}
@@ -2107,9 +2183,14 @@ function WaferMapCanvasImpl({
           onKeyDown={handleStageKeyDown}
           className={cn(
             'relative isolate h-[456px] w-full overflow-hidden select-none',
-            stageTool === 'select' ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing',
+            // Premium §7.7: default at zoom 1, grab when zoomed, crosshair in Select mode
+            stageTool === 'select'
+              ? 'cursor-crosshair'
+              : 'cursor-default data-[zoomed=true]:cursor-grab data-[zoomed=true]:active:cursor-grabbing',
             'md:mx-auto md:h-auto md:aspect-square md:max-w-[680px] xl:mx-0 xl:aspect-auto xl:min-h-[600px] xl:max-w-none xl:flex-1',
-            'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent',
+            // Premium §7.7: keyboard-only 2 px ink ring with 28 px corners, inset 8 px from the wafer area
+            'focus-visible:outline-none',
+            "focus-visible:after:pointer-events-none focus-visible:after:absolute focus-visible:after:inset-2 focus-visible:after:z-[var(--z-stage-hud)] focus-visible:after:rounded-3xl focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ink focus-visible:after:content-['']",
           )}
         >
           {/* Composite-only CSS-transform camera wrapper moving the disc shadows, Base layers, FailCanvas, and sheen (§4.7, premium §5.1) */}
@@ -2222,51 +2303,7 @@ function WaferMapCanvasImpl({
             store={store}
           />
 
-          {/* Stage HUD Top-Left: Pass/Fail | HBIN | SBIN + Pan | Select Segmented Controls (§3.4, §3.6, §4.12) */}
-          <div
-            data-stage-hud="true"
-            className="absolute top-2 left-3 z-[var(--z-stage-hud)] flex flex-nowrap items-center gap-2 md:top-4 md:left-4"
-          >
-            <SegmentedControl
-              data-testid="stage-mode-segmented"
-              ariaLabel={t('stage.roleDescription')}
-              options={modeOptions}
-              value={segmentedValue}
-              onValueChange={(nextMode) => {
-                store.getState().setColorMode(nextMode);
-              }}
-            />
-            <SegmentedControl
-              data-testid="stage-tool-segmented"
-              ariaLabel={`${t('stage.tool.pan')} / ${t('stage.tool.select')}`}
-              options={toolOptions}
-              value={stageTool}
-              onValueChange={(nextTool) => setStageTool(nextTool)}
-            />
-          </div>
-
-          {/* Stage HUD Bottom-Left: Non-colour shape legend / interactive HBIN/SBIN bin toggles (§2.1, §3.4) */}
-          <div
-            data-stage-hud="true"
-            data-testid="stage-legend"
-            className={cn(
-              'absolute bottom-3 left-3 z-[var(--z-stage-hud)] max-w-[calc(100%-120px)] transition-opacity duration-[160ms] ease-[var(--ease-out)] md:bottom-4 md:left-4',
-              evidenceSummary !== null
-                ? 'pointer-events-none opacity-0'
-                : 'opacity-100',
-            )}
-          >
-            <BinLegend
-              lot={lot}
-              waferIndex={safeWaferIndex}
-              colorMode={colorMode}
-              passCount={passCount}
-              failCount={failCount}
-              store={store}
-            />
-          </div>
-
-          {/* Stage HUD Bottom-Centre: Sweep Skip Hint (§3.3) or Finding Evidence Caption Pill (§3.5) */}
+          {/* Stage HUD Bottom-Centre: Sweep Skip Hint (§3.3) */}
           <p
             ref={skipHintRef}
             hidden
@@ -2275,49 +2312,6 @@ function WaferMapCanvasImpl({
           >
             {t('loading.skipHint')}
           </p>
-          {evidenceSummary !== null ? (
-            <div
-              data-stage-hud="true"
-              data-testid="stage-evidence-caption"
-              className="surface-material pointer-events-none absolute bottom-3 left-1/2 z-[var(--z-stage-hud)] -translate-x-1/2 rounded-pill px-3 py-1 type-subhead whitespace-nowrap text-text-primary tabular-nums md:bottom-4"
-            >
-              {t('stage.evidenceCaption', {
-                dies: formatInteger(evidenceSummary.totalDies),
-                wafers: formatInteger(evidenceSummary.wafersWithEvidence),
-                here: formatInteger(evidenceSummary.hereCount),
-              })}
-            </div>
-          ) : null}
-
-          {/* Stage HUD Bottom-Right: Current Wafer ID + Live Zoom Readout Pill (§3.4) */}
-          <div
-            data-stage-hud="true"
-            className="absolute right-3 bottom-3 z-[var(--z-stage-hud)] flex items-center gap-2 md:right-4 md:bottom-4"
-          >
-            <span className="type-caption text-text-tertiary tabular-nums">
-              <Untranslated>{waferId}</Untranslated>
-            </span>
-            <button
-              ref={zoomPillRef}
-              type="button"
-              data-testid="stage-zoom-pill"
-              aria-label={t('stage.zoomReset')}
-              hidden
-              onClick={() => {
-                userMovedCameraSinceFindingRef.current = true;
-                controllerRef.current?.resetToFit(true);
-              }}
-              className={cn(
-                'surface-material cursor-pointer rounded-pill px-2.5 py-1 type-caption text-text-primary tabular-nums',
-                "after:absolute after:-inset-1.5 after:content-['']",
-                'relative transition-transform duration-[100ms] ease-[var(--ease-out)] active:scale-[0.97]',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-              )}
-            >
-              100%
-            </button>
-          </div>
-
           {/* Visually hidden table of failing dies on the active wafer (§4.7, §6.8) */}
           <FailingDiesTable lot={lot} waferIndex={safeWaferIndex} />
         </div>
@@ -2345,6 +2339,79 @@ function WaferMapCanvasImpl({
           onClear={handleClearSelection}
           onZoomToSelection={handleZoomToSelection}
         />
+      </div>
+
+      {/* Control row (premium §5.6, §7.7): segmented control, legend, Reset view, Select an area */}
+      <div
+        data-testid="stage-control-row"
+        className="flex flex-wrap items-center px-4 md:px-0"
+      >
+        <div className="flex h-10 items-center">
+          <SegmentedControl
+            data-testid="stage-mode-segmented"
+            ariaLabel={t('stage.roleDescription')}
+            options={modeOptions}
+            value={segmentedValue}
+            onValueChange={(nextMode) => {
+              store.getState().setColorMode(nextMode);
+            }}
+          />
+        </div>
+        <BinLegend
+          lot={lot}
+          waferIndex={safeWaferIndex}
+          colorMode={colorMode}
+          passCount={passCount}
+          failCount={failCount}
+          store={store}
+          className="order-last mt-2 basis-full lg:order-none lg:mt-0 lg:ml-6 lg:basis-auto"
+        />
+        <div className="ml-auto flex h-10 items-center gap-2 pl-3">
+          <div
+            ref={resetViewRef}
+            data-testid="stage-reset-view"
+            hidden
+            className="flex items-center gap-2"
+          >
+            <span
+              data-zoom-value=""
+              data-testid="stage-zoom-value"
+              className="hidden type-caption text-text-tertiary tabular-nums sm:inline"
+            >
+              100%
+            </span>
+            <Button
+              variant="ghost"
+              data-testid="stage-reset-view-button"
+              aria-label={t('stage.resetView')}
+              onClick={() => {
+                userMovedCameraSinceFindingRef.current = true;
+                controllerRef.current?.resetToFit(true);
+              }}
+            >
+              <span className="hidden sm:inline">{t('stage.resetView')}</span>
+              <span data-zoom-value="" className="tabular-nums sm:hidden">
+                100%
+              </span>
+            </Button>
+          </div>
+          <Button
+            variant="icon"
+            data-testid="stage-select-area"
+            aria-pressed={stageTool === 'select'}
+            aria-label={t('stage.selectArea')}
+            title={t('stage.selectAreaHint')}
+            onClick={() =>
+              setStageTool((prev) => (prev === 'select' ? 'pan' : 'select'))
+            }
+            className={cn(
+              stageTool === 'select' &&
+                'bg-fill-2 text-text-primary enabled:hover:bg-fill-3',
+            )}
+          >
+            <SquareDashed aria-hidden="true" strokeWidth={1.5} />
+          </Button>
+        </div>
       </div>
 
       {/* Horizontal wafer strip: 76 px desktop, 64 px mobile (premium §5.8) */}

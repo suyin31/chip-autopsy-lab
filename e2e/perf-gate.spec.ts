@@ -386,7 +386,7 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
     );
     await expect(stage).toHaveAttribute('data-sweep', 'done');
 
-    // Mobile 390x844 checks: (d) >= 12px gap between segmented control and wafer disc; (e) only the active strip label is visible (premium §5.8)
+    // Mobile 390x844 checks: (d) the segmented control sits in the control row >= 12px below the wafer disc (premium §5.6); (e) only the active strip label is visible (premium §5.8)
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileChecks = await page.evaluate(() => {
       const seg = document.querySelector<HTMLElement>(
@@ -404,12 +404,12 @@ test.describe('Redesign R8 — Reveal motion, reduced motion, visual fixes, and 
         (el) => el.getBoundingClientRect().width > 0,
       ).length;
       return {
-        gapAboveDiscPx:
-          disc.getBoundingClientRect().top - seg.getBoundingClientRect().bottom,
+        gapBelowDiscPx:
+          seg.getBoundingClientRect().top - disc.getBoundingClientRect().bottom,
         visibleLabelCount,
       };
     });
-    expect(mobileChecks.gapAboveDiscPx).toBeGreaterThanOrEqual(12);
+    expect(mobileChecks.gapBelowDiscPx).toBeGreaterThanOrEqual(12);
     expect(mobileChecks.visibleLabelCount).toBe(1);
   });
 

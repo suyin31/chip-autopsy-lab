@@ -1,0 +1,369 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=49
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=59
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=59
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=89
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=123
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Failed: Run Command
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=67
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=49
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=128
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=74
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=367
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=130
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=44
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=94
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=115
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=225
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=38
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=179
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=96
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=118
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=185
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=79
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=241
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=81
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=595
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=483
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1807
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=85
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=146
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now edit the 5 dictionaries.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=455
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Failed: Run Command
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=94
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=44
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=439
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1515
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=61
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=150
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=32
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=344
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=109
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=57
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=50
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Write File
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=1021
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=77
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=326
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=100
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=121
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the e2e spec.
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=982
+[tool] status: Pending
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=77
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=92
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=37
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=230
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=52
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=150
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=24
+[tool] status: Completed
+[tool] Read File
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: Completed
+Good. Now the related e2e specs.
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=74
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=62
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Meanwhile, the full unit suite:
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=30
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run Command
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[tool] status: InProgress
+[tool] status: InProgress

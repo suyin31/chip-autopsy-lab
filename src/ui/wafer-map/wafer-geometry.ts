@@ -943,6 +943,13 @@ export function paintWaferSweepBatch(
   }
 }
 
+/**
+ * Reserved `hiddenBins` keys for the Pass/fail legend entries (premium §5.7). Bin codes are
+ * `U*2` (0..65535), so these never collide with a real HBIN or SBIN code.
+ */
+export const LEGEND_FAILED_KEY = 0x10000;
+export const LEGEND_PASSED_KEY = 0x10001;
+
 export interface PaintWaferBaseParams {
   readonly lot: LotModel;
   readonly waferIndex: number;
@@ -1020,12 +1027,15 @@ export function paintWaferBaseLayer(
     : null;
 
   if (colorMode === 'pass-fail') {
+    // Legend toggles (premium §5.7): hidden groups are not drawn
+    const hidePassed = hiddenBins.has(LEGEND_PASSED_KEY);
+    const hideFailed = hiddenBins.has(LEGEND_FAILED_KEY);
     // Pass 1: Pass tiles, centred 80 % square (batched single fill, premium §5.3)
     ctx.fillStyle = resolvePassTileColor(highContrast);
     ctx.beginPath();
     let anyPassPath = false;
     for (let i = start; i < end; i += 1) {
-      if (validArr[i] === 0 || passArr[i] === 0) {
+      if (hidePassed || validArr[i] === 0 || passArr[i] === 0) {
         continue;
       }
       const cx =
@@ -1058,7 +1068,7 @@ export function paintWaferBaseLayer(
     ctx.beginPath();
     let anyFailPath = false;
     for (let i = start; i < end; i += 1) {
-      if (validArr[i] === 0 || passArr[i] !== 0) {
+      if (hideFailed || validArr[i] === 0 || passArr[i] !== 0) {
         continue;
       }
       const cx =
@@ -1203,11 +1213,16 @@ export function paintWaferFailLayer(
   const maxCullY = layout.cssHeight + layout.diePitchPx;
 
   if (colorMode === 'pass-fail') {
+    const hideFailed = hiddenBins.has(LEGEND_FAILED_KEY);
     ctx.fillStyle = COLOR_TOKENS.failure;
     ctx.beginPath();
     let anyFailPath = false;
     for (let i = start; i < end; i += 1) {
-      if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] !== 0) {
+      if (
+        hideFailed ||
+        dies.hasValidCoords[i] === 0 ||
+        dies.finalPass[i] !== 0
+      ) {
         continue;
       }
       const cx =

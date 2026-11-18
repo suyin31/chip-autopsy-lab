@@ -633,11 +633,26 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     expect(html).toContain('data-testid="wafer-fail-canvas"');
     expect(html).toContain('data-testid="wafer-overlay-canvas"');
     expect(html).toContain('data-testid="stage-mode-segmented"');
-    expect(html).toContain('Pass/Fail');
-    expect(html).toContain('HBIN');
-    expect(html).toContain('SBIN');
-    expect(html).toContain('Pass 523');
-    expect(html).toContain('Fail 110');
+    // Premium §5.5-§5.7: header above the wafer, one control row below it, nothing on the wafer
+    expect(html).toContain('Pass/fail');
+    expect(html).toContain('Hard bins');
+    expect(html).toContain('Soft bins');
+    expect(html).toContain('110 of 633 dies failed');
+    expect(html).toMatch(/data-legend-label=""[^>]*>Failed<\/span><span data-legend-count=""[^>]*>110</);
+    expect(html).toMatch(/data-legend-label=""[^>]*>Passed<\/span><span data-legend-count=""[^>]*>523</);
+    expect(html).toContain('data-testid="stage-select-area"');
+    expect(html).toContain('aria-label="Select an area"');
+    expect(html).not.toContain('data-testid="stage-tool-segmented"');
+    expect(html).not.toContain('data-testid="stage-zoom-pill"');
+    const headerAt = html.indexOf('data-testid="stage-header"');
+    const stageAt = html.indexOf('data-testid="wafer-stage"');
+    const controlRowAt = html.indexOf('data-testid="stage-control-row"');
+    const stageEndAt = html.indexOf('Failing dies on wafer W01');
+    expect(headerAt).toBeGreaterThan(-1);
+    expect(headerAt).toBeLessThan(stageAt);
+    expect(controlRowAt).toBeGreaterThan(stageEndAt);
+    expect(html.indexOf('data-testid="stage-mode-segmented"')).toBeGreaterThan(controlRowAt);
+    expect(html.indexOf('data-testid="stage-legend"')).toBeGreaterThan(controlRowAt);
     expect(html.match(/data-testid="wafer-lot-strip-thumb"/g)).toHaveLength(25);
     expect(html).toContain('Failing dies on wafer W01');
     // visual-acceptance (d), (e), (f) + §5.10 data-sweep attribute

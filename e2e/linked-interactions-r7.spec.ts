@@ -48,7 +48,10 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
 
     await expect(edgeBandRow).toHaveAttribute('aria-pressed', 'true');
     await expect(overlayWrapper).toHaveAttribute('data-glow-mode', 'polar-cw');
-    await expect(page.getByTestId('stage-evidence-caption')).toBeVisible();
+    await expect(page.getByTestId('stage-evidence-caption')).toHaveAttribute(
+      'data-active',
+      'true',
+    );
     // Premium §5.8: evidence wafers stay at full opacity, the rest dim (no evidence dot)
     expect(
       await page.locator('[data-has-evidence="true"]').count(),

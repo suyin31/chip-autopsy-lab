@@ -24,7 +24,7 @@ test.describe('Task 10 - HBIN/SBIN legend and Bin Pareto', () => {
     // SBIN colour mode lists bins in the legend
     await page
       .getByTestId('stage-mode-segmented')
-      .getByRole('radio', { name: 'SBIN' })
+      .getByRole('radio', { name: 'Soft bins' })
       .click();
     const legend = page.getByTestId('stage-legend');
     const legendEntries = legend.getByRole('button', { pressed: true });
