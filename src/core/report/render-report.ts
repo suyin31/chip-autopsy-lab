@@ -36,9 +36,9 @@ export interface RenderedVerdictHero {
   readonly prefix: string;
   /** `"Edge-Ring failure."` (`""` when `isHealthy === true`). */
   readonly cause: string;
-  /** Combined full headline (`"Cause of death: Edge-Ring failure."` or `"No cause of death. Yield is 100.0%."`). */
+  /** Combined full headline (`"Cause of death: Edge-Ring failure."` or `"No cause of death."`). */
   readonly fullHeadline: string;
-  /** Verdict sub-line (`"Yield 82.8% across 25 wafers. Most loss in SBIN 7 IDDQ_EDGE_LEAK."`). */
+  /** Plain-language takeaway (`"Most failing dies sit in the outer 3 rings of every wafer. Final yield is 82.8%."`, premium §9.3). */
   readonly subline: string;
   /** Untranslated tokens embedded in `cause` and `subline` for `<bdi translate="no">` wrapping in UI (§6.6). */
   readonly untranslatedTokens: Readonly<Record<string, string>>;
@@ -46,10 +46,19 @@ export interface RenderedVerdictHero {
 
 export interface RenderedConfidenceInfo {
   readonly confidenceValue: number;
-  /** `"Confidence 0.95"` */
+  readonly level: 'high' | 'moderate' | 'low';
+  /** `"High confidence, 0.95"` (premium §7.4). */
   readonly label: string;
   /** `"How this verdict was made"` */
   readonly methodTitle: string;
+  /** `glossary.confidence` definition shown under the popover title. */
+  readonly definition: string;
+  /** `"Match with Edge-Ring"`; `null` when no WM-811K class backs the score (site and baseline verdicts). */
+  readonly matchLabel: string | null;
+  /** The untranslated class name inside `matchLabel` for `<bdi translate="no">` wrapping. */
+  readonly matchPattern: string | null;
+  /** Formatted 2-decimal confidence (`"0.95"`). */
+  readonly valueText: string;
   /** Method explanation (`verdict.methodLlm` for `en` when `source === 'llm-verified'`, else `verdict.methodTemplate`). */
   readonly methodBody: string;
 }
@@ -134,10 +143,7 @@ function renderHeadlineAndSubline(
   switch (claim.messageKey) {
     case 'verdict.healthy': {
       isHealthy = true;
-      const yieldRatio = Number(params.yield ?? 1);
-      fullHeadline = t(locale, 'verdict.healthy', {
-        yield: formatPercent(locale, yieldRatio),
-      });
+      fullHeadline = t(locale, 'verdict.healthy');
       break;
     }
     case 'verdict.pattern': {
@@ -166,25 +172,7 @@ function renderHeadlineAndSubline(
     fullHeadline = `${prefix}${joiner}${cause}`;
   }
 
-  let subline = '';
-  const subKey = report.sublineKey;
-  const subParams = report.sublineParams ?? {};
-  if (subKey === 'verdict.subline') {
-    const bin = String(subParams.bin ?? '');
-    if (bin.length > 0) {
-      untranslated.bin = bin;
-    }
-    subline = t(locale, 'verdict.subline', {
-      yield: formatPercent(locale, Number(subParams.yield ?? 0)),
-      wafers: formatInteger(locale, Number(subParams.wafers ?? 1)),
-      bin: bin.length > 0 ? bin : t(locale, 'selection.none'),
-    });
-  } else if (subKey === 'findings.lotYield.sub') {
-    subline = t(locale, 'findings.lotYield.sub', {
-      firstPass: formatPercent(locale, Number(subParams.firstPass ?? 1)),
-      retests: formatInteger(locale, Number(subParams.retests ?? 0)),
-    });
-  }
+  const subline = renderTakeaway(report, locale, untranslated);
 
   return {
     isHealthy,
@@ -194,6 +182,63 @@ function renderHeadlineAndSubline(
     subline,
     untranslatedTokens: untranslated,
   };
+}
+
+/**
+ * Renders the plain-language takeaway under the verdict (premium §7.3, §9.3). It never
+ * names bin codes, test names, or STDF fields; the site token is the only untranslated value.
+ */
+function renderTakeaway(
+  report: AutopsyReport,
+  locale: Locale,
+  untranslated: Record<string, string>,
+): string {
+  const key = report.sublineKey;
+  if (key === undefined) {
+    return '';
+  }
+  const p = report.sublineParams ?? {};
+  const yieldText = formatPercent(locale, Number(p.yield ?? 0));
+  switch (key) {
+    case 'takeaway.healthy':
+      return t(locale, key, {
+        passed: formatInteger(locale, Number(p.passed ?? 0)),
+        total: formatInteger(locale, Number(p.total ?? 0)),
+      });
+    case 'takeaway.edgeRing':
+      return t(locale, key, {
+        rings: formatInteger(locale, Number(p.rings ?? 3)),
+        yield: yieldText,
+      });
+    case 'takeaway.scratch':
+      return t(locale, key, {
+        count: formatInteger(locale, Number(p.count ?? 1)),
+        total: formatInteger(locale, Number(p.total ?? 1)),
+        yield: yieldText,
+      });
+    case 'takeaway.site': {
+      const site = formatSiteToken(locale, p.site);
+      untranslated.site = site;
+      return t(locale, key, {
+        site,
+        rate: formatPercent(locale, Number(p.rate ?? 0)),
+        otherRate: formatPercent(locale, Number(p.otherRate ?? 0)),
+        yield: yieldText,
+      });
+    }
+    default:
+      return t(locale, key, { yield: yieldText });
+  }
+}
+
+/** Confidence level words (premium §7.4): >= 0.85 high, 0.60–0.84 moderate, < 0.60 low, on the shown 2-decimal value. */
+export function resolveConfidenceLevel(
+  value: number,
+): 'high' | 'moderate' | 'low' {
+  const shown = Math.round(value * 100) / 100;
+  if (shown >= 0.85) return 'high';
+  if (shown >= 0.6) return 'moderate';
+  return 'low';
 }
 
 function renderHypothesisSpec(
@@ -424,12 +469,21 @@ export function renderReport(
   const useLlmProvenance =
     report.source === 'llm-verified' && locale === 'en';
 
+  const level = resolveConfidenceLevel(cappedConfidence);
+  const valueText = formatDecimal2(locale, cappedConfidence);
+  const matchPattern = report.matchPattern ?? null;
   const confidence: RenderedConfidenceInfo = {
     confidenceValue: cappedConfidence,
-    label: t(locale, 'verdict.confidence', {
-      value: formatDecimal2(locale, cappedConfidence),
-    }),
+    level,
+    label: t(locale, `confidence.${level}`, { value: valueText }),
     methodTitle: t(locale, 'verdict.methodTitle'),
+    definition: t(locale, 'glossary.confidence'),
+    matchLabel:
+      matchPattern !== null
+        ? t(locale, 'confidence.match', { pattern: matchPattern })
+        : null,
+    matchPattern,
+    valueText,
     methodBody: useLlmProvenance
       ? t(locale, 'verdict.methodLlm')
       : t(locale, 'verdict.methodTemplate'),

@@ -77,16 +77,31 @@ export const ko = {
   'verdict.pattern': '{pattern} 불량.',
   'verdict.site': '테스트 사이트 {site} 접촉 불량.',
   'verdict.random': '무작위 결함, 공간 패턴 없음.',
-  'verdict.healthy': '사인 없음. 수율은 {yield}입니다.',
-  'verdict.subline':
-    '웨이퍼 {wafers}장 전체 수율 {yield}. 주요 손실 구간은 {bin}.',
+  'verdict.healthy': '사인 없음.',
+  'verdict.showOnWafer': '웨이퍼에 표시',
   'verdict.causeAria': '이 판정의 근거 다이 표시',
-  'verdict.confidence': '신뢰도 {value}',
   'verdict.methodTitle': '판정 생성 방식',
   'verdict.methodTemplate':
     '모든 수치는 기기 내 분석 엔진에서 계산되며 문장은 내장 템플릿으로 작성됩니다.',
   'verdict.methodLlm':
     '모든 수치는 기기 내 분석 엔진에서 계산됩니다. AI 모델이 표현만 다듬었으며 모든 문장은 엔진 사실을 인용합니다.',
+
+  // Takeaway and confidence (premium §7.3, §7.4, §9.3)
+  'takeaway.edgeRing': '불량 다이 대부분이 모든 웨이퍼의 가장자리 {rings}개 링에 있습니다. 최종 수율은 {yield}입니다.',
+  'takeaway.scratch': '웨이퍼 {total}장 중 {count}장에서 불량 다이가 스크래치를 따라 늘어서 있습니다. 최종 수율은 {yield}입니다.',
+  'takeaway.center': '불량 다이 대부분이 웨이퍼 중앙에 있습니다. 최종 수율은 {yield}입니다.',
+  'takeaway.donut': '불량 다이 대부분이 웨이퍼 중앙을 둘러싼 링에 있습니다. 최종 수율은 {yield}입니다.',
+  'takeaway.edgeLoc': '불량 다이 대부분이 웨이퍼 가장자리의 한 영역에 있습니다. 최종 수율은 {yield}입니다.',
+  'takeaway.loc': '불량 다이 대부분이 웨이퍼의 한 영역에 있습니다. 최종 수율은 {yield}입니다.',
+  'takeaway.nearFull': '불량 다이가 웨이퍼 거의 전체에 퍼져 있습니다. 최종 수율은 {yield}입니다.',
+  'takeaway.site': '테스트 사이트 {site}의 다이 불량률은 {rate}이고 다른 사이트는 {otherRate}입니다. 최종 수율은 {yield}입니다.',
+  'takeaway.random': '불량이 형태 없이 흩어져 있습니다. 공정보다 테스트를 먼저 확인합니다. 최종 수율은 {yield}입니다.',
+  'takeaway.healthy': '다이 {total}개 중 {passed}개가 모든 테스트를 통과했습니다.',
+  'confidence.high': '높은 신뢰도, {value}',
+  'confidence.moderate': '보통 신뢰도, {value}',
+  'confidence.low': '낮은 신뢰도, {value}',
+  'confidence.match': '{pattern} 일치도',
+  'glossary.confidence': '웨이퍼 패턴이 지정된 클래스와 얼마나 일치하는지 0에서 1로 나타냅니다. 이 기기에서 계산됩니다.',
 
   // Stats
   'stats.edgeShare': '외곽 {rings}개 링 불량 비중',

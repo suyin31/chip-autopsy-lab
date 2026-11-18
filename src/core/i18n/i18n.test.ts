@@ -139,7 +139,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(DICTIONARIES.ko).toBe(ko);
 
     const enKeys = Object.keys(en).sort() as MessageKey[];
-    expect(enKeys.length).toBe(192);
+    expect(enKeys.length).toBe(206);
 
     for (const locale of SUPPORTED_LOCALES) {
       const dict = getDictionary(locale);
@@ -255,12 +255,12 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
 
   it('interpolates parameters deterministically, escapes $-replacement hazards, and resolves plural forms', () => {
     expect(
-      t('en', 'verdict.subline', {
+      t('en', 'takeaway.scratch', {
+        count: '3',
+        total: '25',
         yield: '82.8%',
-        wafers: '25',
-        bin: 'SBIN 7 IDDQ_EDGE_LEAK',
       }),
-    ).toBe('Yield 82.8% across 25 wafers. Most loss in SBIN 7 IDDQ_EDGE_LEAK.');
+    ).toBe('Failing dies line up along a scratch on 3 of 25 wafers. Final yield is 82.8%.');
 
     // Dollar-sign patterns in untrusted file or bin names must not trigger RegExp replacement tokens
     expect(
@@ -299,9 +299,9 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
       // @ts-expect-error unknown message key is rejected at compile time
       t('en', 'nonexistent.key');
       // @ts-expect-error missing required params object is rejected at compile time
-      t('en', 'verdict.subline');
+      t('en', 'takeaway.scratch');
       // @ts-expect-error incomplete params object is rejected at compile time
-      t('en', 'verdict.subline', { yield: '82.8%', wafers: '25' });
+      t('en', 'takeaway.scratch', { count: '3', total: '25' });
       // @ts-expect-error unexpected params on parameterless key is rejected at compile time
       t('en', 'landing.headline', { extra: 'x' });
     }

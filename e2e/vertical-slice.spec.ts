@@ -15,19 +15,22 @@ const PRESET_CASES: readonly VerticalSlicePresetCase[] = [
     presetId: 'edge-ring-etch',
     expectedFullHeadline: 'Cause of death: Edge-Ring failure.',
     expectedCausePhrase: 'Edge-Ring failure.',
-    expectedSublineBin: 'Most loss in SBIN 7 IDDQ_EDGE_LEAK.',
+    expectedSublineBin:
+      'Most failing dies sit in the outer 3 rings of every wafer. Final yield is 82.8%.',
   },
   {
     presetId: 'handling-scratch',
     expectedFullHeadline: 'Cause of death: Scratch failure.',
     expectedCausePhrase: 'Scratch failure.',
-    expectedSublineBin: 'Most loss in SBIN 9 VDD_METAL_SHORT.',
+    expectedSublineBin:
+      'Failing dies line up along a scratch on 22 of 25 wafers. Final yield is 94.8%.',
   },
   {
     presetId: 'site2-probe-contact',
     expectedFullHeadline: 'Cause of death: test site 2 contact failure.',
     expectedCausePhrase: 'test site 2 contact failure.',
-    expectedSublineBin: 'Most loss in SBIN 5 CONT_OPEN.',
+    expectedSublineBin:
+      'Test site 2 fails 40.6% of its dies, the other sites fail 3.1%. Final yield is 89.5%.',
   },
 ] as const;
 
@@ -157,7 +160,8 @@ test.describe('Vertical slice & R5 Verdict Column checkpoint', () => {
 
         expect(audit.colWidth).toBe(553);
         expect(audit.h1Lines).toBeLessThanOrEqual(2.15);
-        expect(audit.causeColor).toBe('rgb(255, 107, 44)');
+        // Premium §7.3: the cause phrase is ember-ink (#FF8A57 in the dark e2e default)
+        expect(audit.causeColor).toBe('rgb(255, 138, 87)');
         expect(audit.prefixColor).not.toBe('rgb(255, 107, 44)');
         expect(audit.statCount).toBe(3);
         expect(audit.rowChecks.length).toBeGreaterThanOrEqual(2);

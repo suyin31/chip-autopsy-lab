@@ -76,15 +76,31 @@ export const zhCN = {
   'verdict.pattern': '{pattern} 失效。',
   'verdict.site': '测试工位 {site} 接触失效。',
   'verdict.random': '随机缺陷，无空间分布特征。',
-  'verdict.healthy': '无死因。良率为 {yield}。',
-  'verdict.subline': '共 {wafers} 片晶圆，良率 {yield}。主要损失位于 {bin}。',
+  'verdict.healthy': '无死因。',
+  'verdict.showOnWafer': '在晶圆上显示',
   'verdict.causeAria': '显示此结论对应的晶粒',
-  'verdict.confidence': '置信度 {value}',
   'verdict.methodTitle': '结论生成方式',
   'verdict.methodTemplate':
     '所有数值均由本机分析引擎计算，文本采用内置模板生成。',
   'verdict.methodLlm':
     '所有数值均由本机分析引擎计算。AI 模型仅润色表述，每句话均引用引擎事实。',
+
+  // Takeaway and confidence (premium §7.3, §7.4, §9.3)
+  'takeaway.edgeRing': '大多数失效晶粒位于每片晶圆最外侧 {rings} 圈。最终良率为 {yield}。',
+  'takeaway.scratch': '{total} 片晶圆中有 {count} 片的失效晶粒沿一道划痕排列。最终良率为 {yield}。',
+  'takeaway.center': '大多数失效晶粒位于晶圆中心。最终良率为 {yield}。',
+  'takeaway.donut': '大多数失效晶粒位于晶圆中心周围的环带。最终良率为 {yield}。',
+  'takeaway.edgeLoc': '大多数失效晶粒位于晶圆边缘的一个区域。最终良率为 {yield}。',
+  'takeaway.loc': '大多数失效晶粒位于晶圆的一个区域。最终良率为 {yield}。',
+  'takeaway.nearFull': '失效晶粒几乎遍布整片晶圆。最终良率为 {yield}。',
+  'takeaway.site': '测试工位 {site} 的晶粒失效率为 {rate}，其他工位为 {otherRate}。最终良率为 {yield}。',
+  'takeaway.random': '失效分布零散，没有形状。先查看测试，再查看工艺。最终良率为 {yield}。',
+  'takeaway.healthy': '{total} 颗晶粒中有 {passed} 颗通过全部测试。',
+  'confidence.high': '高置信度，{value}',
+  'confidence.moderate': '中等置信度，{value}',
+  'confidence.low': '低置信度，{value}',
+  'confidence.match': '与 {pattern} 的匹配度',
+  'glossary.confidence': '晶圆图形与所指类别的吻合程度，范围为 0 到 1。在本机计算。',
 
   // Stats
   'stats.edgeShare': '外侧 {rings} 环失效占比',

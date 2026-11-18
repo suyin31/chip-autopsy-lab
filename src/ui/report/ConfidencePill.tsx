@@ -10,7 +10,9 @@ import {
   computeAnchoredMenuPosition,
 } from '@/ui/primitives/menu';
 import { cn } from '@/ui/primitives/cn';
+import { POPOVER_SURFACE_CLASS } from '@/ui/primitives/surfaces';
 import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
+import { renderWithUntranslatedTokens } from './render-untranslated';
 
 export interface ConfidencePillProps {
   readonly confidence: RenderedConfidenceInfo;
@@ -19,14 +21,16 @@ export interface ConfidencePillProps {
   readonly className?: string;
 }
 
-const POPOVER_WIDTH_PX = 300 as const;
+const POPOVER_WIDTH_PX = 320 as const;
 
 /**
- * Confidence Pill (`src/ui/report/ConfidencePill.tsx`, `redesign.md` §0, §3.4, §4.4, §5.9):
- * - Visual height `28 px`, padding `0 12`, radius `999`, `surface-2`, `footnote` secondary
- *   (`"Confidence 0.95"`) with a trailing `12 px` info icon; hit target expanded to `44 px` height.
- * - Clicking opens a `300 px` `material` popover explaining provenance (`"How this verdict was made"` +
- *   template vs verified-LLM method copy), absorbing the legacy `NarrationBadge`.
+ * Confidence chip (`src/ui/report/ConfidencePill.tsx`, premium §7.4, §7.12):
+ * - Ghost pill, 28 px high, padding 0 10 0 12, no fill; `control` secondary "High confidence, 0.95"
+ *   + 6 px + a 14 px `info` icon in `text-tertiary`. Hover `fill-1` with primary text and a secondary
+ *   icon, pressed `fill-2` at scale 0.97, open `fill-2` with primary text. Never orange.
+ * - Click opens a 320 px popover (below-start, 8 px offset): "How this verdict was made", the
+ *   `glossary.confidence` definition, a "Match with {pattern}" row with a 4 px `ink` bar at the
+ *   confidence width (omitted when no WM-811K class backs the score), and the method note.
  */
 export function ConfidencePill({
   confidence,
@@ -189,14 +193,49 @@ export function ConfidencePill({
           : undefined
       }
       className={cn(
-        'z-(--z-menus) w-[300px] max-w-[calc(100vw-32px)] rounded-lg p-4 surface-material',
+        'z-(--z-menus)',
+        POPOVER_SURFACE_CLASS,
         !mounted && 'mt-2',
       )}
     >
       <p className="type-headline text-text-primary">
         {confidence.methodTitle}
       </p>
-      <p className="mt-1.5 type-callout text-text-secondary">
+      <p
+        data-testid="confidence-definition"
+        className="mt-2 type-callout text-text-secondary"
+      >
+        {confidence.definition}
+      </p>
+      {confidence.matchLabel !== null ? (
+        <div data-testid="confidence-match" className="mt-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="type-subhead text-text-secondary">
+              {confidence.matchPattern !== null
+                ? renderWithUntranslatedTokens(confidence.matchLabel, {
+                    pattern: confidence.matchPattern,
+                  })
+                : confidence.matchLabel}
+            </span>
+            <span className="type-subhead tabular-nums text-text-primary">
+              {confidence.valueText}
+            </span>
+          </div>
+          <div
+            aria-hidden="true"
+            className="mt-2 h-1 w-full overflow-hidden rounded-pill bg-fill-2"
+          >
+            <div
+              data-testid="confidence-match-bar"
+              className="h-full rounded-pill bg-ink"
+              style={{
+                width: `${Math.round(Math.min(1, Math.max(0, confidence.confidenceValue)) * 100)}%`,
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
+      <p className="mt-3 type-callout text-text-secondary">
         {confidence.methodBody}
       </p>
     </motion.div>
@@ -208,6 +247,7 @@ export function ConfidencePill({
         ref={triggerRef}
         type="button"
         data-testid="confidence-pill"
+        data-level={confidence.level}
         aria-expanded={open}
         aria-controls={popoverId}
         aria-haspopup="dialog"
@@ -217,16 +257,16 @@ export function ConfidencePill({
         onPointerCancel={releaseSpringScale}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "relative inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-pill bg-surface-2 px-3 type-subhead text-text-secondary select-none after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']",
-          'transition-[background-color,color] duration-120 ease-out',
-          'hover:bg-surface-3 hover:text-text-primary',
-          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-          open && 'bg-surface-3 text-text-primary',
+          "group relative inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-pill bg-transparent pl-3 pr-2.5 type-control whitespace-nowrap text-text-secondary shadow-none select-none after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']",
+          'transition-[background-color,color] duration-[120ms] ease-[var(--ease-out)]',
+          'hover:bg-fill-1 hover:text-text-primary active:bg-fill-2',
+          'focus-visible:shadow-focus-ring focus-visible:outline-none',
+          open && 'bg-fill-2 text-text-primary hover:bg-fill-2',
         )}
       >
-        <span>{confidence.label}</span>
+        <span className="tabular-nums">{confidence.label}</span>
         <Info
-          className="size-3 shrink-0 text-text-tertiary"
+          className="size-3.5 shrink-0 text-text-tertiary transition-colors duration-[120ms] ease-[var(--ease-out)] group-hover:text-text-secondary"
           strokeWidth={1.75}
           aria-hidden="true"
         />

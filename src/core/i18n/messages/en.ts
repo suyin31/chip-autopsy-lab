@@ -74,16 +74,31 @@ export const en = {
   'verdict.pattern': '{pattern} failure.',
   'verdict.site': 'test site {site} contact failure.',
   'verdict.random': 'random defects, no spatial signature.',
-  'verdict.healthy': 'No cause of death. Yield is {yield}.',
-  'verdict.subline':
-    'Yield {yield} across {wafers} wafers. Most loss in {bin}.',
+  'verdict.healthy': 'No cause of death.',
+  'verdict.showOnWafer': 'Show on wafer',
   'verdict.causeAria': 'Show the dies behind this verdict',
-  'verdict.confidence': 'Confidence {value}',
   'verdict.methodTitle': 'How this verdict was made',
   'verdict.methodTemplate':
     'Every number comes from the on-device analysis engine. The text is the built-in template.',
   'verdict.methodLlm':
     'Every number comes from the on-device analysis engine. An AI model rephrased the text and every sentence cites an engine fact.',
+
+  // Takeaway and confidence (premium §7.3, §7.4, §9.3)
+  'takeaway.edgeRing': 'Most failing dies sit in the outer {rings} rings of every wafer. Final yield is {yield}.',
+  'takeaway.scratch': 'Failing dies line up along a scratch on {count} of {total} wafers. Final yield is {yield}.',
+  'takeaway.center': 'Most failing dies sit in the centre of the wafer. Final yield is {yield}.',
+  'takeaway.donut': 'Most failing dies sit in a ring around the centre of the wafer. Final yield is {yield}.',
+  'takeaway.edgeLoc': 'Most failing dies sit in one area at the edge of the wafer. Final yield is {yield}.',
+  'takeaway.loc': 'Most failing dies sit in one area of the wafer. Final yield is {yield}.',
+  'takeaway.nearFull': 'Most failing dies sit across almost all of the wafer. Final yield is {yield}.',
+  'takeaway.site': 'Test site {site} fails {rate} of its dies, the other sites fail {otherRate}. Final yield is {yield}.',
+  'takeaway.random': 'Failures are scattered with no shape. Look at the tests before the process. Final yield is {yield}.',
+  'takeaway.healthy': '{passed} of {total} dies passed every test.',
+  'confidence.high': 'High confidence, {value}',
+  'confidence.moderate': 'Moderate confidence, {value}',
+  'confidence.low': 'Low confidence, {value}',
+  'confidence.match': 'Match with {pattern}',
+  'glossary.confidence': 'How strongly the wafer pattern matches the named class, from 0 to 1. Computed on this device.',
 
   // Stats
   'stats.edgeShare': 'of fails sit in the outer {rings} rings',

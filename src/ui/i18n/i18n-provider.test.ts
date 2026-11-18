@@ -99,10 +99,10 @@ function SampleConsumer(): React.ReactElement {
     React.createElement(
       'p',
       null,
-      t('verdict.subline', {
+      t('takeaway.scratch', {
+        count: formatInteger(3),
+        total: formatInteger(25),
         yield: formatPercent(0.828),
-        wafers: formatInteger(25),
-        bin: 'SBIN 7 IDDQ_EDGE_LEAK',
       }),
     ),
     React.createElement('span', { 'data-dies': 'true' }, tPlural('findings.dieCount', 1)),
@@ -123,7 +123,7 @@ describe('UI I18nProvider, useT hook, pre-hydration script, and persistence (Tas
     expect(html).toContain('data-locale-probe="en"');
     expect(html).toContain('Drop the body.');
     expect(html).toContain(
-      'Yield 82.8% across 25 wafers. Most loss in SBIN 7 IDDQ_EDGE_LEAK.',
+      'Failing dies line up along a scratch on 3 of 25 wafers. Final yield is 82.8%.',
     );
     expect(html).toContain('>1 die<');
     expect(html).toContain('>0.95<');

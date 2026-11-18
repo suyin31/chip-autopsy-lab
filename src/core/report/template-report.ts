@@ -18,6 +18,7 @@ import {
   formatPatternCandidateHypotheses,
   formatSiteConcentrationHypotheses,
 } from '../patterns/root-causes';
+import { CLASSIFIER_THRESHOLDS } from '../patterns/wm811k-classifier';
 import {
   analyzeLotForReport,
   buildEngineFacts,
@@ -90,10 +91,12 @@ export interface AutopsyReport {
   readonly bodyClaims: readonly ReportClaim[];
   readonly source: 'deterministic-template' | 'llm-verified';
   readonly fallbackReason?: string;
-  /** Verdict sub-line message key (`'verdict.subline'` or `'findings.lotYield.sub'`). */
-  readonly sublineKey?: MessageKey;
+  /** Verdict takeaway message key (`takeaway.*`, premium §9.3). Never names bin codes or test names. */
+  readonly sublineKey?: TakeawayMessageKey;
   /** Raw numbers and untranslated tokens for `sublineKey`. */
   readonly sublineParams?: ClaimParams;
+  /** WM-811K class behind the confidence score (`"Match with {pattern}"`, premium §7.4); absent for site and baseline verdicts. */
+  readonly matchPattern?: string;
   /** Capped heuristic confidence score in `[0, 0.95]`. */
   readonly confidence?: number;
   /** Ordered 3 hedged hypotheses for the `"Possible causes"` disclosure (`redesign.md` §4.6). */
@@ -105,6 +108,118 @@ export interface OfflineAutopsyPipelineResult {
   readonly facts: readonly EngineFact[];
   readonly verdict: AutopsyVerdictDecision;
   readonly report: AutopsyReport;
+}
+
+export type TakeawayMessageKey =
+  | 'takeaway.edgeRing'
+  | 'takeaway.scratch'
+  | 'takeaway.center'
+  | 'takeaway.donut'
+  | 'takeaway.edgeLoc'
+  | 'takeaway.loc'
+  | 'takeaway.nearFull'
+  | 'takeaway.site'
+  | 'takeaway.random'
+  | 'takeaway.healthy';
+
+const PATTERN_TAKEAWAY_KEYS: Readonly<Record<string, TakeawayMessageKey>> = {
+  'Edge-Ring': 'takeaway.edgeRing',
+  Scratch: 'takeaway.scratch',
+  Center: 'takeaway.center',
+  Donut: 'takeaway.donut',
+  'Edge-Loc': 'takeaway.edgeLoc',
+  Loc: 'takeaway.loc',
+  'Near-full': 'takeaway.nearFull',
+};
+
+/**
+ * Selects the plain-language verdict takeaway (premium §7.3, §9.3) and the WM-811K class
+ * behind the confidence score. Params carry raw ratios and counts; `renderReport` formats them.
+ */
+export function resolveTakeawaySpec(
+  lot: LotModel,
+  verdict: AutopsyVerdictDecision,
+  factsById: ReadonlyMap<string, EngineFact>,
+): {
+  readonly key: TakeawayMessageKey;
+  readonly params: ClaimParams;
+  readonly matchPattern?: string;
+} {
+  if (isHealthyVerdictDecision(verdict)) {
+    return {
+      key: 'takeaway.healthy',
+      params: {
+        passed: Math.max(0, verdict.testedDies - verdict.totalFailDies),
+        total: verdict.testedDies,
+      },
+    };
+  }
+
+  const finalYield = verdict.finalYield;
+
+  if (verdict.tier === 1 && verdict.siteAnomaly) {
+    const { headNum, siteNum } = verdict.siteAnomaly.site;
+    const siteFact = factsById.get(`fact:site:${headNum}-${siteNum}`);
+    const fpYieldPct = getFactMetricValue(
+      siteFact,
+      'firstPassYieldPct',
+      (verdict.siteAnomaly.siteMetrics.firstPassYield ?? 1) * 100,
+    );
+    const otherFpYieldPct = getFactMetricValue(
+      siteFact,
+      'otherSitesFirstPassYieldPct',
+      verdict.siteAnomaly.otherSitesFirstPassYield * 100,
+    );
+    return {
+      key: 'takeaway.site',
+      params: {
+        site: resolveSiteDisplayToken(lot, headNum, siteNum),
+        rate: Math.min(1, Math.max(0, 1 - fpYieldPct / 100)),
+        otherRate: Math.min(1, Math.max(0, 1 - otherFpYieldPct / 100)),
+        yield: finalYield,
+      },
+    };
+  }
+
+  const isExcursion = verdict.tier === 3 && verdict.waferExcursion !== undefined;
+  const pattern = isExcursion
+    ? verdict.waferExcursion!.classification.pattern
+    : verdict.tier === 2
+      ? verdict.spatialPattern
+      : undefined;
+  const patternKey = pattern !== undefined ? PATTERN_TAKEAWAY_KEYS[pattern] : undefined;
+
+  if (pattern !== undefined && patternKey !== undefined) {
+    if (patternKey === 'takeaway.edgeRing') {
+      return {
+        key: patternKey,
+        params: { rings: CLASSIFIER_THRESHOLDS.EDGE_RING_BAND, yield: finalYield },
+        matchPattern: pattern,
+      };
+    }
+    if (patternKey === 'takeaway.scratch') {
+      const total = Math.max(1, lot.wafers.length);
+      const count = isExcursion
+        ? 1
+        : getFactMetricValue(
+            factsById.get('fact:spatial:primary'),
+            'signatureWaferCount',
+            total,
+          );
+      return {
+        key: patternKey,
+        params: { count: Math.min(total, Math.max(1, count)), total, yield: finalYield },
+        matchPattern: pattern,
+      };
+    }
+    return { key: patternKey, params: { yield: finalYield }, matchPattern: pattern };
+  }
+
+  return {
+    key: 'takeaway.random',
+    params: { yield: finalYield },
+    ...(verdict.tier === 4 ? { matchPattern: 'Random' } : {}),
+  };
 }
 
 const DEFAULT_BASELINE_HYPOTHESIS =
@@ -826,27 +941,10 @@ export function buildTemplateAutopsyReport(
   const hypotheses = buildOrderedHypothesisSpecs(lot, verdict, facts);
   const cappedConfidence = capDisplayedConfidence(verdict.confidence);
 
-  const lotYieldFactForMeta = factsById.get('fact:lot-yield');
-  const firstPassYieldRatio =
-    getFactMetricValue(
-      lotYieldFactForMeta,
-      'firstPassYieldPct',
-      verdict.finalYield * 100,
-    ) / 100;
-
-  const sublineKey: MessageKey =
-    verdict.dominantBin !== null ? 'verdict.subline' : 'findings.lotYield.sub';
-  const sublineParams: ClaimParams =
-    verdict.dominantBin !== null
-      ? {
-          yield: verdict.finalYield,
-          wafers: lot.wafers.length,
-          bin: formatCleanBinToken(verdict.dominantBin),
-        }
-      : {
-          firstPass: firstPassYieldRatio,
-          retests: countLotRetestedDies(lot),
-        };
+  const takeawaySpec = resolveTakeawaySpec(lot, verdict, factsById);
+  const sublineKey = takeawaySpec.key;
+  const sublineParams = takeawaySpec.params;
+  const matchPattern = takeawaySpec.matchPattern;
 
   const bodyClaims: ReportClaim[] = [];
   const retestFact = factsById.get('fact:retest-recovery') ?? null;
@@ -974,6 +1072,7 @@ export function buildTemplateAutopsyReport(
       source: 'deterministic-template',
       sublineKey,
       sublineParams,
+      ...(matchPattern !== undefined ? { matchPattern } : {}),
       confidence: cappedConfidence,
       hypotheses,
     };
@@ -1104,6 +1203,7 @@ export function buildTemplateAutopsyReport(
     source: 'deterministic-template',
     sublineKey,
     sublineParams,
+    ...(matchPattern !== undefined ? { matchPattern } : {}),
     confidence: cappedConfidence,
     hypotheses,
   };

@@ -77,16 +77,31 @@ export const ja = {
   'verdict.pattern': '{pattern} 不良。',
   'verdict.site': 'テストサイト {site} 接触不良。',
   'verdict.random': 'ランダム欠陥、空間パターンなし。',
-  'verdict.healthy': '死因なし。歩留まりは {yield} です。',
-  'verdict.subline':
-    '全 {wafers} ウェハで歩留まり {yield}。主な損失は {bin}。',
+  'verdict.healthy': '死因なし。',
+  'verdict.showOnWafer': 'ウェハ上に表示',
   'verdict.causeAria': 'この判定の根拠となるダイを表示',
-  'verdict.confidence': '信頼度 {value}',
   'verdict.methodTitle': 'この判定の生成方法',
   'verdict.methodTemplate':
     'すべての数値は端末内の解析エンジンで算出され、文章は内蔵テンプレートから生成されています。',
   'verdict.methodLlm':
     'すべての数値は端末内の解析エンジンで算出されています。AI モデルが表現を整え、すべての文がエンジンの事実を引用しています。',
+
+  // Takeaway and confidence (premium §7.3, §7.4, §9.3)
+  'takeaway.edgeRing': '不良ダイの大半は各ウェハの外周 {rings} 周にあります。最終歩留まりは {yield} です。',
+  'takeaway.scratch': '{total} 枚中 {count} 枚のウェハで、不良ダイが傷に沿って並んでいます。最終歩留まりは {yield} です。',
+  'takeaway.center': '不良ダイの大半はウェハの中央にあります。最終歩留まりは {yield} です。',
+  'takeaway.donut': '不良ダイの大半はウェハ中央を囲むリング状の領域にあります。最終歩留まりは {yield} です。',
+  'takeaway.edgeLoc': '不良ダイの大半はウェハ外周の一部の領域にあります。最終歩留まりは {yield} です。',
+  'takeaway.loc': '不良ダイの大半はウェハの一部の領域にあります。最終歩留まりは {yield} です。',
+  'takeaway.nearFull': '不良ダイはウェハのほぼ全面に広がっています。最終歩留まりは {yield} です。',
+  'takeaway.site': 'テストサイト {site} はダイの {rate} が不良で、他のサイトは {otherRate} です。最終歩留まりは {yield} です。',
+  'takeaway.random': '不良は形を持たずに散らばっています。工程より先にテストを確認します。最終歩留まりは {yield} です。',
+  'takeaway.healthy': '{total} 個中 {passed} 個のダイがすべてのテストに合格しました。',
+  'confidence.high': '高い信頼度、{value}',
+  'confidence.moderate': '中程度の信頼度、{value}',
+  'confidence.low': '低い信頼度、{value}',
+  'confidence.match': '{pattern} との一致度',
+  'glossary.confidence': 'ウェハのパターンが指定のクラスにどれだけ一致するかを 0 から 1 で示します。この端末で計算します。',
 
   // Stats
   'stats.edgeShare': '外周 {rings} リング不良割合',

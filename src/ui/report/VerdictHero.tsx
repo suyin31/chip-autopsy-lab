@@ -4,6 +4,7 @@ import * as React from 'react';
 import type { RenderedVerdictHero, ReportClaim } from '@/core/report';
 import { cn } from '@/ui/primitives/cn';
 import type { VerdictRiseBlockId } from '@/ui/wafer-map/probe-sweep';
+import { useT } from '@/ui/i18n/use-t';
 import { renderWithUntranslatedTokens } from './render-untranslated';
 
 export interface VerdictHeroProps {
@@ -18,16 +19,22 @@ export interface VerdictHeroProps {
   ) => React.ReactNode;
 }
 
+/** Lines the verdict may take before it steps down a size (premium §7.3, §4.3): 2 in Latin, 3 in CJK. */
+export function resolveVerdictMaxLines(locale: string): number {
+  return locale === 'en' ? 2 : 3;
+}
+
 /**
- * Verdict Hero (`src/ui/report/VerdictHero.tsx`, `redesign.md` §3.4, §3.5, §4.3, §5.2, §6.6, §6.7):
- * - `<h1>` (`display-l`, <= 2 lines at 553 px desktop, <= 3 lines mobile) with two spans:
- *   1. Prefix (`"Cause of death:"`) in `text-primary`.
- *   2. Cause phrase `<button>` in `failure` orange (`#FF6B2C`), no underline at rest,
- *      `1 px` underline at `6 px` offset (`rgba(255, 107, 44, 0.5)`) on hover; toggles
- *      the primary verdict finding in `SelectionStore`.
- * - Healthy lots (`isHealthy === true`, yield >= 99% or 0 fails) render `"No cause of death. Yield is {yield}."`
- *   in `text-primary` with zero orange.
- * - Sub-line (`body` secondary, max 2 lines) 16 px below desktop / 12 px mobile.
+ * Verdict headline and takeaway (`src/ui/report/VerdictHero.tsx`, premium §7.3, §9.3):
+ * - `<h1>` `display-l`, max 520 px, `text-wrap: balance`, 2 lines max (3 in CJK); beyond that the
+ *   size steps down `display-l` -> 40 -> 36 (`data-stepped-down="1" | "2"`).
+ * - "Cause of death:" in `text-primary`, a `<wbr>`, then the cause phrase `<button>` in `ember-ink`.
+ *   It is `inline-block`, so it wraps as one unit when it fits on a line. Hover underline 1.5 px at
+ *   6 px offset (40 % mix), pressed opacity 0.72, selected (`aria-pressed`) underline at 70 % mix,
+ *   `focus-ring` at `r-md` with 4 px padding absorbed by a negative margin.
+ * - Healthy lot: "No cause of death." in `text-primary` with no button and no orange.
+ * - Takeaway `<p>`: `body` secondary, max 520 px, `text-wrap: pretty`, never clipped before 3 lines
+ *   (5 on mobile, §9.7).
  */
 export function VerdictHero({
   verdict,
@@ -37,15 +44,18 @@ export function VerdictHero({
   onToggleClaim,
   renderRiseBlock,
 }: VerdictHeroProps): React.JSX.Element {
+  const { locale } = useT();
   const headingRef = React.useRef<HTMLHeadingElement | null>(null);
-  const [steppedDown, setSteppedDown] = React.useState(false);
+  const [step, setStep] = React.useState<0 | 1 | 2>(0);
+  const maxLines = resolveVerdictMaxLines(locale);
 
-  // Reset step-down whenever the headline text changes so we measure at natural display-l first
-  const prevHeadlineRef = React.useRef(verdict.fullHeadline);
-  if (prevHeadlineRef.current !== verdict.fullHeadline) {
-    prevHeadlineRef.current = verdict.fullHeadline;
-    if (steppedDown) {
-      setSteppedDown(false);
+  // Reset the step-down whenever the headline text or locale changes so we measure at display-l first
+  const measureKey = `${locale}|${verdict.fullHeadline}`;
+  const prevMeasureKeyRef = React.useRef(measureKey);
+  if (prevMeasureKeyRef.current !== measureKey) {
+    prevMeasureKeyRef.current = measureKey;
+    if (step !== 0) {
+      setStep(0);
     }
   }
 
@@ -56,7 +66,7 @@ export function VerdictHero({
     }
 
     const checkOverflow = (): void => {
-      if (steppedDown) {
+      if (step >= 2) {
         return;
       }
       const computed = window.getComputedStyle(el);
@@ -65,10 +75,8 @@ export function VerdictHero({
       const lineHeight = Number.isFinite(rawLineHeight)
         ? rawLineHeight
         : fontSize * 1.12;
-      const isMobile = window.innerWidth < 768;
-      const maxLines = isMobile ? 3 : 2;
       if (el.scrollHeight > Math.ceil(maxLines * lineHeight + 6)) {
-        setSteppedDown(true);
+        setStep((prev) => (prev === 0 ? 1 : 2));
       }
     };
 
@@ -80,7 +88,7 @@ export function VerdictHero({
     const ro = new ResizeObserver(() => checkOverflow());
     ro.observe(el);
     return () => ro.disconnect();
-  }, [verdict.fullHeadline, steppedDown]);
+  }, [measureKey, step, maxLines]);
 
   const joiner =
     verdict.prefix.length > 0 && !verdict.prefix.endsWith('：') ? ' ' : '';
@@ -97,8 +105,8 @@ export function VerdictHero({
     <h1
       ref={headingRef}
       data-testid="verdict-headline"
-      data-stepped-down={steppedDown ? 'true' : undefined}
-      className="type-display-l text-text-primary"
+      data-stepped-down={step > 0 ? String(step) : undefined}
+      className="type-display-l max-w-[520px] text-text-primary"
     >
       {verdict.isHealthy ? (
         <span>
@@ -113,6 +121,7 @@ export function VerdictHero({
             {verdict.prefix}
             {joiner}
           </span>
+          <wbr />
           <span>
             <button
               type="button"
@@ -123,11 +132,9 @@ export function VerdictHero({
               onPointerDown={handlePointerDown}
               onClick={() => onToggleClaim(headlineClaim)}
               className={cn(
-                'inline cursor-pointer appearance-none rounded-xs border-0 bg-transparent p-0 py-1.5 -my-1.5 text-left font-[inherit] text-[length:inherit] leading-[inherit] tracking-[inherit] text-failure',
-                'decoration-[rgba(255,107,44,0.5)] decoration-1 underline-offset-[6px] transition-opacity duration-120 ease-out',
-                'hover:underline active:opacity-70',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-                isActive && 'underline decoration-failure',
+                'verdict-cause -mx-1 inline-block max-w-[calc(100%+8px)] cursor-pointer appearance-none rounded-md border-0 bg-transparent px-1 py-0 text-left font-[inherit] text-[length:inherit] leading-[inherit] tracking-[inherit] text-ember-ink',
+                'transition-opacity duration-[120ms] ease-[var(--ease-out)] active:opacity-72',
+                'focus-visible:shadow-focus-ring focus-visible:outline-none',
               )}
             >
               {renderWithUntranslatedTokens(
@@ -145,7 +152,7 @@ export function VerdictHero({
     verdict.subline.length > 0 ? (
       <p
         data-testid="verdict-subline"
-        className="verdict-takeaway mt-3 line-clamp-3 type-body text-text-secondary sm:line-clamp-2 md:mt-4"
+        className="verdict-takeaway mt-3 line-clamp-5 max-w-[520px] type-body text-pretty text-text-secondary sm:line-clamp-3 md:mt-4"
       >
         {renderWithUntranslatedTokens(
           verdict.subline,

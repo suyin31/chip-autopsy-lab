@@ -10,6 +10,7 @@ import { parseStdfBytes, PRR_PART_FLG, writeStdfBytes } from '@/core/stdf';
 import { I18nProvider } from '@/ui/i18n';
 import { BinsOnlyNotice, LoadedLotOverview } from '@/ui/layout';
 import { createSelectionStore, type SelectionStoreState } from '@/ui/state';
+import { countPrimaryButtons } from '@/ui/primitives/button';
 import { COLOR_TOKENS, WAFER_TOKENS } from '@/ui/tokens';
 import {
   type Canvas2DContextLike,
@@ -225,19 +226,28 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
         }),
       );
 
-      // VerdictHero: Cause of death prefix + orange cause button + subline with <bdi translate="no">
+      // VerdictHero: Cause of death prefix + ember-ink cause button + plain takeaway (premium §7.3)
       expect(cardHtml).toContain('data-testid="verdict-headline"');
       expect(cardHtml).toContain('Cause of death:');
       expect(cardHtml).toContain(expectedCause);
       expect(cardHtml).toContain(expectedSubBin);
       expect(cardHtml).toContain('translate="no"');
       expect(cardHtml).toContain('data-testid="autopsy-headline-button"');
-      expect(cardHtml).toContain('text-failure');
+      expect(cardHtml).toContain('text-ember-ink');
+      expect(cardHtml).toMatch(/<span data-testid="verdict-prefix"[^>]*>[^<]*<\/span><wbr\/>/);
+      const takeaway =
+        /<p data-testid="verdict-subline"[^>]*>(.*?)<\/p>/.exec(cardHtml)?.[1] ?? '';
+      expect(takeaway).toContain('Final yield is');
+      expect(takeaway).not.toMatch(/[HS]BIN|IDDQ|VDD_|CONT_OPEN|!/);
 
-      // ConfidencePill: single pill absorbing NarrationBadge (no standalone NarrationBadge in header)
+      // Action row: one primary "Show on wafer" + the confidence chip (premium §6.2, §7.4, A20)
+      expect(cardHtml).toContain('data-testid="verdict-show-on-wafer"');
+      expect(cardHtml).toContain('>Show on wafer<');
+      expect(countPrimaryButtons(cardHtml)).toBe(1);
       expect(cardHtml).toContain('data-testid="confidence-pill"');
-      expect(cardHtml).toMatch(/Confidence 0\.\d{2}/);
-      expect(cardHtml).not.toMatch(/Confidence 0\.9[6-9]|Confidence 1\.00/);
+      expect(cardHtml).toContain('data-level="high"');
+      expect(cardHtml).toMatch(/High confidence, 0\.\d{2}/);
+      expect(cardHtml).not.toMatch(/confidence, 0\.9[6-9]|confidence, 1\.00/);
       expect(cardHtml).not.toContain('Template · Offline');
       expect(cardHtml).not.toContain('AUTOPSY REPORT');
       expect(cardHtml).not.toContain('Click a finding to light its dies');
@@ -254,6 +264,18 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       );
       expect(openConfHtml).toContain('data-testid="confidence-popover"');
       expect(openConfHtml).toContain('How this verdict was made');
+      expect(openConfHtml).toContain(
+        'How strongly the wafer pattern matches the named class, from 0 to 1. Computed on this device.',
+      );
+      if (presetId === 'site2-probe-contact') {
+        expect(openConfHtml).not.toContain('data-testid="confidence-match"');
+      } else {
+        expect(openConfHtml).toContain('data-testid="confidence-match"');
+        expect(openConfHtml).toContain(
+          `Match with <bdi translate="no">${expectedCause}</bdi>`,
+        );
+        expect(openConfHtml).toMatch(/data-testid="confidence-match-bar"[^>]*style="width:9\d%"/);
+      }
       expect(openConfHtml).toContain(
         'Every number comes from the on-device analysis engine. The text is the built-in template.',
       );
@@ -282,7 +304,8 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
         /\b(font-mono|type-mono-data|tabular-mono|uppercase)\b/,
       );
       expect(cardHtml).not.toMatch(/<(code|kbd|pre|samp)\b/);
-      expect(cardHtml).not.toMatch(/\bshadow-(?!none\b)[a-z0-9]+\b/);
+      // The focus-ring token (premium §3.2) is the only box-shadow allowed here
+      expect(cardHtml).not.toMatch(/\bshadow-(?!none\b|focus-ring\b)[a-z0-9]+\b/);
       expect(cardHtml).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
 
       // Expanded Possible causes reveals all 3 hedged hypotheses + check-next sublines
@@ -298,6 +321,39 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       const hypItems = expandedHtml.match(/data-testid="hypothesis-item"/g);
       expect(hypItems).toHaveLength(3);
     }
+  });
+
+  it('renders the healthy-lot verdict with no cause button and no orange text (premium §7.3)', () => {
+    const bytes = writeStdfBytes({
+      endianness: 'little',
+      mir: { lotId: 'CLEAN-LOT', partTyp: 'CAL-CLEAN', jobNam: 'SORT' },
+      sdrs: [{ headNum: 1, siteGrp: 1, siteNums: [1], cardId: 'C1' }],
+      hbrs: [{ hbinNum: 1, hbinCnt: 2, hbinPf: 'P', hbinNam: 'PASS' }],
+      sbrs: [{ sbinNum: 1, sbinCnt: 2, sbinPf: 'P', sbinNam: 'GOOD' }],
+      wafers: [
+        {
+          wir: { headNum: 1, siteGrp: 1, startT: 1_700_000_000, waferId: 'W01' },
+          touchdowns: [
+            [{ headNum: 1, siteNum: 1, partFlg: 0, hardBin: 1, softBin: 1, xCoord: 0, yCoord: 0 }],
+            [{ headNum: 1, siteNum: 1, partFlg: 0, hardBin: 1, softBin: 1, xCoord: 1, yCoord: 0 }],
+          ],
+          wrr: { headNum: 1, siteGrp: 1, finishT: 1_700_000_020, partCnt: 2, waferId: 'W01' },
+        },
+      ],
+      mrr: { finishT: 1_700_000_050, dispCod: '0' },
+    });
+    const parsed = parseStdfBytes(bytes, { mode: 'full' });
+    if (!parsed.ok) throw new Error(parsed.error.message);
+    const lot = buildLotModel(parsed.value);
+    const { report, verdict, facts } = generateOfflineAutopsyReport(lot);
+    const html = renderToStaticMarkup(
+      React.createElement(AutopsyReportCard, { lot, report, verdict, facts }),
+    );
+    expect(html).toContain('>No cause of death.<');
+    expect(html).not.toContain('data-testid="autopsy-headline-button"');
+    expect(html).not.toContain('text-ember');
+    expect(html).toContain('2 of 2 dies passed every test.');
+    expect(countPrimaryButtons(html)).toBe(1);
   });
 
   it('writes cited die mask on headline/finding toggle, shows expanded detail + Clear, lights #D6E6FF overlay strokes, and clears on second click', async () => {

@@ -17,6 +17,7 @@ import {
   type ReportClaim,
 } from '@/core/report';
 import { useT } from '@/ui/i18n';
+import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/primitives/cn';
 import {
   type ClaimGlowOrderMode,
@@ -457,6 +458,37 @@ export function AutopsyReportCard({
     [store, lot, factsById, analysis.primarySpatial.pattern],
   );
 
+  // Premium §7.3: the cause phrase shows its selected state only when it lit the evidence,
+  // not when "Show on wafer" did. Each control takes over the lit verdict instead of clearing it.
+  const [headlineSource, setHeadlineSource] = React.useState<
+    'phrase' | 'button' | null
+  >(null);
+  const headlineActive =
+    effectiveActiveClaimId === report.causeOfDeathHeadline.claimId;
+  const toggleHeadlineFrom = React.useCallback(
+    (source: 'phrase' | 'button'): void => {
+      const ownedBySource =
+        source === 'button'
+          ? headlineSource === 'button'
+          : headlineSource !== 'button';
+      if (headlineActive && !ownedBySource) {
+        setHeadlineSource(source);
+        return;
+      }
+      setHeadlineSource(source);
+      handleToggleClaim(report.causeOfDeathHeadline);
+    },
+    [headlineActive, headlineSource, handleToggleClaim, report.causeOfDeathHeadline],
+  );
+
+  const handleShowOnWaferPointerDown = (
+    event: React.PointerEvent<HTMLButtonElement>,
+  ): void => {
+    if (typeof performance !== 'undefined') {
+      event.currentTarget.dataset.ack = String(performance.now());
+    }
+  };
+
   const handleToggleFinding = React.useCallback(
     (claim: ReportClaim): void => {
       handleToggleClaim(claim);
@@ -538,10 +570,8 @@ export function AutopsyReportCard({
           verdict={rendered.verdict}
           headlineClaim={report.causeOfDeathHeadline}
           causeAria={t('verdict.causeAria')}
-          isActive={
-            effectiveActiveClaimId === report.causeOfDeathHeadline.claimId
-          }
-          onToggleClaim={handleToggleClaim}
+          isActive={headlineActive && headlineSource !== 'button'}
+          onToggleClaim={() => toggleHeadlineFrom('phrase')}
           renderRiseBlock={renderHeroRiseBlock}
         />
 
@@ -549,10 +579,25 @@ export function AutopsyReportCard({
           {...buildRiseMotionProps('confidence')}
           className="mt-3 md:mt-5 lg:mt-6"
         >
-          <ConfidencePill
-            confidence={rendered.confidence}
-            defaultOpen={defaultConfidenceOpen}
-          />
+          {/* Premium §6.2 block 3, §7.4: "Show on wafer" (40 h) + 16 + the confidence chip, centred on it */}
+          <div
+            data-testid="verdict-action-row"
+            className="flex flex-wrap items-center gap-x-4 gap-y-2"
+          >
+            <Button
+              variant="primary"
+              data-testid="verdict-show-on-wafer"
+              data-claim-id={report.causeOfDeathHeadline.claimId}
+              onPointerDown={handleShowOnWaferPointerDown}
+              onClick={() => toggleHeadlineFrom('button')}
+            >
+              {t('verdict.showOnWafer')}
+            </Button>
+            <ConfidencePill
+              confidence={rendered.confidence}
+              defaultOpen={defaultConfidenceOpen}
+            />
+          </div>
           {binsOnlyNotice ? <div className="mt-3">{binsOnlyNotice}</div> : null}
         </motion.div>
       </div>

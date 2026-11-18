@@ -3,7 +3,7 @@ import { generateDemoStdfBytes } from '../demo/demo-generator';
 import { en, SUPPORTED_LOCALES } from '../i18n';
 import { buildLotModel, type LotModel } from '../model';
 import { parseStdfBytes, PRR_PART_FLG, writeStdfBytes } from '../stdf';
-import { renderReport } from './render-report';
+import { renderReport, resolveConfidenceLevel } from './render-report';
 import { generateOfflineAutopsyReport } from './template-report';
 
 function buildDemoLot(
@@ -133,12 +133,18 @@ describe('ReportClaim messageKey/params & renderReport per-locale determinism (r
     expect(rendered.verdict.fullHeadline).toBe(
       'Cause of death: Edge-Ring failure.',
     );
+    // Premium §9.3 takeaway: plain words, no bin codes or test names
     expect(rendered.verdict.subline).toBe(
-      'Yield 82.8% across 25 wafers. Most loss in SBIN 7 IDDQ_EDGE_LEAK.',
+      'Most failing dies sit in the outer 3 rings of every wafer. Final yield is 82.8%.',
     );
 
-    // §4.4 Confidence pill
-    expect(rendered.confidence.label).toMatch(/^Confidence 0\.\d{2}$/);
+    // Premium §7.4 confidence chip and popover
+    expect(rendered.confidence.label).toMatch(/^High confidence, 0\.\d{2}$/);
+    expect(rendered.confidence.level).toBe('high');
+    expect(rendered.confidence.matchLabel).toBe('Match with Edge-Ring');
+    expect(rendered.confidence.matchPattern).toBe('Edge-Ring');
+    expect(rendered.confidence.valueText).toMatch(/^0\.\d{2}$/);
+    expect(rendered.confidence.definition).toBe(en['glossary.confidence']);
     expect(rendered.confidence.confidenceValue).toBeLessThanOrEqual(0.95);
     expect(rendered.confidence.methodTitle).toBe('How this verdict was made');
     expect(rendered.confidence.methodBody).toBe(
@@ -214,15 +220,19 @@ describe('ReportClaim messageKey/params & renderReport per-locale determinism (r
         }
 
         // Untranslated tokens preserved in every locale (§6.6)
+        // Premium A26: the takeaway never names bin codes, test names, or STDF fields
+        expect(passA.verdict.subline).not.toMatch(/[HS]BIN|IDDQ|VDD_|CONT_OPEN|PRR|PTR|!/);
+        expect(passA.confidence.matchLabel ?? '').not.toMatch(/\{[a-zA-Z0-9_]+\}/);
         if (presetId === 'edge-ring-etch') {
           expect(passA.verdict.cause).toContain('Edge-Ring');
-          expect(passA.verdict.subline).toContain('SBIN 7 IDDQ_EDGE_LEAK');
+          expect(passA.confidence.matchLabel).toContain('Edge-Ring');
           expect(passA.findings[2]?.headline).toContain('204 IDDQ_LEAK');
         } else if (presetId === 'handling-scratch') {
           expect(passA.verdict.cause).toContain('Scratch');
-          expect(passA.verdict.subline).toContain('SBIN 9 VDD_METAL_SHORT');
+          expect(passA.confidence.matchLabel).toContain('Scratch');
         } else {
-          expect(passA.verdict.subline).toContain('SBIN 5 CONT_OPEN');
+          expect(passA.verdict.untranslatedTokens.site).toBe('2');
+          expect(passA.confidence.matchLabel).toBeNull();
           expect(passA.hypotheses[0]?.checkText).toContain('2');
         }
       }
@@ -237,8 +247,10 @@ describe('ReportClaim messageKey/params & renderReport per-locale determinism (r
     expect(cleanEn.verdict.prefix).toBe('');
     expect(cleanEn.verdict.cause).toBe('');
     expect(cleanEn.verdict.fullHeadline).toBe(
-      'No cause of death. Yield is 100.0%.',
+      'No cause of death.',
     );
+    expect(cleanEn.verdict.subline).toMatch(/^([\d,]+) of \1 dies passed every test\.$/);
+    expect(cleanEn.confidence.matchLabel).toBeNull();
 
     const excLot = buildExcursionLot();
     const { report: excReport } = generateOfflineAutopsyReport(excLot);
@@ -246,6 +258,11 @@ describe('ReportClaim messageKey/params & renderReport per-locale determinism (r
     expect(excEn.verdict.fullHeadline).toBe(
       'Cause of death: Center failure.',
     );
+    expect(excEn.verdict.subline).toBe(
+      'Most failing dies sit in the centre of the wafer. Final yield is ' +
+        excEn.verdict.subline.split('Final yield is ')[1],
+    );
+    expect(excEn.confidence.matchLabel).toBe('Match with Center');
     expect(excEn.findings[0]?.headline).toMatch(/^Wafer W02 dropped to \d+\.\d%$/);
     expect(excEn.findings[0]?.subline).toMatch(/^\d+\.\d% below the lot median$/);
 
@@ -256,6 +273,33 @@ describe('ReportClaim messageKey/params & renderReport per-locale determinism (r
     );
     expect(renderReport(llmReport, 'ja').confidence.methodBody).toBe(
       renderReport(excReport, 'ja').confidence.methodBody,
+    );
+  });
+
+  it('maps confidence to level words on the shown 2-decimal value (premium §7.4)', () => {
+    expect(resolveConfidenceLevel(0.95)).toBe('high');
+    expect(resolveConfidenceLevel(0.85)).toBe('high');
+    expect(resolveConfidenceLevel(0.849)).toBe('high');
+    expect(resolveConfidenceLevel(0.84)).toBe('moderate');
+    expect(resolveConfidenceLevel(0.6)).toBe('moderate');
+    expect(resolveConfidenceLevel(0.594)).toBe('low');
+    expect(resolveConfidenceLevel(0.2)).toBe('low');
+  });
+
+  it('renders the scratch and site takeaways from engine numbers (premium §9.3)', () => {
+    const scratch = renderReport(
+      generateOfflineAutopsyReport(buildDemoLot('handling-scratch')).report,
+      'en',
+    );
+    expect(scratch.verdict.subline).toMatch(
+      /^Failing dies line up along a scratch on \d+ of 25 wafers\. Final yield is \d+\.\d%\.$/,
+    );
+    const site = renderReport(
+      generateOfflineAutopsyReport(buildDemoLot('site2-probe-contact')).report,
+      'en',
+    );
+    expect(site.verdict.subline).toMatch(
+      /^Test site 2 fails \d+\.\d% of its dies, the other sites fail \d+\.\d%\. Final yield is \d+\.\d%\.$/,
     );
   });
 });

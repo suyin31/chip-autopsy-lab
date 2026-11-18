@@ -600,20 +600,43 @@
     text-wrap: balance;
   }
 
-  /* Verdict step-down (premium.md §4.3: display-l -> 40); never grows past the breakpoint size */
-  .type-display-l[data-stepped-down="true"] {
+  /* Verdict step-down (premium.md §4.3: display-l -> 40 -> 36); never grows past the breakpoint size */
+  .type-display-l[data-stepped-down="1"] {
     font-size: min(40px, var(--size-display-l));
   }
 
+  .type-display-l[data-stepped-down="2"] {
+    font-size: min(36px, var(--size-display-l));
+  }
+
   @media (max-width: 639px) {
-    .type-display-l[data-stepped-down="true"] {
+    .type-display-l[data-stepped-down] {
       font-size: 28px;
     }
 
     :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko))
-      .type-display-l[data-stepped-down="true"] {
+      .type-display-l[data-stepped-down] {
       font-size: 26px;
     }
+  }
+
+  /* Verdict cause phrase (premium.md §7.3): ember-ink text button; underline on hover, stronger when selected */
+  .verdict-cause {
+    text-decoration-line: none;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 6px;
+    text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  }
+
+  @media (hover: hover) {
+    .verdict-cause:hover {
+      text-decoration-line: underline;
+    }
+  }
+
+  .verdict-cause[aria-pressed="true"] {
+    text-decoration-line: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 70%, transparent);
   }
 
   .type-title-1 {
