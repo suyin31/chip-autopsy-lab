@@ -11,7 +11,10 @@ import { useT } from '@/ui/i18n';
 import { AutopsyReportCard } from '@/ui/report';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
+  EVIDENCE_SCROLL_NAV_GAP_PX,
+  navBarHeightPx,
   readPrefersReducedMotionSync,
+  shouldDeferEvidenceForStage,
   WaferMapCanvas,
 } from '@/ui/wafer-map';
 import { peekLotInitialRevealPlan } from '@/ui/wafer-map/WaferMapCanvas';
@@ -88,31 +91,52 @@ export function LoadedLotOverview({
     store.getState().setLot(lot);
   }, [lot, store]);
 
-  // Premium §6.2: below 1024 the findings sit under the wafer, so activating one scrolls the
-  // stage top to 8 px under the nav (smooth; instant under reduced motion). Never on desktop.
+  // Premium §6.2, §8.3: below 1024 the findings, Pareto, and yield rows sit under the wafer, so
+  // any new evidence (one store, every trigger) scrolls the stage top to 8 px under the nav when
+  // less than 50 % of the stage is visible (smooth; instant under reduced motion). Never on desktop.
   const stageColumnRef = React.useRef<HTMLDivElement | null>(null);
   const prefersReducedRef = React.useRef(prefersReduced);
   prefersReducedRef.current = prefersReduced;
-  const handleFindingToggle = React.useCallback((activated: boolean): void => {
-    if (!activated || typeof window === 'undefined' || window.innerWidth >= 1024) {
-      return;
-    }
-    const stageEl = stageColumnRef.current?.querySelector<HTMLElement>(
-      '[data-testid="wafer-stage"]',
-    );
-    if (!stageEl) {
-      return;
-    }
-    const navHeight = window.innerWidth < 768 ? 48 : 52;
-    const targetScrollY = Math.max(
-      0,
-      window.scrollY + stageEl.getBoundingClientRect().top - navHeight - 8,
-    );
-    window.scrollTo({
-      top: targetScrollY,
-      behavior: prefersReducedRef.current ? 'instant' : 'smooth',
+  React.useEffect(() => {
+    return store.subscribe((state, prev) => {
+      const nextId = state.claimHighlight?.claimId ?? null;
+      if (
+        nextId === null ||
+        nextId === (prev.claimHighlight?.claimId ?? null) ||
+        typeof window === 'undefined'
+      ) {
+        return;
+      }
+      const stageEl = stageColumnRef.current?.querySelector<HTMLElement>(
+        '[data-testid="wafer-stage"]',
+      );
+      if (!stageEl) {
+        return;
+      }
+      const rect = stageEl.getBoundingClientRect();
+      if (
+        !shouldDeferEvidenceForStage(
+          window.innerWidth,
+          window.innerHeight,
+          rect.top,
+          rect.height,
+        )
+      ) {
+        return;
+      }
+      const targetScrollY = Math.max(
+        0,
+        window.scrollY +
+          rect.top -
+          navBarHeightPx(window.innerWidth) -
+          EVIDENCE_SCROLL_NAV_GAP_PX,
+      );
+      window.scrollTo({
+        top: targetScrollY,
+        behavior: prefersReducedRef.current ? 'instant' : 'smooth',
+      });
     });
-  }, []);
+  }, [store]);
 
   const sanitizedWarnings = React.useMemo(
     () =>
@@ -158,7 +182,6 @@ export function LoadedLotOverview({
             </p>
           </>
         }
-        onFindingToggle={handleFindingToggle}
         className="lg:col-start-2 lg:row-start-1 xl:col-span-5 xl:col-start-8"
         binsOnlyNotice={
           lot.parseMode === 'bins-only' ? (

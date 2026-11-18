@@ -9,12 +9,14 @@ import {
   computeOrderedGlowSchedule,
   computePinnedReadoutPlacement,
   computePopoverPlacement,
+  computeStageVisibleRatio,
   computeWaferEvidencePresence,
   evaluateGlowSequenceFrame,
   formatDieCoordinate,
   inferGlowOrderMode,
   rectsOverlap,
   screenRectToWaferGridBounds,
+  shouldDeferEvidenceForStage,
 } from './linked-interactions';
 import { computeWaferRenderLayout, dieCoordToCanvasRect } from './wafer-geometry';
 
@@ -518,5 +520,37 @@ describe('touch-pinned magnifier readout and coordinates (premium §7.15)', () =
     expect(formatDieCoordinate(-4)).toBe('\u22124');
     expect(formatDieCoordinate(12)).toBe('12');
     expect(formatDieCoordinate(0)).toBe('0');
+  });
+});
+
+describe('evidence stage visibility (premium §8.3 mobile)', () => {
+  it('measures the stage share inside the band below the nav', () => {
+    expect(computeStageVisibleRatio(100, 400, 844, 48)).toBe(1);
+    expect(computeStageVisibleRatio(-152, 400, 844, 48)).toBe(0.5);
+    expect(computeStageVisibleRatio(644, 400, 844, 48)).toBe(0.5);
+    expect(computeStageVisibleRatio(-600, 400, 844, 48)).toBe(0);
+    expect(computeStageVisibleRatio(0, 0, 844, 48)).toBe(0);
+  });
+
+  it('defers only below 1024 px and only under 50 % visible', () => {
+    expect(shouldDeferEvidenceForStage(390, 844, -300, 400)).toBe(true);
+    expect(shouldDeferEvidenceForStage(390, 844, -100, 400)).toBe(false);
+    expect(shouldDeferEvidenceForStage(390, 844, 700, 400)).toBe(true);
+    expect(shouldDeferEvidenceForStage(1024, 768, -2000, 400)).toBe(false);
+  });
+
+  it('keeps the ratio within [0, 1]', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: -5000, max: 5000, noNaN: true }),
+        fc.double({ min: 0, max: 3000, noNaN: true }),
+        fc.double({ min: 1, max: 3000, noNaN: true }),
+        fc.double({ min: 0, max: 100, noNaN: true }),
+        (top, height, vh, inset) => {
+          const r = computeStageVisibleRatio(top, height, vh, inset);
+          return r >= 0 && r <= 1;
+        },
+      ),
+    );
   });
 });

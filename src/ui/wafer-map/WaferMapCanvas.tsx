@@ -947,15 +947,18 @@ function WaferMapCanvasImpl({
       return;
     }
 
+    // Premium §8.3: the camera follows evidence only while the user has not panned or zoomed
+    // since the last evidence change (set, switch, or clear); the flag restarts at each change.
+    const userMoved = userMovedCameraSinceFindingRef.current;
+    userMovedCameraSinceFindingRef.current = false;
     if (nextClaimId === null) {
-      if (!userMovedCameraSinceFindingRef.current) {
+      if (!userMoved) {
         controller.resetToFit(true);
       }
       return;
     }
 
-    userMovedCameraSinceFindingRef.current = false;
-    if (fitLayout && claimHighlightMask) {
+    if (!userMoved && fitLayout && claimHighlightMask) {
       const targetCam = computeEvidenceFramingCamera({
         lot,
         waferIndex: safeWaferIndex,

@@ -971,3 +971,58 @@ export function computeWaferEvidencePresence(
   }
   return anyTotal ? out : null;
 }
+
+/** Below this viewport width the stage scrolls into view for evidence (premium §6.2, §8.3). */
+export const EVIDENCE_SCROLL_MAX_VIEWPORT_PX = 1024 as const;
+/** The ignite waits until this share of the stage is visible (premium §8.3 mobile). */
+export const EVIDENCE_STAGE_VISIBLE_RATIO = 0.5 as const;
+/** ...or at most this long, whichever comes first (premium §8.3 mobile). */
+export const EVIDENCE_IGNITE_MAX_WAIT_MS = 400 as const;
+/** Gap between the nav and the stage top after the evidence scroll (premium §6.2, §8.3). */
+export const EVIDENCE_SCROLL_NAV_GAP_PX = 8 as const;
+
+/** Nav bar height in CSS px at `viewportWidth` (48 below 768, else 52). */
+export function navBarHeightPx(viewportWidth: number): number {
+  return viewportWidth < 768 ? 48 : 52;
+}
+
+/**
+ * Share (`0..1`) of a stage box that sits inside the viewport band below the nav
+ * (`[topInsetPx, viewportHeight]`); premium §8.3 mobile rule.
+ */
+export function computeStageVisibleRatio(
+  stageTop: number,
+  stageHeight: number,
+  viewportHeight: number,
+  topInsetPx: number,
+): number {
+  if (!(stageHeight > 0)) {
+    return 0;
+  }
+  const visible =
+    Math.min(stageTop + stageHeight, viewportHeight) - Math.max(stageTop, topInsetPx);
+  return Math.min(1, Math.max(0, visible / stageHeight));
+}
+
+/**
+ * Whether a new evidence set must wait for the stage (premium §8.3 mobile): only below
+ * 1024 px and only when less than 50 % of the stage is visible under the nav.
+ */
+export function shouldDeferEvidenceForStage(
+  viewportWidth: number,
+  viewportHeight: number,
+  stageTop: number,
+  stageHeight: number,
+): boolean {
+  if (viewportWidth >= EVIDENCE_SCROLL_MAX_VIEWPORT_PX) {
+    return false;
+  }
+  return (
+    computeStageVisibleRatio(
+      stageTop,
+      stageHeight,
+      viewportHeight,
+      navBarHeightPx(viewportWidth),
+    ) < EVIDENCE_STAGE_VISIBLE_RATIO
+  );
+}

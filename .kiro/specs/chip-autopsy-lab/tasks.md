@@ -319,7 +319,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P28. Verdict reveal and count-up
   - Six-block stagger with `spring-ui`, ref-based count-up, interrupt on input, reduced-motion path (premium §8.2).
   - Accept: A36 (also apply premium §11.5).
-- [ ] P29. Evidence ignite and camera focus
+- [x] P29. Evidence ignite and camera focus
   - Veil fade, pattern-ordered rim and bloom stagger, camera targeting rules, strip dimming, clear and switch behaviour, mobile scroll then ignite (premium §8.3).
   - Accept: A38, A9 (animated).
 - [ ] P30. Hover, magnifier, zoom, and pan motion

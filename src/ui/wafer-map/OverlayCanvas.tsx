@@ -10,13 +10,17 @@ import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
   computeOrderedGlowSchedule,
   DIM_SCRIM_MAX_ALPHA,
+  EVIDENCE_IGNITE_MAX_WAIT_MS,
+  EVIDENCE_STAGE_VISIBLE_RATIO,
   GLOW_DIE_FADE_DURATION_MS,
   GLOW_EXIT_DURATION_MS,
   GLOW_TOTAL_DURATION_MS,
   type OrderedGlowSchedule,
   SCRIM_ENTER_DURATION_MS,
+  navBarHeightPx,
   type ScreenBox,
   sampleCubicEaseOut,
+  shouldDeferEvidenceForStage,
 } from './linked-interactions';
 import {
   type CameraState,
@@ -71,6 +75,8 @@ interface GlowAnimatorState {
   liveScrimAlpha: number;
   liveDieIndices: Uint32Array;
   liveDieAlphas: Float32Array;
+  /** Alphas of the live set when a clear began; the 160 ms exit scales from them (§8.3). */
+  exitStartAlphas: Float32Array | null;
   outgoingIndices: Uint32Array | null;
   outgoingStartAlphas: Float32Array | null;
   outgoingLiveAlphas: Float32Array | null;
@@ -88,6 +94,7 @@ function createIdleAnimatorState(waferIndex: number): GlowAnimatorState {
     liveScrimAlpha: 0,
     liveDieIndices: new Uint32Array(0),
     liveDieAlphas: new Float32Array(0),
+    exitStartAlphas: null,
     outgoingIndices: null,
     outgoingStartAlphas: null,
     outgoingLiveAlphas: null,
@@ -388,12 +395,22 @@ const OverlayCanvasImpl = React.forwardRef<
     paintWithViewport(vp, cur.layout);
   }, [paintWithViewport]);
 
+  const igniteHoldCleanupRef = React.useRef<(() => void) | null>(null);
+  const cancelIgniteHold = React.useCallback((): void => {
+    const cleanup = igniteHoldCleanupRef.current;
+    if (cleanup) {
+      igniteHoldCleanupRef.current = null;
+      cleanup();
+    }
+  }, []);
+
   const stopGlowRaf = React.useCallback((): void => {
+    cancelIgniteHold();
     if (rafIdRef.current !== null && typeof cancelAnimationFrame === 'function') {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
     }
-  }, []);
+  }, [cancelIgniteHold]);
 
   const stepGlowFrame = React.useCallback(
     (nowMs: number): void => {
@@ -468,9 +485,9 @@ const OverlayCanvasImpl = React.forwardRef<
         } else {
           const k = 1 - sampleCubicEaseOut(elapsed / GLOW_EXIT_DURATION_MS);
           anim.liveScrimAlpha = anim.scrimStartAlpha * k;
-          if (anim.outgoingStartAlphas) {
+          if (anim.exitStartAlphas) {
             for (let i = 0; i < anim.liveDieAlphas.length; i += 1) {
-              anim.liveDieAlphas[i] = anim.outgoingStartAlphas[i]! * k;
+              anim.liveDieAlphas[i] = anim.exitStartAlphas[i]! * k;
             }
           }
           needsMoreFrames = true;
@@ -484,6 +501,67 @@ const OverlayCanvasImpl = React.forwardRef<
       }
     },
     [paintCurrentNow],
+  );
+
+  /** Holds the entering ignite at t = 0 until the stage is visible enough (premium §8.3). */
+  const holdIgnite = React.useCallback(
+    (stageEl: HTMLElement): void => {
+      cancelIgniteHold();
+      let timerId: ReturnType<typeof setTimeout> | null = null;
+      let observer: IntersectionObserver | null = null;
+      const cleanup = (): void => {
+        if (timerId !== null) {
+          clearTimeout(timerId);
+          timerId = null;
+        }
+        observer?.disconnect();
+        observer = null;
+        const wrapperEl = wrapperRef.current;
+        if (wrapperEl) {
+          wrapperEl.dataset.igniteWait = 'false';
+        }
+      };
+      const release = (): void => {
+        if (igniteHoldCleanupRef.current !== cleanup) {
+          return;
+        }
+        igniteHoldCleanupRef.current = null;
+        cleanup();
+        const now =
+          typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const anim = animStateRef.current;
+        anim.startTimeMs = now;
+        anim.outgoingStartTimeMs = now;
+        if (rafIdRef.current === null) {
+          rafIdRef.current = requestAnimationFrame(stepGlowFrame);
+        }
+      };
+      igniteHoldCleanupRef.current = cleanup;
+      const wrapperEl = wrapperRef.current;
+      if (wrapperEl) {
+        wrapperEl.dataset.igniteWait = 'true';
+      }
+      timerId = setTimeout(release, EVIDENCE_IGNITE_MAX_WAIT_MS);
+      if (typeof IntersectionObserver === 'function') {
+        observer = new IntersectionObserver(
+          (entries) => {
+            const entry = entries[entries.length - 1];
+            if (
+              entry &&
+              entry.intersectionRatio >= EVIDENCE_STAGE_VISIBLE_RATIO - 0.001
+            ) {
+              release();
+            }
+          },
+          {
+            rootMargin: `-${navBarHeightPx(window.innerWidth)}px 0px 0px 0px`,
+            threshold: [EVIDENCE_STAGE_VISIBLE_RATIO],
+          },
+        );
+        observer.observe(stageEl);
+      }
+    },
+    [cancelIgniteHold, stepGlowFrame],
   );
 
   // Transition glow/scrim state when claimHighlight or waferIndex changes (§5.4)
@@ -510,9 +588,9 @@ const OverlayCanvasImpl = React.forwardRef<
       anim.claimId = null;
       anim.startTimeMs = now;
       anim.scrimStartAlpha = anim.liveScrimAlpha;
-      anim.outgoingStartAlphas = snapshotAlphas;
-      anim.outgoingIndices = null;
-      anim.outgoingLiveAlphas = null;
+      // Veil, rims, and bloom fade together from their current alpha; an outgoing set from a
+      // switch keeps fading on its own clock (premium §8.3 Clear)
+      anim.exitStartAlphas = snapshotAlphas;
       rafIdRef.current = requestAnimationFrame(stepGlowFrame);
       return;
     }
@@ -528,7 +606,8 @@ const OverlayCanvasImpl = React.forwardRef<
     const isSameClaimNewWafer =
       anim.claimId === nextClaimId && anim.waferIndex !== waferIndex;
 
-    if (reduced || (isSameClaimNewWafer && anim.phase === 'settled')) {
+    // Same evidence on another wafer draws at full alpha, no replayed ignite (premium §8.7)
+    if (reduced || isSameClaimNewWafer) {
       stopGlowRaf();
       const alphas = new Float32Array(schedule.dieIndices.length);
       alphas.fill(1);
@@ -542,6 +621,7 @@ const OverlayCanvasImpl = React.forwardRef<
         liveScrimAlpha: DIM_SCRIM_MAX_ALPHA,
         liveDieIndices: schedule.dieIndices,
         liveDieAlphas: alphas,
+        exitStartAlphas: null,
         outgoingIndices: null,
         outgoingStartAlphas: null,
         outgoingLiveAlphas: null,
@@ -562,7 +642,7 @@ const OverlayCanvasImpl = React.forwardRef<
     let outgoingStartAlphas: Float32Array | null = null;
     let outgoingLiveAlphas: Float32Array | null = null;
     if (
-      anim.claimId !== null &&
+      anim.phase !== 'idle' &&
       anim.claimId !== nextClaimId &&
       anim.waferIndex === waferIndex &&
       anim.liveDieIndices.length > 0
@@ -586,6 +666,7 @@ const OverlayCanvasImpl = React.forwardRef<
       liveScrimAlpha: startScrim,
       liveDieIndices: schedule.dieIndices,
       liveDieAlphas: nextAlphas,
+      exitStartAlphas: null,
       outgoingIndices,
       outgoingStartAlphas,
       outgoingLiveAlphas,
@@ -593,6 +674,27 @@ const OverlayCanvasImpl = React.forwardRef<
     };
 
     paintCurrentNow();
+
+    // Premium §8.3 mobile: when the stage is less than 50 % visible (the page is scrolling to
+    // it), the ignite starts once >= 50 % is visible or after 400 ms, whichever comes first.
+    const stageEl =
+      wrapperRef.current?.closest<HTMLElement>('[data-testid="wafer-stage"]') ??
+      wrapperRef.current;
+    const stageRect = stageEl?.getBoundingClientRect();
+    if (
+      stageEl &&
+      stageRect &&
+      typeof window !== 'undefined' &&
+      shouldDeferEvidenceForStage(
+        window.innerWidth,
+        window.innerHeight,
+        stageRect.top,
+        stageRect.height,
+      )
+    ) {
+      holdIgnite(stageEl);
+      return;
+    }
     rafIdRef.current = requestAnimationFrame(stepGlowFrame);
   }, [
     claimHighlight,
@@ -602,6 +704,7 @@ const OverlayCanvasImpl = React.forwardRef<
     paintCurrentNow,
     stepGlowFrame,
     stopGlowRaf,
+    holdIgnite,
   ]);
 
   React.useEffect(() => {
@@ -704,6 +807,7 @@ const OverlayCanvasImpl = React.forwardRef<
               liveScrimAlpha: DIM_SCRIM_MAX_ALPHA,
               liveDieIndices: schedule.dieIndices,
               liveDieAlphas: alphas,
+              exitStartAlphas: null,
               outgoingIndices: null,
               outgoingStartAlphas: null,
               outgoingLiveAlphas: null,
@@ -749,6 +853,7 @@ const OverlayCanvasImpl = React.forwardRef<
         waferHighlightStats.waferOuterBandCount
       }
       data-glow-phase="idle"
+      data-ignite-wait="false"
       data-pinned-die=""
       data-scrim-alpha="0.000"
       aria-hidden="true"
