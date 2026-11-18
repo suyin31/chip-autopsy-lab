@@ -1,5 +1,6 @@
 'use client';
 
+import { useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
@@ -11,6 +12,12 @@ import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import { Button } from '@/ui/primitives/button';
 import { CountUp } from '@/ui/primitives/count-up';
+import {
+  DISCLOSURE_SCOPE_ATTR,
+  DisclosureGlide,
+  DisclosureListItem,
+  useDisclosureList,
+} from '@/ui/primitives/disclosure';
 import { SegmentedControl } from '@/ui/primitives/segmented-control';
 import { Tooltip } from '@/ui/primitives/tooltip';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
@@ -89,7 +96,10 @@ export function BinParetoChart({
   const synced = storeLot === lot;
 
   const [mode, setMode] = React.useState<BinMode>('SBIN');
-  const [expanded, setExpanded] = React.useState(false);
+  // Premium §8.6: "Show all N bins" mounts the rows with a fade; the toggle glides
+  const reduced = Boolean(useReducedMotion());
+  const disclosure = useDisclosureList(reduced);
+  const { expanded } = disclosure;
 
   // Premium §11.5: share pills count up with the rows that mount with the lot; rows that mount
   // later (mode switch, "Show all") show their final value at once (§8.14)
@@ -173,12 +183,16 @@ export function BinParetoChart({
     return codes;
   }, [synced, claimHighlight, mode, lot.dies]);
 
-  const rows = selectParetoRows(
-    pareto.entries,
-    expanded,
-    (entry) =>
-      entry.binCode === activeFilterCode || highlightedCodes.has(entry.binCode),
-  );
+  const isPinnedRow = (entry: (typeof pareto.entries)[number]): boolean =>
+    entry.binCode === activeFilterCode || highlightedCodes.has(entry.binCode);
+  const rows = selectParetoRows(pareto.entries, expanded, isPinnedRow);
+  const collapsedCodes = expanded
+    ? new Set(
+        selectParetoRows(pareto.entries, false, isPinnedRow).map(
+          (entry) => entry.binCode,
+        ),
+      )
+    : null;
 
   const maxCount = pareto.entries[0]?.count ?? 0;
 
@@ -206,6 +220,7 @@ export function BinParetoChart({
       aria-labelledby={headingId}
       data-testid="bin-pareto"
       data-mode={mode}
+      {...{ [DISCLOSURE_SCOPE_ATTR]: '' }}
       className={cn(
         'rounded-2xl bg-surface p-4 shadow-card sm:p-6',
         className,
@@ -266,6 +281,7 @@ export function BinParetoChart({
           </div>
 
           <ul
+            ref={disclosure.listRef}
             data-testid="bin-pareto-rows"
             aria-labelledby={chartLabelId}
             className="@container mt-2 -mx-3 flex flex-col"
@@ -287,7 +303,16 @@ export function BinParetoChart({
                 </Untranslated>
               );
               return (
-                <li key={entry.binCode} className="list-none">
+                <DisclosureListItem
+                  key={entry.binCode}
+                  revealOnMount={disclosure.revealNewRows}
+                  reduced={reduced}
+                  layoutEpoch={disclosure.layoutEpoch}
+                  extra={
+                    collapsedCodes !== null && !collapsedCodes.has(entry.binCode)
+                  }
+                  className="list-none"
+                >
                   <button
                     type="button"
                     data-testid="bin-pareto-row"
@@ -349,25 +374,30 @@ export function BinParetoChart({
                       />
                     </span>
                   </button>
-                </li>
+                </DisclosureListItem>
               );
             })}
           </ul>
 
           {pareto.entries.length > PARETO_COLLAPSED_ROW_COUNT ? (
-            <Button
-              variant="text"
-              data-testid="bin-pareto-expand"
-              aria-expanded={expanded}
-              onClick={() => setExpanded((v) => !v)}
+            <DisclosureGlide
+              reduced={reduced}
+              layoutEpoch={disclosure.layoutEpoch}
               className="mt-4"
             >
-              {expanded
-                ? t('pareto.showFewer')
-                : t('pareto.showAll', {
-                    count: formatInteger(pareto.entries.length),
-                  })}
-            </Button>
+              <Button
+                variant="text"
+                data-testid="bin-pareto-expand"
+                aria-expanded={expanded}
+                onClick={disclosure.toggle}
+              >
+                {expanded
+                  ? t('pareto.showFewer')
+                  : t('pareto.showAll', {
+                      count: formatInteger(pareto.entries.length),
+                    })}
+              </Button>
+            </DisclosureGlide>
           ) : null}
         </>
       )}

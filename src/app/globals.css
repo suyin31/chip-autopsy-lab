@@ -967,13 +967,12 @@
  * Sonner toast motion (redesign.md §4.13, premium §7.13). Unlayered with repeated classes so it outranks
  * Sonner's injected stylesheet while leaving its stack/expand positions intact: enter
  * y 16 -> 0 + fade on spring-ui; exit fade + y -> 8 in 160 ms (inside Sonner's 200 ms
- * unmount delay); stack moves keep the spring.
+ * unmount delay); stack moves keep the spring (premium §8.12). Height never animates (§8).
  */
 .cal-toaster.cal-toaster [data-sonner-toast] {
   transition:
     transform 450ms var(--ease-spring-ui),
-    opacity 200ms var(--ease-out),
-    height 450ms var(--ease-spring-ui);
+    opacity 450ms var(--ease-spring-ui);
 }
 
 .cal-toaster.cal-toaster [data-sonner-toast][data-mounted='false'][data-y-position='bottom'] {

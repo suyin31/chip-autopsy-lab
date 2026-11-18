@@ -186,8 +186,8 @@ function isStageHudEventTarget(target: EventTarget | null): boolean {
  * Performance guarantees:
  * - Zero React re-renders of `WaferMapCanvas` during pointer hover, wheel zoom, pinch, drag pan,
  *   inertia coasting, `Shift+drag` box selection, or `120 ms` settle re-raster.
- * - Two-stacked-base-canvas `160 ms` `ease-out` wafer crossfade on click/single-step, and `0 ms`
- *   instant swap on held `ArrowRight` (`event.repeat === true`) or `prefers-reduced-motion`.
+ * - Two-stacked-base-canvas `160 ms` `ease-out` wafer crossfade on a thumbnail click, and a `0 ms`
+ *   swap on every wafer key (arrows, Home/End, PageUp/PageDown, repeat) or `prefers-reduced-motion`.
  */
 /**
  * Visually hidden table of failing dies on the active wafer (§4.7, §6.8). It follows the
@@ -285,6 +285,7 @@ function WaferMapCanvasImpl({
   const cameraWrapperRef = React.useRef<HTMLDivElement>(null);
   const crossfadeCanvasRef = React.useRef<HTMLCanvasElement>(null);
   const crossfadeAnimRef = React.useRef<Animation | null>(null);
+  const crossfadeScratchRef = React.useRef<HTMLCanvasElement | null>(null);
   const ambientShadowRef = React.useRef<HTMLDivElement>(null);
   const contactShadowRef = React.useRef<HTMLDivElement>(null);
   const haloRef = React.useRef<HTMLDivElement>(null);
@@ -1913,9 +1914,34 @@ function WaferMapCanvasImpl({
     if (!cfCtx) {
       return;
     }
+    // §8.7 interrupt: a click mid-fade snapshots the frame on screen (new wafer under the
+    // outgoing snapshot at its current opacity), then restarts the fade from 1
+    let outgoingAlpha = 0;
+    let outgoing: HTMLCanvasElement | null = null;
+    if (crossfadeAnimRef.current) {
+      outgoingAlpha = Number(getComputedStyle(cfEl).opacity) || 0;
+      if (outgoingAlpha > 0) {
+        outgoing = crossfadeScratchRef.current ?? document.createElement('canvas');
+        crossfadeScratchRef.current = outgoing;
+        outgoing.width = cfEl.width;
+        outgoing.height = cfEl.height;
+        const scratchCtx = outgoing.getContext('2d');
+        if (scratchCtx) {
+          scratchCtx.clearRect(0, 0, outgoing.width, outgoing.height);
+          scratchCtx.drawImage(cfEl, 0, 0);
+        } else {
+          outgoing = null;
+        }
+      }
+    }
     cfCtx.setTransform(1, 0, 0, 1, 0, 0);
     cfCtx.clearRect(0, 0, cfEl.width, cfEl.height);
     cfCtx.drawImage(baseEl, 0, 0);
+    if (outgoing) {
+      cfCtx.globalAlpha = Math.min(1, outgoingAlpha);
+      cfCtx.drawImage(outgoing, 0, 0);
+      cfCtx.globalAlpha = 1;
+    }
     if (crossfadeAnimRef.current) {
       crossfadeAnimRef.current.cancel();
       crossfadeAnimRef.current = null;
@@ -1976,7 +2002,7 @@ function WaferMapCanvasImpl({
     [cancelCrossfadeImmediately, getRasterCamera, lot, startWaferCrossfade],
   );
 
-  // §5.8: 160 ms ease-out wafer crossfade on click/single-step; 0 ms instant swap on key-repeat or reduced motion
+  // §8.7: 160 ms ease-out wafer crossfade on a thumbnail click; 0 ms swap on keys or reduced motion
   const handleSelectWafer = React.useCallback(
     (waferIndex: number, options?: WaferSelectOptions): void => {
       const currentIdx = store.getState().activeWaferIndex;

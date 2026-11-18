@@ -2,14 +2,13 @@
 
 import {
   Activity,
-  ChevronDown,
   CircleDashed,
   Crosshair,
   Layers,
   type LucideIcon,
   Minus,
 } from 'lucide-react';
-import { motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import type {
   FindingKind,
@@ -20,7 +19,12 @@ import type {
 import type { GlossaryTermId } from '@/core/i18n';
 import { GlossaryText, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
-import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
+import {
+  DISCLOSURE_SCOPE_ATTR,
+  DisclosureChevron,
+  disclosureLayoutTransition,
+  useDisclosureReveal,
+} from '@/ui/primitives/disclosure';
 import { renderWithUntranslatedTokens } from './render-untranslated';
 
 /** Terms allowed in the expanded engine sentence, in priority order (premium §7.6.4). */
@@ -132,6 +136,90 @@ function writeCausesOpen(lotKey: string, open: boolean): void {
   }
 }
 
+interface RevealProps {
+  readonly revealOnMount: boolean;
+  readonly reduced: boolean;
+}
+
+/** Expanded finding body (premium §8.6): mounts in flow, fades in with -4 px, fades out over 100 ms. */
+function FindingDetail({
+  revealOnMount,
+  reduced,
+  id,
+  children,
+}: RevealProps & {
+  readonly id: string;
+  readonly children: React.ReactNode;
+}): React.JSX.Element {
+  const reveal = useDisclosureReveal(revealOnMount, reduced);
+  return (
+    <motion.div
+      {...reveal}
+      id={id}
+      data-testid="finding-expanded-detail"
+      // Premium §7.6.4: padding 0 16 16 44 puts the text on the headline's left edge
+      className="pb-4 pl-11 pr-4"
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/** "Possible causes" body (premium §8.6), same motion as the finding body. */
+function CausesPanel({
+  revealOnMount,
+  reduced,
+  id,
+  label,
+  children,
+}: RevealProps & {
+  readonly id: string;
+  readonly label: string;
+  readonly children: React.ReactNode;
+}): React.JSX.Element {
+  const reveal = useDisclosureReveal(revealOnMount, reduced);
+  return (
+    <motion.div
+      {...reveal}
+      id={id}
+      role="region"
+      aria-label={label}
+      data-testid="possible-causes-panel"
+      className="px-5 pb-4 pt-1"
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/** A finding row; rows shown by "Show N more findings" fade in like a disclosure body (premium §8.6). */
+function FindingListItem({
+  revealOnMount,
+  reduced,
+  className,
+  children,
+  ...rest
+}: RevealProps & {
+  readonly className?: string;
+  readonly children: React.ReactNode;
+  readonly 'data-active'?: 'true';
+  readonly 'data-pressed'?: 'true';
+  readonly 'data-kind'?: string;
+}): React.JSX.Element {
+  const reveal = useDisclosureReveal(revealOnMount, reduced);
+  return (
+    <motion.li
+      {...reveal}
+      {...rest}
+      layout="position"
+      transition={disclosureLayoutTransition(reduced)}
+      className={className}
+    >
+      {children}
+    </motion.li>
+  );
+}
+
 /**
  * Findings card and "Possible causes" disclosure (premium §7.6):
  * - "Findings" label with its count, then a `surface` card (`r-xl`, `shadow-card`, padding 4) of up
@@ -167,7 +255,7 @@ export function FindingsList({
     children: React.ReactNode,
   ): React.ReactNode => (renderRiseBlock ? renderRiseBlock(id, children) : children);
   const { t, tPlural, formatInteger } = useT();
-  const shouldReduceMotion = useReducedMotion();
+  const reduced = Boolean(useReducedMotion());
   const [hypothesesOpen, setHypothesesOpen] = React.useState<boolean>(
     defaultHypothesesOpen,
   );
@@ -195,9 +283,23 @@ export function FindingsList({
     });
   };
 
-  const layoutTransition = shouldReduceMotion
-    ? { duration: 0 }
-    : SPRING_TOKENS.ui;
+  const layoutTransition = disclosureLayoutTransition(reduced);
+
+  // Premium §8.6: content mounting after the first render (a click, Cmd-K, a claim elsewhere) fades
+  // in; content present at mount shows at once. Rows revealed by "Show N more" are flagged on click.
+  const hasMountedRef = React.useRef(false);
+  React.useEffect(() => {
+    hasMountedRef.current = true;
+  }, []);
+  const revealMoreRowsRef = React.useRef(false);
+  React.useEffect(() => {
+    revealMoreRowsRef.current = false;
+  });
+  // A closed body unmounts after its 100 ms fade; re-rendering then lets the siblings glide up
+  const [, setLayoutTick] = React.useState(0);
+  const handleExitComplete = React.useCallback((): void => {
+    setLayoutTick((n) => n + 1);
+  }, []);
 
   const handleRowPointerDown = (
     rowKey: string,
@@ -228,7 +330,11 @@ export function FindingsList({
   const basedOnFinding = basedOnIndex >= 0 ? findings[basedOnIndex] : undefined;
 
   return (
-    <div data-testid="verdict-findings-section" className={className}>
+    <div
+      data-testid="verdict-findings-section"
+      {...{ [DISCLOSURE_SCOPE_ATTR]: '' }}
+      className={className}
+    >
       {rise(
         'findings',
         <>
@@ -287,10 +393,12 @@ export function FindingsList({
                     });
 
               return (
-                <motion.li
+                <FindingListItem
                   key={row.claimId}
-                  layout="position"
-                  transition={layoutTransition}
+                  revealOnMount={
+                    revealMoreRowsRef.current && idx >= FINDINGS_VISIBLE_LIMIT
+                  }
+                  reduced={reduced}
                   data-active={isSelected ? 'true' : undefined}
                   data-pressed={isPressed ? 'true' : undefined}
                   data-kind={row.kind}
@@ -381,37 +489,30 @@ export function FindingsList({
                             {trailingCountLabel}
                           </span>
                         )}
-                        <ChevronDown
-                          aria-hidden="true"
+                        <DisclosureChevron
                           data-testid="finding-chevron"
-                          strokeWidth={1.5}
+                          open={isSelected}
+                          reduced={reduced}
                           className={cn(
-                            'size-3 shrink-0 transition-[rotate,color] duration-160 ease-out',
+                            'transition-colors duration-120 ease-out',
                             isSelected
-                              ? 'rotate-180 text-text-secondary'
+                              ? 'text-text-secondary'
                               : 'text-text-tertiary group-hover/finding:text-text-secondary',
                           )}
                         />
                       </span>
                     </button>
 
-                    {isSelected ? (
-                      <motion.div
+                    <AnimatePresence
+                      initial={false}
+                      onExitComplete={handleExitComplete}
+                    >
+                      {isSelected ? (
+                      <FindingDetail
+                        key="detail"
                         id={detailId}
-                        data-testid="finding-expanded-detail"
-                        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={
-                          shouldReduceMotion
-                            ? { duration: 0 }
-                            : {
-                                delay: 0.04,
-                                duration: MOTION_TOKENS.durBaseMs / 1000,
-                                ease: MOTION_TOKENS.easeOutTuple,
-                              }
-                        }
-                        // Premium §7.6.4: padding 0 16 16 44 puts the text on the headline's left edge
-                        className="pb-4 pl-11 pr-4"
+                        revealOnMount={hasMountedRef.current}
+                        reduced={reduced}
                       >
                         <p
                           data-testid="finding-engine-sentence"
@@ -450,10 +551,11 @@ export function FindingsList({
                         >
                           {metaLabel}
                         </p>
-                      </motion.div>
-                    ) : null}
+                      </FindingDetail>
+                      ) : null}
+                    </AnimatePresence>
                   </div>
-                </motion.li>
+                </FindingListItem>
               );
             })}
 
@@ -470,7 +572,10 @@ export function FindingsList({
                 <button
                   type="button"
                   data-testid="findings-show-more"
-                  onClick={() => setShowAll(true)}
+                  onClick={() => {
+                    revealMoreRowsRef.current = true;
+                    setShowAll(true);
+                  }}
                   className={cn(
                     'flex h-11 w-full cursor-pointer appearance-none items-center justify-center rounded-lg border-0 bg-transparent px-4 type-control text-text-secondary',
                     'transition-[background-color,color] duration-120 ease-out hover:bg-fill-1 hover:text-text-primary active:bg-fill-2',
@@ -504,7 +609,7 @@ export function FindingsList({
             type="button"
             data-testid="autopsy-hypotheses-toggle"
             aria-expanded={hypothesesOpen}
-            aria-controls={hypothesesPanelId}
+            aria-controls={hypothesesOpen ? hypothesesPanelId : undefined}
             onPointerDown={(e) => handleRowPointerDown('possible-causes', e)}
             onPointerUp={clearPressedRow}
             onPointerLeave={clearPressedRow}
@@ -529,26 +634,24 @@ export function FindingsList({
               >
                 {formatInteger(hypotheses.length)}
               </span>
-              <ChevronDown
-                aria-hidden="true"
-                strokeWidth={1.5}
-                className={cn(
-                  'size-3 shrink-0 text-text-tertiary transition-[rotate] duration-160 ease-out',
-                  hypothesesOpen && 'rotate-180',
-                )}
+              <DisclosureChevron
+                data-testid="possible-causes-chevron"
+                open={hypothesesOpen}
+                reduced={reduced}
+                className="text-text-tertiary"
               />
             </span>
           </button>
 
-          <div
-            id={hypothesesPanelId}
-            role="region"
-            aria-label={possibleCausesHeading}
-            hidden={!hypothesesOpen}
-            className={hypothesesOpen ? 'px-5 pb-4 pt-1' : 'hidden'}
-          >
+          <AnimatePresence initial={false} onExitComplete={handleExitComplete}>
             {hypothesesOpen ? (
-              <>
+              <CausesPanel
+                key="causes"
+                id={hypothesesPanelId}
+                label={possibleCausesHeading}
+                revealOnMount={hasMountedRef.current}
+                reduced={reduced}
+              >
                 <p
                   data-testid="possible-causes-note"
                   className="type-subhead text-text-tertiary"
@@ -588,9 +691,9 @@ export function FindingsList({
                     </div>
                   ))}
                 </div>
-              </>
+              </CausesPanel>
             ) : null}
-          </div>
+          </AnimatePresence>
         </motion.div>,
       ) : null}
     </div>

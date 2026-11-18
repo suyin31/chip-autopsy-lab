@@ -10,7 +10,7 @@ import { MENU_SURFACE_CLASS } from './surfaces';
 
 export type DropdownMenuAlign = 'start' | 'center' | 'end';
 export type DropdownMenuOpenSource = 'pointer' | 'keyboard';
-export type DropdownMenuOpenAnimation = 'spring' | 'pointer-fade';
+const MENU_REDUCED_FADE_S = 0.12;
 
 export interface AnchorRectLike {
   readonly top: number;
@@ -211,7 +211,8 @@ export function DropdownMenu({
         setOpenSource(source);
         setInstantClose(false);
       } else {
-        setInstantClose(options?.instant === true);
+        // Premium §8.13: a keyboard close is 0 ms, like a keyboard open
+        setInstantClose(options?.instant === true || source === 'keyboard');
       }
       if (!isControlled) {
         setUncontrolledOpen(nextOpen);
@@ -360,14 +361,12 @@ export interface DropdownMenuContentProps
   readonly align?: DropdownMenuAlign;
   readonly sideOffset?: number;
   readonly expectedWidthPx?: number;
-  readonly openAnimation?: DropdownMenuOpenAnimation;
 }
 
 export function DropdownMenuContent({
   align = 'center',
   sideOffset = 8,
   expectedWidthPx = 260,
-  openAnimation = 'spring',
   className,
   children,
   ...props
@@ -564,36 +563,35 @@ export function DropdownMenuContent({
     }
   };
 
-  const isInstantOpen =
-    Boolean(shouldReduceMotion) ||
-    (openAnimation === 'pointer-fade' && openSource === 'keyboard');
+  // Premium §8.13: pointer open `opacity 0 -> 1` + `scale(0.97 -> 1)` from the trigger side on
+  // `spring-ui`; keyboard open and close 0 ms; pointer close `opacity -> 0` over `dur-2`; reduced
+  // motion fades opacity only over 120 ms. Locale rows close at once (§8.14).
+  const reduced = Boolean(shouldReduceMotion);
+  const isInstantOpen = !reduced && openSource === 'keyboard';
 
   const initialMotion = isInstantOpen
     ? { opacity: 1, scale: 1 }
-    : openAnimation === 'pointer-fade'
+    : reduced
       ? { opacity: 0, scale: 1 }
-      : { opacity: 0, scale: 0.96 };
+      : { opacity: 0, scale: 0.97 };
 
   const enterTransition = isInstantOpen
     ? { duration: 0 }
-    : openAnimation === 'pointer-fade'
-      ? { duration: 0.12, ease: MOTION_TOKENS.easeOutTuple }
+    : reduced
+      ? { duration: MENU_REDUCED_FADE_S, ease: 'linear' as const }
       : SPRING_TOKENS.ui;
 
-  const exitMotion =
-    shouldReduceMotion || instantClose
-      ? { opacity: 0, scale: 1, transition: { duration: 0 } }
-      : openAnimation === 'pointer-fade'
-        ? {
-            opacity: 0,
-            scale: 1,
-            transition: { duration: 0.12, ease: MOTION_TOKENS.easeOutTuple },
-          }
-        : {
-            opacity: 0,
-            scale: 0.98,
-            transition: { duration: 0.12, ease: MOTION_TOKENS.easeOutTuple },
-          };
+  const exitMotion = instantClose
+    ? { opacity: 0, transition: { duration: 0 } }
+    : {
+        opacity: 0,
+        transition: reduced
+          ? { duration: MENU_REDUCED_FADE_S, ease: 'linear' as const }
+          : {
+              duration: MOTION_TOKENS.dur2Ms / 1000,
+              ease: MOTION_TOKENS.easeOutTuple,
+            },
+      };
 
   const menuNode = (
     <AnimatePresence initial={false}>
@@ -682,7 +680,7 @@ export const DropdownMenuItem = React.forwardRef<
       return;
     }
     onSelect?.();
-    setOpenWithSource(false, 'pointer', {
+    setOpenWithSource(false, event.detail === 0 ? 'keyboard' : 'pointer', {
       returnFocus: true,
       instant: instantClose,
     });
@@ -756,7 +754,7 @@ export const DropdownMenuRadioItem = React.forwardRef<
       return;
     }
     onSelect?.(value);
-    setOpenWithSource(false, 'pointer', {
+    setOpenWithSource(false, event.detail === 0 ? 'keyboard' : 'pointer', {
       returnFocus: true,
       instant: instantClose,
     });

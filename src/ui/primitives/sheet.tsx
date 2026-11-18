@@ -25,6 +25,7 @@ export interface ModalSheetProps {
 }
 
 const DISMISS_VELOCITY_PX_PER_S = 500;
+const REDUCED_FADE = { duration: 0.12, ease: 'linear' } as const;
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -248,18 +249,25 @@ export function ModalSheet({
           <motion.div
             aria-hidden="true"
             data-testid="sheet-scrim"
-            initial={{ opacity: shouldReduceMotion ? 1 : 0 }}
+            // Premium §8.13: scrim opacity `dur-3` in, `dur-2` out; reduced motion 120 ms
+            initial={{ opacity: 0 }}
             animate={{
               opacity: 1,
               transition: shouldReduceMotion
-                ? { duration: 0 }
-                : { duration: 0.12, ease: MOTION_TOKENS.easeOutTuple },
+                ? REDUCED_FADE
+                : {
+                    duration: MOTION_TOKENS.dur3Ms / 1000,
+                    ease: MOTION_TOKENS.easeOutTuple,
+                  },
             }}
             exit={{
               opacity: 0,
               transition: shouldReduceMotion
-                ? { duration: 0 }
-                : { duration: 0.12, ease: MOTION_TOKENS.easeOutTuple },
+                ? REDUCED_FADE
+                : {
+                    duration: MOTION_TOKENS.dur2Ms / 1000,
+                    ease: MOTION_TOKENS.easeOutTuple,
+                  },
             }}
             onClick={onClose}
             className="sheet-scrim-surface absolute inset-0"
@@ -273,37 +281,32 @@ export function ModalSheet({
             aria-describedby={descriptionId}
             data-testid={dataTestId}
             tabIndex={-1}
+            // Premium §8.13: dialog `opacity 0 -> 1` + `scale(0.98 -> 1)` on `spring-ui`, closes with
+            // `opacity -> 0` over `dur-2`; the bottom sheet slides `translateY(100% <-> 0)` on
+            // `spring-ui` both ways; reduced motion fades opacity only over 120 ms
             initial={
               shouldReduceMotion
-                ? { opacity: 1 }
+                ? { opacity: 0 }
                 : isMobile
                   ? { opacity: 1, y: '100%' }
-                  : { opacity: 0, scale: 0.96 }
+                  : { opacity: 0, scale: 0.98 }
             }
             animate={
               shouldReduceMotion
-                ? { opacity: 1, transition: { duration: 0 } }
+                ? { opacity: 1, transition: REDUCED_FADE }
                 : isMobile
                   ? { opacity: 1, y: '0%', transition: SPRING_TOKENS.ui }
                   : { opacity: 1, scale: 1, transition: SPRING_TOKENS.ui }
             }
             exit={
               shouldReduceMotion
-                ? { opacity: 0, transition: { duration: 0 } }
+                ? { opacity: 0, transition: REDUCED_FADE }
                 : isMobile
-                  ? {
-                      opacity: 0,
-                      y: '100%',
-                      transition: {
-                        duration: 0.16,
-                        ease: MOTION_TOKENS.easeOutTuple,
-                      },
-                    }
+                  ? { y: '100%', transition: SPRING_TOKENS.ui }
                   : {
                       opacity: 0,
-                      scale: 0.98,
                       transition: {
-                        duration: 0.12,
+                        duration: MOTION_TOKENS.dur2Ms / 1000,
                         ease: MOTION_TOKENS.easeOutTuple,
                       },
                     }

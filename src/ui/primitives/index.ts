@@ -31,7 +31,6 @@ export {
   DropdownMenuItem,
   type DropdownMenuItemProps,
   DropdownMenuLabel,
-  type DropdownMenuOpenAnimation,
   type DropdownMenuOpenSource,
   type DropdownMenuProps,
   DropdownMenuRadioItem,

@@ -67,7 +67,8 @@ export interface WaferSelectorProps {
  * - Edge fade and desktop chevrons appear only on a side that can scroll, toggled imperatively
  *   from the scroll position (no React render)
  * - Roving `tabIndex`: `ArrowLeft`/`ArrowRight` ±1, `PageUp`/`PageDown` ±5, `Home`/`End`;
- *   held key-repeat (`event.repeat === true`) passes `{ instant: true }` for `0 ms` stage swap
+ *   every key step (single press or held repeat) passes `{ instant: true }` for a `0 ms` stage
+ *   swap and an `instant` strip scroll; only a thumbnail click cross-fades (premium §8.7)
  * - Keyboard steps never render React or read layout in the keydown handler: selection
  *   attributes flip imperatively, the stage repaints via `onPreviewWafer`, the strip scrolls in
  *   the next frame from cached item offsets, and the store commit is deferred until stepping pauses
@@ -389,13 +390,14 @@ export const WaferSelector = React.memo(function WaferSelector({
     return null;
   }
 
-  const focusAndSelect = (nextIndex: number, isRepeat: boolean): void => {
+  const focusAndSelect = (nextIndex: number): void => {
     const clamped = Math.min(count - 1, Math.max(0, nextIndex));
     const prevIndex = liveActiveRef.current;
     if (clamped === prevIndex) {
       return;
     }
-    const instant = isRepeat || Boolean(shouldReduceMotion);
+    // Premium §8.7: arrow keys, Home/End, PageUp/PageDown, and key repeat swap at 0 ms
+    const instant = true;
     const nextEl = itemRefs.current[clamped];
     const prevEl = itemRefs.current[prevIndex];
     // Focus before mutating attributes so focus() finds clean style and forces no recalc
@@ -434,39 +436,38 @@ export const WaferSelector = React.memo(function WaferSelector({
     if (typeof performance !== "undefined") {
       event.currentTarget.dataset.ack = String(performance.now());
     }
-    const repeat = event.repeat === true;
     const baseIndex = liveActiveRef.current;
     switch (event.key) {
       case "ArrowRight":
       case "ArrowDown": {
         event.preventDefault();
-        focusAndSelect(Math.min(count - 1, baseIndex + 1), repeat);
+        focusAndSelect(Math.min(count - 1, baseIndex + 1));
         break;
       }
       case "ArrowLeft":
       case "ArrowUp": {
         event.preventDefault();
-        focusAndSelect(Math.max(0, baseIndex - 1), repeat);
+        focusAndSelect(Math.max(0, baseIndex - 1));
         break;
       }
       case "PageDown": {
         event.preventDefault();
-        focusAndSelect(Math.min(count - 1, baseIndex + 5), repeat);
+        focusAndSelect(Math.min(count - 1, baseIndex + 5));
         break;
       }
       case "PageUp": {
         event.preventDefault();
-        focusAndSelect(Math.max(0, baseIndex - 5), repeat);
+        focusAndSelect(Math.max(0, baseIndex - 5));
         break;
       }
       case "Home": {
         event.preventDefault();
-        focusAndSelect(0, repeat);
+        focusAndSelect(0);
         break;
       }
       case "End": {
         event.preventDefault();
-        focusAndSelect(count - 1, repeat);
+        focusAndSelect(count - 1);
         break;
       }
       default:

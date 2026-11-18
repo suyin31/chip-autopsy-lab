@@ -1,11 +1,12 @@
 'use client';
 
-import { useReducedMotion } from 'motion/react';
+import { animate, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/primitives/cn';
 import { MATERIAL_THICK_CLASS } from '@/ui/primitives/surfaces';
+import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
 import type { LiveBoxSelectStats } from './linked-interactions';
 
 export const SELECTION_POPOVER_WIDTH_PX = 240 as const;
@@ -90,6 +91,49 @@ export const SelectionPopover = React.forwardRef<
     [t, tPlural, formatInteger, formatPercent],
   );
 
+  // Premium §8.13: enters with `scale(0.96 -> 1)` + opacity on `spring-snappy`, leaves with
+  // opacity over `dur-1`; reduced motion fades opacity only over 120 ms. Both start from the
+  // card's current values, so a re-entry during the fade reverses it.
+  const fadeGenRef = React.useRef(0);
+  const showCard = React.useCallback(
+    (cardEl: HTMLDivElement): void => {
+      fadeGenRef.current += 1;
+      const outerEl = outerRef.current;
+      if (outerEl) outerEl.style.visibility = 'visible';
+      if (shouldReduceMotion) {
+        cardEl.style.transform = 'none';
+        animate(cardEl, { opacity: 1 }, { duration: 0.12, ease: 'linear' });
+        return;
+      }
+      if (Number(getComputedStyle(cardEl).opacity) === 0) {
+        animate(cardEl, { opacity: 0, scale: 0.96 }, { duration: 0 });
+      }
+      animate(cardEl, { opacity: 1, scale: 1 }, SPRING_TOKENS.snappy);
+    },
+    [shouldReduceMotion],
+  );
+  const hideCard = React.useCallback((): void => {
+    const cardEl = cardRef.current;
+    const outerEl = outerRef.current;
+    if (!cardEl) return;
+    const gen = (fadeGenRef.current += 1);
+    const controls = animate(
+      cardEl,
+      { opacity: 0 },
+      shouldReduceMotion
+        ? { duration: 0.12, ease: 'linear' }
+        : {
+            duration: MOTION_TOKENS.dur1Ms / 1000,
+            ease: MOTION_TOKENS.easeOutTuple,
+          },
+    );
+    void controls.then(() => {
+      if (fadeGenRef.current === gen && outerEl) {
+        outerEl.style.visibility = 'hidden';
+      }
+    });
+  }, [shouldReduceMotion]);
+
   React.useImperativeHandle(
     ref,
     () => ({
@@ -100,29 +144,17 @@ export const SelectionPopover = React.forwardRef<
         if (el) {
           el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
           el.style.transformOrigin = transformOrigin;
-          el.style.visibility = visible ? 'visible' : 'hidden';
+          // Hiding waits for the card's fade (hideCard)
+          if (visible) el.style.visibility = 'visible';
           el.dataset.visible = visible ? 'true' : 'false';
           el.setAttribute('aria-hidden', visible ? 'false' : 'true');
         }
         if (cardEl) {
           cardEl.style.transformOrigin = transformOrigin;
           if (visible && !wasVisibleRef.current) {
-            cardEl.style.opacity = '1';
-            cardEl.style.transform = 'scale(1)';
-            if (!shouldReduceMotion && typeof cardEl.animate === 'function') {
-              cardEl.animate(
-                [
-                  { opacity: 0, transform: 'scale(0.96)' },
-                  { opacity: 1, transform: 'scale(1)' },
-                ],
-                {
-                  duration: 200,
-                  easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-                },
-              );
-            }
+            showCard(cardEl);
           } else if (!visible && wasVisibleRef.current) {
-            cardEl.style.opacity = '0';
+            hideCard();
           }
         }
         wasVisibleRef.current = visible;
@@ -158,10 +190,22 @@ export const SelectionPopover = React.forwardRef<
         return h > 0 ? h : fallback;
       },
     }),
-    [formatStatsStrings, isCommitted, shouldReduceMotion],
+    [formatStatsStrings, hideCard, isCommitted, showCard],
   );
 
   const committedShown = isCommitted && committedStats !== null;
+  // A cleared commit fades out like a live hide: React has just written `visibility: hidden`,
+  // so keep the frame visible until the fade ends
+  const prevCommittedShownRef = React.useRef(committedShown);
+  React.useLayoutEffect(() => {
+    const wasShown = prevCommittedShownRef.current;
+    prevCommittedShownRef.current = committedShown;
+    if (wasShown && !committedShown && outerRef.current) {
+      outerRef.current.style.visibility = 'visible';
+      if (cardRef.current) cardRef.current.style.opacity = '1';
+      hideCard();
+    }
+  }, [committedShown, hideCard]);
   React.useEffect(() => {
     wasVisibleRef.current = committedShown;
   }, [committedShown]);

@@ -89,7 +89,10 @@ describe('FindingsList (premium §7.6)', () => {
       }),
     );
     expect(html).toContain('data-testid="finding-clear-label"');
-    expect(html.match(/rotate-180/g)).toHaveLength(1);
+    // Premium §8.6: the chevron rotates 0 -> 180deg on spring-snappy (a Motion transform)
+    expect(html.match(/data-testid="finding-chevron" data-open="true"/g)).toHaveLength(1);
+    expect(html.match(/data-testid="finding-chevron" data-open="false"/g)).toHaveLength(2);
+    expect(html).toContain('rotate(180deg)');
     expect(html.match(/claim-cited-dies-count/g)).toHaveLength(2);
     // Only the finding carrying hypotheses lists "Check next" steps
     expect(html).not.toContain('data-testid="finding-check-next"');

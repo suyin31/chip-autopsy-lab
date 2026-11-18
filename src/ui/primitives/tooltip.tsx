@@ -1,7 +1,9 @@
 'use client';
 
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import { MOTION_TOKENS } from '@/ui/tokens';
 import { cn } from './cn';
 import { TOOLTIP_SURFACE_CLASS } from './surfaces';
 
@@ -11,6 +13,9 @@ export const TOOLTIP_DELAY_MS = 600 as const;
 export const TOOLTIP_SKIP_DELAY_WINDOW_MS = 400 as const;
 const TOOLTIP_OFFSET_PX = 8;
 const TOOLTIP_VIEWPORT_MARGIN_PX = 8;
+/** Premium §8.13: open `opacity 0 -> 1` over `dur-1`, close over 100 ms; reduced motion 120 ms both ways. */
+const TOOLTIP_CLOSE_S = 0.1;
+const TOOLTIP_REDUCED_FADE_S = 0.12;
 
 let lastTooltipClosedAt = Number.NEGATIVE_INFINITY;
 
@@ -47,6 +52,10 @@ export function Tooltip({
   const tooltipRef = React.useRef<HTMLDivElement | null>(null);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [open, setOpen] = React.useState(false);
+  // The portal stays while the close fade runs
+  const [present, setPresent] = React.useState(false);
+  if (open && !present) setPresent(true);
+  const reduced = Boolean(useReducedMotion());
   const [position, setPosition] = React.useState({ top: 0, left: 0 });
 
   const clearTimer = (): void => {
@@ -113,20 +122,43 @@ export function Tooltip({
       onPointerDown={hide}
     >
       {children}
-      {open && typeof document !== 'undefined'
+      {present && typeof document !== 'undefined'
         ? createPortal(
-            <div
-              ref={tooltipRef}
-              role="tooltip"
-              data-testid="tooltip"
-              style={{ top: `${position.top}px`, left: `${position.left}px` }}
-              className={cn(
-                TOOLTIP_SURFACE_CLASS,
-                'pointer-events-none fixed z-[var(--z-tooltips)] w-max text-pretty',
-              )}
-            >
-              {content}
-            </div>,
+            <AnimatePresence onExitComplete={() => setPresent(false)}>
+              {open ? (
+                <motion.div
+                  ref={tooltipRef}
+                  role="tooltip"
+                  data-testid="tooltip"
+                  initial={{ opacity: 0 }}
+                  animate={{
+                    opacity: 1,
+                    transition: reduced
+                      ? { duration: TOOLTIP_REDUCED_FADE_S, ease: 'linear' }
+                      : {
+                          duration: MOTION_TOKENS.dur1Ms / 1000,
+                          ease: MOTION_TOKENS.easeOutTuple,
+                        },
+                  }}
+                  exit={{
+                    opacity: 0,
+                    transition: reduced
+                      ? { duration: TOOLTIP_REDUCED_FADE_S, ease: 'linear' }
+                      : {
+                          duration: TOOLTIP_CLOSE_S,
+                          ease: MOTION_TOKENS.easeOutTuple,
+                        },
+                  }}
+                  style={{ top: `${position.top}px`, left: `${position.left}px` }}
+                  className={cn(
+                    TOOLTIP_SURFACE_CLASS,
+                    'pointer-events-none fixed z-[var(--z-tooltips)] w-max text-pretty',
+                  )}
+                >
+                  {content}
+                </motion.div>
+              ) : null}
+            </AnimatePresence>,
             document.body,
           )
         : null}

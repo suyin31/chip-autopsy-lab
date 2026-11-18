@@ -70,7 +70,6 @@ export function LanguageSwitcher({
         align="end"
         sideOffset={8}
         expectedWidthPx={220}
-        openAnimation="pointer-fade"
         aria-label={t('language.menuTitle')}
         data-testid="language-switcher-menu"
         className="w-[220px]"

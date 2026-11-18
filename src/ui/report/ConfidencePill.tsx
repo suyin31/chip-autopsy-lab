@@ -177,10 +177,10 @@ export function ConfidencePill({
         shouldReduceMotion
           ? { opacity: 0, transition: { duration: 0.12 } }
           : {
+              // Premium §8.13: popovers close with `opacity -> 0` over `dur-2`
               opacity: 0,
-              scale: 0.98,
               transition: {
-                duration: MOTION_TOKENS.durFastMs / 1000,
+                duration: MOTION_TOKENS.dur2Ms / 1000,
                 ease: MOTION_TOKENS.easeOutTuple,
               },
             }

@@ -1,6 +1,7 @@
 'use client';
 
 import { TriangleAlert } from 'lucide-react';
+import { useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
@@ -12,6 +13,12 @@ import type { GlossaryTermId } from '@/core/i18n';
 import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/primitives/cn';
+import {
+  DISCLOSURE_SCOPE_ATTR,
+  DisclosureGlide,
+  DisclosureListItem,
+  useDisclosureList,
+} from '@/ui/primitives/disclosure';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
   isWaferTableCollapsible,
@@ -83,7 +90,10 @@ export function YieldSummaryPanel({
   const activeSite = synced ? siteFilter : null;
   const activeWafer = synced ? waferFilter : null;
 
-  const [expanded, setExpanded] = React.useState(false);
+  // Premium §8.6: "Show all N wafers" mounts the rows with a fade; rows and toggle glide
+  const reduced = Boolean(useReducedMotion());
+  const disclosure = useDisclosureList(reduced);
+  const { expanded } = disclosure;
 
   const { overall, byWafer, bySite } = yieldSummary;
 
@@ -98,6 +108,15 @@ export function YieldSummaryPanel({
 
   const waferRowIndices = React.useMemo(
     () => selectWaferRowIndices(byWafer, expanded, (i) => i === activeWafer),
+    [byWafer, expanded, activeWafer],
+  );
+  const collapsedWaferRows = React.useMemo(
+    () =>
+      expanded
+        ? new Set(
+            selectWaferRowIndices(byWafer, false, (i) => i === activeWafer),
+          )
+        : null,
     [byWafer, expanded, activeWafer],
   );
   const collapsible = isWaferTableCollapsible(byWafer.length);
@@ -336,12 +355,20 @@ export function YieldSummaryPanel({
         </div>
       ) : null}
 
-      <div data-testid="yield-wafers" className="mt-8">
+      <div
+        data-testid="yield-wafers"
+        {...{ [DISCLOSURE_SCOPE_ATTR]: '' }}
+        className="mt-8"
+      >
         <h3 className="type-headline text-text-primary">
           {t('yield.wafers')}
         </h3>
         {columnHeader(t('yield.col.wafer'))}
-        <ul id={wafersListId} className="-mx-3 flex flex-col">
+        <ul
+          ref={disclosure.listRef}
+          id={wafersListId}
+          className="-mx-3 flex flex-col"
+        >
           {waferRowIndices.map((index, position) => {
             const wafer = lot.wafers[index];
             const metrics = byWafer[index];
@@ -350,8 +377,14 @@ export function YieldSummaryPanel({
             }
             const pressed = activeWafer === index;
             return (
-              <li
+              <DisclosureListItem
                 key={wafer.waferIndex}
+                revealOnMount={disclosure.revealNewRows}
+                reduced={reduced}
+                layoutEpoch={disclosure.layoutEpoch}
+                extra={
+                  collapsedWaferRows !== null && !collapsedWaferRows.has(index)
+                }
                 data-active={pressed ? 'true' : undefined}
                 className="yield-list-item list-none"
               >
@@ -374,25 +407,30 @@ export function YieldSummaryPanel({
                   </span>
                   {renderValues(metrics, pressed)}
                 </button>
-              </li>
+              </DisclosureListItem>
             );
           })}
         </ul>
         {collapsible ? (
-          <Button
-            variant="text"
-            data-testid="yield-wafers-toggle"
-            aria-expanded={expanded}
-            aria-controls={wafersListId}
-            onClick={() => setExpanded((v) => !v)}
+          <DisclosureGlide
+            reduced={reduced}
+            layoutEpoch={disclosure.layoutEpoch}
             className="mt-4"
           >
-            {expanded
-              ? t('yield.showFewer')
-              : t('yield.showAll', {
-                  count: formatInteger(byWafer.length),
-                })}
-          </Button>
+            <Button
+              variant="text"
+              data-testid="yield-wafers-toggle"
+              aria-expanded={expanded}
+              aria-controls={wafersListId}
+              onClick={disclosure.toggle}
+            >
+              {expanded
+                ? t('yield.showFewer')
+                : t('yield.showAll', {
+                    count: formatInteger(byWafer.length),
+                  })}
+            </Button>
+          </DisclosureGlide>
         ) : null}
       </div>
     </section>
