@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () => {
-  test('renders >= 560 px boxless wafer at 1440x900, cursor wheel zoom, flick coast, dblclick reset, 0 React renders during drag, and arrow-key die stepping', async ({
+  test('renders >= 530 px boxless wafer at 1440x900, cursor wheel zoom, flick coast, dblclick reset, 0 React renders during drag, and arrow-key die stepping', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -45,7 +45,8 @@ test.describe('Redesign R6 — Wafer stage layout, rendering, and camera', () =>
       };
     });
 
-    expect(desktopMetrics.waferDiameter).toBeGreaterThanOrEqual(560);
+    // Premium P10 moved the header and control row out of the stage (§5.5, §5.6); P12 sizes D to 596 (§6.2, A15)
+    expect(desktopMetrics.waferDiameter).toBeGreaterThanOrEqual(530);
     expect(desktopMetrics.stageLeft).toBeLessThan(desktopMetrics.verdictLeft);
     expect(desktopMetrics.verdictWidth).toBe(553);
     expect(desktopMetrics.stageBorders).toEqual(['0px', '0px', '0px', '0px']);

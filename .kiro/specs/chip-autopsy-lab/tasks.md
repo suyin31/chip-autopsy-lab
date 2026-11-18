@@ -246,7 +246,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P9. Wafer strip
   - Scroller padding, 48 x 64 items, active and focus rings, hover scale, evidence opacity, side-aware edge fades, desktop chevrons (premium §5.8).
   - Accept: A12.
-- [ ] P10. Stage header, control row, legend
+- [x] P10. Stage header, control row, legend
   - Header caption and evidence caption, one control row, legend entries and "+N more" popover, Select an area and Reset view, stage focus ring (premium §5.5–§5.7, §7.7).
   - Accept: A11, A35 (stage part).
 
