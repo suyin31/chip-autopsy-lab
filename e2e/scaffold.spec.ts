@@ -15,6 +15,6 @@ test('renders dark clinical scaffold with self-hosted fonts and zero third-party
   await expect(page.getByRole('heading', { name: 'Chip Autopsy Lab' })).toBeVisible();
 
   const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  expect(bodyBg).toBe('rgb(10, 10, 11)');
+  expect(bodyBg).toBe('rgb(0, 0, 0)');
   expect(externalRequests).toEqual([]);
 });

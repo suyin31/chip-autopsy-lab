@@ -46,7 +46,7 @@ function areBaseCanvasPropsEqual(
 
 /**
  * DPR-scaled Canvas2D base layer rendering wafer substrate geometry, `1 px`
- * `#0A0A0B` streets, Pass/Fail or bin fills (`#53655D` pass, `#FF7A1A` fail),
+ * `#000000` streets, Pass/Fail or bin fills (`#63666C` pass, `#FF6B2C` fail),
  * and failing-die center micro-dots.
  *
  * Strictly isolated via `React.memo` with structural `hiddenBins` equality from

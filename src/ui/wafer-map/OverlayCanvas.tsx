@@ -31,7 +31,7 @@ const EMPTY_MASK = new Uint8Array(0);
  * DPR-scaled Canvas2D overlay layer stacked above `BaseCanvas` (`pointer-events: none`).
  *
  * Subscribes via a single `useShallow` selector to `SelectionStore` highlight,
- * brush, and hover slices so `#7CF2C1` outlines/glows and hover reticles repaint
+ * brush, and hover slices so `#D6E6FF` outlines/glows and hover reticles repaint
  * in `< 1 ms` without ever re-rendering or repainting `BaseCanvas`
  * (Requirements 4.3, 10.4, 15.4).
  */

@@ -37,7 +37,7 @@ describe('Design token & colour scale properties (fast-check)', () => {
     );
   });
 
-  it('categorical fail-bin colour assignment is deterministic, >= 3:1 on bg, and never uses accent or pass-die fills', () => {
+  it('categorical fail-bin colour assignment is deterministic, >= 3:1 on bg and surface-2, and never uses accent or pass-die fills', () => {
     fc.assert(
       fc.property(fc.integer({ min: -50, max: 5_000 }), (rank) => {
         const first = getFailBinColor(rank);
@@ -48,8 +48,11 @@ describe('Design token & colour scale properties (fast-check)', () => {
         expect(wcagHexContrastRatio(first, COLOR_TOKENS.bg)).toBeGreaterThanOrEqual(
           3.0,
         );
+        expect(
+          wcagHexContrastRatio(first, COLOR_TOKENS.surface2),
+        ).toBeGreaterThanOrEqual(3.0);
         if (rank <= 0) {
-          expect(first).toBe(COLOR_TOKENS.failure);
+          expect(first).toBe('#FF6B2C');
         }
       }),
       { numRuns: NUM_RUNS },

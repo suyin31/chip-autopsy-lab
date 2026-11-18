@@ -8,7 +8,7 @@ export interface ClaimInlineButtonProps {
   /** Optional display text override (e.g. quantitative prefix when hypothesis tail is disclosed separately). */
   readonly displayText?: string;
   readonly variant?: 'headline' | 'body';
-  /** Whether the lot has >= 1 failing die (controls `#FF7A1A` cause-of-death styling on headline). */
+  /** Whether the lot has >= 1 failing die (controls `#FF6B2C` cause-of-death styling on headline). */
   readonly hasFailures?: boolean;
   /** Optional wafer badge label (`"Wafer W02"`) when the claim scopes to a specific wafer. */
   readonly targetWaferLabel?: string | null;
@@ -47,7 +47,7 @@ function renderHeadlineText(
 
 /**
  * Keyboard-operable (`<button type="button">`) claim control with `aria-pressed`
- * toggle state, `#7CF2C1` focus ring, non-color active border/marker + `"Highlighted"`
+ * toggle state, `#D6E6FF` focus ring, non-color active border/marker + `"Highlighted"`
  * badge, and linked die/bin/site/test citation chips (Requirements 10.1, 10.4, 14.2, 14.3).
  *
  * All claim text is rendered strictly via React plain-text nodes (Requirement 2.4).

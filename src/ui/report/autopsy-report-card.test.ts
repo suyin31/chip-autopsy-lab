@@ -255,7 +255,7 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
     }
   });
 
-  it('writes cited die mask on headline/claim click, lights #7CF2C1 overlay strokes, and clears on second click', async () => {
+  it('writes cited die mask on headline/claim click, lights #D6E6FF overlay strokes, and clears on second click', async () => {
     const res = await ingestDemoPreset('edge-ring-etch');
     expect(res.kind).toBe('ok');
     if (res.kind !== 'ok') return;
@@ -339,7 +339,7 @@ describe('AutopsyReportCard & LoadedLotOverview integration (Task 7.2)', () => {
       'Selected finding (claim:cause-of-death):',
     );
 
-    // OverlayCanvas paint helper lights up the cited dies on Wafer 0 in #7CF2C1 + outer halo
+    // OverlayCanvas paint helper lights up the cited dies on Wafer 0 in #D6E6FF + outer halo
     const wafer0 = lot.wafers[afterFirstClick.activeWaferIndex]!;
     const layout = computeWaferRenderLayout(
       wafer0,

@@ -26,9 +26,8 @@ const SIZE_CLASSES: Readonly<Record<ButtonSize, string>> = {
 };
 
 /**
- * Owned shadcn/ui-pattern `Button` restyled to Chip Autopsy Lab tokens:
- * `#7CF2C1` primary accent fill with `#0A0A0B` text, `8 px` control radius,
- * weight `500` (never bold `>= 700`), zero shadows, and `#7CF2C1` focus rings.
+ * Owned shadcn/ui-pattern `Button` bound to Chip Autopsy Lab design tokens:
+ * weight `500` (never bold `>= 700`), zero shadows, and `#D6E6FF` focus rings.
  */
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(

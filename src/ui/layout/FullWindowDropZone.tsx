@@ -176,7 +176,7 @@ export function FullWindowDropZone({
           className="surface-overlay pointer-events-none fixed inset-3 z-50 flex flex-col items-center justify-center rounded-panel border border-accent transition-[transform,opacity] duration-150 ease-[var(--ease-clinical)]"
           style={{
             backgroundImage:
-              'linear-gradient(to right, rgba(124, 242, 193, 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(124, 242, 193, 0.06) 1px, transparent 1px)',
+              'linear-gradient(to right, rgba(214, 230, 255, 0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(214, 230, 255, 0.08) 1px, transparent 1px)',
             backgroundSize: '32px 32px',
           }}
         >

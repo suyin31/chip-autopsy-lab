@@ -1,32 +1,56 @@
 import { formatHexColor, parseHexColor, type RgbTuple } from './contrast';
 
 /**
- * Locked Chip Autopsy Lab colour tokens (Requirements 4.4, 5.2, 14.1, 17.1).
+ * Locked Chip Autopsy Lab redesign colour tokens (redesign.md §2.1, design-language.md).
  *
- * Pass-die fill `#53655D` (`LCH(41.2, 8.3, 165.4)`) achieves 3.19:1 contrast
- * against `#0A0A0B` (`bg`), 3.04:1 against `#111113` (`panel`), and 4.53:1
- * against `#7CF2C1` (`accent` outlines).
+ * Contrast invariants (WCAG 2.2 relative luminance):
+ * - `passDie` `#63666C` achieves 3.65:1 on `bg` `#000000` and 3.20:1 on vignette peak `#141416`.
+ * - `failure` `#FF6B2C` achieves 7.4:1 on `#000000`; `failureText` `#FF8A57` achieves 9.0:1.
+ * - `accent` (ice) `#D6E6FF` achieves 16.6:1 on `#000000`.
+ * - `textPrimary` (0.92), `textSecondary` (0.56), and `textTertiary` (0.48) all achieve
+ *   >= 4.5:1 composited over `#000000` (`bg`) and `#1A1A1C` (`surface2`).
  */
 export const COLOR_TOKENS = {
-  bg: '#0A0A0B',
-  panel: '#111113',
-  hairline: 'rgba(255, 255, 255, 0.08)',
-  raised: 'rgba(255, 255, 255, 0.04)',
-  overlay: 'rgba(255, 255, 255, 0.08)',
+  bg: '#000000',
+  surface1: '#0F0F10',
+  surface2: '#1A1A1C',
+  surface3: '#242426',
+  material: 'rgba(22, 22, 24, 0.72)',
+  ring: 'inset 0 0 0 1px rgba(255, 255, 255, 0.10)',
+  ringStrong: 'inset 0 0 0 1px rgba(255, 255, 255, 0.16)',
+  separator: 'rgba(255, 255, 255, 0.08)',
   textPrimary: 'rgba(255, 255, 255, 0.92)',
-  textSecondary: 'rgba(255, 255, 255, 0.64)',
+  textSecondary: 'rgba(255, 255, 255, 0.56)',
   textTertiary: 'rgba(255, 255, 255, 0.48)',
-  accent: '#7CF2C1',
-  accentForeground: '#0A0A0B',
-  failure: '#FF7A1A',
-  passDie: '#53655D',
-  waferStreet: '#0A0A0B',
+  textDisabled: 'rgba(255, 255, 255, 0.28)',
+  accent: '#D6E6FF',
+  accentSoft: 'rgba(214, 230, 255, 0.12)',
+  failure: '#FF6B2C',
+  failureText: '#FF8A57',
+  passDie: '#63666C',
+  dieStreet: '#000000',
+  dimScrim: 'rgba(0, 0, 0, 0.62)',
+  buttonPrimary: '#F5F5F7',
+  buttonPrimaryText: '#000000',
+  vignette:
+    'radial-gradient(closest-side, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.02) 55%, rgba(255,255,255,0) 100%)',
+  vignettePeak: '#141416',
+  topLight:
+    'linear-gradient(180deg, rgba(214,230,255,0.06) 0%, rgba(214,230,255,0) 40%)',
+  waferDisc: '#0B0B0C',
+
+  // Compatibility aliases while downstream R3–R7 components migrate
+  panel: '#0F0F10',
+  hairline: 'rgba(255, 255, 255, 0.08)',
+  raised: '#1A1A1C',
+  overlay: 'rgba(22, 22, 24, 0.72)',
+  accentForeground: '#000000',
+  waferStreet: '#000000',
 } as const;
 
 /**
- * Equal-lightness CIE LCH (`L* ~= 66.0`, ~7.6:1 contrast on `#0A0A0B`)
- * secondary categorical fail-bin colours for ranks 2+.
- * Excludes `[125 deg, 200 deg]` (`#7CF2C1`) and `[40 deg, 72 deg]` (`#FF7A1A`).
+ * Equal-lightness CIE LCH (`L* ~= 66.0`, ~8.0:1 contrast on `#000000`)
+ * secondary categorical fail-bin colours for ranks 1+ (redesign.md §2.1).
  */
 export const SECONDARY_FAIL_BIN_PALETTE = [
   '#00ACEA',
@@ -40,7 +64,7 @@ export const SECONDARY_FAIL_BIN_PALETTE = [
 
 /**
  * Returns the deterministic categorical colour for a failing bin ordered by
- * yield-loss rank (`0` = top yield-loss failing bin -> `#FF7A1A`).
+ * yield-loss rank (`0` = dominant yield-loss failing bin -> `#FF6B2C`).
  */
 export function getFailBinColor(rankZeroBased: number): string {
   const safeRank = Math.max(0, Math.trunc(rankZeroBased));

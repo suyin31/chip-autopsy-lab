@@ -342,10 +342,10 @@ describe('Wafer Map pure geometry, color mapping, and two-layer canvas isolation
 
   it('maps Pass/Fail, dominant/secondary categorical fail bins, and parametric magma colors deterministically', () => {
     const lot = buildWaferTestLot();
-    expect(resolvePassFailDieColor(1)).toBe('#53655D');
-    expect(resolvePassFailDieColor(0)).toBe('#FF7A1A');
+    expect(resolvePassFailDieColor(1)).toBe('#63666C');
+    expect(resolvePassFailDieColor(0)).toBe('#FF6B2C');
 
-    // SBIN 5 has 3 total fails (dies 1, 3, 5) -> rank 0 (#FF7A1A); SBIN 7 has 1 fail (die 4) -> rank 1 (#00ACEA)
+    // SBIN 5 has 3 total fails (dies 1, 3, 5) -> rank 0 (#FF6B2C); SBIN 7 has 1 fail (die 4) -> rank 1 (#00ACEA)
     const sbinRanks = buildFailBinRankMap(lot.dies, 'SBIN');
     expect(sbinRanks.get(5)).toBe(0);
     expect(sbinRanks.get(7)).toBe(1);
@@ -384,7 +384,7 @@ describe('Wafer Map pure geometry, color mapping, and two-layer canvas isolation
     expect(lowHex).not.toBe(highHex);
   });
 
-  it('draws Pass/Fail fills + micro-dots on BaseCanvas and redraws #7CF2C1 glow/outlines solely on OverlayCanvas without base repaints', () => {
+  it('draws Pass/Fail fills + micro-dots on BaseCanvas and redraws #D6E6FF glow/outlines solely on OverlayCanvas without base repaints', () => {
     const lot = buildWaferTestLot();
     const wafer = lot.wafers[0];
     const layout = computeWaferRenderLayout(wafer, 500, 500, lot.dies);
@@ -404,7 +404,7 @@ describe('Wafer Map pure geometry, color mapping, and two-layer canvas isolation
 
     expect(baseMock.getDrawPassCount()).toBe(1);
 
-    // 5 valid coordinate dies: 2 passing (#53655D), 3 failing (#FF7A1A) + 3 micro-dots (#0A0A0B); die 5 (-32768) excluded
+    // 5 valid coordinate dies: 2 passing (#63666C), 3 failing (#FF6B2C) + 3 micro-dots (#000000); die 5 (-32768) excluded
     const passFills = baseMock.fillRects.filter(
       (r) => r.fillStyle === COLOR_TOKENS.passDie,
     );
@@ -468,7 +468,7 @@ describe('Wafer Map pure geometry, color mapping, and two-layer canvas isolation
     const failFills = thumbMock.fillRects.filter(
       (r) => r.fillStyle === COLOR_TOKENS.failure,
     );
-    // 2 valid passing dies (#53655D) and 3 valid failing dies (#FF7A1A); missing-coord die 5 excluded
+    // 2 valid passing dies (#63666C) and 3 valid failing dies (#FF6B2C); missing-coord die 5 excluded
     expect(passFills).toHaveLength(2);
     expect(failFills).toHaveLength(3);
 

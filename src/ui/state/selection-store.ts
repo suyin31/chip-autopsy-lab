@@ -5,7 +5,7 @@
  * Bin Pareto bar filters, Test Site scoping, Filter DSL predicates, legend bin
  * visibility toggles, hovered die state, and Autopsy Report claim highlights,
  * deriving flat `Uint8Array` die masks for sub-100 ms cross-chart updates and
- * zero-base-repaint `#7CF2C1` wafer overlay rendering.
+ * zero-base-repaint `#D6E6FF` wafer overlay rendering.
  *
  * Validates: Requirements 4.1, 4.6, 6.4, 7.5, 10.4, 11.1, 11.4, 11.5, 12.2, 12.5
  */
@@ -106,7 +106,7 @@ export interface DerivedSelectionMasks {
   /** Validated unique in-bounds die indices cited by `claimHighlight`. */
   readonly highlightedDieIndices: Uint32Array;
   /**
-   * Length === `lot.dies.count`. Effective `#7CF2C1` wafer overlay highlight mask:
+   * Length === `lot.dies.count`. Effective `#D6E6FF` wafer overlay highlight mask:
    * `(hasActiveFilter ? selectedDieMask[i] : 0) | claimHighlightMask[i]`.
    * All `0`s when neither a filter nor a claim highlight is active.
    */
@@ -398,7 +398,7 @@ export function deriveSelectionMasks(
     claimHighlightMask = getZeroMaskForLot(lot);
   }
 
-  // 3. Derive effective wafer overlay highlight mask (#7CF2C1 outline/glow)
+  // 3. Derive effective wafer overlay highlight mask (#D6E6FF outline/glow)
   let overlayHighlightMask: Uint8Array;
   let overlayHighlightCount = 0;
 

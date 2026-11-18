@@ -31,7 +31,7 @@ interface ActiveThumbTooltip {
  * across wafers.
  *
  * Keeps full ARIA `radiogroup` / `radio` semantics, roving `tabIndex`, `ArrowLeft`/
- * `ArrowRight` stepping, `#7CF2C1` active ring + non-color indicator pip, and a
+ * `ArrowRight` stepping, `#D6E6FF` active ring + non-color indicator pip, and a
  * zero-shadow `.surface-overlay` hover/focus tooltip showing wafer ID + yield.
  *
  * Validates: Requirements 4.1, 14.2, 14.3, 17.1, 17.2, 17.5

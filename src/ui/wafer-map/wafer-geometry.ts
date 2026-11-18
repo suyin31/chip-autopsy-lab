@@ -36,7 +36,7 @@ export const DEFAULT_VIEWPORT_TRANSFORM: ViewportTransform = {
   panY: 0,
 };
 
-/** `design.md` Resolved Decision: `#0A0A0B` street border width around every die. */
+/** `redesign.md` §2.1: `#000000` street border width around every die. */
 export const WAFER_STREET_WIDTH_PX = 1 as const;
 
 /** `design.md` Resolved Decision: failing dies draw a center micro-dot when `diePitchPx >= 7`. */
@@ -45,8 +45,8 @@ export const FAIL_MICRO_DOT_MIN_PITCH_PX = 7 as const;
 /** Extra radial margin (in die pitches) between outermost die corner and wafer bevel rim. */
 const WAFER_RIM_CLEARANCE_UNITS = 0.55;
 
-/** Subtle formalin-green outer halo stroke paired with crisp `#7CF2C1` inner outline. */
-export const OVERLAY_HALO_STROKE = 'rgba(124, 242, 193, 0.26)' as const;
+/** Subtle ice outer halo stroke paired with crisp `#D6E6FF` inner outline. */
+export const OVERLAY_HALO_STROKE = 'rgba(214, 230, 255, 0.28)' as const;
 export const OVERLAY_HOVER_STROKE = 'rgba(255, 255, 255, 0.92)' as const;
 export const WAFER_OUTLINE_STROKE = 'rgba(255, 255, 255, 0.14)' as const;
 export const WAFER_EXCLUSION_RING_STROKE = 'rgba(255, 255, 255, 0.04)' as const;
@@ -363,7 +363,7 @@ export function projectBrushToCanvasRect(
 }
 
 /**
- * Maps Pass/Fail state to the locked WCAG-verified wafer palette (`#53655D` pass, `#FF7A1A` fail).
+ * Maps Pass/Fail state to the locked WCAG-verified wafer palette (`#63666C` pass, `#FF6B2C` fail).
  */
 export function resolvePassFailDieColor(finalPass: number): string {
   return finalPass !== 0 ? COLOR_TOKENS.passDie : COLOR_TOKENS.failure;
@@ -371,7 +371,7 @@ export function resolvePassFailDieColor(finalPass: number): string {
 
 /**
  * Ranks failing bin codes across a Lot in non-increasing order of final-state fail count
- * (`rank 0` -> `#FF7A1A`, `ranks 1+` -> equal-lightness LCH categorical palette).
+ * (`rank 0` -> `#FF6B2C`, `ranks 1+` -> equal-lightness LCH categorical palette).
  */
 export function buildFailBinRankMap(
   dies: ColumnarDies,
@@ -511,11 +511,11 @@ export interface PaintWaferBaseParams {
 /**
  * Draws the DPR-scaled base wafer map layer:
  * 1. Subtle wafer substrate circle + `WF_FLAT` V-notch + inner bevel guide
- * 2. Coordinate-bearing dies (`!== -32768`) with `1 px` `#0A0A0B` streets
- * 3. `#0A0A0B` center micro-dot on failing dies when `diePitchPx >= 7`
+ * 2. Coordinate-bearing dies (`!== -32768`) with `1 px` `#000000` streets
+ * 3. `#000000` center micro-dot on failing dies when `diePitchPx >= 7`
  *
- * Batches `Pass/Fail` mode into at most three `fillStyle` passes (`#53655D`,
- * `#FF7A1A`, `#0A0A0B` micro-dots) so `10,000` dies draw in `< 2 ms`.
+ * Batches `Pass/Fail` mode into at most three `fillStyle` passes (`#63666C`,
+ * `#FF6B2C`, `#000000` micro-dots) so `10,000` dies draw in `< 2 ms`.
  */
 export function paintWaferBaseLayer(
   ctx: Canvas2DContextLike,
@@ -588,7 +588,7 @@ export function paintWaferBaseLayer(
     const half = layout.dieSizePx / 2;
     const dieSize = layout.dieSizePx;
 
-    // Pass 1: Passing dies (#53655D)
+    // Pass 1: Passing dies (#63666C)
     ctx.fillStyle = COLOR_TOKENS.passDie;
     for (let i = start; i < end; i += 1) {
       if (validArr[i] === 0 || passArr[i] === 0) {
@@ -606,7 +606,7 @@ export function paintWaferBaseLayer(
       ctx.fillRect(cx - half, cy - half, dieSize, dieSize);
     }
 
-    // Pass 2: Failing dies (#FF7A1A)
+    // Pass 2: Failing dies (#FF6B2C)
     ctx.fillStyle = COLOR_TOKENS.failure;
     for (let i = start; i < end; i += 1) {
       if (validArr[i] === 0 || passArr[i] !== 0) {
@@ -624,7 +624,7 @@ export function paintWaferBaseLayer(
       ctx.fillRect(cx - half, cy - half, dieSize, dieSize);
     }
 
-    // Pass 3: Failing-die center micro-dots (#0A0A0B) when diePitchPx >= 7
+    // Pass 3: Failing-die center micro-dots (#000000) when diePitchPx >= 7
     if (layout.drawFailMicroDot && layout.microDotSizePx > 0) {
       const dotSize = layout.microDotSizePx;
       const dotHalf = dotSize / 2;
@@ -713,7 +713,7 @@ export interface PaintWaferOverlayParams {
 }
 
 /**
- * Draws the DPR-scaled overlay canvas (`#7CF2C1` selection / site / claim
+ * Draws the DPR-scaled overlay canvas (`#D6E6FF` selection / site / claim
  * outlines + outer glow, spatial brush bounds, and hovered die reticle)
  * WITHOUT touching or repainting `BaseCanvas`.
  */
@@ -744,7 +744,7 @@ export function paintWaferOverlayLayer(
   const start = wafer.dieStartIndex;
   const end = wafer.dieEndIndex;
 
-  // 1. Batched #7CF2C1 evidence/selection outer glow + crisp inner outline (never a fill)
+  // 1. Batched #D6E6FF evidence/selection outer glow + crisp inner outline (never a fill)
   if (overlayHighlightCount > 0 && overlayHighlightMask.length >= end) {
     const xArr = dies.x;
     const yArr = dies.y;
@@ -829,7 +829,7 @@ export interface PaintWaferThumbnailParams {
 
 /**
  * Draws a compact Pass/Fail wafer thumbnail (`~36-44 px` CSS) for the horizontal
- * lot strip using locked colour tokens (`#53655D` pass, `#FF7A1A` fail, `#0A0A0B`
+ * lot strip using locked colour tokens (`#63666C` pass, `#FF6B2C` fail, `#000000`
  * substrate) and `WCR` orientation. Failing dies paint in a dedicated second pass
  * so repeating spatial signatures (edge rings, scratches, site checkerboards) remain
  * immediately scannable across 25+ wafers.
@@ -895,7 +895,7 @@ export function paintWaferThumbnail(
   const start = wafer.dieStartIndex;
   const end = wafer.dieEndIndex;
 
-  // Pass 1: Passing dies (#53655D)
+  // Pass 1: Passing dies (#63666C)
   const passSize = Math.max(0.95, diePitchPx * 0.94);
   const passHalf = passSize / 2;
   ctx.fillStyle = COLOR_TOKENS.passDie;
@@ -908,7 +908,7 @@ export function paintWaferThumbnail(
     ctx.fillRect(cx - passHalf, cy - passHalf, passSize, passSize);
   }
 
-  // Pass 2: Failing dies (#FF7A1A) painted over pass cells for sub-2 px pattern legibility
+  // Pass 2: Failing dies (#FF6B2C) painted over pass cells for sub-2 px pattern legibility
   const failSize = Math.max(1.15, diePitchPx * 1.04);
   const failHalf = failSize / 2;
   ctx.fillStyle = COLOR_TOKENS.failure;

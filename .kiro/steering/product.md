@@ -37,7 +37,7 @@ Chip Autopsy Lab is a browser-based semiconductor failure analysis tool that ing
 - **Every claim traceable to dies**: never display an ungrounded statement or unlinked summary number.
 - **Local-first privacy**: parsing and analytics run in the browser; raw STDF bytes never leave the device; the optional LLM receives aggregate facts only.
 - **Progressive disclosure**: step cleanly from macro (lot yield, cause of death) to meso (bins, wafer regions, sites) to micro (single die).
-- **One Halloween note only**: clinical autopsy framing plus pumpkin orange (`#FF7A1A`) strictly for failures and cause of death.
+- **One Halloween note only**: clinical autopsy framing plus pumpkin orange (`#FF6B2C`) strictly for failures and cause of death.
 
 ## Built-in Demo Data
 - Ships seeded, deterministic synthetic STDF V4 demo lots: `edge-ring-etch` (`Edge-Ring`), `handling-scratch` (`Scratch`), and `site2-probe-contact` (spatially `Random` with a Test Site 1:2 concentration anomaly, exercising the probe card / tester site diagnosis).

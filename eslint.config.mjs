@@ -42,6 +42,8 @@ const CORE_FORBIDDEN_DOM_GLOBALS = [
 export default tseslint.config(
   {
     ignores: [
+      '.agent/**',
+      '.kiro/**',
       '.next/**',
       'out/**',
       'dist/**',

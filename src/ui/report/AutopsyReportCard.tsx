@@ -358,7 +358,7 @@ function resolveSingleWaferBadgeLabel(
  *   steps by default behind an accessible disclosure button (`aria-expanded`).
  * - Clicking any claim or the headline writes its cited die set (`resolvedDieIndices`)
  *   to `SelectionStore` (and selects the relevant wafer when wafer-specific), lighting
- *   those dies on `OverlayCanvas` in `#7CF2C1`; clicking the active claim again clears.
+ *   those dies on `OverlayCanvas` in `#D6E6FF`; clicking the active claim again clears.
  *
  * Validates: Requirements 2.4, 9.3, 10.1, 10.3, 10.4, 10.5, 14.2, 14.3, 17.1–17.4
  */

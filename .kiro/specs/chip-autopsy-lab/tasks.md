@@ -184,7 +184,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
 
 Specification: `.kiro/specs/chip-autopsy-lab/redesign.md`. Each task is a <= 15-minute chunk and must leave `pnpm lint`, `pnpm typecheck`, and `pnpm test` green.
 
-- [ ] R1. Tokens and globals
+- [x] R1. Tokens and globals
   - Apply redesign §2 to `src/ui/tokens/palette.ts`, `tokens.ts`, and `src/app/globals.css` (`bg #000000`, ice `accent #D6E6FF`, `failure #FF6B2C`, `pass-die #63666C`, type scale, radii, springs, z-layers, CJK font variables and `:lang()` overrides); update palette tests.
   - Accept: `pass-die` >= 3:1 on `#000` and `#141416`; `text-tertiary` >= 4.5:1 on `#000` and `#1A1A1C`; no `7CF2C1` or `FF7A1A` left in `src/`.
 - [ ] R2. i18n core and provider
