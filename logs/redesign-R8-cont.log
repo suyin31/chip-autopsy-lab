@@ -1,8 +1,51 @@
-error: invalid model selection (--model "gemini-4-carbon-high" --effort ""): model gemini-4-carbon-high is not recognized as a known model or custom model in settings
-Available models:
-  Gemini 3.8 Flash (High)
-  Gemini 3.8 Flash (Medium)
-  Gemini 3.8 Flash (Low)
-  Claude Sonnet 4.6 (Thinking)
-  Claude Opus 4.6 (Thinking)
-  GPT-OSS 120B (Medium)
+I'll start by reading the required skill files and task context in parallel.
+Let me continue reading the redesign spec and the other required files.
+Now let me understand R8's scope and see what was already done by the previous interrupted run. Let me check the current state of R8-related files.
+Good, there's already work committed. Let me check the current state of typecheck, lint, and tests:
+Typecheck and lint are clean. Now let me run tests:
+While tests run, let me read the key R8 files to audit what's already been done:
+Good. Let me check the test results and also examine the remaining R8 components (verdict rise-in, toast styling, perf gate, and visual-acceptance fixes):
+Let me check if tests finish, and also look at the remaining items to audit:
+All 184 tests pass, typecheck clean, lint clean. Now I need to audit R8 against every bullet and acceptance check. Let me launch a comprehensive audit in parallel using subagents:
+Good, tests all pass. Now let me do a thorough audit of R8. Let me check the R8 items one by one:
+
+**R8 scope (from tasks.md line 208-211):**
+1. Fix visual-acceptance items (a)-(h) — but I only see (d)-(h) in the file
+2. Probe sweep (§5.1)
+3. Verdict rise-in (§5.2)
+4. Count-up (§5.3)
+5. Toast styling (§4.13)
+6. Reduced-motion paths
+7. `e2e/perf-gate.spec.ts` (§5.10)
+8. Record measurements in logs/
+
+**Accept criteria:**
+- First load sweeps in <= 1.2s, any key skips
+- Second load fades
+- `reducedMotion: "reduce"` → no sweep, no stagger, stats show final values
+- Perf gate: 0 frames > 50ms, median rAF < 20ms, p95 < 34ms
+- Demo time-to-verdict < 3s
+
+Let me check the current state of each in more detail:
+The perf gate is comprehensive. Now let me check the visual-acceptance items. Let me look at what items (a)-(h) exist and whether (a)-(c) were fixed:
+Let me now check the current visual-acceptance.md more carefully to see which items have been marked as fixed and which haven't:
+So the visual-acceptance items are:
+- R4 items (3 fixes) - appears the previous run addressed some (nav hidden on landing, thumbnails 190px, nav Open STDF font 14px)
+- (d) through (h) - listed as "Fix in R8 pass"
+
+The e2e test already checks (a/h: nav Open STDF 14px), (b: nav button hidden on landing), (d: 12px gap), (e: 25 strip labels), (f: strip mask), (g: stat tracking). All are covered.
+
+Now I need to verify: does the visual-acceptance.md file need to be updated to mark items as fixed? The R8 task says "mark each fixed there." Let me also check the toasts styling per §4.13:
+Now let me check a few more things - the WaferMapCanvas sweep integration and whether the loading screen shows the right elements:
+Good, let me check the LoadedLotOverview to understand the sweep → verdict connection:
+Now let me comprehensively audit R8 against every bullet. I need to look at the WaferMapCanvas probe sweep implementation:
+That's a large file. Let me read the sweep section specifically:
+The sweep implementation is comprehensive. Let me verify the most critical parts - the sweep animation loop and the fail fade:
+The sweep implementation looks complete and matches §5.1. Now let me comprehensively verify all acceptance criteria against the code. Let me build a complete checklist and check remaining gaps:
+Good - `prefers-reduced-transparency: reduce` is handled per §14 of the apple-design spec. Now let me also check the toast enter/exit animations. The spec says:
+- Enter: `y 16 → 0`, opacity `0 → 1`, `spring-ui`
+- Exit: opacity → 0, y → 8, 160 ms
+
+Sonner handles enter/exit with its own animation. Let me check how the toaster handles this:
+error: Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 167h56m49s. (response may be truncated)
+AGY_ERROR: {"short_error":"RESOURCE_EXHAUSTED (code 429): Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 167h56m49s.","status":"RESOURCE_EXHAUSTED","error_code":429,"code_kind":"http","retryable":true,"error_id":"f39a3b1d-e8f3-4895-9eb2-96ac5b6f5337-72"}

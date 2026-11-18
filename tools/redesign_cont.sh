@@ -8,4 +8,4 @@ Continue Redesign task $R in .kiro/specs/chip-autopsy-lab/tasks.md (spec: .kiro/
 $TSC
 Run pnpm typecheck, pnpm lint, pnpm test until green. Then tick '- [ ] $R.' in tasks.md and append 2-4 lines to logs/progress.md. Do not start the next task. No web search. Finish within 13 minutes; if still unfinished, leave it compiling and write exactly what remains in logs/progress.md.
 EOP
-tools/kiro_step.sh "$PWD" redesign-$R-cont logs/prompt-$R-cont.txt
+tools/kiro_step.sh "$PWD" redesign-$R-cont logs/prompt-$R-cont.txt ${3:-}
