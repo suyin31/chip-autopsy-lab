@@ -150,6 +150,9 @@ export function bindWindowFileDropListeners(options: {
   };
 }
 
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
+
 /**
  * Viewport-wide STDF file drag-and-drop wrapper (`redesign.md` §3.2, §5.9):
  * - Full viewport `rgba(0, 0, 0, 0.55)` + `blur(32px)` at `z-index: 80`, hidden on mobile
@@ -167,11 +170,12 @@ export function FullWindowDropZone({
   const shouldReduceMotion = useReducedMotion();
   const [dragKind, setDragKind] = React.useState<DragItemKind | null>(null);
   const [isMobileViewport, setIsMobileViewport] = React.useState(false);
+  const [listenersBound, setListenersBound] = React.useState(false);
 
   const onFileDropRef = React.useRef(onFileDrop);
   onFileDropRef.current = onFileDrop;
 
-  React.useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
@@ -182,13 +186,14 @@ export function FullWindowDropZone({
     return () => mql.removeEventListener('change', sync);
   }, []);
 
-  React.useEffect(() => {
-    if (disabled || isMobileViewport) {
+  useIsomorphicLayoutEffect(() => {
+    if (typeof window === 'undefined' || disabled || isMobileViewport) {
       setDragKind(null);
+      setListenersBound(false);
       return;
     }
 
-    return bindWindowFileDropListeners({
+    const unbind = bindWindowFileDropListeners({
       target: window as unknown as WindowDropEventTarget,
       getOnFileDrop: () => onFileDropRef.current,
       onDragActiveChange: (active) => {
@@ -198,13 +203,23 @@ export function FullWindowDropZone({
       },
       onDragKindChange: setDragKind,
     });
+    setListenersBound(true);
+
+    return () => {
+      unbind();
+      setListenersBound(false);
+    };
   }, [disabled, isMobileViewport]);
 
   const showOverlay = dragKind !== null && !isMobileViewport;
   const isFileDrag = dragKind === 'file';
 
   return (
-    <div className="relative min-h-screen bg-bg text-text-primary">
+    <div
+      data-testid="full-window-drop-zone"
+      data-dropzone-ready={listenersBound ? 'true' : undefined}
+      className="relative min-h-screen bg-bg text-text-primary"
+    >
       <div className="sr-only" aria-live="assertive" aria-atomic="true">
         {showOverlay
           ? isFileDrag

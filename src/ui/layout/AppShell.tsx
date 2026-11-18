@@ -338,6 +338,9 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
     (presetId: DemoPresetId, mode?: ParseMode): void => {
       const preset = getDemoPresetMeta(presetId);
       setSelectedPresetId(presetId);
+      if (largeFilePrompt !== null && clientRef.current !== null) {
+        void clientRef.current.cancelLargeFile();
+      }
       setLargeFilePrompt(null);
       pendingOriginRef.current = { kind: 'preset', presetId };
 
@@ -376,7 +379,12 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         .then((response) => applyWorkerResponse(requestId, response))
         .catch((err: unknown) => handleUnexpectedWorkerError(requestId, err));
     },
-    [applyWorkerResponse, getWorkerClient, handleUnexpectedWorkerError],
+    [
+      applyWorkerResponse,
+      getWorkerClient,
+      handleUnexpectedWorkerError,
+      largeFilePrompt,
+    ],
   );
 
   const handleLoadFile = React.useCallback(
@@ -389,6 +397,9 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         byteSize: file.size,
         file,
       };
+      if (largeFilePrompt !== null && clientRef.current !== null) {
+        void clientRef.current.cancelLargeFile();
+      }
       setLargeFilePrompt(null);
 
       const requestId = activeRequestIdRef.current + 1;
@@ -431,7 +442,12 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
           handleUnexpectedWorkerError(requestId, err, file.name),
         );
     },
-    [applyWorkerResponse, getWorkerClient, handleUnexpectedWorkerError],
+    [
+      applyWorkerResponse,
+      getWorkerClient,
+      handleUnexpectedWorkerError,
+      largeFilePrompt,
+    ],
   );
 
   const handleNavFileInputChange = React.useCallback(

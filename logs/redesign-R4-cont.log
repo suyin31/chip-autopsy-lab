@@ -1,0 +1,18 @@
+Completed Redesign task **R4 (Landing, drag overlay, parse error, bins-only)**:
+
+### Audit & Fixes
+- **CSS Root `rem` & Layer Cascade ([globals.css](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/app/globals.css#L300-L525))**:
+  - Kept `html` at the default `100%` (`16px`) root font size and scoped `font-size: var(--size-body)` to `body` so Tailwind `rem` spacing/heights align cleanly with the `4px` design grid (`y = 148` desktop / `y = 96` mobile hero headline, `52px`/`48px` nav, `44x44` mobile icon buttons).
+  - Moved `.type-*` and `.surface-*` / `.ring-*` rules into `@layer components` so `@layer utilities` (`truncate` on demo card descriptions) is no longer overridden by `.type-callout { text-wrap: pretty }`.
+- **Landing, Drag Overlay & Sheets ([EmptyStateCard.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/EmptyStateCard.tsx), [FullWindowDropZone.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/FullWindowDropZone.tsx), [sheet.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/primitives/sheet.tsx), [ErrorDetailsSheet.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/ErrorDetailsSheet.tsx), [AppShell.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/AppShell.tsx))**:
+  - Switched `FullWindowDropZone` listener registration to isomorphic `useLayoutEffect` so early drags immediately after hydration are never missed (`data-dropzone-ready="true"`).
+  - Added mobile bottom-sheet upward rubber-band resistance and release-velocity handoff in `ModalSheet`, removed hardcoded English `<dt>` labels from `ErrorDetailsSheet`, and ensured `cancelLargeFile()` runs when switching lots while `BinsOnlySheet` is open.
+- **Browser Acceptance & Tracking ([landing-r4.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/landing-r4.spec.ts), [scaffold.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/scaffold.spec.ts), [tasks.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/specs/chip-autopsy-lab/tasks.md#L196), [progress.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/progress.md#L40-L42))**:
+  - Verified and captured [landing-desktop.png](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/__screenshots__/landing-desktop.png) (`1440x900`) and [landing-mobile.png](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/__screenshots__/landing-mobile.png) (`390x844`), file/non-file drag overlays, PNG `not-stdf` hex error + details sheet, stubbed `312 MB` `BinsOnlySheet` with `"Use bins-only"` focused, and one-click demo lot loading.
+  - Marked `R4` complete in [tasks.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/specs/chip-autopsy-lab/tasks.md#L196) and appended the summary to [progress.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/progress.md#L40-L42).
+
+### Verification
+- `pnpm typecheck`: **0 errors**
+- `pnpm lint`: **0 errors**
+- `pnpm test`: **150/150 tests passed** across 29 files
+- `pnpm build` & `pnpm e2e`: **7/7 Playwright tests passed**

@@ -193,7 +193,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/redesign.md`. Each task is a <= 15-
 - [x] R3. Primitives and nav
   - Restyle buttons (§4.11), add segmented control and menus, build `NavBar`, `LotPicker`, `LanguageSwitcher`; remove the old header, toolbar row, `Browser Sandbox` badge, and footer counter.
   - Accept: nav 52 px desktop / 48 px mobile; language change updates `<html lang>` and survives reload; ice 2 px focus rings; Tab order wordmark, lot picker, language, Open STDF.
-- [ ] R4. Landing, drag overlay, parse error, bins-only
+- [x] R4. Landing, drag overlay, parse error, bins-only
   - Landing hero with three demo cards and wafer thumbnails (§3.1), drag overlay (§3.2), error view per code (§3.7), bins-only sheet and notice (§3.8).
   - Accept: Playwright screenshots at 1440 x 900 and 390 x 844 match §3.1 above the fold; one click on a card loads the lot; a PNG drop shows "This file isn't an STDF log."; a stubbed 312 MB file opens the sheet with "Use bins-only" focused.
 - [ ] R5. Verdict column

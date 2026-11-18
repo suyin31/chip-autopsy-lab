@@ -1,0 +1,3 @@
+Continue Redesign task R4 in .kiro/specs/chip-autopsy-lab/tasks.md (spec: .kiro/specs/chip-autopsy-lab/redesign.md). A previous run was interrupted by timeout partway; its work is committed. First read .agent/skills/verification-before-completion/SKILL.md and .agent/skills/apple-design/SKILL.md. Audit the current code against every bullet and acceptance check of R4, finish what is missing, and fix any errors. Current typecheck output (may be empty):
+
+Run pnpm typecheck, pnpm lint, pnpm test until green. Then tick '- [ ] R4.' in tasks.md and append 2-4 lines to logs/progress.md. Do not start the next task. No web search. Finish within 13 minutes; if still unfinished, leave it compiling and write exactly what remains in logs/progress.md.

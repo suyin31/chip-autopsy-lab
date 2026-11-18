@@ -81,17 +81,34 @@ test.describe('R4 Landing, drag overlay, parse error, and bins-only acceptance',
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
+    await expect(page.getByTestId('full-window-drop-zone')).toHaveAttribute(
+      'data-dropzone-ready',
+      'true',
+    );
 
-    // 1. Drag overlay for file vs non-file (§3.2)
+    // 1a. Drag overlay for file drag (§3.2): "Drop the body." + "Release to open. STDF, STD, or gzip."
     await page.evaluate(() => {
       const enterEvt = new Event('dragenter', { bubbles: true, cancelable: true });
       Object.defineProperty(enterEvt, 'dataTransfer', {
-        value: { types: ['text/plain'] },
+        value: { types: ['Files'] },
       });
       window.dispatchEvent(enterEvt);
     });
     const dropOverlay = page.getByTestId('full-window-drop-overlay');
     await expect(dropOverlay).toBeVisible();
+    await expect(dropOverlay).toContainText('Drop the body.');
+    await expect(dropOverlay).toContainText(
+      'Release to open. STDF, STD, or gzip.',
+    );
+
+    // 1b. Drag overlay for non-file drag (§3.2): "Only files can be opened here."
+    await page.evaluate(() => {
+      const overEvt = new Event('dragover', { bubbles: true, cancelable: true });
+      Object.defineProperty(overEvt, 'dataTransfer', {
+        value: { types: ['text/plain'] },
+      });
+      window.dispatchEvent(overEvt);
+    });
     await expect(dropOverlay).toContainText('Only files can be opened here.');
 
     await page.evaluate(() => {

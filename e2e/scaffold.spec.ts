@@ -51,7 +51,9 @@ test('NavBar R3 acceptance: 52px desktop / 48px mobile, language reload persiste
   });
 
   await page.evaluate(() => {
-    (document.activeElement as HTMLElement | null)?.blur();
+    document.body.tabIndex = -1;
+    document.body.focus();
+    document.body.removeAttribute('tabindex');
   });
 
   const expectedOrder = [

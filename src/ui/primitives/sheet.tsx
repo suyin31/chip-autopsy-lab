@@ -20,6 +20,18 @@ export interface ModalSheetProps {
 
 const DISMISS_VELOCITY_PX_PER_S = 500;
 const DISMISS_HEIGHT_FRACTION = 0.3;
+const RUBBERBAND_CONSTANT = 0.55;
+
+function rubberband(overshoot: number, dimension: number): number {
+  const safeDim = Math.max(1, dimension);
+  return (
+    (overshoot * safeDim * RUBBERBAND_CONSTANT) /
+    (safeDim + RUBBERBAND_CONSTANT * Math.abs(overshoot))
+  );
+}
+
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
 /**
  * Accessible modal / mobile bottom sheet primitive (`redesign.md` §2.4, §2.5, §3.7, §3.8, §5.9):
@@ -49,7 +61,7 @@ export function ModalSheet({
   const dragSamplesRef = React.useRef<Array<{ y: number; t: number }>>([]);
   const dragStartYRef = React.useRef<number | null>(null);
 
-  React.useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     setIsClientMounted(true);
     if (typeof window === 'undefined') {
       return;
@@ -61,7 +73,7 @@ export function ModalSheet({
     return () => mql.removeEventListener('change', sync);
   }, []);
 
-  React.useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!open || typeof document === 'undefined') {
       return;
     }
@@ -162,7 +174,10 @@ export function ModalSheet({
     if (startY === null || !dialogEl) {
       return;
     }
-    const deltaY = Math.max(0, event.clientY - startY);
+    const rawDelta = event.clientY - startY;
+    const sheetHeight = Math.max(1, dialogEl.offsetHeight);
+    const deltaY =
+      rawDelta >= 0 ? rawDelta : rubberband(rawDelta, sheetHeight) * 0.25;
     dialogEl.style.transform = `translate3d(0, ${deltaY}px, 0)`;
 
     const samples = dragSamplesRef.current;
@@ -183,11 +198,13 @@ export function ModalSheet({
     const samples = dragSamplesRef.current;
     const last = samples[samples.length - 1];
     const first = samples[0];
-    const currentDeltaY = last ? Math.max(0, last.y - startY) : 0;
+    const sheetHeight = Math.max(1, dialogEl.offsetHeight);
+    const rawDelta = last ? last.y - startY : 0;
+    const currentDeltaY =
+      rawDelta >= 0 ? rawDelta : rubberband(rawDelta, sheetHeight) * 0.25;
     const dtMs = first && last ? Math.max(1, last.t - first.t) : 16;
     const velocityPxPerS =
       first && last ? ((last.y - first.y) / dtMs) * 1000 : 0;
-    const sheetHeight = Math.max(1, dialogEl.offsetHeight);
 
     if (
       velocityPxPerS > DISMISS_VELOCITY_PX_PER_S ||
@@ -200,7 +217,11 @@ export function ModalSheet({
     if (shouldReduceMotion) {
       dialogEl.style.transform = 'translate3d(0, 0px, 0)';
     } else {
-      animate(dialogEl, { y: 0 }, SPRING_TOKENS.ui);
+      animate(
+        dialogEl,
+        { y: [currentDeltaY, 0] },
+        { ...SPRING_TOKENS.ui, velocity: velocityPxPerS },
+      );
     }
   };
 
@@ -208,7 +229,7 @@ export function ModalSheet({
     <AnimatePresence initial={false}>
       {open ? (
         <div
-          className="fixed inset-0 z-[var(--z-sheets)] flex items-end justify-center md:items-center md:p-4"
+          className="fixed inset-0 z-[var(--z-sheets)] flex items-end justify-center overscroll-contain md:items-center md:p-4"
           onKeyDown={handleKeyDown}
         >
           {/* Scrim: rgba(0,0,0,0.5) + 32px blur (§3.8) */}

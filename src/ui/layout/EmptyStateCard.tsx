@@ -295,7 +295,10 @@ function DemoLotCardButton({
           : {})}
       />
 
-      <div id={descId} className="flex min-w-0 flex-1 flex-col px-3 pt-3.5 pb-1.5">
+      <div
+        id={descId}
+        className="flex min-w-0 flex-1 flex-col px-3 pt-3 pb-0 md:pt-3.5"
+      >
         <span className="truncate type-headline text-text-primary">{title}</span>
         <span className="mt-1 truncate type-callout text-text-secondary">
           {description}
@@ -518,7 +521,10 @@ export function EmptyStateCard({
         <>
           <section
             aria-label={t('landing.demoHeading')}
-            className="mt-7 md:mt-8"
+            className={cn(
+              'mt-6',
+              cause === 'parse-failed' ? 'md:mt-10' : 'md:mt-5',
+            )}
           >
             <h2 className="sr-only">{t('landing.demoHeading')}</h2>
 
@@ -544,7 +550,7 @@ export function EmptyStateCard({
           </section>
 
           {/* §3.1 Footer line: privacy left, Download demo files menu right */}
-          <footer className="mt-8 flex flex-wrap items-center justify-between gap-4 md:mt-12">
+          <footer className="mt-8 flex flex-wrap items-center justify-between gap-4 md:mt-14">
             <p className="type-footnote text-text-tertiary">
               {t('landing.privacy')}
             </p>

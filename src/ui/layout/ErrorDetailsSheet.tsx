@@ -34,6 +34,9 @@ export function ErrorDetailsSheet({
 
   const cleanFileName = fileName ? sanitizeReportProseText(fileName) : '';
   const cleanHex = first16BytesHex.trim() || '—';
+  const safeOffset =
+    Number.isFinite(byteOffset) && byteOffset >= 0 ? Math.trunc(byteOffset) : 0;
+  const hexOffset = `0x${safeOffset.toString(16).toUpperCase().padStart(8, '0')}`;
 
   return (
     <ModalSheet
@@ -48,25 +51,29 @@ export function ErrorDetailsSheet({
         {t('error.detailsTitle')}
       </h2>
 
-      <dl className="mt-5 flex flex-col gap-3 rounded-md bg-surface-1 p-4 ring-surface">
-        {cleanFileName ? (
-          <div className="flex items-baseline justify-between gap-4">
-            <dt className="type-footnote text-text-secondary">File</dt>
-            <dd className="min-w-0 truncate text-right type-mono-data text-text-primary">
-              <Untranslated>{cleanFileName}</Untranslated>
-            </dd>
-          </div>
-        ) : null}
+      {cleanFileName ? (
+        <p className="mt-2 truncate type-mono-data text-text-secondary">
+          <Untranslated>{cleanFileName}</Untranslated>
+        </p>
+      ) : null}
 
+      <dl className="mt-4 flex flex-col gap-3 rounded-md bg-surface-1 p-4 ring-surface">
         <div className="flex items-baseline justify-between gap-4">
-          <dt className="type-footnote text-text-secondary">Offset</dt>
-          <dd className="text-right type-mono-data text-text-primary">
-            <Untranslated>{formatInteger(byteOffset)}</Untranslated>
+          <dt className="type-mono-data text-text-tertiary">
+            <Untranslated>{hexOffset}</Untranslated>
+          </dt>
+          <dd
+            data-testid="error-details-offset"
+            className="text-right type-mono-data text-text-primary"
+          >
+            <Untranslated>{formatInteger(safeOffset)}</Untranslated>
           </dd>
         </div>
 
         <div className="flex flex-col gap-1.5 border-t border-separator pt-3">
-          <dt className="type-footnote text-text-secondary">Hex (0..15)</dt>
+          <dt className="type-mono-data text-text-tertiary">
+            <Untranslated>00..0F</Untranslated>
+          </dt>
           <dd
             data-testid="error-details-hex"
             className="break-words type-mono-data text-text-primary"
