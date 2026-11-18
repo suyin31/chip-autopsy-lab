@@ -142,6 +142,20 @@ export const ko = {
   'pareto.rowAria': '{bin}(으)로 필터, {dies}, 테스트 대비 {share}',
   'pareto.showAll': '빈 {count}개 모두 보기',
   'pareto.showFewer': '간단히 보기',
+  // Yield summary
+  'yield.heading': '수율',
+  'yield.col.firstPass': '초도',
+  'yield.col.final': '최종',
+  'yield.col.retests': '재테스트',
+  'yield.sites': '테스트 사이트',
+  'yield.wafers': '웨이퍼',
+  'yield.wafersLowest': '수율이 낮은 웨이퍼',
+  'yield.siteLabel': '사이트 {site}',
+  'yield.siteLow': '다른 사이트보다 낮음',
+  'yield.siteRowAria': '사이트 {site}(으)로 범위 지정, 최종 수율 {final}, 초도 {firstPass}',
+  'yield.waferRowAria': '웨이퍼 {wafer}(으)로 범위 지정, 최종 수율 {final}, 초도 {firstPass}',
+  'yield.showAllWafers': '웨이퍼 {count}장 모두 보기',
+  'yield.showFewer': '간단히 보기',
   'stage.evidenceCaption': '웨이퍼 {wafers}장 중 {dies}개 다이, 현재 웨이퍼 {here}개',
 
   // Magnifier

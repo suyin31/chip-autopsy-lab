@@ -14,13 +14,14 @@ export interface ParetoMaskInputs {
   readonly brush: SpatialBrushRect | null;
   readonly binFilter: BinSelectionFilter | null;
   readonly siteFilter: number | null;
+  readonly waferFilter?: number | null;
   readonly dslFilter: FilterDslAst | null;
   readonly hasActiveFilter: boolean;
   readonly selectedDieMask: Uint8Array;
 }
 
 /**
- * Selection mask the Pareto counts over (Requirement 6.5): the active brush, site, and
+ * Selection mask the Pareto counts over (Requirement 6.5): the active brush, site, wafer, and
  * filter-DSL selection. The Pareto's own bin filter is left out, so clicking a bar keeps the
  * other bars visible and a second click can switch or clear the filter.
  *
@@ -40,6 +41,7 @@ export function resolveParetoMask(
     brush: inputs.brush,
     binFilter: null,
     siteFilter: inputs.siteFilter,
+    waferFilter: inputs.waferFilter ?? null,
     dslFilter: inputs.dslFilter,
     claimHighlight: null,
   });

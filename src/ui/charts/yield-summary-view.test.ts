@@ -1,0 +1,93 @@
+import { describe, expect, it } from 'vitest';
+import { computeYieldSummary, type YieldMetrics } from '@/core/analytics';
+import { generateDemoStdfBytes } from '@/core/demo';
+import type { DemoPresetId } from '@/core/demo';
+import { buildLotModel } from '@/core/model/lot-builder';
+import type { LotModel } from '@/core/model';
+import { buildEngineFacts } from '@/core/report';
+import { parseStdfBytes } from '@/core/stdf/stdf-parser';
+import {
+  isWaferTableCollapsible,
+  resolveAnomalousSiteIndices,
+  selectWaferRowIndices,
+  YIELD_COLLAPSED_WAFER_COUNT,
+} from './yield-summary-view';
+
+function loadLot(preset: DemoPresetId): LotModel {
+  const parsed = parseStdfBytes(generateDemoStdfBytes(preset), { mode: 'full' });
+  if (!parsed.ok) {
+    throw new Error(parsed.error.message);
+  }
+  return buildLotModel(parsed.value);
+}
+
+function metrics(finalYield: number | null): YieldMetrics {
+  return {
+    testedDies: 100,
+    firstPassTestedDies: 100,
+    firstPassDies: 90,
+    firstPassFailDies: 10,
+    finalPassDies: finalYield === null ? 0 : Math.round(finalYield * 100),
+    finalFailDies: 0,
+    retestExecutions: 0,
+    firstPassYield: 0.9,
+    finalYield,
+  };
+}
+
+describe('selectWaferRowIndices', () => {
+  const yields = [0.9, 0.5, 0.95, 0.7, 0.99, 0.6, 0.8, 0.97, 0.85, 0.4];
+  const byWafer = yields.map(metrics);
+
+  it('keeps the lowest final-yield wafers in wafer order while collapsed', () => {
+    const rows = selectWaferRowIndices(byWafer, false, () => false);
+    expect(rows).toEqual([1, 3, 5, 6, 9]);
+    expect(rows).toHaveLength(YIELD_COLLAPSED_WAFER_COUNT);
+  });
+
+  it('always includes the pinned wafer', () => {
+    expect(selectWaferRowIndices(byWafer, false, (i) => i === 4)).toEqual([
+      1, 3, 4, 5, 6, 9,
+    ]);
+  });
+
+  it('shows every wafer when expanded', () => {
+    expect(selectWaferRowIndices(byWafer, true, () => false)).toEqual(
+      yields.map((_, i) => i),
+    );
+  });
+
+  it('ranks a null yield lowest and breaks ties by wafer index', () => {
+    const tied = [0.9, 0.9, null, 0.9, 0.9, 0.9, 0.9, 0.9].map(metrics);
+    expect(selectWaferRowIndices(tied, false, () => false)).toEqual([
+      0, 1, 2, 3, 4,
+    ]);
+  });
+
+  it('skips the disclosure for short lots', () => {
+    const short = [0.9, 0.5, 0.95].map(metrics);
+    expect(isWaferTableCollapsible(short.length)).toBe(false);
+    expect(selectWaferRowIndices(short, false, () => false)).toEqual([0, 1, 2]);
+  });
+});
+
+describe('resolveAnomalousSiteIndices', () => {
+  it('flags the contact-failure site of site2-probe-contact only', () => {
+    const lot = loadLot('site2-probe-contact');
+    const facts = buildEngineFacts(lot);
+    const flagged = resolveAnomalousSiteIndices(lot, facts);
+    expect(flagged.size).toBe(1);
+    const [index] = [...flagged];
+    expect(lot.sites[index!]!.siteNum).toBe(2);
+    // The flagged site has the lowest first-pass yield of all sites
+    const bySite = computeYieldSummary(lot).bySite;
+    const lowest = Math.min(...bySite.map((m) => m.firstPassYield ?? 1));
+    expect(bySite[index!]!.firstPassYield).toBe(lowest);
+  });
+
+  it('flags nothing for lots without a site anomaly or without facts', () => {
+    const lot = loadLot('edge-ring-etch');
+    expect(resolveAnomalousSiteIndices(lot, buildEngineFacts(lot)).size).toBe(0);
+    expect(resolveAnomalousSiteIndices(lot, undefined).size).toBe(0);
+  });
+});

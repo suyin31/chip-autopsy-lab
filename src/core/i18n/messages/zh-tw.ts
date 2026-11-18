@@ -136,6 +136,20 @@ export const zhTW = {
   'pareto.rowAria': '篩選 {bin}，{dies}，佔測試總數 {share}',
   'pareto.showAll': '顯示全部 {count} 個 Bin',
   'pareto.showFewer': '收合',
+  // Yield summary
+  'yield.heading': '良率',
+  'yield.col.firstPass': '初測',
+  'yield.col.final': '最終',
+  'yield.col.retests': '複測',
+  'yield.sites': '測試站點',
+  'yield.wafers': '晶圓',
+  'yield.wafersLowest': '良率最低的晶圓',
+  'yield.siteLabel': '站點 {site}',
+  'yield.siteLow': '低於其他站點',
+  'yield.siteRowAria': '限定到站點 {site}，最終良率 {final}，初測 {firstPass}',
+  'yield.waferRowAria': '限定到晶圓 {wafer}，最終良率 {final}，初測 {firstPass}',
+  'yield.showAllWafers': '顯示全部 {count} 片晶圓',
+  'yield.showFewer': '收合',
   'stage.evidenceCaption': '共 {wafers} 片晶圓 {dies} 顆晶粒，本片 {here} 顆',
 
   // Magnifier

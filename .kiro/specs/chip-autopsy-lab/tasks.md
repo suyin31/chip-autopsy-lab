@@ -103,7 +103,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - **Property 5** in `src/core/analytics/bin-pareto.prop.test.ts`
     - _Requirements: 6.1, 6.2, 6.5_
 
-- [ ] 11. Add the yield summary panel with site breakdown
+- [x] 11. Add the yield summary panel with site breakdown
   - Lot, wafer, and site tables with first-pass and final yield; clicking a wafer or site scopes the selection; site anomaly surfaces in the report for `site2-probe-contact`.
   - _Requirements: 7.3, 7.4, 7.5_
 

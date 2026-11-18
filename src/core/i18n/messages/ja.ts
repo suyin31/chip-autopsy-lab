@@ -142,6 +142,20 @@ export const ja = {
   'pareto.rowAria': '{bin} に絞り込み、{dies}、テスト済みの {share}',
   'pareto.showAll': 'すべての {count} ビンを表示',
   'pareto.showFewer': '表示を減らす',
+  // Yield summary
+  'yield.heading': '歩留まり',
+  'yield.col.firstPass': '初回',
+  'yield.col.final': '最終',
+  'yield.col.retests': '再テスト',
+  'yield.sites': 'テストサイト',
+  'yield.wafers': 'ウェハ',
+  'yield.wafersLowest': '歩留まりの低いウェハ',
+  'yield.siteLabel': 'サイト {site}',
+  'yield.siteLow': '他のサイトより低い',
+  'yield.siteRowAria': 'サイト {site} に絞り込み、最終歩留まり {final}、初回 {firstPass}',
+  'yield.waferRowAria': 'ウェハ {wafer} に絞り込み、最終歩留まり {final}、初回 {firstPass}',
+  'yield.showAllWafers': 'すべての {count} 枚のウェハを表示',
+  'yield.showFewer': '表示を減らす',
   'stage.evidenceCaption': '全 {wafers} ウェハ中 {dies} ダイ、このウェハに {here}',
 
   // Magnifier

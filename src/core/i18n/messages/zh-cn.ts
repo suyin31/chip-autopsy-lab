@@ -136,6 +136,20 @@ export const zhCN = {
   'pareto.rowAria': '筛选 {bin}，{dies}，占测试总数 {share}',
   'pareto.showAll': '显示全部 {count} 个 Bin',
   'pareto.showFewer': '收起',
+  // Yield summary
+  'yield.heading': '良率',
+  'yield.col.firstPass': '初测',
+  'yield.col.final': '最终',
+  'yield.col.retests': '复测',
+  'yield.sites': '测试工位',
+  'yield.wafers': '晶圆',
+  'yield.wafersLowest': '良率最低的晶圆',
+  'yield.siteLabel': '工位 {site}',
+  'yield.siteLow': '低于其他工位',
+  'yield.siteRowAria': '限定到工位 {site}，最终良率 {final}，初测 {firstPass}',
+  'yield.waferRowAria': '限定到晶圆 {wafer}，最终良率 {final}，初测 {firstPass}',
+  'yield.showAllWafers': '显示全部 {count} 片晶圆',
+  'yield.showFewer': '收起',
   'stage.evidenceCaption': '共 {wafers} 片晶圆 {dies} 颗晶粒，本片 {here} 颗',
 
   // Magnifier

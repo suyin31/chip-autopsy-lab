@@ -142,6 +142,20 @@ export const en = {
   'pareto.rowAria': 'Filter to {bin}, {dies}, {share} of tested',
   'pareto.showAll': 'Show all {count} bins',
   'pareto.showFewer': 'Show fewer',
+  // Yield summary
+  'yield.heading': 'Yield',
+  'yield.col.firstPass': 'First pass',
+  'yield.col.final': 'Final',
+  'yield.col.retests': 'Retests',
+  'yield.sites': 'Test sites',
+  'yield.wafers': 'Wafers',
+  'yield.wafersLowest': 'Lowest yield wafers',
+  'yield.siteLabel': 'Site {site}',
+  'yield.siteLow': 'Lower than the other sites',
+  'yield.siteRowAria': 'Scope to site {site}, final yield {final}, first pass {firstPass}',
+  'yield.waferRowAria': 'Scope to wafer {wafer}, final yield {final}, first pass {firstPass}',
+  'yield.showAllWafers': 'Show all {count} wafers',
+  'yield.showFewer': 'Show fewer',
   'stage.evidenceCaption':
     '{dies} dies on {wafers} wafers, {here} on this wafer',
 

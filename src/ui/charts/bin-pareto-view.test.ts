@@ -78,6 +78,31 @@ describe('resolveParetoMask', () => {
   });
 });
 
+describe('resolveParetoMask with a wafer scope', () => {
+  const lot = loadLot();
+
+  it('counts only the scoped wafer, with or without a bin filter', () => {
+    const store = createSelectionStore();
+    store.getState().setLot(lot);
+    store.getState().toggleWaferFilter(2);
+    const wafer = lot.wafers[2]!;
+    const waferMask = resolveParetoMask(lot, store.getState())!;
+    expect(waferMask).toBe(store.getState().selectedDieMask);
+    const scoped = computeBinPareto(lot, 'SBIN', waferMask);
+    expect(scoped.failCount).toBeLessThanOrEqual(
+      wafer.dieEndIndex - wafer.dieStartIndex,
+    );
+    expect(scoped.failCount).toBeLessThan(
+      computeBinPareto(lot, 'SBIN').failCount,
+    );
+
+    const topCode = scoped.entries[0]!.binCode;
+    store.getState().toggleBinFilter({ mode: 'SBIN', code: topCode });
+    const both = resolveParetoMask(lot, store.getState())!;
+    expect(Array.from(both)).toEqual(Array.from(waferMask));
+  });
+});
+
 describe('selectParetoRows', () => {
   const entries = Array.from({ length: 12 }, (_, i) => entry(i + 1));
 

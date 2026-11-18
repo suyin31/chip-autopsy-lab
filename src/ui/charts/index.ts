@@ -6,3 +6,11 @@ export {
   resolveParetoMask,
   selectParetoRows,
 } from './bin-pareto-view';
+export { YieldSummaryPanel, type YieldSummaryPanelProps } from './YieldSummaryPanel';
+export {
+  isWaferTableCollapsible,
+  resolveAnomalousSiteIndices,
+  selectWaferRowIndices,
+  YIELD_ALWAYS_EXPANDED_WAFER_COUNT,
+  YIELD_COLLAPSED_WAFER_COUNT,
+} from './yield-summary-view';

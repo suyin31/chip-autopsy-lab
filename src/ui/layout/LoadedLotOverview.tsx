@@ -5,7 +5,7 @@ import * as React from 'react';
 import type { StoreApi } from 'zustand';
 import type { DemoPresetId, DemoPresetMeta } from '@/core/demo';
 import { sanitizeReportProseText } from '@/core/report';
-import { BinParetoChart } from '@/ui/charts';
+import { BinParetoChart, YieldSummaryPanel } from '@/ui/charts';
 import { formatGroupedInt } from '@/ui/format';
 import { AutopsyReportCard } from '@/ui/report';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
@@ -107,7 +107,18 @@ export function LoadedLotOverview({
         verdictRevealed={verdictRevealed}
         store={store}
         splitForMobileStage
-        belowFindings={<BinParetoChart lot={lot} store={store} />}
+        belowFindings={
+          <>
+            <BinParetoChart lot={lot} store={store} />
+            <YieldSummaryPanel
+              lot={lot}
+              yieldSummary={yieldSummary}
+              facts={facts}
+              store={store}
+              className="mt-12"
+            />
+          </>
+        }
         className="xl:col-start-2 xl:row-start-1 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:[scrollbar-gutter:stable]"
         binsOnlyNotice={
           lot.parseMode === 'bins-only' ? (

@@ -271,6 +271,59 @@ describe('SelectionStore and Uint8Array mask derivation (Sub-task 5.1)', () => {
     ]);
   });
 
+  it('scopes to a wafer, shows it, intersects with other filters, and clears (Req 7.5)', () => {
+    const store = createSelectionStore();
+    store.getState().setLot(lot);
+    const w2 = lot.wafers[1]!;
+    const w2Dies: number[] = [];
+    for (let i = w2.dieStartIndex; i < w2.dieEndIndex; i += 1) {
+      w2Dies.push(i);
+    }
+
+    store.getState().toggleWaferFilter(1);
+    expect(store.getState().waferFilter).toBe(1);
+    expect(store.getState().activeWaferIndex).toBe(1);
+    expect(store.getState().hasActiveFilter).toBe(true);
+    expect(maskToIndices(store.getState().selectedDieMask)).toEqual(w2Dies);
+    expect(store.getState().selectedDieCount).toBe(w2Dies.length);
+    // A wafer scope alone does not light every die on the map
+    expect(store.getState().overlayHighlightCount).toBe(0);
+
+    // Intersects with a site scope and then lights the selected dies
+    store.getState().toggleSiteFilter(1);
+    const w2Site2 = w2Dies.filter((i) => lot.dies.siteIndex[i] === 1);
+    expect(maskToIndices(store.getState().selectedDieMask)).toEqual(w2Site2);
+    expect(maskToIndices(store.getState().overlayHighlightMask)).toEqual(
+      w2Site2,
+    );
+
+    // Same wafer again clears only the wafer scope
+    store.getState().toggleWaferFilter(1);
+    expect(store.getState().waferFilter).toBeNull();
+    expect(store.getState().siteFilter).toBe(1);
+
+    // Out-of-range indices clamp; clearFilters and a new lot reset the scope
+    store.getState().setWaferFilter(99);
+    expect(store.getState().waferFilter).toBe(lot.wafers.length - 1);
+    store.getState().clearFilters();
+    expect(store.getState().waferFilter).toBeNull();
+    store.getState().setWaferFilter(0);
+    store.getState().setLot(buildFixtureLot());
+    expect(store.getState().waferFilter).toBeNull();
+    expect(store.getState().hasActiveFilter).toBe(false);
+
+    // Pure derivation treats a missing waferFilter as null and rejects bad indices
+    const bad = deriveSelectionMasks(lot, {
+      brush: null,
+      binFilter: null,
+      siteFilter: null,
+      waferFilter: 42,
+      dslFilter: null,
+      claimHighlight: null,
+    });
+    expect(bad.selectedDieCount).toBe(0);
+  });
+
   it('evaluates FilterDslAst clauses (pass-status, bin, edge-ring, radial-zone, wafer, site)', () => {
     const dslFailSite2W01: FilterDslAst = {
       dieClauses: [

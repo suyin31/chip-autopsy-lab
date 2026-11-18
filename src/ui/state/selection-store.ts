@@ -89,6 +89,11 @@ export interface SelectionMaskInputs {
   readonly binFilter: BinSelectionFilter | null;
   /** Dense `0 .. lot.sites.length - 1` index into `LotModel.sites`. */
   readonly siteFilter: number | null;
+  /**
+   * Dense `0 .. lot.wafers.length - 1` index into `LotModel.wafers`; scopes every view to the
+   * dies tested on that wafer (yield summary wafer click, Requirement 7.5). Omitted means `null`.
+   */
+  readonly waferFilter?: number | null;
   readonly dslFilter: FilterDslAst | null;
   readonly claimHighlight: ClaimHighlightState | null;
 }
@@ -96,7 +101,7 @@ export interface SelectionMaskInputs {
 export interface DerivedSelectionMasks {
   /**
    * `true` when at least one die filter predicate (`brush`, `binFilter`,
-   * `siteFilter`, or non-empty `dslFilter.dieClauses`) is active.
+   * `siteFilter`, `waferFilter`, or non-empty `dslFilter.dieClauses`) is active.
    */
   readonly hasActiveFilter: boolean;
   /**
@@ -115,6 +120,8 @@ export interface DerivedSelectionMasks {
   /**
    * Length === `lot.dies.count`. Effective `#D6E6FF` wafer overlay highlight mask:
    * `(hasActiveFilter ? selectedDieMask[i] : 0) | claimHighlightMask[i]`.
+   * A `waferFilter` on its own does not light dies (the wafer map already shows that wafer), so
+   * it contributes only while another die filter is active.
    * All `0`s when neither a filter nor a claim highlight is active.
    */
   readonly overlayHighlightMask: Uint8Array;
@@ -271,12 +278,14 @@ export function deriveSelectionMasks(
   inputs: SelectionMaskInputs,
 ): DerivedSelectionMasks {
   const { brush, binFilter, siteFilter, dslFilter, claimHighlight } = inputs;
+  const waferFilter = inputs.waferFilter ?? null;
   const dslDieClauses = dslFilter?.dieClauses ?? [];
-  const hasActiveFilter =
+  const hasHighlightingFilter =
     brush !== null ||
     binFilter !== null ||
     siteFilter !== null ||
     dslDieClauses.length > 0;
+  const hasActiveFilter = hasHighlightingFilter || waferFilter !== null;
 
   if (lot === null || lot.dies.count === 0) {
     return {
@@ -308,8 +317,13 @@ export function deriveSelectionMasks(
       (!Number.isInteger(siteFilter) ||
         siteFilter < 0 ||
         siteFilter >= sites.length);
+    const waferOutOfRange =
+      waferFilter !== null &&
+      (!Number.isInteger(waferFilter) ||
+        waferFilter < 0 ||
+        waferFilter >= lot.wafers.length);
 
-    if (!siteOutOfRange) {
+    if (!siteOutOfRange && !waferOutOfRange) {
       const brushLoX = brush !== null ? Math.min(brush.minX, brush.maxX) : 0;
       const brushHiX = brush !== null ? Math.max(brush.minX, brush.maxX) : 0;
       const brushLoY = brush !== null ? Math.min(brush.minY, brush.maxY) : 0;
@@ -332,6 +346,10 @@ export function deriveSelectionMasks(
 
       for (let i = 0; i < dieCount; i += 1) {
         if (siteFilter !== null && siteIdxArr[i] !== siteFilter) {
+          continue;
+        }
+
+        if (waferFilter !== null && waferIdxArr[i] !== waferFilter) {
           continue;
         }
 
@@ -409,13 +427,13 @@ export function deriveSelectionMasks(
   let overlayHighlightMask: Uint8Array;
   let overlayHighlightCount = 0;
 
-  if (!hasActiveFilter && highlightedDieIndices.length === 0) {
+  if (!hasHighlightingFilter && highlightedDieIndices.length === 0) {
     overlayHighlightMask = getZeroMaskForLot(lot);
     overlayHighlightCount = 0;
-  } else if (hasActiveFilter && highlightedDieIndices.length === 0) {
+  } else if (hasHighlightingFilter && highlightedDieIndices.length === 0) {
     overlayHighlightMask = new Uint8Array(selectedDieMask);
     overlayHighlightCount = selectedDieCount;
-  } else if (!hasActiveFilter) {
+  } else if (!hasHighlightingFilter) {
     overlayHighlightMask = new Uint8Array(claimHighlightMask);
     overlayHighlightCount = highlightedDieIndices.length;
   } else {
@@ -450,6 +468,7 @@ export interface SelectionStoreState extends DerivedSelectionMasks {
   readonly brush: SpatialBrushRect | null;
   readonly binFilter: BinSelectionFilter | null;
   readonly siteFilter: number | null;
+  readonly waferFilter: number | null;
   readonly dslFilter: FilterDslAst | null;
   readonly claimHighlight: ClaimHighlightState | null;
 
@@ -465,6 +484,9 @@ export interface SelectionStoreState extends DerivedSelectionMasks {
   readonly toggleBinFilter: (binFilter: BinSelectionFilter) => void;
   readonly setSiteFilter: (siteIndex: number | null) => void;
   readonly toggleSiteFilter: (siteIndex: number) => void;
+  readonly setWaferFilter: (waferIndex: number | null) => void;
+  /** Scopes to one wafer and shows it on the wafer map; a second call clears the scope. */
+  readonly toggleWaferFilter: (waferIndex: number) => void;
   readonly setDslFilter: (dslFilter: FilterDslAst | null) => void;
   readonly setClaimHighlight: (highlight: ClaimHighlightState | null) => void;
   readonly toggleClaimHighlight: (highlight: ClaimHighlightState) => void;
@@ -513,6 +535,10 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
         overrides.siteFilter !== undefined
           ? overrides.siteFilter
           : current.siteFilter,
+      waferFilter:
+        overrides.waferFilter !== undefined
+          ? overrides.waferFilter
+          : current.waferFilter,
       dslFilter:
         overrides.dslFilter !== undefined
           ? overrides.dslFilter
@@ -527,6 +553,7 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
       nextInputs.brush === current.brush &&
       nextInputs.binFilter === current.binFilter &&
       nextInputs.siteFilter === current.siteFilter &&
+      nextInputs.waferFilter === current.waferFilter &&
       nextInputs.dslFilter === current.dslFilter &&
       nextInputs.claimHighlight === current.claimHighlight
     ) {
@@ -546,6 +573,7 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
     brush: null,
     binFilter: null,
     siteFilter: null,
+    waferFilter: null,
     dslFilter: null,
     claimHighlight: null,
     ...INITIAL_MASKS,
@@ -554,10 +582,11 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
       if (get().lot === lot) {
         return;
       }
-      const cleanInputs: SelectionMaskInputs = {
+      const cleanInputs = {
         brush: null,
         binFilter: null,
         siteFilter: null,
+        waferFilter: null,
         dslFilter: null,
         claimHighlight: null,
       };
@@ -680,6 +709,28 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
       }
     },
 
+    setWaferFilter: (waferFilter) => {
+      const lot = get().lot;
+      const valid =
+        waferFilter === null ? null : clampWaferIndex(lot, waferFilter);
+      const patch = recomputeWith(lot, { waferFilter: valid });
+      if (patch) {
+        set(
+          valid !== null && valid !== get().activeWaferIndex
+            ? { ...patch, activeWaferIndex: valid, hoveredDieIndex: null }
+            : patch,
+        );
+      } else if (valid !== null && valid !== get().activeWaferIndex) {
+        set({ activeWaferIndex: valid, hoveredDieIndex: null });
+      }
+    },
+
+    toggleWaferFilter: (waferIndex) => {
+      const { waferFilter, lot } = get();
+      const target = clampWaferIndex(lot, waferIndex);
+      get().setWaferFilter(waferFilter === target ? null : target);
+    },
+
     setDslFilter: (dslFilter) => {
       const patch = recomputeWith(get().lot, { dslFilter });
       if (patch) {
@@ -757,6 +808,7 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
         brush: null,
         binFilter: null,
         siteFilter: null,
+        waferFilter: null,
         dslFilter: null,
         claimHighlight: null,
       });
@@ -776,6 +828,7 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
         brush: null,
         binFilter: null,
         siteFilter: null,
+        waferFilter: null,
         dslFilter: null,
         claimHighlight: null,
         ...INITIAL_MASKS,

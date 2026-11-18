@@ -1643,6 +1643,7 @@ function WaferMapCanvasImpl({
           state.setBrush(null);
           state.setBinFilter(null);
           state.setSiteFilter(null);
+          state.setWaferFilter(null);
           state.setDslFilter(null);
           return;
         }
