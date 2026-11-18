@@ -271,6 +271,13 @@ export const zhTW = {
   'magnifier.retested': '已重測，第 {n} 次合格',
   'magnifier.retestedFailed': '已重測，第 {n} 次仍失效',
 
+  // Coach marks (premium §2.4, §7.18)
+  'hints.show': '從這裡開始。它會點亮結論背後的晶粒。',
+  'hints.hover': '指向任一晶粒，查看它的分類和測試值。',
+  'hints.hoverTouch': '輕點任一晶粒，查看它的分類和測試值。',
+  'hints.strip': '在這裡瀏覽全部 {count} 片晶圓，或按 ← 和 →。',
+  'hints.gotIt': '知道了',
+
   // Selection popover
   'selection.dies.one': '已選 {count} 顆晶粒',
   'selection.dies.other': '已選 {count} 顆晶粒',

@@ -297,7 +297,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P24. Term and glossary
   - `Term` component and popover, all `glossary.*` keys in 5 locales, Terms placed per §2.2 (premium §2.3, §7.17, §9.5).
   - Accept: A21, A22.
-- [ ] P25. Coach marks
+- [x] P25. Coach marks
   - Three hints, anchoring, persistence in `localStorage["cal.hints.v1"]`, `?nohints=1`, suppression rules (premium §2.4, §7.18).
   - Accept: A23, A24, A44 (also apply premium §11.4).
 - [ ] P26. Copy and i18n pass

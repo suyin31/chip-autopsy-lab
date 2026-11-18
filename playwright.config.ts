@@ -19,6 +19,17 @@ export default defineConfig({
   reporter: 'list',
   use: {
     baseURL: BASE_URL,
+    // Coach marks (premium §2.4) start dismissed so they never cover controls in other specs;
+    // coach-marks-p25.spec.ts clears this to test them.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: BASE_URL,
+          localStorage: [{ name: 'cal.hints.v1', value: '["h-show","h-hover","h-strip"]' }],
+        },
+      ],
+    },
     colorScheme: 'dark',
     trace: 'on-first-retry',
     viewport: { width: 1440, height: 900 },

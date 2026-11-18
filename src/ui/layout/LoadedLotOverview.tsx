@@ -17,6 +17,7 @@ import {
 import { peekLotInitialRevealPlan } from '@/ui/wafer-map/WaferMapCanvas';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
 import { BinsOnlyNotice } from './BinsOnlyNotice';
+import { CoachMarks } from './CoachMarks';
 
 export interface LoadedLotOverviewProps {
   readonly data: AutopsyWorkerLoadedPayload;
@@ -184,6 +185,9 @@ export function LoadedLotOverview({
           store={store}
         />
       </div>
+
+      {/* Premium §2.4, §7.18: first-use hints (portalled; at most one visible) */}
+      <CoachMarks lot={lot} verdictRevealed={verdictRevealed} store={store} />
 
       {sanitizedWarnings.length > 0 ? (
         <div className="sr-only" role="status">

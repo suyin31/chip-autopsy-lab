@@ -271,6 +271,13 @@ export const zhCN = {
   'magnifier.retested': '已复测，第 {n} 次合格',
   'magnifier.retestedFailed': '已复测，第 {n} 次仍失效',
 
+  // Coach marks (premium §2.4, §7.18)
+  'hints.show': '从这里开始。它会点亮结论背后的晶粒。',
+  'hints.hover': '指向任意晶粒，查看它的分类和测试值。',
+  'hints.hoverTouch': '轻点任意晶粒，查看它的分类和测试值。',
+  'hints.strip': '在这里浏览全部 {count} 片晶圆，或按 ← 和 →。',
+  'hints.gotIt': '知道了',
+
   // Selection popover
   'selection.dies.one': '已选 {count} 颗晶粒',
   'selection.dies.other': '已选 {count} 颗晶粒',

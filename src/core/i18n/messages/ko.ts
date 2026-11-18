@@ -275,6 +275,13 @@ export const ko = {
   'magnifier.retested': '재측정, {n}번째에 양품',
   'magnifier.retestedFailed': '재측정, {n}번째에도 불량',
 
+  // Coach marks (premium §2.4, §7.18)
+  'hints.show': '여기서 시작하세요. 판정의 근거가 된 다이가 켜집니다.',
+  'hints.hover': '다이에 포인터를 올리면 분류와 테스트 값을 볼 수 있습니다.',
+  'hints.hoverTouch': '다이를 탭하면 분류와 테스트 값을 볼 수 있습니다.',
+  'hints.strip': '여기서 웨이퍼 {count}장을 넘겨 보세요. ← 와 → 키도 됩니다.',
+  'hints.gotIt': '확인',
+
   // Selection popover
   'selection.dies.one': '{count}개 다이 선택됨',
   'selection.dies.other': '{count}개 다이 선택됨',

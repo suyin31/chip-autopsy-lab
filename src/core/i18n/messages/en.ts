@@ -273,6 +273,13 @@ export const en = {
   'magnifier.retested': 'Retested, passed on try {n}',
   'magnifier.retestedFailed': 'Retested, failed on try {n}',
 
+  // Coach marks (premium §2.4, §7.18)
+  'hints.show': 'Start here. This lights up the dies behind the verdict.',
+  'hints.hover': 'Point at any die to read its bin and test values.',
+  'hints.hoverTouch': 'Tap any die to read its bin and test values.',
+  'hints.strip': 'Flip through all {count} wafers here, or press ← and →.',
+  'hints.gotIt': 'Got it',
+
   // Selection popover
   'selection.dies.one': '{count} die selected',
   'selection.dies.other': '{count} dies selected',

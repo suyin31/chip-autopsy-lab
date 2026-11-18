@@ -275,6 +275,13 @@ export const ja = {
   'magnifier.retested': '再測定、{n} 回目で良',
   'magnifier.retestedFailed': '再測定、{n} 回目も不良',
 
+  // Coach marks (premium §2.4, §7.18)
+  'hints.show': 'ここから始めます。結論の根拠となるダイが光ります。',
+  'hints.hover': 'ダイにポインタを合わせると、区分とテスト値が見られます。',
+  'hints.hoverTouch': 'ダイをタップすると、区分とテスト値が見られます。',
+  'hints.strip': 'ここで {count} 枚のウェハを切り替えられます。← と → キーも使えます。',
+  'hints.gotIt': '了解',
+
   // Selection popover
   'selection.dies.one': '{count} ダイを選択',
   'selection.dies.other': '{count} ダイを選択',

@@ -2168,6 +2168,8 @@ function WaferMapCanvasImpl({
           data-sweep="done"
           data-render-count={renderCountRef.current}
           data-wafer-diameter-px={Math.round(fitWaferDiameter)}
+          data-disc-center-x={Math.round(fitLayout?.centerXCss ?? stageDims.width / 2)}
+          data-disc-center-y={Math.round(fitLayout?.centerYCss ?? stageDims.height / 2)}
           data-stage-tool={stageTool}
           tabIndex={0}
           style={{ touchAction: stageTool === 'select' ? 'none' : 'pan-y' }}
