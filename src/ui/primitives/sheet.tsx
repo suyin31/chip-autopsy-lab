@@ -1,9 +1,11 @@
 'use client';
 
+import { X } from 'lucide-react';
 import { AnimatePresence, animate, motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
+import { Button } from './button';
 import { cn } from './cn';
 
 export interface ModalSheetProps {
@@ -12,6 +14,10 @@ export interface ModalSheetProps {
   readonly titleId: string;
   readonly descriptionId?: string;
   readonly initialFocusRef?: React.RefObject<HTMLElement | null>;
+  /** Accessible name of the desktop close icon button ("Close", premium §7.16). */
+  readonly closeLabel: string;
+  /** Desktop dialog width: 480 (default) or 560 (error details). */
+  readonly size?: 'default' | 'wide';
   readonly disablePortal?: boolean;
   readonly 'data-testid'?: string;
   readonly className?: string;
@@ -19,6 +25,15 @@ export interface ModalSheetProps {
 }
 
 const DISMISS_VELOCITY_PX_PER_S = 500;
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Focusable descendants that are rendered (the desktop-only close button is hidden on mobile). */
+function listFocusables(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (el) => el.getClientRects().length > 0,
+  );
+}
 const DISMISS_HEIGHT_FRACTION = 0.3;
 const RUBBERBAND_CONSTANT = 0.55;
 
@@ -34,9 +49,10 @@ const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
 /**
- * Accessible modal / mobile bottom sheet primitive (`redesign.md` §2.4, §2.5, §3.7, §3.8, §5.9):
- * - Scrim `rgba(0, 0, 0, 0.5)` + `blur(32px)` at `z-[var(--z-sheets)]` (`60`)
- * - Desktop (`>= 768px`): `480px` wide centred `rounded-[24px]` material surface, `32px` padding, `spring-ui`
+ * Accessible modal / mobile bottom sheet primitive (premium §7.16; `redesign.md` §2.4, §2.5, §5.9):
+ * - `scrim` backdrop at `z-[var(--z-sheets)]` (`60`)
+ * - Desktop (`>= 768px`): centred dialog, 480 wide (`size="wide"`: 560), `surface`, `r-2xl`,
+ *   `shadow-popover`, padding 32, `spring-ui`; icon button "Close" (`x`) 16 / 16 from the top-right
  * - Mobile (`< 768px`): full-width bottom sheet (`rounded-t-[24px]`), `36 x 5 px` drag handle,
  *   `y: 100% -> 0` `spring-ui` + 1:1 ref-driven drag-to-dismiss (`velocity > 500 px/s` or `> 30%` height)
  * - Deterministic initial focus (`initialFocusRef`), Tab focus trap, Escape & scrim dismissal
@@ -47,6 +63,8 @@ export function ModalSheet({
   titleId,
   descriptionId,
   initialFocusRef,
+  closeLabel,
+  size = 'default',
   disablePortal = false,
   'data-testid': dataTestId,
   className,
@@ -89,9 +107,7 @@ export function ModalSheet({
       if (!dialogEl) {
         return;
       }
-      const firstFocusable = dialogEl.querySelector<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      );
+      const firstFocusable = listFocusables(dialogEl)[0];
       (firstFocusable ?? dialogEl).focus();
     };
 
@@ -130,11 +146,7 @@ export function ModalSheet({
       if (!dialogEl || typeof document === 'undefined') {
         return;
       }
-      const focusables = Array.from(
-        dialogEl.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ),
-      );
+      const focusables = listFocusables(dialogEl);
       if (focusables.length === 0) {
         event.preventDefault();
         return;
@@ -299,7 +311,8 @@ export function ModalSheet({
             className={cn(
               // premium §7.16: `surface`, `r-2xl`, `shadow-popover`; mobile padding 24 16 + safe area
               'relative z-10 w-full rounded-t-2xl bg-surface px-4 pt-0 pb-[calc(24px+env(safe-area-inset-bottom))] text-text-primary shadow-popover outline-none',
-              'md:w-[480px] md:max-w-[calc(100vw-32px)] md:rounded-2xl md:p-8',
+              size === 'wide' ? 'md:w-[560px]' : 'md:w-[480px]',
+              'md:max-w-[calc(100vw-32px)] md:rounded-2xl md:p-8',
               className,
             )}
           >
@@ -314,6 +327,18 @@ export function ModalSheet({
             >
               <span className="h-[5px] w-9 rounded-pill bg-fill-3" />
             </div>
+
+            {/* Desktop: icon button "Close" (`x`) 16 / 16 from the top-right (premium §7.16) */}
+            <span className="absolute top-4 right-4 hidden md:block">
+              <Button
+                variant="icon"
+                aria-label={closeLabel}
+                data-testid="sheet-close-button"
+                onClick={onClose}
+              >
+                <X aria-hidden="true" strokeWidth={2} />
+              </Button>
+            </span>
 
             {children}
           </motion.div>

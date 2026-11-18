@@ -84,7 +84,7 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
       timeout: 500,
     });
 
-    // 3. Shift+drag box select updates "N dies / Failing / Yield / Top bin" live DURING drag with 0 WaferMapCanvas React renders (§3.6, §5.7)
+    // 3. Shift+drag box select updates "N dies selected / failed, yield / Most loss" live DURING drag with 0 WaferMapCanvas React renders (§3.6, §5.7)
     const popover = page.getByTestId('wafer-selection-popover');
     await expect(popover).toHaveAttribute('data-visible', 'false');
 
@@ -112,11 +112,10 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
     );
     const midDragTitle2 =
       (await page.getByTestId('selection-popover-title').textContent()) ?? '';
-    expect(midDragTitle2).toMatch(/^\d[\d,]*\s+dies$/);
-    await expect(page.getByTestId('selection-popover-failing')).toHaveText(
-      /^\d[\d,]*$/,
+    expect(midDragTitle2).toMatch(/^\d[\d,]*\s+dies selected$/);
+    await expect(page.getByTestId('selection-popover-summary')).toHaveText(
+      /^\d[\d,]* failed, \d+(\.\d)?% yield$/,
     );
-    await expect(page.getByTestId('selection-popover-yield')).toContainText('%');
     await expect(page.getByTestId('selection-popover-top-bin')).toContainText(
       'SBIN',
     );
@@ -129,7 +128,7 @@ test.describe('Redesign R7 — Linked interactions acceptance', () => {
     await page.mouse.up();
     await page.keyboard.up('Shift');
 
-    // Committed popover shows Clear + Zoom to selection, and linked verdict stats reflect "in selection"
+    // Committed popover shows Clear + the Esc keycap (premium §7.14), and linked verdict stats reflect "in selection"
     await expect(page.getByTestId('selection-popover-actions')).toBeVisible();
     await expect(page.getByTestId('verdict-stat-row')).toContainText(
       'in selection',

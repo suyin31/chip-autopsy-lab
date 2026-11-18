@@ -1629,28 +1629,6 @@ function WaferMapCanvasImpl({
     store.getState().setBrush(null);
   }, [cancelSnapAnimation, store]);
 
-  const handleZoomToSelection = React.useCallback((): void => {
-    const controller = controllerRef.current;
-    if (!controller || !fitLayout) {
-      return;
-    }
-    const state = store.getState();
-    if (!state.hasActiveFilter) {
-      return;
-    }
-    userMovedCameraSinceFindingRef.current = true;
-    const targetCam = computeEvidenceFramingCamera({
-      lot,
-      waferIndex: safeWaferIndex,
-      dieMask: state.selectedDieMask,
-      fitLayout,
-      stageWidth: stageDims.width,
-      stageHeight: stageDims.height,
-      fullWaferRatioThreshold: 0.98,
-    });
-    controller.animateToCamera(targetCam);
-  }, [fitLayout, lot, safeWaferIndex, stageDims.height, stageDims.width, store]);
-
   const handleStageKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>): void => {
       if (isStageHudEventTarget(event.target)) {
@@ -2318,13 +2296,12 @@ function WaferMapCanvasImpl({
           onPinnedDieChange={handlePinnedDieChange}
         />
 
-        {/* Box-Select Live & Committed Stats Popover (z: 30, §3.6, §4.14, §5.7) */}
+        {/* Box-Select Live & Committed Stats Popover (z: 30, premium §7.14, redesign §4.14, §5.7) */}
         <SelectionPopover
           ref={selectionPopoverRef}
           committedStats={committedBrushStats}
           isCommitted={activeWaferBrush !== null}
           onClear={handleClearSelection}
-          onZoomToSelection={handleZoomToSelection}
         />
       </div>
 

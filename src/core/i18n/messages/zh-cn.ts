@@ -239,14 +239,12 @@ export const zhCN = {
   'magnifier.notchValue': '{clock} 点钟方向',
 
   // Selection popover
-  'selection.dies.one': '{count} 颗晶粒',
-  'selection.dies.other': '{count} 颗晶粒',
-  'selection.failing': '失效',
-  'selection.yield': '良率',
-  'selection.topBin': '主要分档',
+  'selection.dies.one': '已选 {count} 颗晶粒',
+  'selection.dies.other': '已选 {count} 颗晶粒',
+  'selection.summary': '{failed} 颗失效，良率 {yield}',
+  'selection.mostLoss': '主要损失：{bin}',
   'selection.none': '无',
   'selection.clear': '清除',
-  'selection.zoom': '缩放到选区',
 
   // Strip
   'strip.aria': '批次 {lotId} 中的晶圆',
@@ -293,6 +291,9 @@ export const zhCN = {
   'toast.downloaded': '已下载 {fileName}。',
   'toast.binsOnly': '仅分档模式已开启。',
   'toast.dismiss': '关闭',
+
+  // Sheets
+  'sheet.close': '关闭',
 
   // Language
   'language.changed': '语言已切换为 {language}。',

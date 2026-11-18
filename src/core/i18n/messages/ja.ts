@@ -243,14 +243,12 @@ export const ja = {
   'magnifier.notchValue': '{clock} 時方向',
 
   // Selection popover
-  'selection.dies.one': '{count} ダイ',
-  'selection.dies.other': '{count} ダイ',
-  'selection.failing': '不良',
-  'selection.yield': '歩留まり',
-  'selection.topBin': '最頻ビン',
+  'selection.dies.one': '{count} ダイを選択',
+  'selection.dies.other': '{count} ダイを選択',
+  'selection.summary': '不良 {failed}、歩留まり {yield}',
+  'selection.mostLoss': '最大の損失：{bin}',
   'selection.none': 'なし',
   'selection.clear': 'クリア',
-  'selection.zoom': '選択範囲にズーム',
 
   // Strip
   'strip.aria': 'ロット {lotId} のウェハ一覧',
@@ -297,6 +295,9 @@ export const ja = {
   'toast.downloaded': '{fileName} をダウンロードしました。',
   'toast.binsOnly': 'ビンのみモードが有効です。',
   'toast.dismiss': '閉じる',
+
+  // Sheets
+  'sheet.close': '閉じる',
 
   // Language
   'language.changed': '言語を {language} に変更しました。',

@@ -48,10 +48,11 @@ export function BinsOnlySheet({
       titleId={titleId}
       descriptionId={bodyId}
       initialFocusRef={useBinsOnlyButtonRef}
+      closeLabel={t('sheet.close')}
       disablePortal={disablePortal}
       data-testid="bins-only-sheet"
     >
-      <h2 id={titleId} className="type-title-1 text-text-primary">
+      <h2 id={titleId} className="type-title-1 text-text-primary md:pr-6">
         {t('binsOnly.sheetTitle', { size: formattedSize })}
       </h2>
 

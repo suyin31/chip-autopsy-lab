@@ -3,9 +3,21 @@
 import { useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { useT } from '@/ui/i18n';
+import { Button } from '@/ui/primitives/button';
+import { cn } from '@/ui/primitives/cn';
+import { MATERIAL_THICK_CLASS } from '@/ui/primitives/surfaces';
 import type { LiveBoxSelectStats } from './linked-interactions';
 
-export const SELECTION_POPOVER_WIDTH_PX = 220 as const;
+export const SELECTION_POPOVER_WIDTH_PX = 240 as const;
+
+/** Placeholder used to split the "Most loss: {bin}" template around the untranslated bin code. */
+const BIN_SLOT = '\u0000';
+
+/** Splits a translated template around its `{bin}` slot (`[prefix, suffix]`). */
+export function splitMostLossTemplate(text: string): readonly [string, string] {
+  const at = text.indexOf(BIN_SLOT);
+  return at < 0 ? [text, ''] : [text.slice(0, at), text.slice(at + BIN_SLOT.length)];
+}
 
 export interface SelectionPopoverHandle {
   updateLiveFrame(payload: {
@@ -22,25 +34,26 @@ export interface SelectionPopoverProps {
   readonly committedStats: LiveBoxSelectStats | null;
   readonly isCommitted: boolean;
   readonly onClear: () => void;
-  readonly onZoomToSelection: () => void;
 }
 
+/** Fallback heights before the first layout (live drag / committed with the Clear row). */
+const FALLBACK_HEIGHT_PX = { live: 92, committed: 124 } as const;
+
 /**
- * Box-Selection Live Stats Popover (`src/ui/wafer-map/SelectionPopover.tsx`,
- * `redesign.md` §3.6, §4.14, §5.7, §5.10):
- * - Material container (`z: 30`, radius `16`, padding `12 14`, width `220`)
- * - During `Shift+drag` / `Select` drag, updates position (`transform`) and live
- *   `N dies / Failing / Yield / Top bin` values every frame via DOM refs with
- *   strictly ZERO React re-renders (`pointermove` never touches React state)
- * - Enters once drag passes `8 px` via WAAPI (`opacity 0 -> 1`, `scale 0.96 -> 1`)
- * - On release (`isCommitted === true`), displays `"Clear"` and `"Zoom to selection"`
- *   text actions
+ * Box-selection popover (premium §7.14; anchoring and live updates per `redesign.md` §4.14, §5.7):
+ * - `material-thick` + `shadow-popover`, `r-lg`, padding 12 16, width 240, z 30
+ * - `headline` primary tabular "148 dies selected"; 2 px; `subhead` secondary "31 failed, 79.1% yield";
+ *   8 px; `subhead` secondary "Most loss: SBIN 7" (bin code untranslated, hidden with no failing bin);
+ *   12 px; committed only: text button "Clear" left and an "Esc" keycap right
+ * - Text tiers primary and secondary only (it sits over the wafer)
+ * - During `Shift+drag` / Select drag, position (`transform`) and values update every frame via
+ *   DOM refs with zero React re-renders; enters once the drag passes 8 px (opacity + scale 0.96 -> 1)
  */
 export const SelectionPopover = React.forwardRef<
   SelectionPopoverHandle,
   SelectionPopoverProps
 >(function SelectionPopover(
-  { committedStats, isCommitted, onClear, onZoomToSelection },
+  { committedStats, isCommitted, onClear },
   ref,
 ): React.JSX.Element {
   const { t, tPlural, formatInteger, formatPercent } = useT();
@@ -48,9 +61,9 @@ export const SelectionPopover = React.forwardRef<
   const outerRef = React.useRef<HTMLDivElement>(null);
   const cardRef = React.useRef<HTMLDivElement>(null);
   const titleRef = React.useRef<HTMLDivElement>(null);
-  const failingValRef = React.useRef<HTMLSpanElement>(null);
-  const yieldValRef = React.useRef<HTMLSpanElement>(null);
-  const topBinValRef = React.useRef<HTMLSpanElement>(null);
+  const summaryRef = React.useRef<HTMLParagraphElement>(null);
+  const mostLossRef = React.useRef<HTMLParagraphElement>(null);
+  const topBinValRef = React.useRef<HTMLElement>(null);
   const wasVisibleRef = React.useRef(false);
   const lastPlacedRef = React.useRef<{
     x: number;
@@ -58,16 +71,21 @@ export const SelectionPopover = React.forwardRef<
     origin: string;
   }>({ x: 0, y: 0, origin: 'top left' });
 
+  const [mostLossPrefix, mostLossSuffix] = splitMostLossTemplate(
+    t('selection.mostLoss', { bin: BIN_SLOT }),
+  );
+
   const formatStatsStrings = React.useCallback(
     (stats: LiveBoxSelectStats) => {
       const titleText = tPlural('selection.dies', stats.dieCount);
-      const failingText = formatInteger(stats.failingCount);
-      const yieldText =
-        stats.dieCount > 0 ? formatPercent(stats.yieldRatio) : '0.0%';
+      const summaryText = t('selection.summary', {
+        failed: formatInteger(stats.failingCount),
+        yield: formatPercent(stats.dieCount > 0 ? stats.yieldRatio : 0),
+      });
       const topBinText = stats.topBin
-        ? `${stats.topBin.mode} ${stats.topBin.code} (${formatInteger(stats.topBin.count)})`
-        : t('selection.none');
-      return { titleText, failingText, yieldText, topBinText };
+        ? `${stats.topBin.mode} ${stats.topBin.code}`
+        : '';
+      return { titleText, summaryText, topBinText };
     },
     [t, tPlural, formatInteger, formatPercent],
   );
@@ -115,16 +133,10 @@ export const SelectionPopover = React.forwardRef<
             titleRef.current.textContent = formatted.titleText;
           }
           if (
-            failingValRef.current &&
-            failingValRef.current.textContent !== formatted.failingText
+            summaryRef.current &&
+            summaryRef.current.textContent !== formatted.summaryText
           ) {
-            failingValRef.current.textContent = formatted.failingText;
-          }
-          if (
-            yieldValRef.current &&
-            yieldValRef.current.textContent !== formatted.yieldText
-          ) {
-            yieldValRef.current.textContent = formatted.yieldText;
+            summaryRef.current.textContent = formatted.summaryText;
           }
           if (
             topBinValRef.current &&
@@ -132,15 +144,18 @@ export const SelectionPopover = React.forwardRef<
           ) {
             topBinValRef.current.textContent = formatted.topBinText;
           }
+          if (mostLossRef.current) {
+            mostLossRef.current.hidden = formatted.topBinText === '';
+          }
         }
       },
       getMeasuredHeight(): number {
         const el = outerRef.current;
-        if (!el) {
-          return isCommitted ? 156 : 124;
-        }
-        const h = el.offsetHeight;
-        return h > 0 ? h : isCommitted ? 156 : 124;
+        const fallback = isCommitted
+          ? FALLBACK_HEIGHT_PX.committed
+          : FALLBACK_HEIGHT_PX.live;
+        const h = el?.offsetHeight ?? 0;
+        return h > 0 ? h : fallback;
       },
     }),
     [formatStatsStrings, isCommitted, shouldReduceMotion],
@@ -155,9 +170,11 @@ export const SelectionPopover = React.forwardRef<
     ? formatStatsStrings(committedStats)
     : {
         titleText: tPlural('selection.dies', 0),
-        failingText: '0',
-        yieldText: '0.0%',
-        topBinText: t('selection.none'),
+        summaryText: t('selection.summary', {
+          failed: formatInteger(0),
+          yield: formatPercent(0),
+        }),
+        topBinText: '',
       };
 
   return (
@@ -174,8 +191,8 @@ export const SelectionPopover = React.forwardRef<
       }}
       className={
         committedShown
-          ? 'pointer-events-auto absolute top-0 left-0 z-[var(--z-selection-popover)] w-[220px] select-none'
-          : 'pointer-events-none absolute top-0 left-0 z-[var(--z-selection-popover)] w-[220px] select-none'
+          ? 'pointer-events-auto absolute top-0 left-0 z-[var(--z-selection-popover)] w-[240px] select-none'
+          : 'pointer-events-none absolute top-0 left-0 z-[var(--z-selection-popover)] w-[240px] select-none'
       }
     >
       <div
@@ -184,7 +201,7 @@ export const SelectionPopover = React.forwardRef<
           opacity: committedShown ? 1 : 0,
           transformOrigin: 'inherit',
         }}
-        className="surface-material flex flex-col gap-2 rounded-lg px-3.5 py-3"
+        className={cn(MATERIAL_THICK_CLASS, 'flex flex-col rounded-lg px-4 py-3')}
       >
         <div
           ref={titleRef}
@@ -194,79 +211,63 @@ export const SelectionPopover = React.forwardRef<
           {initialFormatted.titleText}
         </div>
 
-        <div className="flex flex-col gap-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="type-callout text-text-secondary">
-              {t('selection.failing')}
-            </span>
-            <span
-              ref={failingValRef}
-              data-testid="selection-popover-failing"
-              className="type-mono-data text-text-primary"
-            >
-              {initialFormatted.failingText}
-            </span>
-          </div>
+        <p
+          ref={summaryRef}
+          data-testid="selection-popover-summary"
+          className="mt-0.5 type-subhead text-text-secondary tabular-nums"
+        >
+          {initialFormatted.summaryText}
+        </p>
 
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="type-callout text-text-secondary">
-              {t('selection.yield')}
-            </span>
-            <span
-              ref={yieldValRef}
-              data-testid="selection-popover-yield"
-              className="type-mono-data text-text-primary"
-            >
-              {initialFormatted.yieldText}
-            </span>
-          </div>
-
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="shrink-0 type-callout text-text-secondary">
-              {t('selection.topBin')}
-            </span>
-            <span
-              ref={topBinValRef}
-              data-testid="selection-popover-top-bin"
-              translate="no"
-              className="truncate text-right type-mono-data text-text-primary"
-            >
-              {initialFormatted.topBinText}
-            </span>
-          </div>
-        </div>
+        <p
+          ref={mostLossRef}
+          data-testid="selection-popover-most-loss"
+          hidden={initialFormatted.topBinText === ''}
+          className="mt-2 truncate type-subhead text-text-secondary"
+        >
+          {mostLossPrefix}
+          <bdi
+            ref={topBinValRef}
+            translate="no"
+            data-testid="selection-popover-top-bin"
+          >
+            {initialFormatted.topBinText}
+          </bdi>
+          {mostLossSuffix}
+        </p>
 
         {isCommitted ? (
           <div
             data-testid="selection-popover-actions"
-            className="mt-1 flex items-center justify-between gap-3 border-t border-separator pt-2"
+            className="mt-3 flex items-center justify-between gap-3"
           >
-            <button
-              type="button"
+            <Button
+              variant="text"
               data-testid="selection-popover-clear"
               onPointerDown={(e) => {
                 if (typeof performance !== 'undefined') {
                   e.currentTarget.dataset.ack = String(performance.now());
                 }
               }}
-              onClick={onClear}
-              className="relative cursor-pointer rounded-xs py-0.5 type-control text-text-secondary transition-colors duration-[120ms] ease-[var(--ease-out)] after:absolute after:-inset-2 after:content-[''] hover:text-text-primary active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              {t('selection.clear')}
-            </button>
-            <button
-              type="button"
-              data-testid="selection-popover-zoom"
-              onPointerDown={(e) => {
-                if (typeof performance !== 'undefined') {
-                  e.currentTarget.dataset.ack = String(performance.now());
+              onKeyDown={(e) => {
+                // The keycap promises Esc: it clears even while the Clear button holds focus
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onClear();
                 }
               }}
-              onClick={onZoomToSelection}
-              className="relative cursor-pointer rounded-xs py-0.5 type-control text-text-primary transition-opacity duration-[120ms] ease-[var(--ease-out)] after:absolute after:-inset-2 after:content-[''] hover:opacity-90 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              onClick={onClear}
             >
-              {t('selection.zoom')}
-            </button>
+              {t('selection.clear')}
+            </Button>
+            <kbd
+              data-testid="selection-popover-esc"
+              translate="no"
+              className="rounded-xs bg-fill-2 px-1.5 py-0.5 font-sans type-caption text-text-secondary"
+            >
+              Esc
+            </kbd>
           </div>
         ) : null}
       </div>

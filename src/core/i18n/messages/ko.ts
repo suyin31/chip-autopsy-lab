@@ -243,14 +243,12 @@ export const ko = {
   'magnifier.notchValue': '{clock}시 방향',
 
   // Selection popover
-  'selection.dies.one': '{count}개 다이',
-  'selection.dies.other': '{count}개 다이',
-  'selection.failing': '불량',
-  'selection.yield': '수율',
-  'selection.topBin': '최다 빈',
+  'selection.dies.one': '{count}개 다이 선택됨',
+  'selection.dies.other': '{count}개 다이 선택됨',
+  'selection.summary': '불량 {failed}개, 수율 {yield}',
+  'selection.mostLoss': '최대 손실: {bin}',
   'selection.none': '없음',
   'selection.clear': '해제',
-  'selection.zoom': '선택 영역으로 확대',
 
   // Strip
   'strip.aria': '로트 {lotId}의 웨이퍼 목록',
@@ -297,6 +295,9 @@ export const ko = {
   'toast.downloaded': '{fileName} 파일을 다운로드했습니다.',
   'toast.binsOnly': '빈 전용 모드가 켜져 있습니다.',
   'toast.dismiss': '닫기',
+
+  // Sheets
+  'sheet.close': '닫기',
 
   // Language
   'language.changed': '언어가 {language}(으)로 변경되었습니다.',

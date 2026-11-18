@@ -248,10 +248,12 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         if (truncToastModel) {
           const fileName =
             origin?.kind === 'file' ? origin.fileName : undefined;
-          toast.warning(truncToastModel.title, {
+          // premium §7.13: an error toast persists and carries the "Dismiss" icon button
+          toast.error(truncToastModel.title, {
             id: truncToastModel.id,
             description: truncToastModel.body,
             duration: Number.POSITIVE_INFINITY,
+            closeButton: true,
             action: {
               label: t('error.showDetails'),
               onClick: () => {
@@ -617,7 +619,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       disabled={isLoading}
       onFileDrop={(file) => handleLoadFile(file)}
     >
-      <ClinicalToaster />
+      <ClinicalToaster dismissLabel={t('toast.dismiss')} />
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {liveAnnouncement}
       </div>

@@ -241,14 +241,12 @@ export const en = {
   'magnifier.notchValue': "{clock} o'clock",
 
   // Selection popover
-  'selection.dies.one': '{count} die',
-  'selection.dies.other': '{count} dies',
-  'selection.failing': 'Failing',
-  'selection.yield': 'Yield',
-  'selection.topBin': 'Top bin',
+  'selection.dies.one': '{count} die selected',
+  'selection.dies.other': '{count} dies selected',
+  'selection.summary': '{failed} failed, {yield} yield',
+  'selection.mostLoss': 'Most loss: {bin}',
   'selection.none': 'None',
   'selection.clear': 'Clear',
-  'selection.zoom': 'Zoom to selection',
 
   // Strip
   'strip.aria': 'Wafers in lot {lotId}',
@@ -296,6 +294,9 @@ export const en = {
   'toast.downloaded': 'Downloaded {fileName}.',
   'toast.binsOnly': 'Bins-only mode is on.',
   'toast.dismiss': 'Dismiss',
+
+  // Sheets
+  'sheet.close': 'Close',
 
   // Language
   'language.changed': 'Language changed to {language}.',

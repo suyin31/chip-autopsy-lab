@@ -5,6 +5,7 @@ import { listDemoPresets } from '@/core/demo';
 import { I18nProvider } from '@/ui/i18n';
 import { BinsOnlySheet } from '@/ui/layout/BinsOnlySheet';
 import { EmptyStateCard } from '@/ui/layout/EmptyStateCard';
+import { ErrorDetailsSheet } from '@/ui/layout/ErrorDetailsSheet';
 import {
   Button,
   countPrimaryButtons,
@@ -38,7 +39,11 @@ import {
   POPOVER_SURFACE_CLASS,
   TOOLTIP_SURFACE_CLASS,
 } from './surfaces';
-import { ClinicalToaster, SONNER_TOAST_OPTIONS } from './toaster';
+import {
+  ClinicalToaster,
+  SONNER_TOAST_OPTIONS,
+  TOAST_WIDTH_CSS,
+} from './toaster';
 
 describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () => {
   it('styles Button per premium §7.11: every variant, size, state, focus-ring, and hit area', () => {
@@ -391,7 +396,7 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
     expect(TOOLTIP_SURFACE_CLASS).toContain('type-caption text-text-primary');
   });
 
-  it('styles ClinicalToaster (§4.13) at bottom-center with material surface, radius-16, callout/footnote sans tokens, max 3 visible, 8px gap, and 4s duration', () => {
+  it('styles ClinicalToaster per premium §7.13: bottom-centre material-thick, r-lg, grid, 4 s, expand, grey icons', () => {
     const html = renderToStaticMarkup(React.createElement(ClinicalToaster));
     expect(html).toBeTruthy();
 
@@ -399,24 +404,73 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
     expect(SONNER_TOAST_OPTIONS.visibleToasts).toBe(3);
     expect(SONNER_TOAST_OPTIONS.gap).toBe(8);
     expect(SONNER_TOAST_OPTIONS.duration).toBe(4_000);
+    expect(SONNER_TOAST_OPTIONS.expand).toBe(true);
     expect(SONNER_TOAST_OPTIONS.offset).toBe(24);
-    expect(SONNER_TOAST_OPTIONS.mobileOffset).toBe(16);
+    expect(SONNER_TOAST_OPTIONS.mobileOffset.bottom).toBe(
+      'calc(16px + env(safe-area-inset-bottom))',
+    );
+    expect(TOAST_WIDTH_CSS).toBe('min(380px, calc(100vw - 32px))');
 
     const toastClass = SONNER_TOAST_OPTIONS.classNames.toast;
-    expect(toastClass).toContain('surface-material');
+    expect(toastClass).toContain('bg-material-thick');
+    expect(toastClass).toContain('shadow-popover');
     expect(toastClass).toContain('rounded-lg');
-    expect(toastClass).toContain('w-[360px]');
+    expect(toastClass).toContain('min-h-12');
+    expect(toastClass).toContain('grid-cols-[auto_minmax(0,1fr)_auto]');
+    expect(toastClass).toContain('items-center');
+    expect(toastClass).toContain('gap-3');
     expect(toastClass).toContain('px-4');
     expect(toastClass).toContain('py-3');
     expect(toastClass).not.toContain('border-hairline');
 
     expect(SONNER_TOAST_OPTIONS.classNames.title).toContain('type-callout');
-    expect(SONNER_TOAST_OPTIONS.classNames.description).toContain(
-      'type-subhead',
+    expect(SONNER_TOAST_OPTIONS.classNames.description).toContain('type-subhead');
+    expect(SONNER_TOAST_OPTIONS.classNames.description).toContain('text-text-secondary');
+    expect(SONNER_TOAST_OPTIONS.classNames.description).not.toContain('font-mono');
+    expect(SONNER_TOAST_OPTIONS.classNames.actionButton).toContain('type-control text-text-primary');
+    expect(SONNER_TOAST_OPTIONS.classNames.icon).toContain('text-text-secondary');
+    expect(SONNER_TOAST_OPTIONS.classNames.closeButton).toContain('size-6');
+    for (const cls of Object.values(SONNER_TOAST_OPTIONS.classNames)) {
+      expect(cls).not.toMatch(/ember|red|green/);
+    }
+  });
+
+  it('ModalSheet dialogs carry a "Close" icon button; error details is 560 wide with a title-2 title (premium §7.16)', () => {
+    const binsOnly = renderToStaticMarkup(
+      React.createElement(
+        I18nProvider,
+        { initialLocale: 'en' },
+        React.createElement(BinsOnlySheet, {
+          open: true,
+          bytesObserved: 312 * 1024 * 1024,
+          onUseBinsOnly: () => undefined,
+          onParseEverything: () => undefined,
+          onCancel: () => undefined,
+          disablePortal: true,
+        }),
+      ),
     );
-    expect(SONNER_TOAST_OPTIONS.classNames.description).not.toContain(
-      'font-mono',
+    expect(binsOnly).toContain('data-testid="sheet-close-button"');
+    expect(binsOnly).toContain('aria-label="Close"');
+    expect(binsOnly).toContain('md:w-[480px]');
+    expect(binsOnly).toContain('absolute top-4 right-4');
+
+    const details = renderToStaticMarkup(
+      React.createElement(
+        I18nProvider,
+        { initialLocale: 'en' },
+        React.createElement(ErrorDetailsSheet, {
+          open: true,
+          onClose: () => undefined,
+          byteOffset: 16,
+          first16BytesHex: '89 50 4E 47',
+          disablePortal: true,
+        }),
+      ),
     );
+    expect(details).toContain('md:w-[560px]');
+    expect(details).toContain('type-title-2');
+    expect(countPrimaryButtons(details)).toBe(0);
   });
 
   it('tooltip waits 600 ms, or 0 ms within 400 ms of another closing (premium §7.12)', () => {

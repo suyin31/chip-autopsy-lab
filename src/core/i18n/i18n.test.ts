@@ -139,7 +139,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(DICTIONARIES.ko).toBe(ko);
 
     const enKeys = Object.keys(en).sort() as MessageKey[];
-    expect(enKeys.length).toBe(242);
+    expect(enKeys.length).toBe(241);
 
     for (const locale of SUPPORTED_LOCALES) {
       const dict = getDictionary(locale);
@@ -286,7 +286,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(tPlural('en', 'findings.dieCount', 1)).toBe('1 die');
     expect(tPlural('en', 'findings.dieCount', 0)).toBe('0 dies');
     expect(tPlural('en', 'findings.dieCount', 2552)).toBe('2,552 dies');
-    expect(tPlural('en', 'selection.dies', 148, { count: '148' })).toBe('148 dies');
+    expect(tPlural('en', 'selection.dies', 148, { count: '148' })).toBe('148 dies selected');
 
     for (const locale of SUPPORTED_LOCALES) {
       const detA = t(locale, 'findings.edgeBand.sub', {

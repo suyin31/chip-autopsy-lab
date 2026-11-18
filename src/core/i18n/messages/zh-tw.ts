@@ -239,14 +239,12 @@ export const zhTW = {
   'magnifier.notchValue': '{clock} 點鐘方向',
 
   // Selection popover
-  'selection.dies.one': '{count} 顆晶粒',
-  'selection.dies.other': '{count} 顆晶粒',
-  'selection.failing': '失效',
-  'selection.yield': '良率',
-  'selection.topBin': '主要分級',
+  'selection.dies.one': '已選 {count} 顆晶粒',
+  'selection.dies.other': '已選 {count} 顆晶粒',
+  'selection.summary': '{failed} 顆失效，良率 {yield}',
+  'selection.mostLoss': '主要損失：{bin}',
   'selection.none': '無',
   'selection.clear': '清除',
-  'selection.zoom': '縮放至選取範圍',
 
   // Strip
   'strip.aria': '批次 {lotId} 中的晶圓',
@@ -293,6 +291,9 @@ export const zhTW = {
   'toast.downloaded': '已下載 {fileName}。',
   'toast.binsOnly': '僅分級模式已啟用。',
   'toast.dismiss': '關閉',
+
+  // Sheets
+  'sheet.close': '關閉',
 
   // Language
   'language.changed': '語言已切換為 {language}。',

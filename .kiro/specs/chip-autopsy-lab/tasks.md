@@ -288,7 +288,7 @@ Specification: `.kiro/specs/chip-autopsy-lab/premium.md` (supersedes `redesign.m
 - [x] P21. Yield summary panel
   - Restyle `src/ui/charts/YieldSummaryPanel.tsx`: section card, takeaway, lot numbers, site and wafer rows, anomaly label, narrow-viewport column rule; keep current store behaviour and tests (premium §7.10).
   - Accept: A33, A19.
-- [ ] P22. Toasts, selection popover, sheets
+- [x] P22. Toasts, selection popover, sheets
   - Sonner styling and timing, selection popover content, dialog and bottom-sheet surfaces (premium §7.13, §7.14, §7.16).
   - Accept: A34.
 - [ ] P23. Magnifier

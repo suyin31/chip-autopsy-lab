@@ -16,8 +16,9 @@ export interface ErrorDetailsSheetProps {
 }
 
 /**
- * Parse-error technical details sheet (`redesign.md` §3.7):
- * Displays the record/stream byte offset and the first 16 bytes formatted as hex (`mono-data`).
+ * Parse-error technical details sheet (`redesign.md` §3.7, premium §7.16):
+ * 560 wide on desktop, `title-2` title; shows the record/stream byte offset and the first
+ * 16 bytes formatted as hex (`mono-data`).
  */
 export function ErrorDetailsSheet({
   open,
@@ -44,10 +45,12 @@ export function ErrorDetailsSheet({
       onClose={onClose}
       titleId={titleId}
       initialFocusRef={dismissRef}
+      closeLabel={t('sheet.close')}
+      size="wide"
       disablePortal={disablePortal}
       data-testid="error-details-sheet"
     >
-      <h2 id={titleId} className="type-title-3 text-text-primary">
+      <h2 id={titleId} className="type-title-2 text-text-primary md:pr-6">
         {t('error.detailsTitle')}
       </h2>
 

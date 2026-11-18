@@ -62,13 +62,13 @@ export function formatParseWarningToast(
 }
 
 /**
- * Emits a non-blocking Sonner warning toast when a parsed lot contains partial-result
- * stream warnings (truncated records, missing WIR/PIR, malformed fields, etc.).
+ * Emits a non-blocking Sonner notice toast (`info` icon, default 4 s, premium §7.13) when a
+ * parsed lot contains partial-result stream warnings (missing WIR/PIR, malformed fields, etc.).
  */
 export function notifyParseWarnings(
   warnings: readonly ParseWarning[],
   emit: WarningToastEmitter = (title, options) => {
-    toast.warning(title, options);
+    toast.info(title, options);
   },
 ): FormattedWarningToast | null {
   const formatted = formatParseWarningToast(warnings);
@@ -78,7 +78,6 @@ export function notifyParseWarnings(
   emit(formatted.title, {
     id: formatted.id,
     description: formatted.description,
-    duration: 6_000,
   });
   return formatted;
 }
