@@ -195,7 +195,7 @@ async function auditVisibleTextContrast(page: Page): Promise<{
 async function openLanding(
   page: Page,
   theme: 'light' | 'dark',
-  opts: { readonly skipSweep?: boolean } = {},
+  opts: { readonly skipSweep?: boolean; readonly narrate?: boolean } = {},
 ): Promise<void> {
   await page.addInitScript(
     ({ t, skip }) => {
@@ -208,7 +208,7 @@ async function openLanding(
   );
   await page.emulateMedia({ colorScheme: theme });
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?nohints=1');
+  await page.goto(opts.narrate ? '/?nohints=1&narrate=1' : '/?nohints=1');
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
   await expect(page.getByTestId('landing-headline')).toBeVisible();
 }
@@ -429,7 +429,7 @@ test.describe('Task 19 - Accessibility, keyboard operability, contrast, and copy
       });
     });
 
-    await openLanding(page, 'light');
+    await openLanding(page, 'light', { narrate: true });
     await page.getByTestId('demo-card-edge-ring-etch').click();
     await expect(page.getByTestId('autopsy-report-card')).toHaveAttribute(
       'data-narration-status',

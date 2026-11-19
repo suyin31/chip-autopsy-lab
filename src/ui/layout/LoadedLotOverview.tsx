@@ -43,6 +43,8 @@ export interface LoadedLotOverviewProps {
   readonly downloadingPresetId?: DemoPresetId | null;
   readonly onSelectFile?: (file: File) => void;
   readonly onParseEverything?: () => void;
+  /** Server-safe boolean indicating whether optional LLM narration is configured. */
+  readonly narrationEnabled?: boolean;
   /** Optional isolated Zustand store instance for deterministic component tests. */
   readonly store?: StoreApi<SelectionStoreState>;
 }
@@ -65,6 +67,7 @@ export function LoadedLotOverview({
   selectedPresetId = 'edge-ring-etch',
   onLoadDemoLot,
   onParseEverything,
+  narrationEnabled = false,
   store = useSelectionStore,
 }: LoadedLotOverviewProps): React.JSX.Element {
   const { lot, probeOrderByWafer, yieldSummary, facts, verdict, report } = data;
@@ -342,6 +345,7 @@ export function LoadedLotOverview({
         facts={facts}
         yieldSummary={yieldSummary}
         verdictRevealed={verdictRevealed}
+        narrationEnabled={narrationEnabled}
         store={store}
         splitForMobileStage
         belowFindings={

@@ -85,6 +85,8 @@ interface CachedRecentLot {
 export interface AppShellProps {
   /** Optional injected worker client factory for deterministic testing. */
   readonly createClient?: () => AutopsyWorkerClient;
+  /** Server-safe boolean indicating whether optional LLM narration is configured. */
+  readonly narrationEnabled?: boolean;
 }
 
 const MAX_RECENT_LOTS = 3 as const;
@@ -104,7 +106,10 @@ const INITIAL_PROGRESS: WorkerParseProgress = {
  *
  * Validates: Requirements 1.1, 1.2, 1.4, 1.10, 2.2, 2.5, 3.2, 3.3, 14.4, 17.1–17.6 & redesign §3.1, §3.2, §3.7, §3.8
  */
-export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
+export function AppShell({
+  createClient,
+  narrationEnabled = false,
+}: AppShellProps): React.JSX.Element {
   const { locale, t, formatInteger, formatPercent, formatFileSize } = useT();
   const presets = React.useMemo(() => listDemoPresets(), []);
   const [selectedPresetId, setSelectedPresetId] =
@@ -747,6 +752,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
                 downloadingPresetId={downloadingPresetId}
                 onSelectFile={(file) => handleLoadFile(file)}
                 onParseEverything={handleParseEverythingFromNotice}
+                narrationEnabled={narrationEnabled}
               />
             ) : null}
           </LayoutGroup>

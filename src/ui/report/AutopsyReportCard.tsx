@@ -40,6 +40,7 @@ import { ConfidencePill } from './ConfidencePill';
 import { FindingsList } from './FindingsList';
 import { StatRow } from './StatRow';
 import {
+  isPublicNarrationFlagEnabled,
   resolveNarrationStatusKey,
   useAutopsyNarration,
 } from './use-autopsy-narration';
@@ -58,7 +59,7 @@ export interface AutopsyReportCardProps {
   readonly defaultHypothesesOpen?: boolean;
   /** Initial open state for the `ConfidencePill` method popover (`false` by default). */
   readonly defaultConfidenceOpen?: boolean;
-  /** Enables optional `en`-only LLM narration against `/api/autopsy/narrate` (`true` by default). */
+  /** Enables optional `en`-only LLM narration against `/api/autopsy/narrate` (`false` when no key is configured). */
   readonly narrationEnabled?: boolean;
   /** Optional `fetch` override for deterministic narration tests. */
   readonly narrationFetch?: typeof fetch;
@@ -305,7 +306,7 @@ export function AutopsyReportCard({
   store = useSelectionStore,
   defaultHypothesesOpen = false,
   defaultConfidenceOpen = false,
-  narrationEnabled = true,
+  narrationEnabled = isPublicNarrationFlagEnabled(),
   narrationFetch,
   narrationTimeoutMs,
   binsOnlyNotice,

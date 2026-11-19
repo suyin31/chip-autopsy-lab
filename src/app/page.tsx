@@ -1,5 +1,19 @@
 import { AppShell } from '@/ui/layout';
+import { resolveServerNarrationEnabled } from './narration-config';
 
-export default function HomePage() {
-  return <AppShell />;
+export const dynamic = 'force-dynamic';
+
+interface HomePageProps {
+  readonly searchParams?: Promise<
+    Record<string, string | string[] | undefined>
+  >;
+}
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const resolvedParams = searchParams ? await searchParams : undefined;
+  const narrationEnabled = resolveServerNarrationEnabled(
+    process.env,
+    resolvedParams,
+  );
+  return <AppShell narrationEnabled={narrationEnabled} />;
 }

@@ -168,7 +168,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
   - WCAG 2.2 AA contrast checks, non-colour cues on every mark, keyboard operability with `#7CF2C1` focus rings, screen-reader tables for canvas/SVG views, live-region announcements, number formats, and clinical copy.
   - _Requirements: 14.1, 14.2, 14.3, 14.4, 17.4_
 
-- [ ] 20. Performance, offline, and privacy gates
+- [x] 20. Performance, offline, and privacy gates
   - Playwright and Vitest gates for parse throughput, main-thread task length, base-layer draw time, brush latency, and demo time-to-report; an offline run with zero third-party requests; a bundle scan for secrets; a check that no request body contains STDF bytes or die IDs.
   - _Requirements: 15.1, 15.2, 15.4, 15.5, 15.6, 16.1, 16.2, 16.4_
 

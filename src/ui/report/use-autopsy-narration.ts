@@ -17,6 +17,19 @@ import {
 
 export const AUTOPSY_NARRATE_ENDPOINT = '/api/autopsy/narrate' as const;
 
+/**
+ * Client-safe check for an explicit public opt-in flag (`NEXT_PUBLIC_NARRATION_ENABLED`).
+ * Defaults to `false` when unset so unconfigured deployments never call `/api/autopsy/narrate`
+ * (zero HTTP 503s and zero browser console errors; Requirements 10.6, 16.4).
+ */
+export function isPublicNarrationFlagEnabled(): boolean {
+  const flag =
+    typeof process !== 'undefined'
+      ? process.env.NEXT_PUBLIC_NARRATION_ENABLED
+      : undefined;
+  return flag === 'true' || flag === '1';
+}
+
 export type NarrationStatus = 'idle' | 'loading' | 'verified' | 'fallback';
 
 export type NarrationStatusMessageKey =
@@ -48,7 +61,7 @@ export interface UseAutopsyNarrationOptions {
   readonly verdict?: Pick<AutopsyVerdictDecision, 'verdict' | 'confidence'>;
   readonly facts?: readonly EngineFact[];
   readonly locale: Locale;
-  /** Defaults to `true`. Set `false` to skip optional LLM narration. */
+  /** Defaults to `isPublicNarrationFlagEnabled()` (`false` when unconfigured). */
   readonly enabled?: boolean;
   readonly endpoint?: string;
   readonly timeoutMs?: number;
@@ -294,7 +307,7 @@ export function useAutopsyNarration({
   verdict,
   facts,
   locale,
-  enabled = true,
+  enabled = isPublicNarrationFlagEnabled(),
   endpoint = AUTOPSY_NARRATE_ENDPOINT,
   timeoutMs = NARRATE_CLIENT_TIMEOUT_MS,
   fetchImpl,

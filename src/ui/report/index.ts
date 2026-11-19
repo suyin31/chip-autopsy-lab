@@ -14,6 +14,7 @@ export {
   AUTOPSY_NARRATE_ENDPOINT,
   type AutopsyNarrationOutcome,
   type AutopsyNarrationState,
+  isPublicNarrationFlagEnabled,
   type NarrationStatus,
   type NarrationStatusMessageKey,
   type RequestAutopsyNarrationOptions,

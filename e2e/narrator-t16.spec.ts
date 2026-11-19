@@ -77,7 +77,7 @@ async function openEdgeRingDemo(page: Page): Promise<void> {
     window.sessionStorage.setItem('cal.sweep.v1', '1');
   });
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?nohints=1');
+  await page.goto('/?nohints=1&narrate=1');
   await page.getByTestId('demo-card-edge-ring-etch').click();
   await expect(page.getByTestId('wafer-stage')).toHaveAttribute(
     'data-sweep',

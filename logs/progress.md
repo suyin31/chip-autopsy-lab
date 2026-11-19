@@ -279,3 +279,6 @@
 
 ## Task 19 (2026-11-19 15:20 SGT)
 A11y, keyboard, contrast, copy pass. unit 457/457, lint/typecheck/build clean, e2e a11y-t19 6/6 + regression 18 passed.
+
+## Task 20 (2026-11-19 21:55 SGT)
+Perf/offline/privacy gates + narrate skipped when no LLM key + bundle secret scan. unit 466/466, e2e 21 passed. Sandbox demo load: time-to-report 0.85-1.5 s, one ~185 ms long task on view switch (2-core arm64; recheck on real machine before demo). perf-gate.spec frame budget still flaky on sandbox.
