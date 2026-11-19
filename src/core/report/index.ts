@@ -1,3 +1,4 @@
+export * from './citation-validator';
 export * from './engine-facts';
 export * from './render-report';
 export * from './stat-facts';

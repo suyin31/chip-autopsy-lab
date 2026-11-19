@@ -410,4 +410,9 @@ export const zhTW = {
   'filter.clearAll': '全部清除',
   'filter.announcement': '篩選已更新：已選取 {dies}。',
   'filter.stackedScope': '全部晶圓',
+
+  // Optional LLM narration status (Task 16)
+  'verdict.narration.loading': '正在對照引擎事實校驗 AI 摘要…',
+  'verdict.narration.verified': 'AI 摘要已通過引擎事實引用校驗。',
+  'verdict.narration.fallback': '目前顯示內建範本摘要。',
 } as const satisfies Dictionary;

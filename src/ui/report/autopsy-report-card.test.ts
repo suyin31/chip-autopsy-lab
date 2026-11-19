@@ -1,11 +1,18 @@
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { StoreApi } from 'zustand';
 import { listDemoPresets } from '@/core/demo';
 import { SUPPORTED_LOCALES } from '@/core/i18n';
 import { buildLotModel, type LotModel } from '@/core/model';
-import { buildStatFacts, generateOfflineAutopsyReport } from '@/core/report';
+import {
+  buildStatFacts,
+  generateOfflineAutopsyReport,
+} from '@/core/report';
+import {
+  NARRATE_CLIENT_TIMEOUT_MS,
+  type NarrateRequestPayload,
+} from '@/core/report/citation-validator';
 import { parseStdfBytes, PRR_PART_FLG, writeStdfBytes } from '@/core/stdf';
 import { I18nProvider } from '@/ui/i18n';
 import { BinsOnlyNotice, LoadedLotOverview } from '@/ui/layout';
@@ -24,6 +31,12 @@ import {
   AutopsyReportCard,
   toggleReportClaimInStore,
 } from './AutopsyReportCard';
+import { ConfidencePill } from './ConfidencePill';
+import {
+  AUTOPSY_NARRATE_ENDPOINT,
+  requestAutopsyNarration,
+  resolveNarrationStatusKey,
+} from './use-autopsy-narration';
 
 /**
  * Creates an isolated Zustand store whose `getInitialState` mirrors `getState()` so
@@ -729,5 +742,326 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
     expect(html).not.toContain('<img');
     expect(html).not.toContain('\u0007');
     expect(html).toContain('Unexpected img src=x onerror=evil()frametail');
+  });
+});
+
+describe('Optional LLM narration hook & client fallback (Task 16)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  function jsonResponse(body: unknown, status = 200): Response {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  it('renders deterministic template synchronously at 0 ms with data-narration attributes and confidence-method-body', async () => {
+    const res = await ingestDemoPreset('edge-ring-etch');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
+
+    const html = renderToStaticMarkup(
+      React.createElement(AutopsyReportCard, {
+        lot: res.lot,
+        report: res.report,
+        verdict: res.verdict,
+        facts: res.facts,
+        yieldSummary: res.yieldSummary,
+        defaultConfidenceOpen: true,
+      }),
+    );
+
+    expect(html).toContain('data-narration-source="deterministic-template"');
+    expect(html).toContain('data-narration-status="idle"');
+    expect(html).toContain('data-testid="confidence-method-body"');
+    expect(html).toContain(
+      'Every number comes from the on-device analysis engine. The text is the built-in template.',
+    );
+    // Idle state renders no extra narration status line and no extra pills/colours
+    expect(html).not.toContain('data-testid="confidence-narration-status"');
+  });
+
+  it('validates a mocked 200 narration response, swaps English finding headlines, switches ConfidencePill to verdict.methodLlm, and keeps outbound payload privacy-safe', async () => {
+    const res = await ingestDemoPreset('edge-ring-etch');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
+
+    const captured: {
+      url: string;
+      rawBody: string;
+      payload: NarrateRequestPayload | null;
+    } = {
+      url: '',
+      rawBody: '',
+      payload: null,
+    };
+
+    const spatialFact = res.facts.find((f) => f.kind === 'spatial-pattern')!;
+    const binFact = res.facts.find((f) => f.kind === 'dominant-bin')!;
+    const paramFact = res.facts.find((f) => f.kind === 'parametric-capability');
+    expect(spatialFact).toBeDefined();
+    expect(binFact).toBeDefined();
+
+    const verifiedSpatialHeadline = `Verified summary: outer 3 rings contain ${spatialFact.dieIndices.length} failing dies across the lot.`;
+    const verifiedBinHeadline = `Verified summary: ${binFact.binRef?.mode ?? 'SBIN'} ${binFact.binRef?.code ?? 7} holds ${binFact.dieIndices.length} failing dies.`;
+
+    const mockFetch: typeof fetch = async (input, init) => {
+      captured.url = String(input);
+      captured.rawBody = typeof init?.body === 'string' ? init.body : '';
+      captured.payload = JSON.parse(captured.rawBody) as NarrateRequestPayload;
+
+      const claims = [
+        {
+          id: 'claim:primary-evidence',
+          text: verifiedSpatialHeadline,
+          citedFactIds: [spatialFact.factId],
+        },
+        {
+          id: 'claim:dominant-bin',
+          text: verifiedBinHeadline,
+          citedFactIds: [binFact.factId],
+        },
+      ];
+      if (paramFact) {
+        const cpkMetric = paramFact.metrics.find((m) => m.key === 'cpk');
+        if (cpkMetric) {
+          claims.push({
+            id: 'claim:supporting-evidence',
+            text: `Verified summary: Test ${paramFact.testRef?.testNum ?? 204} Cpk is ${cpkMetric.displayValue}.`,
+            citedFactIds: [paramFact.factId],
+          });
+        }
+      }
+      return jsonResponse({ claims }, 200);
+    };
+
+    const outcome = await requestAutopsyNarration({
+      lot: res.lot,
+      templateReport: res.report,
+      verdict: res.verdict,
+      facts: res.facts,
+      fetchImpl: mockFetch,
+    });
+
+    expect(captured.url).toBe(AUTOPSY_NARRATE_ENDPOINT);
+    expect(captured.payload).not.toBeNull();
+    expect(captured.payload?.mode).toBe('narrate');
+    expect(captured.rawBody).not.toContain('"dieIds"');
+    expect(captured.rawBody).not.toContain('"dieIndices"');
+    expect(captured.rawBody).not.toContain('"xCoord"');
+    expect(captured.rawBody).not.toContain('"yCoord"');
+    expect(captured.rawBody).not.toMatch(/\bW\d+:-?\d+,-?\d+\b/);
+
+    expect(outcome.status).toBe('verified');
+    expect(outcome.report.source).toBe('llm-verified');
+    expect(outcome.report.causeOfDeathHeadline).toEqual(
+      res.report.causeOfDeathHeadline,
+    );
+
+    // Rendering the verified report in `en` swaps findings headlines & methodLlm copy
+    const verifiedHtml = renderToStaticMarkup(
+      React.createElement(AutopsyReportCard, {
+        lot: res.lot,
+        report: outcome.report,
+        verdict: res.verdict,
+        facts: res.facts,
+        yieldSummary: res.yieldSummary,
+        defaultConfidenceOpen: true,
+      }),
+    );
+
+    expect(verifiedHtml).toContain('data-narration-source="llm-verified"');
+    expect(verifiedHtml).toContain('data-narration-status="verified"');
+    expect(verifiedHtml).toContain(verifiedSpatialHeadline);
+    expect(verifiedHtml).toContain(verifiedBinHeadline);
+    expect(verifiedHtml).toContain('data-testid="confidence-method-body"');
+    expect(verifiedHtml).toContain(
+      'Every number comes from the on-device analysis engine. An AI model rephrased the text and every sentence cites an engine fact.',
+    );
+    expect(verifiedHtml).toContain('data-testid="confidence-narration-status"');
+    expect(verifiedHtml).toContain(
+      'AI summary verified against cited engine facts.',
+    );
+
+    // Non-English locales keep deterministic template prose & methodTemplate copy
+    const jaHtml = renderToStaticMarkup(
+      React.createElement(
+        I18nProvider,
+        { initialLocale: 'ja' },
+        React.createElement(AutopsyReportCard, {
+          lot: res.lot,
+          report: outcome.report,
+          verdict: res.verdict,
+          facts: res.facts,
+          yieldSummary: res.yieldSummary,
+          defaultConfidenceOpen: true,
+        }),
+      ),
+    );
+    expect(jaHtml).not.toContain(verifiedSpatialHeadline);
+    expect(jaHtml).toContain('data-testid="confidence-method-body"');
+    expect(jaHtml).not.toContain('An AI model rephrased');
+  });
+
+  it('keeps the deterministic template unchanged on 503, 400, 500, hallucinated numbers, and unknown factIds', async () => {
+    const res = await ingestDemoPreset('edge-ring-etch');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
+
+    const spatialFact = res.facts.find((f) => f.kind === 'spatial-pattern')!;
+
+    // 1. Missing LLM_API_KEY (503)
+    const unconfigured = await requestAutopsyNarration({
+      lot: res.lot,
+      templateReport: res.report,
+      verdict: res.verdict,
+      facts: res.facts,
+      fetchImpl: async () => jsonResponse({ reason: 'llm_unconfigured' }, 503),
+    });
+    expect(unconfigured.status).toBe('fallback');
+    expect(unconfigured.fallbackReason).toBe('llm_unconfigured');
+    expect(unconfigured.report).toBe(res.report);
+
+    // 2. Privacy/schema rejection (400)
+    const badReq = await requestAutopsyNarration({
+      lot: res.lot,
+      templateReport: res.report,
+      verdict: res.verdict,
+      facts: res.facts,
+      fetchImpl: async () => jsonResponse({ reason: 'invalid_payload' }, 400),
+    });
+    expect(badReq.status).toBe('fallback');
+    expect(badReq.fallbackReason).toBe('invalid_payload');
+    expect(badReq.report).toBe(res.report);
+
+    // 3. Server error (500)
+    const serverErr = await requestAutopsyNarration({
+      lot: res.lot,
+      templateReport: res.report,
+      verdict: res.verdict,
+      facts: res.facts,
+      fetchImpl: async () => new Response('Internal Server Error', { status: 500 }),
+    });
+    expect(serverErr.status).toBe('fallback');
+    expect(serverErr.fallbackReason).toBe('http_500');
+    expect(serverErr.report).toBe(res.report);
+
+    // 4. Hallucinated numeric claim (200 OK but fails validateLlmNarration)
+    const hallucinated = await requestAutopsyNarration({
+      lot: res.lot,
+      templateReport: res.report,
+      verdict: res.verdict,
+      facts: res.facts,
+      fetchImpl: async () =>
+        jsonResponse(
+          {
+            claims: [
+              {
+                id: 'claim:primary-evidence',
+                text: 'Hallucinated claim: 99.9% and 88888 dies failed.',
+                citedFactIds: [spatialFact.factId],
+              },
+            ],
+          },
+          200,
+        ),
+    });
+    expect(hallucinated.status).toBe('fallback');
+    expect(hallucinated.report).toBe(res.report);
+
+    // 5. Unknown factId (200 OK but fails validateLlmNarration)
+    const unknownFact = await requestAutopsyNarration({
+      lot: res.lot,
+      templateReport: res.report,
+      verdict: res.verdict,
+      facts: res.facts,
+      fetchImpl: async () =>
+        jsonResponse(
+          {
+            claims: [
+              {
+                id: 'claim:primary-evidence',
+                text: 'Fabricated citation without valid fact.',
+                citedFactIds: ['fact:nonexistent:999'],
+              },
+            ],
+          },
+          200,
+        ),
+    });
+    expect(unknownFact.status).toBe('fallback');
+    expect(unknownFact.report).toBe(res.report);
+  });
+
+  it('aborts after 4,000 ms timeout and falls back cleanly to the deterministic template', async () => {
+    const res = await ingestDemoPreset('edge-ring-etch');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
+
+    vi.useFakeTimers();
+    let observedAbort = false;
+
+    const hangingFetch: typeof fetch = (_input, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          'abort',
+          () => {
+            observedAbort = true;
+            reject(new DOMException('The operation was aborted.', 'AbortError'));
+          },
+          { once: true },
+        );
+      });
+
+    const pending = requestAutopsyNarration({
+      lot: res.lot,
+      templateReport: res.report,
+      verdict: res.verdict,
+      facts: res.facts,
+      fetchImpl: hangingFetch,
+    });
+
+    await vi.advanceTimersByTimeAsync(NARRATE_CLIENT_TIMEOUT_MS + 10);
+    const outcome = await pending;
+
+    expect(observedAbort).toBe(true);
+    expect(outcome.status).toBe('fallback');
+    expect(outcome.fallbackReason).toBe('timeout');
+    expect(outcome.report).toBe(res.report);
+  });
+
+  it('maps narration status keys and renders quiet ConfidencePill narration status without new pills or colours', () => {
+    expect(resolveNarrationStatusKey('idle')).toBeNull();
+    expect(resolveNarrationStatusKey('loading')).toBe('verdict.narration.loading');
+    expect(resolveNarrationStatusKey('verified')).toBe('verdict.narration.verified');
+    expect(resolveNarrationStatusKey('fallback')).toBe('verdict.narration.fallback');
+
+    const pillHtml = renderToStaticMarkup(
+      React.createElement(ConfidencePill, {
+        confidence: {
+          confidenceValue: 0.95,
+          level: 'high',
+          label: 'High confidence, 0.95',
+          methodTitle: 'How this verdict was made',
+          definition:
+            'How strongly the wafer pattern matches the named class, from 0 to 1. Computed on this device.',
+          matchLabel: 'Match with Edge-Ring',
+          matchPattern: 'Edge-Ring',
+          valueText: '0.95',
+          methodBody:
+            'Every number comes from the on-device analysis engine. The text is the built-in template.',
+        },
+        narrationStatusText: 'Showing built-in template summary.',
+        defaultOpen: true,
+      }),
+    );
+
+    expect(pillHtml).toContain('data-testid="confidence-method-body"');
+    expect(pillHtml).toContain('data-testid="confidence-narration-status"');
+    expect(pillHtml).toContain('Showing built-in template summary.');
+    expect(pillHtml).not.toMatch(/text-ember|text-failure|bg-ember|bg-failure/);
   });
 });

@@ -18,6 +18,8 @@ import { renderWithUntranslatedTokens } from './render-untranslated';
 
 export interface ConfidencePillProps {
   readonly confidence: RenderedConfidenceInfo;
+  /** Optional quiet narration status shown inside the method popover (Task 16; no new colours/pills). */
+  readonly narrationStatusText?: string | null;
   /** Optional initial open state for deterministic SSR/unit verification. */
   readonly defaultOpen?: boolean;
   readonly className?: string;
@@ -36,6 +38,7 @@ const POPOVER_WIDTH_PX = 320 as const;
  */
 export function ConfidencePill({
   confidence,
+  narrationStatusText = null,
   defaultOpen = false,
   className,
 }: ConfidencePillProps): React.JSX.Element {
@@ -245,9 +248,20 @@ export function ConfidencePill({
           </div>
         </div>
       ) : null}
-      <p className="mt-3 type-callout text-text-secondary">
+      <p
+        data-testid="confidence-method-body"
+        className="mt-3 type-callout text-text-secondary"
+      >
         {confidence.methodBody}
       </p>
+      {narrationStatusText ? (
+        <p
+          data-testid="confidence-narration-status"
+          className="mt-2 type-subhead text-text-tertiary"
+        >
+          {narrationStatusText}
+        </p>
+      ) : null}
     </motion.div>
   );
 

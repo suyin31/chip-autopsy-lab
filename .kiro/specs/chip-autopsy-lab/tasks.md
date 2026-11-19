@@ -137,7 +137,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
   - Floating readout that never covers the die (X/Y, bin, test values), wheel/drag/button zoom and pan, axis direction and flat/notch from `WCR`.
   - _Requirements: 4.2, 4.5, 4.7_
 
-- [ ] 16. Add the LLM narrator route with citation validation
+- [x] 16. Add the LLM narrator route with citation validation
   - [ ] 16.1 Implement `sanitizeOutboundNarratePayload` and `validateLlmNarration` in `citation-validator.ts`
     - _Requirements: 10.6, 10.7, 16.3_
   - [ ] 16.2 Implement `src/app/api/autopsy/narrate/route.ts`

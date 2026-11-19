@@ -410,4 +410,9 @@ export const zhCN = {
   'filter.clearAll': '全部清除',
   'filter.announcement': '筛选已更新：已选中 {dies}。',
   'filter.stackedScope': '全部晶圆',
+
+  // Optional LLM narration status (Task 16)
+  'verdict.narration.loading': '正在对照引擎事实校验 AI 摘要…',
+  'verdict.narration.verified': 'AI 摘要已通过引擎事实引用校验。',
+  'verdict.narration.fallback': '当前显示内置模板摘要。',
 } as const satisfies Dictionary;

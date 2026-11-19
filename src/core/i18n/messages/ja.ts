@@ -414,4 +414,9 @@ export const ja = {
   'filter.clearAll': 'すべて解除',
   'filter.announcement': 'フィルタを更新しました: {dies} を選択中。',
   'filter.stackedScope': '全ウェハ',
+
+  // Optional LLM narration status (Task 16)
+  'verdict.narration.loading': 'エンジンの事実データと AI 要約を照合しています…',
+  'verdict.narration.verified': 'AI 要約は引用されたエンジンの事実データと照合済みです。',
+  'verdict.narration.fallback': '内蔵テンプレートの要約を表示しています。',
 } as const satisfies Dictionary;

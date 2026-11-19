@@ -38,6 +38,10 @@ import {
 import { ConfidencePill } from './ConfidencePill';
 import { FindingsList } from './FindingsList';
 import { StatRow } from './StatRow';
+import {
+  resolveNarrationStatusKey,
+  useAutopsyNarration,
+} from './use-autopsy-narration';
 import { VerdictHero } from './VerdictHero';
 import { VerdictRiseBlock } from './VerdictRiseBlock';
 
@@ -53,6 +57,12 @@ export interface AutopsyReportCardProps {
   readonly defaultHypothesesOpen?: boolean;
   /** Initial open state for the `ConfidencePill` method popover (`false` by default). */
   readonly defaultConfidenceOpen?: boolean;
+  /** Enables optional `en`-only LLM narration against `/api/autopsy/narrate` (`true` by default). */
+  readonly narrationEnabled?: boolean;
+  /** Optional `fetch` override for deterministic narration tests. */
+  readonly narrationFetch?: typeof fetch;
+  /** Optional client narration timeout override in ms (defaults to `NARRATE_CLIENT_TIMEOUT_MS`). */
+  readonly narrationTimeoutMs?: number;
   /** Optional post-load bins-only notice rendered directly beneath the confidence pill (§3.8). */
   readonly binsOnlyNotice?: React.ReactNode;
   /**
@@ -294,6 +304,9 @@ export function AutopsyReportCard({
   store = useSelectionStore,
   defaultHypothesesOpen = false,
   defaultConfidenceOpen = false,
+  narrationEnabled = true,
+  narrationFetch,
+  narrationTimeoutMs,
   binsOnlyNotice,
   splitForMobileStage = false,
   belowFindings,
@@ -393,9 +406,24 @@ export function AutopsyReportCard({
     return map;
   }, [facts]);
 
+  const narration = useAutopsyNarration({
+    lot,
+    templateReport: report,
+    ...(verdict !== undefined ? { verdict } : {}),
+    ...(facts !== undefined ? { facts } : {}),
+    locale,
+    enabled: narrationEnabled,
+    ...(narrationFetch !== undefined ? { fetchImpl: narrationFetch } : {}),
+    ...(narrationTimeoutMs !== undefined ? { timeoutMs: narrationTimeoutMs } : {}),
+  });
+  const activeReport = narration.report;
+  const narrationStatusKey = resolveNarrationStatusKey(narration.status);
+  const narrationStatusText =
+    narrationStatusKey !== null ? t(narrationStatusKey) : null;
+
   const rendered = React.useMemo(
-    () => renderReport(report, locale),
-    [report, locale],
+    () => renderReport(activeReport, locale),
+    [activeReport, locale],
   );
 
   // §3.8 Moment 2: Parametric findings rows are not rendered in bins-only mode
@@ -502,7 +530,7 @@ export function AutopsyReportCard({
     'phrase' | 'button' | null
   >(null);
   const headlineActive =
-    effectiveActiveClaimId === report.causeOfDeathHeadline.claimId;
+    effectiveActiveClaimId === activeReport.causeOfDeathHeadline.claimId;
   const toggleHeadlineFrom = React.useCallback(
     (source: 'phrase' | 'button'): void => {
       const ownedBySource =
@@ -514,9 +542,14 @@ export function AutopsyReportCard({
         return;
       }
       setHeadlineSource(source);
-      handleToggleClaim(report.causeOfDeathHeadline);
+      handleToggleClaim(activeReport.causeOfDeathHeadline);
     },
-    [headlineActive, headlineSource, handleToggleClaim, report.causeOfDeathHeadline],
+    [
+      headlineActive,
+      headlineSource,
+      handleToggleClaim,
+      activeReport.causeOfDeathHeadline,
+    ],
   );
 
   const handleShowOnWaferPointerDown = (
@@ -557,10 +590,10 @@ export function AutopsyReportCard({
     if (!effectiveActiveClaimId) {
       return fullHeadline;
     }
-    if (effectiveActiveClaimId === report.causeOfDeathHeadline.claimId) {
+    if (effectiveActiveClaimId === activeReport.causeOfDeathHeadline.claimId) {
       const dieCountLabel = tPlural(
         'findings.dieCount',
-        report.causeOfDeathHeadline.resolvedDieIndices.length,
+        activeReport.causeOfDeathHeadline.resolvedDieIndices.length,
       );
       return `${fullHeadline} (${dieCountLabel})`;
     }
@@ -574,7 +607,7 @@ export function AutopsyReportCard({
   }, [
     rendered.verdict.fullHeadline,
     effectiveActiveClaimId,
-    report.causeOfDeathHeadline,
+    activeReport.causeOfDeathHeadline,
     visibleFindings,
     tPlural,
   ]);
@@ -583,6 +616,8 @@ export function AutopsyReportCard({
     <section
       aria-label={rendered.findingsHeading}
       data-testid="autopsy-report-card"
+      data-narration-source={activeReport.source}
+      data-narration-status={narration.status}
       data-verdict-scroll="true"
       className={cn(
         // Premium §6.2: column padding-top 72 from 1024, 84 at 1440 (verdict cap height meets the disc top)
@@ -609,7 +644,7 @@ export function AutopsyReportCard({
 
           <VerdictHero
             verdict={rendered.verdict}
-            headlineClaim={report.causeOfDeathHeadline}
+            headlineClaim={activeReport.causeOfDeathHeadline}
             causeAria={t('verdict.causeAria')}
             isActive={headlineActive && headlineSource !== 'button'}
             onToggleClaim={() => toggleHeadlineFrom('phrase')}
@@ -627,7 +662,7 @@ export function AutopsyReportCard({
                 <Button
                   variant="primary"
                   data-testid="verdict-show-on-wafer"
-                  data-claim-id={report.causeOfDeathHeadline.claimId}
+                  data-claim-id={activeReport.causeOfDeathHeadline.claimId}
                   onPointerDown={handleShowOnWaferPointerDown}
                   onClick={() => toggleHeadlineFrom('button')}
                 >
@@ -635,6 +670,7 @@ export function AutopsyReportCard({
                 </Button>
                 <ConfidencePill
                   confidence={rendered.confidence}
+                  narrationStatusText={narrationStatusText}
                   defaultOpen={defaultConfidenceOpen}
                 />
               </div>

@@ -413,4 +413,9 @@ export const en = {
   'filter.clearAll': 'Clear all',
   'filter.announcement': 'Filter updated: {dies} selected.',
   'filter.stackedScope': 'All wafers',
+
+  // Optional LLM narration status (Task 16)
+  'verdict.narration.loading': 'Verifying AI summary against engine facts…',
+  'verdict.narration.verified': 'AI summary verified against cited engine facts.',
+  'verdict.narration.fallback': 'Showing built-in template summary.',
 } as const;

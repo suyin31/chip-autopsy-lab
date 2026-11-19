@@ -414,4 +414,9 @@ export const ko = {
   'filter.clearAll': '모두 해제',
   'filter.announcement': '필터가 업데이트되었습니다: {dies} 선택됨.',
   'filter.stackedScope': '전체 웨이퍼',
+
+  // Optional LLM narration status (Task 16)
+  'verdict.narration.loading': '엔진 사실 데이터와 AI 요약을 대조하는 중…',
+  'verdict.narration.verified': 'AI 요약이 인용된 엔진 사실 데이터와 검증되었습니다.',
+  'verdict.narration.fallback': '내장 템플릿 요약을 표시합니다.',
 } as const satisfies Dictionary;
