@@ -285,3 +285,9 @@ Perf/offline/privacy gates + narrate skipped when no LLM key + bundle secret sca
 
 ## Accent colour option (2026-11-19 22:25 SGT)
 Appearance menu: System/Light/Dark + accent Ember/Cobalt/Jade/Violet (data-accent, cal.accent, pre-hydration). unit 474/474, e2e 62 passed.
+
+## Task 22 part 1 (README) — 2026-11-19
+Rewrote `README.md` for the Kiroween 2026 submission with verified features, demo lots, local setup, privacy gates, Kiro usage table, architecture, and third-party license disclosures.
+
+## Task 15 verified (2026-11-19 23:00 SGT)
+Code from 851721f re-verified on a fresh build: e2e wafer-viewport-t15 3/3 + zoom-pan-p30 3/3; unit suite 474/474.

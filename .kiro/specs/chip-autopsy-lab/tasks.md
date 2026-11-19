@@ -133,7 +133,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - **Property 12** in `src/core/query/selection-predicates.prop.test.ts`
     - _Requirements: 11.1, 11.2, 11.4, 12.2, 12.5_
 
-- [ ] 15. Add wafer map hover readout, pan/zoom, and WCR orientation
+- [x] 15. Add wafer map hover readout, pan/zoom, and WCR orientation
   - Floating readout that never covers the die (X/Y, bin, test values), wheel/drag/button zoom and pan, axis direction and flat/notch from `WCR`.
   - _Requirements: 4.2, 4.5, 4.7_
 

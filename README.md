@@ -1,33 +1,190 @@
 # Chip Autopsy Lab
 
-Browser-based semiconductor failure analysis tool for Kiroween 2026 (Frankenstein category): drop in an STDF V4 wafer test log to get a one-sentence cause of death with every claim linked to dies, bins, and parametric charts.
+Drop an STDF V4 wafer test log and get a one-sentence cause of death where every claim links to the dies, bins, and charts that prove it. Built for the Kiroween 2026 Frankenstein category, Chip Autopsy Lab stitches a decades-old ATE binary datalog format to a modern, local-first web analysis workbench.
 
-**Status**: Phase 1: product steering and requirements only. No application code yet.
+## The problem
 
-## Planned Capabilities
-- Parse STDF V4 binary logs (`.stdf`, `.std`, and gzip variants detected by `1F 8B` magic bytes) in a browser Web Worker.
-- Render Pass/Fail, HBIN, and SBIN wafer maps, stacked multi-wafer fail heatmaps, bin Pareto charts, and lot/wafer/site yield summaries (first-pass, final, and retest counts).
-- Plot parametric histograms with limits, capability statistics (`n`, mean, sigma, `Cp`, `Cpk`), and parametric wafer heatmaps.
-- Classify spatial failure signatures into the 9 WM-811K classes with confidence scores and hedged cause hypotheses.
-- Produce a verdict-first Autopsy Report (deterministic offline template by default; optional LLM rephrasing citing engine fact IDs) where clicking any claim highlights its dies and Pareto bars.
-- Filter all views via live wafer-map brushing or the `Cmd-K` / `Ctrl-K` natural-language command palette, and ship seeded synthetic demo lots (`Edge-Ring` and `Scratch`) one click from the empty state.
+Test, product, and yield engineers at small fabless teams and OSATs routinely triage wafer sort excursions using heavy desktop tools or ad-hoc per-wafer Python, Excel, and matplotlib scripts. STDF V4 is a 1990s tag-length-value binary format with multi-site interleaving, optional trailing fields, and display-scaling flags that remains opaque without specialized parsers. Enterprise yield-management suites are cost-prohibitive for small teams, while open-source browser viewers stop at rendering disconnected charts without synthesizing a diagnosis. Chip Autopsy Lab turns raw binary logs into a verdict-first, evidence-linked failure analysis directly in the browser.
 
-## Privacy (Local-First)
-Parsing and analysis run entirely in the browser. Raw STDF files never leave the device; the optional LLM narrator receives aggregate engine facts only.
+## What it does
 
-## Built with Kiro
+- **Off-main-thread STDF V4 parsing**: Decodes 16 STDF V4 record types (`FAR`, `MIR`, `MRR`, `PCR`, `HBR`, `SBR`, `SDR`, `WIR`, `WRR`, `WCR`, `PIR`, `PRR`, `PTR`, `MPR`, `FTR`, `TSR`) inside a Comlink Web Worker, with native `DecompressionStream('gzip')` detected by `1F 8B` magic bytes, big- and little-endian byte order, multi-site `PIR`/`PRR` interleaving, truncated-stream recovery, and Bins-Only mode above 200 MB.
+- **Interactive wafer maps**: Renders `Pass/Fail`, `Hard bins` (`HBIN`), `Soft bins` (`SBIN`), and `Parametric` modes on layered DPR-scaled Canvas2D surfaces with a non-occluding hover magnifier and readout, cursor-anchored wheel zoom, inertial drag pan, interactive bin-legend toggles, and `WCR` coordinate-axis (`POS_X`, `POS_Y`) and notch (`WF_FLAT`) orientation.
+- **Stacked multi-wafer heatmap**: Aggregates per-`(X, Y)` failure rates across wafers on a perceptually uniform `magma` ramp with a numeric scale legend, cell hover readout, rectangular region selection, and animated wafer-gallery collapse.
+- **Bin Pareto and yield summary**: Pairs a visx Bin Pareto chart (`SBIN`/`HBIN` toggle, dominant failure highlight, click-to-filter) with lot, wafer, and test-site yield breakdowns covering first-pass yield, final yield, retest counts, and single-site anomaly detection.
+- **Parametric analysis**: Computes Welford mean and sigma, two-sided and single-sided `Cp`/`Cpk`, SI-prefixed scaled measurements, sortable test catalogs, histograms with `LO_LIMIT`/`HI_LIMIT` markers and scrub readout, and a parametric wafer heatmap mode.
+- **WM-811K spatial signature classification**: Runs a deterministic, D4-symmetry-robust TypeScript classifier across all 9 WM-811K classes (`Center`, `Donut`, `Edge-Loc`, `Edge-Ring`, `Loc`, `Near-full`, `Random`, `Scratch`, `None`) with confidence scores and hedged root-cause hypotheses.
+- **Verdict-first Autopsy Report with clickable evidence**: Evaluates a 6-tier deterministic verdict engine that leads with a plain-language cause of death and findings; clicking the verdict, summary stats, or any finding highlights the supporting dies on the wafer map and the matching bar in the Bin Pareto chart.
+- **Live cross-chart brushing**: Brushing a region on the single-wafer map or stacked heatmap immediately cross-filters the Bin Pareto, yield summary, and parametric views, with removable filter chips and `Escape` or click-out clearing.
+- **`Cmd-K` / `Ctrl-K` filter palette**: Opens an instant `cmdk` command palette backed by a typed Filter DSL and an offline natural-language grammar supporting queries such as `only bin 7`, `edge 3 rings`, `tests with Cpk < 1.33`, and `show edge failures with Cpk < 1.33`.
+- **Optional LLM narrator with citation validation**: Routes optional prose rephrasing through a server-only `/api/autopsy/narrate` handler (`LLM_API_KEY`) that receives aggregate engine facts only, validates every cited fact ID and numeric claim on the client, and falls back deterministically to the offline template when unconfigured or if validation fails.
+- **Internationalization, appearance, and accessibility**: Ships 5 UI languages (`English`, `简体中文`, `繁體中文`, `日本語`, `한국어`), System/Light/Dark themes with 4 accent colours (`Ember`, `Cobalt`, `Jade`, `Violet`), inline hover definitions for ATE terminology, WCAG 2.2 AA contrast, full keyboard navigation with screen-reader data tables and `aria-live` announcements, and complete `prefers-reduced-motion` support.
 
-| Kiro feature | How this repo uses it |
-|---|---|
-| Steering files (`.kiro/steering/*.md`) | Always-included rules for product scope, tech constraints and STDF V4 rules, UI design tokens, and repo layout |
-| Spec (`.kiro/specs/chip-autopsy-lab/`) | Spec-driven development: `requirements.md` in phase 1; `design.md` and `tasks.md` in phase 2 |
-| Carbon MCP server (`.kiro/settings/mcp.json`, `tools/carbon-mcp/`) | Local MCP server delegating drafting and review tasks to Gemini via the `agy` CLI, with phase logs recorded in `logs/` |
+## Try it
 
-## Repository Layout
-See [`.kiro/steering/structure.md`](.kiro/steering/structure.md) for the current phase-1 file tree and proposed `src/` module architecture.
+Live demo: `https://REPLACE-WITH-DEPLOY-URL`
 
-## Third-Party Code and Data
-No third-party application code or external dataset is used yet. Any permissively licensed code or dataset reused in later phases will be disclosed here.
+### Demo lots
+
+Three seeded, deterministic synthetic STDF V4 demo lots are loadable in one click from the landing page (and downloadable as binary `.stdf` files to drag back into the viewport). Each lot contains 25 wafers x 633 dies (15,825 dies) serialized through the same STDF V4 writer and parsed through the same Web Worker pipeline as user-dropped files:
+
+| Demo lot | Preset ID / Lot ID | Failure scenario |
+|---|---|---|
+| **Edge-Ring Plasma Etch** | `edge-ring-etch` / `CAL-ER-2401` | RIE focus-ring erosion driving outer 3-ring `IDDQ_LEAK` failures (`SBIN 7`, `Edge-Ring`). |
+| **Robotic Handling Scratch** | `handling-scratch` / `CAL-SC-2402` | Transfer-blade chord across wafers `W05`–`W22` causing `VCCA_SHORT` (`SBIN 9`, `Scratch`). |
+| **Site 2 Probe Contact** | `site2-probe-contact` / `CAL-S2-2403` | Oxidized `Head 1 / Site 2` probe needles causing `VDD_CONT_R` contact opens and retest recovery (`SBIN 5`, spatially `Random` with a Test Site `1:2` anomaly). |
+
+All demo lots are 100% synthetic. No proprietary foundry, OSAT, or product data is included.
+
+## Run locally
+
+Prerequisites: Node.js 22+ and `pnpm`.
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Open `http://localhost:3000`.
+
+### Testing and production build
+
+```bash
+# Unit and fast-check property-based tests
+pnpm test
+
+# Production build (Playwright serves the built .next output)
+pnpm build
+
+# End-to-end Playwright suite (install Chromium once)
+npx playwright install chromium
+pnpm test:e2e
+
+# Lint, typecheck, and client bundle secret scan
+pnpm lint
+pnpm typecheck
+pnpm scan:secrets
+```
+
+### Optional environment variables
+
+Every core capability, demo lot, offline report template, and `Cmd-K` query grammar works offline with no environment variables configured. To enable optional server-side LLM narration on `/api/autopsy/narrate`, set server-only variables in `.env.local`:
+
+| Variable | Required | Default | Purpose |
+|---|---|---|---|
+| `LLM_API_KEY` | Optional | Unset (narrator disabled) | Server-only bearer key for upstream chat completions. Never use a `NEXT_PUBLIC_` prefix. |
+| `LLM_PROVIDER_URL` | Optional | `https://api.openai.com/v1/chat/completions` | OpenAI-compatible chat completions endpoint. |
+| `LLM_MODEL` | Optional | `gpt-4o-mini` | Model identifier sent to the narration endpoint. |
+| `NEXT_PUBLIC_NARRATION_ENABLED` | Optional (test only) | Unset | Set to `1` or `true` in local tests to trigger client narration requests against a mocked `/api/autopsy/narrate` route without setting `LLM_API_KEY`. |
+
+## Privacy
+
+Chip Autopsy Lab is local-first by design:
+
+- Gzip decompression, STDF V4 binary parsing, columnar modeling, statistical analytics, WM-811K classification, and Filter DSL evaluation execute entirely in the browser.
+- Raw STDF bytes, per-die coordinates, and die IDs never leave the device.
+- When `LLM_API_KEY` is configured on the server, only sanitized aggregate `EngineFact` summaries are sent to `/api/autopsy/narrate`. When unconfigured, the client makes zero narration requests.
+- Privacy and secret hygiene are enforced by automated gates:
+  - **Offline gate** (`e2e/gates-t20.spec.ts`): blocks all non-app-origin network requests and asserts zero third-party requests and zero console errors across landing, demo analysis, and palette filtering.
+  - **Request-body scan** (`e2e/gates-t20.spec.ts` and `src/core/report/llm-payload-privacy.prop.test.ts`): asserts no outbound request body contains STDF `FAR` headers, gzip magic bytes, die IDs, or per-die coordinate/measurement fields.
+  - **Bundle secret scan** (`pnpm scan:secrets` via `tools/scan-bundle-secrets.mjs`) and an ESLint rule (`eslint.config.mjs`) blocking any `NEXT_PUBLIC_LLM_*` reference.
+
+## How Kiro was used
+
+| Kiro feature | Where in repo | How it shaped the project |
+|---|---|---|
+| **Spec-driven development** | `.kiro/specs/chip-autopsy-lab/` (`requirements.md`, `design.md`, `tasks.md`, `redesign.md`, `premium.md`) | EARS acceptance criteria in `requirements.md`, 14 formal correctness properties in `design.md`, incremental task tracking in `tasks.md`, and the visual/interaction specifications in `redesign.md` and `premium.md` governed every module and acceptance gate. |
+| **Steering** | `.kiro/steering/` (`product.md`, `tech.md`, `structure.md`, `design-language.md`) | Always-included steering files enforced product scope, STDF V4 binary decoding rules, framework-free core isolation, design tokens, copy restraint, and repository conventions across sessions. |
+| **Agent skills** | `.kiro/skills/` (`accessibility`, `animation-performance`, `apple-design`, `claude-api`, `doc-coauthoring`, `frontend-design`, `make-interfaces-feel-better`, `prompt-optimizer`, `react-best-practices`, `receiving-code-review`, `systematic-debugging`, `test-driven-development`, `verification-before-completion`, `webapp-testing`) | Reusable domain skills guided WCAG 2.2 AA compliance, composite-only 60 fps motion, tactile wafer and surface craft, test-driven implementation, debugging, and Playwright audits. |
+| **MCP** | `.kiro/settings/mcp.json`, `tools/carbon-mcp/carbon_mcp.py` | Local stdio MCP server exposing `carbon_task` and `carbon_ask` let Kiro delegate implementation, drafting, and review turns while keeping phase logs tracked in `logs/`. |
+| **Property-based testing** | 16 `*.prop.test.ts` suites across `src/core/` and `src/ui/` | Mapped all 14 spec correctness properties (`Property 1`–`Property 14`: STDF round-trip, parser bounds/truncation safety, retest determinism, yield additivity, Pareto conservation, stacked heatmap conservation, `Cp`/`Cpk` invariants, WM-811K D4 robustness, demo determinism, report claim integrity, citation validator soundness, selection filter algebra, Filter DSL codec round-trip, and outbound LLM payload privacy) plus 2 UI property suites (`palette.prop.test.ts`, `sheen-motion.prop.test.ts`) to `fast-check` runs. |
+
+### Workflow
+
+Development followed a strict spec -> tasks -> agent implementation -> verification loop logged in `logs/progress.md`. Each task in `.kiro/specs/chip-autopsy-lab/tasks.md` referenced specific EARS requirements and design properties, implemented pure logic in `src/core/` before wiring `src/workers/` and `src/ui/`, and required clean `pnpm typecheck`, `pnpm lint`, Vitest unit/property suites, and Playwright browser checks before completion. The repository currently verifies **474 unit and property tests across 82 test files** (including **16 `fast-check` property suites**) and **54 Playwright E2E spec files** in `e2e/`.
+
+## Architecture
+
+```text
+src/
+├── core/               # Pure, framework-free TypeScript (ESLint-enforced: zero React/Next/DOM imports or globals)
+│   ├── stdf/           # STDF V4 binary cursor, parser, writer, gzip ceiling stream
+│   ├── model/          # Columnar LotModel, PRR retest resolution, edge-ring BFS
+│   ├── analytics/      # Yield summary, site anomaly z-test, Bin Pareto, stacked heatmap, Cp/Cpk stats
+│   ├── patterns/       # 9-class WM-811K D4-invariant classifier and hedged root-cause hypotheses
+│   ├── report/         # Engine facts, 6-tier verdict precedence, localized template report, citation validator
+│   ├── query/          # Filter DSL codec, offline NL grammar, selection predicates
+│   ├── demo/           # Seeded Mulberry32 PRNG and deterministic synthetic STDF V4 lot generator
+│   └── i18n/           # 5-locale dictionaries, Intl formatters, glossary entries
+├── workers/            # Comlink Web Worker (autopsy.worker.ts) and typed client bridge (worker-client.ts)
+├── ui/                 # Client components: layered Canvas2D wafer stage, visx charts, report, cmdk, theme, motion
+│   ├── wafer-map/      # Base/Fail/Overlay canvases, camera physics, magnifier, stacked heatmap, wafer strip
+│   ├── charts/         # BinParetoChart, YieldSummaryPanel, ParametricPanel, ParametricHistogram
+│   ├── report/         # VerdictHero, ConfidencePill, StatRow, FindingsList, narration hook
+│   ├── command-palette/# Cmd-K / Ctrl-K CommandPalette
+│   ├── state/          # Central Zustand SelectionStore and ThemeStore
+│   ├── theme/          # System/Light/Dark + accent colour controllers and pre-hydration scripts
+│   ├── tokens/         # Light/Dark/Wafer colour tokens, typography, motion springs, WCAG contrast helpers
+│   ├── motion/         # Reveal choreography and reduced-motion hooks
+│   ├── i18n/           # I18nProvider, useT, Untranslated (<bdi translate="no">)
+│   ├── primitives/     # Button, SegmentedControl, DropdownMenu, ModalSheet, Term, Tooltip, CountUp, Disclosure
+│   └── layout/         # AppShell, NavBar, LotPicker, EmptyStateCard, FullWindowDropZone, LoadedLotOverview
+└── app/                # Next.js App Router entry, self-hosted fonts, server-only /api/autopsy/narrate route handler
+```
+
+**Data flow**: Dropping a `.stdf`, `.std`, or `.gz` file (or selecting a demo preset, which synthesizes raw STDF bytes via `stdf-writer.ts`) transfers an `ArrayBuffer` zero-copy through `worker-client.ts` to `autopsy.worker.ts` via Comlink. Inside the worker, optional gzip decompression (`1F 8B` magic bytes), STDF V4 record framing, columnar `LotModel` construction, yield/site analytics, WM-811K classification, and deterministic `AutopsyReport` generation run off the main thread while streaming progress updates. The UI loads the resulting lot into the central Zustand `SelectionStore`, so clicking any report claim, brushing the wafer map or stacked heatmap, clicking a Pareto bar or site row, or running a `Cmd-K` Filter DSL query recomputes derived `Uint8Array` die masks across every linked view without reparsing the file. If `LLM_API_KEY` is configured on the server, `/api/autopsy/narrate` optionally rephrases aggregate engine facts and the client validates every citation before display.
+
+## Tech stack
+
+- **Language**: TypeScript 5.9 (`strict` mode)
+- **Framework**: Next.js 16 (App Router) and React 19
+- **Styling and typography**: Tailwind CSS v4 with `@theme` CSS variables and self-hosted Inter Variable, Instrument Serif, and JetBrains Mono fonts
+- **Wafer rendering**: Custom layered HTML5 Canvas2D renderer with DPR scaling and CSS-transform camera physics
+- **Charts**: visx (`@visx/scale`, `@visx/shape`)
+- **State and worker**: Zustand and Comlink over a module Web Worker with native `DecompressionStream('gzip')`
+- **Interaction and motion**: `cmdk`, Motion (`motion/react`), Sonner, and `lucide-react`
+- **Testing**: Vitest, `fast-check` (property-based testing), and Playwright (end-to-end and visual/perf/privacy gates)
+
+## Third-party code and data
+
+### Dependencies (`package.json`)
+
+| Package | Role | License |
+|---|---|---|
+| `next`, `react`, `react-dom` | App Router framework and UI runtime | MIT |
+| `zustand` | Central selection and theme state | MIT |
+| `comlink` | Typed Web Worker RPC bridge | Apache-2.0 |
+| `@visx/scale`, `@visx/shape` | Bin Pareto and parametric histogram primitives | MIT |
+| `cmdk` | `Cmd-K` / `Ctrl-K` command palette | MIT |
+| `motion` | Spring and layout animations with reduced-motion support | MIT |
+| `sonner` | Accessible toast queue | MIT |
+| `lucide-react` | Interface icons | ISC |
+| `clsx`, `tailwind-merge` | Conditional class composition | MIT |
+| `@fontsource/instrument-serif`, `@fontsource/jetbrains-mono`, `@fontsource-variable/inter` | Self-hosted fonts (plus `src/app/fonts/InterVariable*.woff2`) | OFL-1.1 |
+| `geist` | Font package (devDependency) | SIL Open Font License 1.1 |
+| `tailwindcss`, `@tailwindcss/postcss`, `postcss` | CSS compilation | MIT |
+| `typescript` | Type checker and compiler | Apache-2.0 |
+| `vitest`, `fast-check` | Unit and property-based test runner | MIT |
+| `@playwright/test` | End-to-end browser verification | Apache-2.0 |
+| `eslint`, `@eslint/js`, `@next/eslint-plugin-next`, `typescript-eslint`, `globals`, `@types/*` | Linting and type definitions | MIT |
+
+### Agent skills (`.kiro/skills/`)
+
+| Skill | Source / Copyright | License |
+|---|---|---|
+| `accessibility` | Addy Osmani | MIT |
+| `animation-performance`, `apple-design` | Emil Kowalski | MIT |
+| `make-interfaces-feel-better` | Jakub Krehel | MIT |
+| `react-best-practices` | Vercel, Inc. | MIT |
+| `receiving-code-review`, `systematic-debugging`, `test-driven-development`, `verification-before-completion` | Jesse Vincent | MIT |
+| `claude-api`, `webapp-testing` | Anthropic, PBC | Apache-2.0 |
+| `frontend-design` | Included `LICENSE.txt` | Apache-2.0 |
+| `doc-coauthoring`, `prompt-optimizer` | Functional Software, Inc. dba Sentry | Apache-2.0 |
+
+### External data
+
+No external dataset or pre-trained model weights are bundled in this repository. The WM-811K wafer map dataset is referenced only for its 9 canonical spatial defect class names; classification is performed by a deterministic feature-based TypeScript implementation, and all demo lots and test fixtures are synthesized locally.
 
 ## License
+
 MIT. See [`LICENSE`](LICENSE).
