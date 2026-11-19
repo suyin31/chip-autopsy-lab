@@ -352,4 +352,24 @@ export const en = {
   'empty.noResults.body': 'Clear the filter to see the whole lot.',
   'empty.noResults.bodyFilter': 'Active filter: {filter}. Clear the filter to see the whole lot.',
   'empty.noResults.clear': 'Clear the filter',
+
+  // Stacked heatmap and wafer gallery
+  'stacked.title': 'Across all wafers',
+  'stacked.takeaway.peak': 'Peak coordinate fails on {failed} of {tested} wafers ({rate}).',
+  'stacked.takeaway.clean': 'Every coordinate passed across all {wafers} wafers.',
+  'stacked.modeAria': 'Multi-wafer view',
+  'stacked.mode.gallery': 'Gallery',
+  'stacked.mode.stacked': 'Stacked',
+  'stacked.galleryAria': 'All {count} wafers in lot {lotId}',
+  'stacked.canvasAria':
+    'Stacked failure heatmap across {wafers} wafers. Drag to select a region or use arrow keys to inspect coordinates.',
+  'stacked.legendUnit': 'fail rate',
+  'stacked.legendAria': 'Failure rate scale from {min} to {max}',
+  'stacked.readout.wafers': '{failed} of {tested} wafers failed',
+  'stacked.readout.rate': '{rate} fail rate',
+  'stacked.readout.allPassed': 'All {tested} wafers passed',
+  'stacked.readout.dominantSbin': 'Most common {bin}',
+  'stacked.readout.dominantHbin': 'Hard bin {bin}',
+  'stacked.selection.summary': '{dies} selected across {wafers} wafers',
+  'stacked.selection.hint': 'Click or drag on the map to filter all views to those coordinates.',
 } as const;

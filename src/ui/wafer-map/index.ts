@@ -203,3 +203,28 @@ export {
   PREFERS_MORE_CONTRAST_QUERY,
   usePrefersMoreContrast,
 } from './use-prefers-more-contrast';
+export {
+  type StackedPanelViewMode,
+  StackedWaferPanel,
+  type StackedWaferPanelProps,
+} from './StackedWaferPanel';
+export {
+  computeGalleryCollapseOffset,
+  computeStackedRenderLayout,
+  countDiesInStackedBrush,
+  GALLERY_COLLAPSE_DURATION_S,
+  GALLERY_REDUCED_FADE_DURATION_S,
+  hitTestStackedCell,
+  paintMagmaLegendCanvas,
+  paintStackedHeatmapBase,
+  paintStackedHeatmapOverlay,
+  type PaintStackedBaseParams,
+  type PaintStackedOverlayParams,
+  resolveStackedCellColor,
+  type ScreenSelectionRect,
+  screenRectToStackedBrush,
+  STACKED_LEGEND_HEIGHT_PX,
+  STACKED_LEGEND_WIDTH_PX,
+  STACKED_MAGMA_MAX_T,
+  STACKED_MAGMA_MIN_T,
+} from './stacked-heatmap-view';

@@ -605,7 +605,11 @@ const PART_FLG_CANDIDATES: readonly number[] = [
  * `'P'` / `'F'` / `' '` / undeclared bins, multi-site switching across retests, and partial
  * `PTR` execution subsets per touchdown (Property 3 & Property 4).
  */
-export const arbChronologicalPrrStream: fc.Arbitrary<ParsedLotBuildInput> = fc
+function createArbChronologicalPrrStream(
+  minWafers: number,
+  maxWafers: number,
+): fc.Arbitrary<ParsedLotBuildInput> {
+  return fc
   .record({
     parseMode: fc.constantFrom<'full' | 'bins-only'>('full', 'bins-only'),
     endianness: arbEndianness,
@@ -627,7 +631,7 @@ export const arbChronologicalPrrStream: fc.Arbitrary<ParsedLotBuildInput> = fc
       maxLength: 5,
     }),
     catalog: arbTestCatalog,
-    waferCount: fc.integer({ min: 1, max: 3 }),
+    waferCount: fc.integer({ min: minWafers, max: maxWafers }),
     coordPool: fc.uniqueArray(
       fc.record({
         x: fc.integer({ min: -8, max: 8 }),
@@ -951,12 +955,22 @@ export const arbChronologicalPrrStream: fc.Arbitrary<ParsedLotBuildInput> = fc
         };
       });
   });
+}
+
+export const arbChronologicalPrrStream: fc.Arbitrary<ParsedLotBuildInput> =
+  createArbChronologicalPrrStream(1, 3);
 
 /**
  * Shared composable `LotModel` arbitrary built from `arbChronologicalPrrStream`.
  */
 export const arbLotModel: fc.Arbitrary<LotModel> =
   arbChronologicalPrrStream.map(buildLotModel);
+
+/**
+ * Multi-wafer `LotModel` arbitrary (`2..5` wafers) for stacked heatmap properties (Property 6).
+ */
+export const arbMultiWaferLot: fc.Arbitrary<LotModel> =
+  createArbChronologicalPrrStream(2, 5).map(buildLotModel);
 
 /**
  * Generates arbitrary `Uint8Array` die selection masks (`0` or `1`) of length `dieCount`,

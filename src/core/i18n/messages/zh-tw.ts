@@ -349,4 +349,24 @@ export const zhTW = {
   'empty.noResults.body': '清除篩選即可查看整個批次。',
   'empty.noResults.bodyFilter': '目前篩選：{filter}。清除篩選即可查看整個批次。',
   'empty.noResults.clear': '清除篩選',
+
+  // Stacked heatmap and wafer gallery
+  'stacked.title': '全部晶圓彙總',
+  'stacked.takeaway.peak': '最高失效座標在 {tested} 片晶圓中有 {failed} 片失效（{rate}）。',
+  'stacked.takeaway.clean': '全部 {wafers} 片晶圓的每個座標皆通過測試。',
+  'stacked.modeAria': '多晶圓檢視',
+  'stacked.mode.gallery': '晶圓牆',
+  'stacked.mode.stacked': '疊加熱圖',
+  'stacked.galleryAria': '批次 {lotId} 中的全部 {count} 片晶圓',
+  'stacked.canvasAria':
+    '涵蓋 {wafers} 片晶圓的疊加失效熱圖。拖曳可框選區域，或使用方向鍵檢視座標。',
+  'stacked.legendUnit': '失效率',
+  'stacked.legendAria': '失效率刻度：從 {min} 到 {max}',
+  'stacked.readout.wafers': '{tested} 片中有 {failed} 片失效',
+  'stacked.readout.rate': '失效率 {rate}',
+  'stacked.readout.allPassed': '全部 {tested} 片通過',
+  'stacked.readout.dominantSbin': '主要分級 {bin}',
+  'stacked.readout.dominantHbin': '硬分級 {bin}',
+  'stacked.selection.summary': '已在 {wafers} 片晶圓中選取 {dies}',
+  'stacked.selection.hint': '點擊或拖曳熱圖，可將全部檢視篩選至對應座標。',
 } as const satisfies Dictionary;

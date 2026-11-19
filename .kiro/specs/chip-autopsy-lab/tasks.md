@@ -107,12 +107,12 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
   - Lot, wafer, and site tables with first-pass and final yield; clicking a wafer or site scopes the selection; site anomaly surfaces in the report for `site2-probe-contact`.
   - _Requirements: 7.3, 7.4, 7.5_
 
-- [ ] 12. Add the stacked multi-wafer heatmap and wafer gallery
-  - [ ] 12.1 Implement `stacked-heatmap.ts`, the gallery, and the magma heatmap with numeric legend, hover readout, and region selection
+- [x] 12. Add the stacked multi-wafer heatmap and wafer gallery
+  - [x] 12.1 Implement `stacked-heatmap.ts`, the gallery, and the magma heatmap with numeric legend, hover readout, and region selection
     - _Requirements: 5.1, 5.2, 5.4, 5.5_
-  - [ ] 12.2 Animate the gallery collapse into the stacked heatmap (`<= 800 ms`, Motion layout)
+  - [x] 12.2 Animate the gallery collapse into the stacked heatmap (`<= 800 ms`, Motion layout)
     - _Requirements: 5.3, 14.5_
-  - [ ]* 12.3 Property test: stacked heatmap failure conservation
+  - [x]* 12.3 Property test: stacked heatmap failure conservation
     - **Property 6** in `src/core/analytics/stacked-heatmap.prop.test.ts`
     - _Requirements: 5.2, 5.4_
 

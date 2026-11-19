@@ -353,4 +353,24 @@ export const ko = {
   'empty.noResults.body': '필터를 해제하면 로트 전체가 보입니다.',
   'empty.noResults.bodyFilter': '적용된 필터: {filter}. 필터를 해제하면 로트 전체가 보입니다.',
   'empty.noResults.clear': '필터 해제',
+
+  // Stacked heatmap and wafer gallery
+  'stacked.title': '전체 웨이퍼 요약',
+  'stacked.takeaway.peak': '최다 불량 좌표가 웨이퍼 {tested}장 중 {failed}장에서 불량입니다({rate}).',
+  'stacked.takeaway.clean': '전체 웨이퍼 {wafers}장의 모든 좌표가 통과했습니다.',
+  'stacked.modeAria': '다중 웨이퍼 보기',
+  'stacked.mode.gallery': '갤러리',
+  'stacked.mode.stacked': '누적 히트맵',
+  'stacked.galleryAria': '로트 {lotId}의 전체 웨이퍼 {count}장',
+  'stacked.canvasAria':
+    '웨이퍼 {wafers}장의 누적 불량 히트맵입니다. 드래그하여 영역을 선택하거나 방향키로 좌표를 확인하세요.',
+  'stacked.legendUnit': '불량률',
+  'stacked.legendAria': '불량률 눈금 {min}~{max}',
+  'stacked.readout.wafers': '웨이퍼 {tested}장 중 {failed}장 불량',
+  'stacked.readout.rate': '불량률 {rate}',
+  'stacked.readout.allPassed': '웨이퍼 {tested}장 모두 통과',
+  'stacked.readout.dominantSbin': '주요 빈 {bin}',
+  'stacked.readout.dominantHbin': '하드 빈 {bin}',
+  'stacked.selection.summary': '웨이퍼 {wafers}장에서 {dies} 선택됨',
+  'stacked.selection.hint': '맵을 클릭하거나 드래그하면 해당 좌표로 모든 보기가 필터링됩니다.',
 } as const satisfies Dictionary;

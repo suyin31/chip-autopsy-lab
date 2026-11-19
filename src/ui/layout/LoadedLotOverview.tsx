@@ -15,6 +15,7 @@ import {
   navBarHeightPx,
   readPrefersReducedMotionSync,
   shouldDeferEvidenceForStage,
+  StackedWaferPanel,
   WaferMapCanvas,
 } from '@/ui/wafer-map';
 import { peekLotInitialRevealPlan } from '@/ui/wafer-map/WaferMapCanvas';
@@ -174,6 +175,14 @@ export function LoadedLotOverview({
               store={store}
               className="mt-12 lg:mt-24"
             />
+            {lot.wafers.length >= 2 ? (
+              <StackedWaferPanel
+                lot={lot}
+                byWaferYield={yieldSummary.byWafer}
+                store={store}
+                className="mt-12 lg:mt-24"
+              />
+            ) : null}
             <p
               data-testid="verdict-footer"
               className="mt-12 type-subhead text-text-tertiary lg:mt-24"

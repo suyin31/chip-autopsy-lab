@@ -353,4 +353,24 @@ export const ja = {
   'empty.noResults.body': 'フィルターを解除するとロット全体が表示されます。',
   'empty.noResults.bodyFilter': '適用中のフィルター：{filter}。フィルターを解除するとロット全体が表示されます。',
   'empty.noResults.clear': 'フィルターを解除',
+
+  // Stacked heatmap and wafer gallery
+  'stacked.title': '全ウェハ集計',
+  'stacked.takeaway.peak': '最多不良座標は {tested} ウェハ中 {failed} ウェハで不良（{rate}）。',
+  'stacked.takeaway.clean': '全 {wafers} ウェハのすべての座標が合格しました。',
+  'stacked.modeAria': '複数ウェハ表示',
+  'stacked.mode.gallery': 'ギャラリー',
+  'stacked.mode.stacked': '重ね合わせ',
+  'stacked.galleryAria': 'ロット {lotId} の全 {count} ウェハ',
+  'stacked.canvasAria':
+    '{wafers} ウェハを重ね合わせた不良ヒートマップ。ドラッグで範囲選択、矢印キーで座標を確認できます。',
+  'stacked.legendUnit': '不良率',
+  'stacked.legendAria': '不良率スケール：{min} から {max}',
+  'stacked.readout.wafers': '{tested} ウェハ中 {failed} ウェハ不良',
+  'stacked.readout.rate': '不良率 {rate}',
+  'stacked.readout.allPassed': '全 {tested} ウェハ合格',
+  'stacked.readout.dominantSbin': '最多ビン {bin}',
+  'stacked.readout.dominantHbin': 'ハードビン {bin}',
+  'stacked.selection.summary': '{wafers} ウェハ全体で {dies} を選択中',
+  'stacked.selection.hint': 'マップをクリックまたはドラッグすると、該当座標で全ビューを絞り込みます。',
 } as const satisfies Dictionary;
