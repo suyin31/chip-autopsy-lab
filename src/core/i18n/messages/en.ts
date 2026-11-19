@@ -399,4 +399,14 @@ export const en = {
   'parametric.empty': 'No finite measurements in the active selection.',
   'parametric.legendAria': 'Parametric colour scale for {test}, from {min} to {max}',
   'parametric.legendNoData': 'No measurements',
+
+  // Active filter chips (Task 14)
+  'filter.barAria': 'Active filters',
+  'filter.brushCoords': 'X {minX}..{maxX}, Y {minY}..{maxY}',
+  'filter.brushSingleCoord': 'X {x}, Y {y}',
+  'filter.brushChipAria': 'Brushed area {coords}, {dies}. Remove area filter',
+  'filter.removeChipAria': 'Remove {label} filter',
+  'filter.clearAll': 'Clear all',
+  'filter.announcement': 'Filter updated: {dies} selected.',
+  'filter.stackedScope': 'All wafers',
 } as const;

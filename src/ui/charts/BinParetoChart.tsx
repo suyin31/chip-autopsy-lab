@@ -248,7 +248,9 @@ export function BinParetoChart({
           data-testid="bin-pareto-empty"
           className="mt-2 type-callout text-pretty text-text-secondary"
         >
-          {t('pareto.empty')}
+          {pareto.testedCount === 0
+            ? t('empty.noResults.title')
+            : t('pareto.empty')}
         </p>
       ) : (
         <>

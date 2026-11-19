@@ -400,4 +400,14 @@ export const ko = {
   'parametric.empty': '현재 선택 영역에 유효한 측정값이 없습니다.',
   'parametric.legendAria': '{test} 색상 눈금, {min}~{max}',
   'parametric.legendNoData': '측정값 없음',
+
+  // Active filter chips (Task 14)
+  'filter.barAria': '적용된 필터',
+  'filter.brushCoords': 'X {minX}..{maxX}, Y {minY}..{maxY}',
+  'filter.brushSingleCoord': 'X {x}, Y {y}',
+  'filter.brushChipAria': '선택 영역 {coords}, {dies}. 영역 필터 해제',
+  'filter.removeChipAria': '{label} 필터 해제',
+  'filter.clearAll': '모두 해제',
+  'filter.announcement': '필터가 업데이트되었습니다: {dies} 선택됨.',
+  'filter.stackedScope': '전체 웨이퍼',
 } as const satisfies Dictionary;

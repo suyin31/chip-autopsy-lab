@@ -23,6 +23,7 @@ import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
   isWaferTableCollapsible,
   resolveAnomalousSiteIndices,
+  resolveYieldSummaryForSelection,
   resolveYieldTakeaway,
   selectWaferRowIndices,
 } from './yield-summary-view';
@@ -78,12 +79,26 @@ export function YieldSummaryPanel({
   const headingId = React.useId();
   const wafersListId = React.useId();
 
-  const { storeLot, siteFilter, waferFilter } = useStore(
+  const {
+    storeLot,
+    brush,
+    binFilter,
+    siteFilter,
+    waferFilter,
+    dslFilter,
+    hasActiveFilter,
+    selectedDieMask,
+  } = useStore(
     store,
     useShallow((s) => ({
       storeLot: s.lot,
+      brush: s.brush,
+      binFilter: s.binFilter,
       siteFilter: s.siteFilter,
       waferFilter: s.waferFilter,
+      dslFilter: s.dslFilter,
+      hasActiveFilter: s.hasActiveFilter,
+      selectedDieMask: s.selectedDieMask,
     })),
   );
   const synced = storeLot === lot;
@@ -95,7 +110,33 @@ export function YieldSummaryPanel({
   const disclosure = useDisclosureList(reduced);
   const { expanded } = disclosure;
 
-  const { overall, byWafer, bySite } = yieldSummary;
+  const effectiveYieldSummary = React.useMemo(
+    () =>
+      synced
+        ? resolveYieldSummaryForSelection(lot, yieldSummary, {
+            brush,
+            binFilter,
+            siteFilter,
+            waferFilter,
+            dslFilter,
+            hasActiveFilter,
+            selectedDieMask,
+          })
+        : yieldSummary,
+    [
+      synced,
+      lot,
+      yieldSummary,
+      brush,
+      binFilter,
+      siteFilter,
+      waferFilter,
+      dslFilter,
+      hasActiveFilter,
+      selectedDieMask,
+    ],
+  );
+  const { overall, byWafer, bySite } = effectiveYieldSummary;
 
   const anomalousSites = React.useMemo(
     () => resolveAnomalousSiteIndices(lot, facts),

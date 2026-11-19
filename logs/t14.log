@@ -1,0 +1,5 @@
+root agent idle; waiting for 1 background task(s) to finish
+I have implemented the core selection predicates, Property 12 tests, linked Yield Summary recomputation, removable filter chips, global `Escape` clearing, and the Task 14 Playwright spec. Running `pnpm typecheck`, `pnpm lint`, and `pnpm test` now and waiting for the results.
+`pnpm typecheck` passed cleanly; waiting for `pnpm lint` and `pnpm test` to finish.
+`active-filter-chips.test.ts` passed (2/2); waiting for `e2e/brushing-t14.spec.ts` to finish.
+error: interrupted

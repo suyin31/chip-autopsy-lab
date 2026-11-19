@@ -13,5 +13,6 @@ export * from './demo';
 export * from './i18n';
 export * from './model';
 export * from './patterns';
+export * from './query';
 export * from './report';
 export * from './stdf';

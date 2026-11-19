@@ -139,7 +139,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(DICTIONARIES.ko).toBe(ko);
 
     const enKeys = Object.keys(en).sort() as MessageKey[];
-    expect(enKeys.length).toBe(327);
+    expect(enKeys.length).toBe(335);
 
     for (const locale of SUPPORTED_LOCALES) {
       const dict = getDictionary(locale);

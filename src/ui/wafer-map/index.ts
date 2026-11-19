@@ -1,4 +1,9 @@
 export {
+  ActiveFilterChips,
+  type ActiveFilterChipsProps,
+  formatBrushCoordinateRange,
+} from './ActiveFilterChips';
+export {
   BaseCanvas,
   type BaseCanvasHandle,
   type BaseCanvasProps,

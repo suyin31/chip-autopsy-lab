@@ -13,48 +13,24 @@
 import { create, type StateCreator } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import type { BinMode, LotModel } from '@/core/model';
+import {
+  type CapabilityPredicateClause,
+  type ComparisonOp,
+  type DiePredicateClause,
+  evaluateSelection,
+  type FilterDslAst,
+  type SpatialBrushRect,
+} from '@/core/query';
 
 export type WaferColorMode = 'pass-fail' | 'hbin' | 'sbin' | 'parametric';
 
-export type ComparisonOp = '<' | '<=' | '>' | '>=' | '=';
-
-export type DiePredicateClause =
-  | { readonly kind: 'pass-status'; readonly status: 'fail' | 'pass' }
-  | {
-      readonly kind: 'bin';
-      readonly mode: BinMode | 'ANY_BIN';
-      readonly codes: readonly number[];
-    }
-  | { readonly kind: 'edge-ring'; readonly maxRing: number }
-  | { readonly kind: 'radial-zone'; readonly zone: 'center' | 'donut' }
-  | { readonly kind: 'wafer'; readonly waferIndices: readonly number[] }
-  | {
-      readonly kind: 'site';
-      readonly headNum?: number;
-      readonly siteNum: number;
-    };
-
-export interface CapabilityPredicateClause {
-  readonly kind: 'capability';
-  readonly metric: 'cpk' | 'cp';
-  readonly op: ComparisonOp;
-  readonly threshold: number;
-}
-
-export interface FilterDslAst {
-  readonly dieClauses: readonly DiePredicateClause[];
-  readonly capabilityClauses: readonly CapabilityPredicateClause[];
-}
-
-export interface SpatialBrushRect {
-  readonly scope: 'wafer' | 'stacked';
-  /** Optional wafer index when brushing on a single-wafer view. */
-  readonly waferIndex?: number;
-  readonly minX: number;
-  readonly maxX: number;
-  readonly minY: number;
-  readonly maxY: number;
-}
+export type {
+  CapabilityPredicateClause,
+  ComparisonOp,
+  DiePredicateClause,
+  FilterDslAst,
+  SpatialBrushRect,
+};
 
 export interface BinSelectionFilter {
   readonly mode: BinMode;
@@ -129,9 +105,6 @@ export interface DerivedSelectionMasks {
   readonly overlayHighlightCount: number;
 }
 
-const INNER_RHO_MAX = 0.38;
-const MID_RHO_MAX = 0.75;
-
 const EMPTY_UINT8 = new Uint8Array(0);
 const EMPTY_UINT32 = new Uint32Array(0);
 export const EMPTY_HIDDEN_BINS: ReadonlySet<number> = new Set<number>();
@@ -165,109 +138,6 @@ export function areHiddenBinSetsEqual(
   return true;
 }
 
-interface WaferRadialBounds {
-  readonly cx: number;
-  readonly cy: number;
-  readonly rMax: number;
-}
-
-function computeWaferRadialBounds(lot: LotModel): readonly WaferRadialBounds[] {
-  const { wafers, dies } = lot;
-  const out: WaferRadialBounds[] = new Array<WaferRadialBounds>(wafers.length);
-  for (let w = 0; w < wafers.length; w += 1) {
-    const meta = wafers[w];
-    const cx = (meta.minX + meta.maxX) / 2;
-    const cy = (meta.minY + meta.maxY) / 2;
-    let rMax = 1;
-    for (let i = meta.dieStartIndex; i < meta.dieEndIndex; i += 1) {
-      if (dies.hasValidCoords[i] === 0) {
-        continue;
-      }
-      const dist = Math.hypot(dies.x[i] - cx, dies.y[i] - cy);
-      if (dist > rMax) {
-        rMax = dist;
-      }
-    }
-    out[w] = { cx, cy, rMax };
-  }
-  return out;
-}
-
-type CompiledDslClause = (dieIndex: number) => boolean;
-
-function compileDslClauses(
-  lot: LotModel,
-  clauses: readonly DiePredicateClause[],
-): readonly CompiledDslClause[] {
-  const { dies, sites } = lot;
-  let radialBounds: readonly WaferRadialBounds[] | null = null;
-
-  return clauses.map((clause): CompiledDslClause => {
-    switch (clause.kind) {
-      case 'pass-status': {
-        const wantPass = clause.status === 'pass';
-        return (i: number) =>
-          wantPass ? dies.finalPass[i] !== 0 : dies.finalPass[i] === 0;
-      }
-      case 'bin': {
-        const codeSet = new Set<number>(clause.codes);
-        if (clause.mode === 'SBIN') {
-          return (i: number) => codeSet.has(dies.sbin[i]);
-        }
-        if (clause.mode === 'HBIN') {
-          return (i: number) => codeSet.has(dies.hbin[i]);
-        }
-        return (i: number) =>
-          codeSet.has(dies.sbin[i]) || codeSet.has(dies.hbin[i]);
-      }
-      case 'edge-ring': {
-        const maxRing = Math.max(0, Math.trunc(clause.maxRing));
-        return (i: number) =>
-          dies.hasValidCoords[i] === 1 &&
-          dies.ringIndex[i] >= 1 &&
-          dies.ringIndex[i] <= maxRing;
-      }
-      case 'radial-zone': {
-        if (radialBounds === null) {
-          radialBounds = computeWaferRadialBounds(lot);
-        }
-        const boundsRef = radialBounds;
-        const zone = clause.zone;
-        return (i: number) => {
-          if (dies.hasValidCoords[i] === 0) {
-            return false;
-          }
-          const wb = boundsRef[dies.waferIndex[i]];
-          if (!wb) {
-            return false;
-          }
-          const rho = Math.hypot(dies.x[i] - wb.cx, dies.y[i] - wb.cy) / wb.rMax;
-          return zone === 'center'
-            ? rho <= INNER_RHO_MAX
-            : rho > INNER_RHO_MAX && rho <= MID_RHO_MAX;
-        };
-      }
-      case 'wafer': {
-        const waferSet = new Set<number>(clause.waferIndices);
-        return (i: number) => waferSet.has(dies.waferIndex[i]);
-      }
-      case 'site': {
-        const matchingSites = new Set<number>();
-        for (let s = 0; s < sites.length; s += 1) {
-          const meta = sites[s];
-          if (
-            meta.siteNum === clause.siteNum &&
-            (clause.headNum === undefined || meta.headNum === clause.headNum)
-          ) {
-            matchingSites.add(meta.siteIndex);
-          }
-        }
-        return (i: number) => matchingSites.has(dies.siteIndex[i]);
-      }
-    }
-  });
-}
-
 /**
  * Pure, deterministic `Uint8Array` bitmask evaluator uniting spatial brush bounds,
  * Bin Pareto bar toggles, Test Site scoping, Filter DSL die clauses, and
@@ -299,104 +169,20 @@ export function deriveSelectionMasks(
     };
   }
 
-  const { dies, sites } = lot;
-  const dieCount = dies.count;
+  const dieCount = lot.dies.count;
 
-  // 1. Evaluate intersection of active filter predicates -> selectedDieMask
-  const selectedDieMask = new Uint8Array(dieCount);
-  let selectedDieCount = 0;
-
-  if (!hasActiveFilter) {
-    // Missing-coordinate (-32768) dies remain 1 when no spatial filter is active
-    // so non-spatial Lot, Wafer, Site, and Bin totals retain them (Req 4.2).
-    selectedDieMask.fill(1);
-    selectedDieCount = dieCount;
-  } else {
-    const siteOutOfRange =
-      siteFilter !== null &&
-      (!Number.isInteger(siteFilter) ||
-        siteFilter < 0 ||
-        siteFilter >= sites.length);
-    const waferOutOfRange =
-      waferFilter !== null &&
-      (!Number.isInteger(waferFilter) ||
-        waferFilter < 0 ||
-        waferFilter >= lot.wafers.length);
-
-    if (!siteOutOfRange && !waferOutOfRange) {
-      const brushLoX = brush !== null ? Math.min(brush.minX, brush.maxX) : 0;
-      const brushHiX = brush !== null ? Math.max(brush.minX, brush.maxX) : 0;
-      const brushLoY = brush !== null ? Math.min(brush.minY, brush.maxY) : 0;
-      const brushHiY = brush !== null ? Math.max(brush.minY, brush.maxY) : 0;
-      const brushScopedWafer =
-        brush !== null && brush.scope === 'wafer' && brush.waferIndex !== undefined
-          ? brush.waferIndex
-          : null;
-
-      const compiledClauses =
-        dslDieClauses.length > 0 ? compileDslClauses(lot, dslDieClauses) : null;
-
-      const xArr = dies.x;
-      const yArr = dies.y;
-      const validCoordArr = dies.hasValidCoords;
-      const waferIdxArr = dies.waferIndex;
-      const siteIdxArr = dies.siteIndex;
-      const sbinArr = dies.sbin;
-      const hbinArr = dies.hbin;
-
-      for (let i = 0; i < dieCount; i += 1) {
-        if (siteFilter !== null && siteIdxArr[i] !== siteFilter) {
-          continue;
-        }
-
-        if (waferFilter !== null && waferIdxArr[i] !== waferFilter) {
-          continue;
-        }
-
-        if (binFilter !== null) {
-          const code = binFilter.mode === 'SBIN' ? sbinArr[i] : hbinArr[i];
-          if (code !== binFilter.code) {
-            continue;
-          }
-        }
-
-        if (brush !== null) {
-          if (validCoordArr[i] === 0) {
-            continue;
-          }
-          if (brushScopedWafer !== null && waferIdxArr[i] !== brushScopedWafer) {
-            continue;
-          }
-          const dx = xArr[i];
-          const dy = yArr[i];
-          if (
-            dx < brushLoX ||
-            dx > brushHiX ||
-            dy < brushLoY ||
-            dy > brushHiY
-          ) {
-            continue;
-          }
-        }
-
-        if (compiledClauses !== null) {
-          let allMatch = true;
-          for (let c = 0; c < compiledClauses.length; c += 1) {
-            if (!compiledClauses[c](i)) {
-              allMatch = false;
-              break;
-            }
-          }
-          if (!allMatch) {
-            continue;
-          }
-        }
-
-        selectedDieMask[i] = 1;
-        selectedDieCount += 1;
-      }
-    }
-  }
+  // 1. Evaluate intersection of active filter predicates -> selectedDieMask (via core query engine)
+  const dieOnlyDsl: FilterDslAst | null =
+    dslDieClauses.length > 0
+      ? { dieClauses: dslDieClauses, capabilityClauses: [] }
+      : null;
+  const evaluated = evaluateSelection(lot, brush, dieOnlyDsl, {
+    bin: binFilter,
+    siteIndex: siteFilter,
+    waferIndex: waferFilter,
+  });
+  const selectedDieMask = evaluated.dieMask;
+  const selectedDieCount = evaluated.selectedDieCount;
 
   // 2. Evaluate claimHighlight -> claimHighlightMask + deduplicated highlightedDieIndices
   let claimHighlightMask: Uint8Array;

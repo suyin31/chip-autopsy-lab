@@ -27,6 +27,7 @@ import {
   type WaferColorMode,
 } from '@/ui/state';
 import { SPRING_PHYSICS_EQUIVALENTS, WAFER_TOKENS } from '@/ui/tokens';
+import { ActiveFilterChips } from './ActiveFilterChips';
 import { BaseCanvas, type BaseCanvasHandle } from './BaseCanvas';
 import { BinLegend } from './BinLegend';
 import { FailCanvas, type FailCanvasHandle } from './FailCanvas';
@@ -1064,10 +1065,12 @@ function WaferMapCanvasImpl({
     if (activeWaferBrush && committedBrushStats) {
       syncCommittedPopoverForCamera(getCamera());
     } else if (boxSelectDragRef.current === null) {
+      cancelSnapAnimation();
       overlayCanvasRef.current?.setLiveBrushScreenRect(null);
     }
   }, [
     activeWaferBrush,
+    cancelSnapAnimation,
     committedBrushStats,
     getCamera,
     syncCommittedPopoverForCamera,
@@ -2295,10 +2298,10 @@ function WaferMapCanvasImpl({
         className,
       )}
     >
-      {/* Stage header (premium §5.5): wafer title + caption that cross-fades for evidence and box select */}
+      {/* Stage header (premium §5.5): wafer title, caption, and removable active filter chips (Req 11.3) */}
       <div
         data-testid="stage-header"
-        className="col-span-2 flex flex-wrap items-baseline gap-x-3 px-4 pb-2 sm:h-10 sm:items-end sm:px-0"
+        className="col-span-2 flex flex-wrap items-baseline gap-x-3 gap-y-1.5 px-4 pb-2 sm:min-h-10 sm:items-end sm:px-0"
       >
         <h2 className="type-headline text-text-primary">
           {titleParts[0]}
@@ -2320,7 +2323,7 @@ function WaferMapCanvasImpl({
               data-active={captionKind === kind}
               aria-hidden={captionKind === kind ? undefined : true}
               className={cn(
-                '[grid-area:1/1] transition-opacity duration-[120ms] ease-[var(--ease-out)]',
+                '[grid-area:1/1] transition-opacity duration-[120ms] ease-[var(--ease-out)] motion-reduce:transition-none',
                 captionKind === kind ? 'opacity-100' : 'opacity-0',
               )}
             >
@@ -2328,6 +2331,7 @@ function WaferMapCanvasImpl({
             </span>
           ))}
         </p>
+        <ActiveFilterChips lot={lot} store={store} className="ml-auto self-end" />
       </div>
 
       {/* Unclipped floating anchor wrapper so magnifier/popover can place above stage edge (§4.8) */}

@@ -400,4 +400,14 @@ export const ja = {
   'parametric.empty': '選択範囲に有効な測定値がありません。',
   'parametric.legendAria': '{test} のカラースケール、{min} から {max}',
   'parametric.legendNoData': '測定値なし',
+
+  // Active filter chips (Task 14)
+  'filter.barAria': '適用中のフィルタ',
+  'filter.brushCoords': 'X {minX}..{maxX}, Y {minY}..{maxY}',
+  'filter.brushSingleCoord': 'X {x}, Y {y}',
+  'filter.brushChipAria': '選択領域 {coords}、{dies}。領域フィルタを解除',
+  'filter.removeChipAria': '{label} フィルタを解除',
+  'filter.clearAll': 'すべて解除',
+  'filter.announcement': 'フィルタを更新しました: {dies} を選択中。',
+  'filter.stackedScope': '全ウェハ',
 } as const satisfies Dictionary;

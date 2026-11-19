@@ -1,6 +1,88 @@
-import type { YieldMetrics } from '@/core/analytics';
+import {
+  computeYieldSummary,
+  type YieldMetrics,
+  type YieldSummary,
+} from '@/core/analytics';
 import type { LotModel } from '@/core/model';
 import type { EngineFact } from '@/core/report';
+import {
+  type BinSelectionFilter,
+  deriveSelectionMasks,
+  type FilterDslAst,
+  type SpatialBrushRect,
+} from '@/ui/state';
+
+export interface YieldSelectionMaskInputs {
+  readonly brush: SpatialBrushRect | null;
+  readonly binFilter: BinSelectionFilter | null;
+  readonly siteFilter: number | null;
+  readonly waferFilter: number | null;
+  readonly dslFilter: FilterDslAst | null;
+  readonly hasActiveFilter: boolean;
+  readonly selectedDieMask: Uint8Array;
+}
+
+/**
+ * Recomputes yield metrics over the active Selection Store filter (Requirements 11.2, 11.4):
+ * - When no filter is active, returns the precomputed `baseSummary` in O(1).
+ * - `overall` always reflects the full intersection (`selectedDieMask`), including any brush,
+ *   bin, site, wafer, or DSL filter.
+ * - `bySite` leaves out `siteFilter` so every site stays comparable and switchable while still
+ *   updating for brush, bin, wafer, and DSL filters.
+ * - `byWafer` leaves out `waferFilter` so every wafer stays comparable and switchable while still
+ *   updating for brush, bin, site, and DSL filters.
+ */
+export function resolveYieldSummaryForSelection(
+  lot: LotModel,
+  baseSummary: YieldSummary,
+  inputs: YieldSelectionMaskInputs,
+): YieldSummary {
+  if (!inputs.hasActiveFilter) {
+    return baseSummary;
+  }
+
+  const fullFiltered = computeYieldSummary(lot, inputs.selectedDieMask);
+
+  if (inputs.siteFilter === null && inputs.waferFilter === null) {
+    return fullFiltered;
+  }
+
+  let bySite = fullFiltered.bySite;
+  if (inputs.siteFilter !== null) {
+    const withoutSite = deriveSelectionMasks(lot, {
+      brush: inputs.brush,
+      binFilter: inputs.binFilter,
+      siteFilter: null,
+      waferFilter: inputs.waferFilter,
+      dslFilter: inputs.dslFilter,
+      claimHighlight: null,
+    });
+    bySite = withoutSite.hasActiveFilter
+      ? computeYieldSummary(lot, withoutSite.selectedDieMask).bySite
+      : baseSummary.bySite;
+  }
+
+  let byWafer = fullFiltered.byWafer;
+  if (inputs.waferFilter !== null) {
+    const withoutWafer = deriveSelectionMasks(lot, {
+      brush: inputs.brush,
+      binFilter: inputs.binFilter,
+      siteFilter: inputs.siteFilter,
+      waferFilter: null,
+      dslFilter: inputs.dslFilter,
+      claimHighlight: null,
+    });
+    byWafer = withoutWafer.hasActiveFilter
+      ? computeYieldSummary(lot, withoutWafer.selectedDieMask).byWafer
+      : baseSummary.byWafer;
+  }
+
+  return {
+    overall: fullFiltered.overall,
+    byWafer,
+    bySite,
+  };
+}
 
 /** Wafer rows shown while the wafer table is collapsed. */
 export const YIELD_COLLAPSED_WAFER_COUNT = 5;

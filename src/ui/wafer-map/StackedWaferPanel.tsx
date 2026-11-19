@@ -31,6 +31,7 @@ import {
   useSelectionStore,
 } from '@/ui/state';
 import { WAFER_TOKENS } from '@/ui/tokens';
+import { formatBrushCoordinateRange } from './ActiveFilterChips';
 import { formatDieCoordinate } from './linked-interactions';
 import { readPrefersReducedMotionSync } from './probe-sweep';
 import { computeStageDiscLayerRects } from './stage-layers';
@@ -1089,6 +1090,16 @@ export function StackedWaferPanel({
                 >
                   {activeStackedBrush !== null ? (
                     <>
+                      <Untranslated
+                        data-testid="stacked-selection-coords"
+                        className="font-mono-id type-caption text-text-primary tabular-nums"
+                      >
+                        {formatBrushCoordinateRange(
+                          activeStackedBrush,
+                          (params) => t('filter.brushCoords', params),
+                          (params) => t('filter.brushSingleCoord', params),
+                        )}
+                      </Untranslated>
                       <span
                         data-testid="stacked-selection-summary"
                         className="type-subhead text-text-secondary tabular-nums"

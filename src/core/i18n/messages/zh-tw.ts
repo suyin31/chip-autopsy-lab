@@ -396,4 +396,14 @@ export const zhTW = {
   'parametric.empty': '目前選取中沒有有效量測值。',
   'parametric.legendAria': '{test} 參數色標，範圍 {min} 至 {max}',
   'parametric.legendNoData': '無量測值',
+
+  // Active filter chips (Task 14)
+  'filter.barAria': '目前篩選條件',
+  'filter.brushCoords': 'X {minX}..{maxX}, Y {minY}..{maxY}',
+  'filter.brushSingleCoord': 'X {x}, Y {y}',
+  'filter.brushChipAria': '框選區域 {coords}，{dies}。移除區域篩選',
+  'filter.removeChipAria': '移除 {label} 篩選',
+  'filter.clearAll': '全部清除',
+  'filter.announcement': '篩選已更新：已選取 {dies}。',
+  'filter.stackedScope': '全部晶圓',
 } as const satisfies Dictionary;

@@ -92,6 +92,51 @@ export function LoadedLotOverview({
     store.getState().setLot(lot);
   }, [lot, store]);
 
+  // Requirement 11.5: pressing Escape anywhere (when no dialog, menu, popover, or text input
+  // is open) clears the active spatial brush and filters, restoring full-scope aggregations.
+  React.useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const handleGlobalEscape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape' || event.defaultPrevented) {
+        return;
+      }
+      const activeEl = document.activeElement;
+      if (
+        activeEl instanceof HTMLInputElement ||
+        activeEl instanceof HTMLTextAreaElement ||
+        activeEl instanceof HTMLSelectElement ||
+        (activeEl instanceof HTMLElement && activeEl.isContentEditable)
+      ) {
+        return;
+      }
+      if (
+        document.querySelector(
+          '[role="dialog"], [role="alertdialog"], [role="menu"], [data-testid="coach-mark-bubble"], [data-testid="term-popover"]',
+        ) !== null
+      ) {
+        return;
+      }
+      const state = store.getState();
+      if (state.hasActiveFilter) {
+        event.preventDefault();
+        state.setBrush(null);
+        state.setBinFilter(null);
+        state.setSiteFilter(null);
+        state.setWaferFilter(null);
+        state.setDslFilter(null);
+        return;
+      }
+      if (state.claimHighlight !== null) {
+        event.preventDefault();
+        state.setClaimHighlight(null);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalEscape);
+    return () => window.removeEventListener('keydown', handleGlobalEscape);
+  }, [store]);
+
   // Premium §6.2, §8.3: below 1024 the findings, Pareto, and yield rows sit under the wafer, so
   // any new evidence (one store, every trigger) scrolls the stage top to 8 px under the nav when
   // less than 50 % of the stage is visible (smooth; instant under reduced motion). Never on desktop.

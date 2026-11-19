@@ -6,9 +6,11 @@ import { buildLotModel } from '@/core/model/lot-builder';
 import type { LotModel } from '@/core/model';
 import { buildEngineFacts } from '@/core/report';
 import { parseStdfBytes } from '@/core/stdf/stdf-parser';
+import { deriveSelectionMasks } from '@/ui/state';
 import {
   isWaferTableCollapsible,
   resolveAnomalousSiteIndices,
+  resolveYieldSummaryForSelection,
   resolveYieldTakeaway,
   selectWaferRowIndices,
   YIELD_COLLAPSED_WAFER_COUNT,
@@ -125,5 +127,90 @@ describe('resolveYieldTakeaway', () => {
   it('has no takeaway for a lot without retests or a flagged site', () => {
     const lot = loadLot('edge-ring-etch');
     expect(resolveYieldTakeaway(lot, metrics(0.9), undefined)).toBeNull();
+  });
+});
+
+describe('resolveYieldSummaryForSelection (Task 14, Req 11.2 & 11.4)', () => {
+  it('recomputes overall, bySite, and byWafer over a spatial brush and keeps site/wafer tables comparable when scoped', () => {
+    const lot = loadLot('edge-ring-etch');
+    const base = computeYieldSummary(lot);
+    const w0 = lot.wafers[0]!;
+
+    // Unfiltered returns baseSummary by reference
+    const unfilteredMasks = deriveSelectionMasks(lot, {
+      brush: null,
+      binFilter: null,
+      siteFilter: null,
+      waferFilter: null,
+      dslFilter: null,
+      claimHighlight: null,
+    });
+    expect(
+      resolveYieldSummaryForSelection(lot, base, {
+        brush: null,
+        binFilter: null,
+        siteFilter: null,
+        waferFilter: null,
+        dslFilter: null,
+        hasActiveFilter: unfilteredMasks.hasActiveFilter,
+        selectedDieMask: unfilteredMasks.selectedDieMask,
+      }),
+    ).toBe(base);
+
+    // Single-wafer spatial brush updates overall and wafer yields to the brushed subset
+    const brush = {
+      scope: 'wafer' as const,
+      waferIndex: 0,
+      minX: w0.minX,
+      maxX: Math.round((w0.minX + w0.maxX) / 2),
+      minY: w0.minY,
+      maxY: w0.maxY,
+    };
+    const brushedMasks = deriveSelectionMasks(lot, {
+      brush,
+      binFilter: null,
+      siteFilter: null,
+      waferFilter: null,
+      dslFilter: null,
+      claimHighlight: null,
+    });
+    const brushed = resolveYieldSummaryForSelection(lot, base, {
+      brush,
+      binFilter: null,
+      siteFilter: null,
+      waferFilter: null,
+      dslFilter: null,
+      hasActiveFilter: brushedMasks.hasActiveFilter,
+      selectedDieMask: brushedMasks.selectedDieMask,
+    });
+    expect(brushed.overall.testedDies).toBe(brushedMasks.selectedDieCount);
+    expect(brushed.overall.testedDies).toBeLessThan(base.overall.testedDies);
+    expect(brushed.byWafer[0]!.testedDies).toBe(brushedMasks.selectedDieCount);
+    expect(brushed.byWafer[1]!.testedDies).toBe(0);
+
+    // Combined brush + siteFilter: overall reflects intersection, while bySite keeps other sites visible
+    const combinedMasks = deriveSelectionMasks(lot, {
+      brush,
+      binFilter: null,
+      siteFilter: 0,
+      waferFilter: null,
+      dslFilter: null,
+      claimHighlight: null,
+    });
+    const combined = resolveYieldSummaryForSelection(lot, base, {
+      brush,
+      binFilter: null,
+      siteFilter: 0,
+      waferFilter: null,
+      dslFilter: null,
+      hasActiveFilter: combinedMasks.hasActiveFilter,
+      selectedDieMask: combinedMasks.selectedDieMask,
+    });
+    expect(combined.overall.testedDies).toBe(combinedMasks.selectedDieCount);
+    expect(combined.overall.testedDies).toBeLessThan(brushed.overall.testedDies);
+    // Other sites still show their counts within the brushed region
+    expect(
+      combined.bySite.reduce((sum, s) => sum + s.testedDies, 0),
+    ).toBe(brushed.overall.testedDies);
   });
 });

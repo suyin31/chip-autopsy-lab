@@ -396,4 +396,14 @@ export const zhCN = {
   'parametric.empty': '当前选择中没有有效测量值。',
   'parametric.legendAria': '{test} 参数色标，范围 {min} 至 {max}',
   'parametric.legendNoData': '无测量值',
+
+  // Active filter chips (Task 14)
+  'filter.barAria': '当前筛选条件',
+  'filter.brushCoords': 'X {minX}..{maxX}, Y {minY}..{maxY}',
+  'filter.brushSingleCoord': 'X {x}, Y {y}',
+  'filter.brushChipAria': '框选区域 {coords}，{dies}。移除区域筛选',
+  'filter.removeChipAria': '移除 {label} 筛选',
+  'filter.clearAll': '全部清除',
+  'filter.announcement': '筛选已更新：已选中 {dies}。',
+  'filter.stackedScope': '全部晶圆',
 } as const satisfies Dictionary;
