@@ -811,6 +811,86 @@ export const DropdownMenuRadioItem = React.forwardRef<
   );
 });
 
+export interface DropdownMenuRadioSwatchProps
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onSelect'> {
+  readonly value: string;
+  readonly checked: boolean;
+  readonly label: string;
+  readonly color: string;
+  readonly onSelect?: (value: string) => void;
+  readonly instantClose?: boolean;
+}
+
+/**
+ * Compact 20 px circular radio swatch inside a `DropdownMenu` with a 2 px ink focus/selected ring,
+ * radio semantics (`role="menuitemradio"`), and extended hit area without overlap.
+ */
+export const DropdownMenuRadioSwatch = React.forwardRef<
+  HTMLButtonElement,
+  DropdownMenuRadioSwatchProps
+>(function DropdownMenuRadioSwatch(
+  {
+    value,
+    checked,
+    label,
+    color,
+    onSelect,
+    onClick,
+    disabled,
+    instantClose = false,
+    className,
+    style,
+    ...props
+  },
+  ref,
+) {
+  const { setOpenWithSource } = useDropdownMenuContext(
+    'DropdownMenuRadioSwatch',
+  );
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>): void => {
+    onClick?.(event);
+    if (event.defaultPrevented || disabled) {
+      return;
+    }
+    onSelect?.(value);
+    setOpenWithSource(false, event.detail === 0 ? 'keyboard' : 'pointer', {
+      returnFocus: true,
+      instant: instantClose,
+    });
+  };
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      role="menuitemradio"
+      aria-checked={checked}
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      aria-disabled={disabled ? 'true' : undefined}
+      data-typeahead={label}
+      tabIndex={-1}
+      onClick={handleClick}
+      style={{ backgroundColor: color, ...style }}
+      className={cn(
+        'relative size-5 shrink-0 cursor-pointer rounded-full outline-none',
+        'after:absolute after:-inset-2 after:content-[""]',
+        'transition-[transform,opacity] duration-[120ms] ease-[var(--ease-out)]',
+        'motion-safe:hover:scale-[1.08] motion-safe:enabled:active:scale-[0.94]',
+        checked
+          ? 'shadow-[0_0_0_2px_var(--surface),0_0_0_4px_var(--ink)]'
+          : 'border border-hairline-strong',
+        'focus:shadow-[0_0_0_2px_var(--surface),0_0_0_4px_var(--ink)] focus:outline-none',
+        'disabled:cursor-not-allowed disabled:opacity-40',
+        className,
+      )}
+      {...props}
+    />
+  );
+});
+
 export function DropdownMenuLabel({
   className,
   ...props

@@ -1,14 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACCENT_INIT_SCRIPT,
+  ACCENT_PREFERENCES,
+  ACCENT_STORAGE_KEY,
+  applyAccent,
   applyResolvedTheme,
+  DEFAULT_ACCENT_PREFERENCE,
   DEFAULT_THEME_PREFERENCE,
+  isAccentPreference,
+  parseAccentPreference,
   parseThemePreference,
+  readStoredAccentPreference,
   readStoredThemePreference,
   resolveTheme,
   THEME_COLOR_META,
   THEME_INIT_SCRIPT,
   THEME_STORAGE_KEY,
+  type AccentDocumentLike,
   type ThemeDocumentLike,
+  writeStoredAccentPreference,
   writeStoredThemePreference,
 } from './index';
 
@@ -208,5 +218,88 @@ describe('THEME_INIT_SCRIPT (pre-hydration)', () => {
         );
       }
     }
+  });
+});
+
+function runAccentScript(options: {
+  stored?: string | null;
+  throwOnStorage?: boolean;
+}) {
+  const attrs = new Map<string, string>();
+  const doc = {
+    documentElement: {
+      setAttribute(name: string, value: string) {
+        attrs.set(name, value);
+      },
+    },
+  };
+  const localStorage = {
+    getItem(key: string) {
+      if (options.throwOnStorage) throw new Error('SecurityError');
+      expect(key).toBe(ACCENT_STORAGE_KEY);
+      return options.stored ?? null;
+    },
+  };
+  new Function('localStorage', 'document', ACCENT_INIT_SCRIPT)(
+    localStorage,
+    doc,
+  );
+  return attrs.get('data-accent');
+}
+
+describe('accent preference and ACCENT_INIT_SCRIPT (pre-hydration)', () => {
+  it('defaults to "ember" stored under cal.accent and validates all 4 swatches', () => {
+    expect(ACCENT_STORAGE_KEY).toBe('cal.accent');
+    expect(DEFAULT_ACCENT_PREFERENCE).toBe('ember');
+    expect(ACCENT_PREFERENCES).toEqual(['ember', 'cobalt', 'jade', 'violet']);
+    for (const accent of ACCENT_PREFERENCES) {
+      expect(isAccentPreference(accent)).toBe(true);
+      expect(parseAccentPreference(accent)).toBe(accent);
+    }
+    expect(isAccentPreference('crimson')).toBe(false);
+    expect(parseAccentPreference('crimson')).toBe('ember');
+    expect(parseAccentPreference(null)).toBe('ember');
+  });
+
+  it('reads, writes, and applies accent while tolerating storage errors', () => {
+    const map = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => void map.set(k, v),
+    };
+    expect(readStoredAccentPreference(storage)).toBe('ember');
+    writeStoredAccentPreference(storage, 'cobalt');
+    expect(map.get('cal.accent')).toBe('cobalt');
+    expect(readStoredAccentPreference(storage)).toBe('cobalt');
+
+    const broken = {
+      getItem: () => {
+        throw new Error('denied');
+      },
+      setItem: () => {
+        throw new Error('denied');
+      },
+    };
+    expect(readStoredAccentPreference(broken)).toBe('ember');
+    expect(() => writeStoredAccentPreference(broken, 'jade')).not.toThrow();
+
+    const attrs = new Map<string, string>();
+    const doc: AccentDocumentLike = {
+      documentElement: {
+        setAttribute: (name, value) => void attrs.set(name, value),
+      },
+    };
+    applyAccent('violet', doc);
+    expect(attrs.get('data-accent')).toBe('violet');
+    expect(() => applyAccent('violet', null)).not.toThrow();
+  });
+
+  it('pre-hydration script sets data-accent for valid values and falls back to ember on invalid/error', () => {
+    for (const accent of ACCENT_PREFERENCES) {
+      expect(runAccentScript({ stored: accent })).toBe(accent);
+    }
+    expect(runAccentScript({ stored: null })).toBe('ember');
+    expect(runAccentScript({ stored: 'magenta' })).toBe('ember');
+    expect(runAccentScript({ throwOnStorage: true })).toBe('ember');
   });
 });

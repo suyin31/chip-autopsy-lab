@@ -28,6 +28,7 @@ import { cn } from '@/ui/primitives/cn';
 import {
   type SelectionStoreState,
   type SpatialBrushRect,
+  useAccent,
   useSelectionStore,
 } from '@/ui/state';
 import { WAFER_TOKENS } from '@/ui/tokens';
@@ -184,6 +185,7 @@ export function StackedWaferPanel({
   );
 
   // Gallery thumbnail canvas refs
+  const accent = useAccent();
   const galleryCanvasRefs = React.useRef<Array<HTMLCanvasElement | null>>([]);
   const galleryCtxRefs = React.useRef<Array<CanvasRenderingContext2D | null>>([]);
 
@@ -252,6 +254,7 @@ export function StackedWaferPanel({
           cssSize: dims.cssWidth,
           dpr: dims.dpr,
           highContrast,
+          accent,
         });
       }
     };
@@ -285,7 +288,7 @@ export function StackedWaferPanel({
         cancelAnimationFrame(rafId);
       }
     };
-  }, [viewMode, lot, dpr, highContrast]);
+  }, [viewMode, lot, dpr, highContrast, accent]);
 
   // Paint stacked heatmap base layer & magma legend canvas (never repainted on hover or drag)
   React.useEffect(() => {

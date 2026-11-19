@@ -3,7 +3,11 @@
 import * as React from 'react';
 import type { StoreApi } from 'zustand';
 import type { LotModel } from '@/core/model';
-import type { SelectionStoreState, WaferColorMode } from '@/ui/state';
+import {
+  type SelectionStoreState,
+  useAccent,
+  type WaferColorMode,
+} from '@/ui/state';
 import {
   type CameraState,
   cameraToViewportTransform,
@@ -73,6 +77,7 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
     const canvasRef = React.useRef<HTMLCanvasElement>(null);
     const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
 
+    const accent = useAccent();
     const safeCssWidth = Math.max(1, Math.round(cssWidth));
     const safeCssHeight = Math.max(1, Math.round(cssHeight));
 
@@ -83,6 +88,7 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
       safeCssWidth,
       safeCssHeight,
       dpr,
+      accent,
     });
     latestRef.current = {
       lot,
@@ -91,6 +97,7 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
       safeCssWidth,
       safeCssHeight,
       dpr,
+      accent,
     };
 
     const repaintHiddenRef = React.useRef<() => void>(() => undefined);
@@ -156,6 +163,7 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
         dpr: dims.dpr,
         colorMode: cur.colorMode,
         hiddenBins: hiddenBinsRef.current,
+        accent: cur.accent,
       });
     }, [hiddenBinsRef]);
 
@@ -200,6 +208,7 @@ const FailCanvasImpl = React.forwardRef<FailCanvasHandle, FailCanvasProps>(
       safeCssWidth,
       safeCssHeight,
       dpr,
+      accent,
       paintCamera,
     ]);
 

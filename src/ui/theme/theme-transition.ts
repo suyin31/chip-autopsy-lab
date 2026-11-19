@@ -25,6 +25,10 @@ export interface ThemeSwitcherOptions<P> {
   readonly changesResolvedTheme: (preference: P) => boolean;
   /** Writes the preference and the DOM theme synchronously. */
   readonly apply: (preference: P) => void;
+  /** Optional lifecycle hook invoked right before `startViewTransition`. */
+  readonly onTransitionStart?: () => void;
+  /** Optional lifecycle hook invoked when the view transition settles or is skipped. */
+  readonly onTransitionEnd?: () => void;
 }
 
 export interface ThemeSwitcher<P> {
@@ -41,7 +45,10 @@ export function createThemeSwitcher<P>(
   const switchTo = (preference: P): void => {
     const previous = running;
     running = null;
-    previous?.skipTransition();
+    if (previous) {
+      previous.skipTransition();
+      options.onTransitionEnd?.();
+    }
 
     const doc = options.getDocument();
     const animated =
@@ -54,11 +61,13 @@ export function createThemeSwitcher<P>(
       return;
     }
 
+    options.onTransitionStart?.();
     const transition = doc.startViewTransition!(() => options.apply(preference));
     running = transition;
     const release = (): void => {
       if (running === transition) {
         running = null;
+        options.onTransitionEnd?.();
       }
     };
     transition.finished.then(release, release);
@@ -69,6 +78,12 @@ export function createThemeSwitcher<P>(
 
 /** Attribute that turns every CSS transition off while the theme attributes change. */
 export const THEME_SWITCHING_ATTRIBUTE = 'data-theme-switching';
+
+/** Attribute active during an accent View Transition (240 ms cross-fade). */
+export const ACCENT_TRANSITION_ATTRIBUTE = 'data-accent-transition';
+
+/** Attribute active during fallback CSS accent cross-fade when View Transitions are absent. */
+export const ACCENT_FADING_ATTRIBUTE = 'data-accent-fading';
 
 export interface TransitionSuppressDocumentLike {
   readonly documentElement: {

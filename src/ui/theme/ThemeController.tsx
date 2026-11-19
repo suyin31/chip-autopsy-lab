@@ -15,6 +15,12 @@ import * as React from 'react';
 import { flushSync } from 'react-dom';
 import { useThemeStore } from '@/ui/state/theme-store';
 import {
+  type AccentPreference,
+  applyAccent,
+  readStoredAccentPreference,
+  writeStoredAccentPreference,
+} from './accent-preference';
+import {
   applyResolvedTheme,
   DARK_SCHEME_QUERY,
   readStoredThemePreference,
@@ -24,22 +30,50 @@ import {
   writeStoredThemePreference,
 } from './theme-preference';
 import {
+  ACCENT_FADING_ATTRIBUTE,
+  ACCENT_TRANSITION_ATTRIBUTE,
   createThemeSwitcher,
   type ViewTransitionDocumentLike,
   withTransitionsSuppressed,
 } from './theme-transition';
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+const ACCENT_FADE_FALLBACK_MS = 260;
+
+let accentFadeTimer: ReturnType<typeof setTimeout> | null = null;
+let suppressAccentTransitions = true;
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia(REDUCED_MOTION_QUERY).matches
+  );
+}
+
+function flushDocumentStyle(body: unknown): void {
+  if (body instanceof Element) {
+    void window.getComputedStyle(body).color;
+  }
+}
 
 function applyThemeToDocument(theme: ResolvedTheme): void {
   withTransitionsSuppressed(
     document,
     () => applyResolvedTheme(theme, document),
-    (body) => {
-      if (body instanceof Element) {
-        void window.getComputedStyle(body).color;
-      }
-    },
+    flushDocumentStyle,
+  );
+}
+
+function applyAccentToDocument(accent: AccentPreference): void {
+  if (!suppressAccentTransitions) {
+    applyAccent(accent, document);
+    return;
+  }
+  withTransitionsSuppressed(
+    document,
+    () => applyAccent(accent, document),
+    flushDocumentStyle,
   );
 }
 
@@ -48,13 +82,13 @@ const themeSwitcher = createThemeSwitcher<ThemePreference>({
     typeof document === 'undefined'
       ? null
       : (document as unknown as ViewTransitionDocumentLike),
-  prefersReducedMotion: () =>
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia(REDUCED_MOTION_QUERY).matches,
+  prefersReducedMotion,
   changesResolvedTheme: (preference) => {
     const { resolved, systemPrefersDark } = useThemeStore.getState();
     return resolveTheme(preference, systemPrefersDark) !== resolved;
+  },
+  onTransitionStart: () => {
+    document.documentElement.removeAttribute(ACCENT_TRANSITION_ATTRIBUTE);
   },
   // The store subscriber below writes the DOM synchronously; `flushSync` renders React
   // (menu check, magnifier canvas theme) before the new snapshot is taken.
@@ -63,9 +97,60 @@ const themeSwitcher = createThemeSwitcher<ThemePreference>({
   },
 });
 
+const accentSwitcher = createThemeSwitcher<AccentPreference>({
+  getDocument: () =>
+    typeof document === 'undefined'
+      ? null
+      : (document as unknown as ViewTransitionDocumentLike),
+  prefersReducedMotion,
+  changesResolvedTheme: (accent) => useThemeStore.getState().accent !== accent,
+  onTransitionStart: () => {
+    document.documentElement.setAttribute(ACCENT_TRANSITION_ATTRIBUTE, '');
+  },
+  onTransitionEnd: () => {
+    document.documentElement.removeAttribute(ACCENT_TRANSITION_ATTRIBUTE);
+  },
+  apply: (accent) => {
+    flushSync(() => useThemeStore.getState().setAccent(accent));
+  },
+});
+
 /** Appearance menu entry point: View Transition cross-fade, instant when unsupported or reduced (§8.8). */
 export function switchThemePreference(preference: ThemePreference): void {
   themeSwitcher.switchTo(preference);
+}
+
+/** Accent swatch entry point: smooth 240 ms cross-fade (View Transition or CSS fallback), instant under reduced motion. */
+export function switchAccentPreference(accent: AccentPreference): void {
+  if (useThemeStore.getState().accent === accent) {
+    return;
+  }
+  const doc =
+    typeof document === 'undefined'
+      ? null
+      : (document as unknown as ViewTransitionDocumentLike);
+  const canViewTransition =
+    doc !== null && typeof doc.startViewTransition === 'function';
+
+  if (!canViewTransition && doc !== null && !prefersReducedMotion()) {
+    if (accentFadeTimer !== null) {
+      clearTimeout(accentFadeTimer);
+    }
+    document.documentElement.setAttribute(ACCENT_FADING_ATTRIBUTE, '');
+    suppressAccentTransitions = false;
+    try {
+      flushSync(() => useThemeStore.getState().setAccent(accent));
+    } finally {
+      suppressAccentTransitions = true;
+    }
+    accentFadeTimer = setTimeout(() => {
+      document.documentElement.removeAttribute(ACCENT_FADING_ATTRIBUTE);
+      accentFadeTimer = null;
+    }, ACCENT_FADE_FALLBACK_MS);
+    return;
+  }
+
+  accentSwitcher.switchTo(accent);
 }
 
 function getStorage(): Storage | null {
@@ -87,7 +172,9 @@ export function ThemeController(): null {
     const initial = store.getState();
     initial.setSystemPrefersDark(mql?.matches ?? false);
     initial.setPreference(readStoredThemePreference(getStorage()));
+    initial.setAccent(readStoredAccentPreference(getStorage()));
     applyResolvedTheme(store.getState().resolved, document);
+    applyAccent(store.getState().accent, document);
 
     const unsubscribe = store.subscribe((state, prev) => {
       if (state.preference !== prev.preference) {
@@ -95,6 +182,10 @@ export function ThemeController(): null {
       }
       if (state.resolved !== prev.resolved) {
         applyThemeToDocument(state.resolved);
+      }
+      if (state.accent !== prev.accent) {
+        writeStoredAccentPreference(getStorage(), state.accent);
+        applyAccentToDocument(state.accent);
       }
     });
 
@@ -106,6 +197,10 @@ export function ThemeController(): null {
     return () => {
       unsubscribe();
       mql?.removeEventListener('change', onSchemeChange);
+      if (accentFadeTimer !== null) {
+        clearTimeout(accentFadeTimer);
+        accentFadeTimer = null;
+      }
     };
   }, []);
 

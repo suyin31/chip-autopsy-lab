@@ -25,6 +25,7 @@ export {
   createThemeStore,
   type ThemeStoreInit,
   type ThemeStoreState,
+  useAccent,
   useResolvedTheme,
   useThemeStore,
 } from './theme-store';

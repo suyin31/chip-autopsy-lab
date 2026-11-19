@@ -312,6 +312,7 @@ for (const scheme of ['light', 'dark'] as const) {
     test('A4: stats, findings, legend, buttons, and focus rings never turn ember', async ({
       page,
     }) => {
+      test.setTimeout(120_000); // hover + 60-step Tab audit is slow on the 2-core sandbox
       await loadDemo(page, 'edge-ring-etch');
 
       // Stat numbers compute to text-primary

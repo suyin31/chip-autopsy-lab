@@ -35,6 +35,11 @@ export const zhCN = {
   'theme.light': '浅色',
   'theme.dark': '深色',
   'theme.systemNote': '“跟随系统”会使用设备的设置。',
+  'accent.label': '强调色',
+  'accent.ember': '余烬橙',
+  'accent.cobalt': '钴蓝',
+  'accent.jade': '翡翠绿',
+  'accent.violet': '紫罗兰',
 
   // Glossary (premium §2.3)
   'glossary.lot': '一起制造的一批晶圆。同一批次的问题往往有共同原因。',

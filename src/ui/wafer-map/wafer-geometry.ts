@@ -20,8 +20,10 @@ import {
 } from '@/core/model';
 import type { SpatialBrushRect, WaferColorMode } from '@/ui/state';
 import {
-  COLOR_TOKENS,
+  type AccentName,
+  DEFAULT_ACCENT,
   getFailBinColor,
+  getFailDieColor,
   sampleMagmaHex,
   WAFER_TOKENS,
 } from '@/ui/tokens';
@@ -623,15 +625,16 @@ export function projectBrushToCanvasRect(
 }
 
 /**
- * Maps Pass/Fail state to the disc die palette (premium §5.3: `pass-tile` texture, `fail-die` `#FF6B2C`).
+ * Maps Pass/Fail state to the disc die palette (premium §5.3: `pass-tile` texture, `fail-die` accent).
  */
 export function resolvePassFailDieColor(
   finalPass: number,
   highContrast = false,
+  accent: AccentName = DEFAULT_ACCENT,
 ): string {
   return finalPass !== 0
     ? resolvePassTileColor(highContrast)
-    : COLOR_TOKENS.failure;
+    : getFailDieColor(accent);
 }
 
 /**
@@ -719,9 +722,10 @@ export function resolveDieFillColor(
   parametricCol?: ParametricTestColumn,
   parametricRange?: ParametricRange | null,
   highContrast = false,
+  accent: AccentName = DEFAULT_ACCENT,
 ): string {
   if (colorMode === 'pass-fail') {
-    return resolvePassFailDieColor(dies.finalPass[dieIndex]!, highContrast);
+    return resolvePassFailDieColor(dies.finalPass[dieIndex]!, highContrast, accent);
   }
 
   if (colorMode === 'hbin' || colorMode === 'sbin') {
@@ -731,7 +735,7 @@ export function resolveDieFillColor(
     const code =
       colorMode === 'sbin' ? dies.sbin[dieIndex]! : dies.hbin[dieIndex]!;
     const rank = failBinRankMap?.get(code) ?? 0;
-    return getFailBinColor(rank);
+    return getFailBinColor(rank, accent);
   }
 
   // Parametric magma heatmap mode (premium §3.6: magma on t in [0.18, 1.0])
@@ -987,6 +991,8 @@ export interface PaintWaferBaseParams {
   readonly deviceDpr?: number;
   /** `prefers-contrast: more`: pass tiles use `pass-tile-hc` (premium §5.3). */
   readonly highContrast?: boolean;
+  /** Active accent palette for failing dies and rank-0 fail bins. */
+  readonly accent?: AccentName;
 }
 
 /**
@@ -1010,6 +1016,7 @@ export function paintWaferBaseLayer(
     activeTestNum,
     hiddenBins,
     highContrast = false,
+    accent = DEFAULT_ACCENT,
   } = params;
   const wafer = lot.wafers[waferIndex];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1088,8 +1095,8 @@ export function paintWaferBaseLayer(
       ctx.fill();
     }
 
-    // Pass 2: Failing dies (#FF6B2C), full cell minus street (batched single fill, premium §5.3)
-    ctx.fillStyle = COLOR_TOKENS.failure;
+    // Pass 2: Failing dies (active accent), full cell minus street (batched single fill, premium §5.3)
+    ctx.fillStyle = getFailDieColor(accent);
     ctx.beginPath();
     let anyFailPath = false;
     for (let i = start; i < end; i += 1) {
@@ -1177,6 +1184,7 @@ export function paintWaferBaseLayer(
       paramCol,
       paramRange,
       highContrast,
+      accent,
     );
     drawDieRoundedRect(ctx, cx - half, cy - half, size, radius);
     if (facets && colorMode !== 'parametric' && !isPassBinMode) {
@@ -1195,6 +1203,8 @@ export interface PaintWaferFailParams {
   readonly dpr: number;
   readonly colorMode: WaferColorMode;
   readonly hiddenBins: ReadonlySet<number>;
+  /** Active accent palette for failing dies and rank-0 fail bins. */
+  readonly accent?: AccentName;
 }
 
 /**
@@ -1205,7 +1215,15 @@ export function paintWaferFailLayer(
   ctx: Canvas2DContextLike,
   params: PaintWaferFailParams,
 ): void {
-  const { lot, waferIndex, layout, dpr, colorMode, hiddenBins } = params;
+  const {
+    lot,
+    waferIndex,
+    layout,
+    dpr,
+    colorMode,
+    hiddenBins,
+    accent = DEFAULT_ACCENT,
+  } = params;
   const wafer = lot.wafers[waferIndex];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, layout.cssWidth, layout.cssHeight);
@@ -1239,7 +1257,7 @@ export function paintWaferFailLayer(
 
   if (colorMode === 'pass-fail') {
     const hideFailed = hiddenBins.has(LEGEND_FAILED_KEY);
-    ctx.fillStyle = COLOR_TOKENS.failure;
+    ctx.fillStyle = getFailDieColor(accent);
     ctx.beginPath();
     let anyFailPath = false;
     for (let i = start; i < end; i += 1) {
@@ -1300,7 +1318,16 @@ export function paintWaferFailLayer(
     if (cx < minCullX || cx > maxCullX || cy < minCullY || cy > maxCullY) {
       continue;
     }
-    ctx.fillStyle = resolveDieFillColor(i, dies, colorMode, failRankMap);
+    ctx.fillStyle = resolveDieFillColor(
+      i,
+      dies,
+      colorMode,
+      failRankMap,
+      undefined,
+      null,
+      false,
+      accent,
+    );
     drawDieRoundedRect(
       ctx,
       cx - failHalf,
@@ -1363,15 +1390,17 @@ const bloomSpriteCache = new Map<string, EvidenceBloomSprite | null>();
 function getEvidenceBloomSprite(
   fitDieSizePx: number,
   dpr: number,
+  accent: AccentName = DEFAULT_ACCENT,
 ): EvidenceBloomSprite | null {
   const size = Math.max(1, Math.round(fitDieSizePx * 2) / 2);
   const scale = Math.min(4, Math.max(1, dpr));
-  const key = `${size}@${scale}`;
+  const key = `${accent}:${size}@${scale}`;
   const cached = bloomSpriteCache.get(key);
   if (cached !== undefined) {
     return cached;
   }
-  const { color, alpha, blurPx } = WAFER_TOKENS.evidenceBloom;
+  const { alpha, blurPx } = WAFER_TOKENS.evidenceBloom;
+  const color = getFailDieColor(accent);
   const cssSpan = size + 2 * EVIDENCE_BLOOM_PAD_PX;
   const pixelSpan = Math.ceil(cssSpan * scale);
   let sprite: EvidenceBloomSprite | null = null;
@@ -1506,6 +1535,8 @@ export interface PaintWaferOverlayParams {
   readonly probeHeadDieIndex?: number | null;
   /** Probe light opacity in [0, 1] (premium §8.1 fade in and out); defaults to 1. */
   readonly probeHeadOpacity?: number;
+  /** Active accent palette for the evidence bloom glow. */
+  readonly accent?: AccentName;
 }
 
 /**
@@ -1533,6 +1564,7 @@ export function paintWaferOverlayLayer(
     liveBrushScreenRect = null,
     probeHeadDieIndex = null,
     probeHeadOpacity = 1,
+    accent = DEFAULT_ACCENT,
   } = params;
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1643,7 +1675,7 @@ export function paintWaferOverlayLayer(
         : 1;
     const sprite =
       typeof ctx.drawImage === 'function'
-        ? getEvidenceBloomSprite(failSize / fitScale, dpr)
+        ? getEvidenceBloomSprite(failSize / fitScale, dpr, accent)
         : null;
     if (sprite !== null) {
       const span = sprite.cssSpan * fitScale;
@@ -1855,6 +1887,8 @@ export interface PaintWaferThumbnailParams {
   readonly highContrast?: boolean;
   /** Paints the §5.2 step 3 thin film (landing hero wafer, premium §11.1); thumbnails skip it. */
   readonly thinFilm?: boolean;
+  /** Active accent palette for failing dies. */
+  readonly accent?: AccentName;
 }
 
 /**
@@ -1875,6 +1909,7 @@ function paintThumbnailDisc(
     dpr,
     highContrast = false,
     thinFilm = false,
+    accent = DEFAULT_ACCENT,
   } = params;
   const center = cssSize / 2;
 
@@ -1936,7 +1971,7 @@ function paintThumbnailDisc(
   // Fail dies: full cell with no street when p < 3; otherwise cell minus street
   const facets: number[] | null =
     !dense && shouldDrawFailFacet(diePitchPx) ? [] : null;
-  ctx.fillStyle = COLOR_TOKENS.failure;
+  ctx.fillStyle = getFailDieColor(accent);
   ctx.beginPath();
   let anyFailPath = false;
   for (let i = start; i < end; i += 1) {

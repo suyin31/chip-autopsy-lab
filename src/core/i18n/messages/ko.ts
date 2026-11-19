@@ -36,6 +36,11 @@ export const ko = {
   'theme.light': '라이트',
   'theme.dark': '다크',
   'theme.systemNote': '시스템 설정에 맞춤은 기기 설정을 따릅니다.',
+  'accent.label': '색상',
+  'accent.ember': '엠버',
+  'accent.cobalt': '코발트',
+  'accent.jade': '제이드',
+  'accent.violet': '바이올렛',
 
   // Glossary (premium §2.3)
   'glossary.lot': '함께 제조된 웨이퍼 묶음입니다. 한 로트의 문제는 원인이 같은 경우가 많습니다.',

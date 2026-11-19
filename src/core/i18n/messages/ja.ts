@@ -36,6 +36,11 @@ export const ja = {
   'theme.light': 'ライト',
   'theme.dark': 'ダーク',
   'theme.systemNote': '「システムに合わせる」はデバイスの設定に従います。',
+  'accent.label': 'カラー',
+  'accent.ember': 'エンバー',
+  'accent.cobalt': 'コバルト',
+  'accent.jade': 'ジェイド',
+  'accent.violet': 'バイオレット',
 
   // Glossary (premium §2.3)
   'glossary.lot': '一緒に製造されたウェハのまとまり。同じロットの問題は原因が共通することが多い。',

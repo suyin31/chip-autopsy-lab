@@ -13,11 +13,16 @@ export {
 } from './contrast';
 
 export {
+  ACCENT_NAMES,
+  ACCENT_PALETTES,
   BIN_DISC_PALETTE,
   BIN_INK_PALETTE_LIGHT,
   COLOR_TOKENS,
+  DEFAULT_ACCENT,
+  getAccentTokens,
   getBinColor,
   getFailBinColor,
+  getFailDieColor,
   MAGMA_LUT_256,
   MAGMA_RGB_256,
   sampleMagmaHex,
@@ -25,6 +30,9 @@ export {
   SECONDARY_FAIL_BIN_PALETTE,
   THEME_TOKENS,
   WAFER_TOKENS,
+  type AccentName,
+  type AccentPalette,
+  type AccentThemeTokens,
   type BinColorSurface,
   type MaterialToken,
   type ThemeName,

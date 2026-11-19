@@ -2,16 +2,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  ACCENT_NAMES,
+  ACCENT_PALETTES,
   BIN_DISC_PALETTE,
   BIN_INK_PALETTE_LIGHT,
   compositeRgbaOverRgb,
   formatHexColor,
+  getAccentTokens,
   getBinColor,
+  getFailBinColor,
+  getFailDieColor,
   parseHexColor,
   parseRgbaString,
   THEME_TOKENS,
   WAFER_TOKENS,
   wcagContrastRatio,
+  type AccentName,
   type RgbTuple,
   type ThemeName,
   type ThemeTokens,
@@ -339,6 +345,7 @@ describe('globals.css theme variables (premium.md §3.1)', () => {
       '--ember': t.ember,
       '--ember-mark': t.emberMark,
       '--ember-ink': t.emberInk,
+      '--ember-soft': t.emberSoft,
       '--focus-ring': t.focusRing,
       '--selection': t.selection,
       '--bar-neutral': t.barNeutral,
@@ -389,6 +396,7 @@ describe('globals.css theme variables (premium.md §3.1)', () => {
       'ember',
       'ember-mark',
       'ember-ink',
+      'ember-soft',
       'bar-neutral',
     ]) {
       expect(inline.get(`--color-${name}`)).toBe(`var(--${name})`);
@@ -430,6 +438,115 @@ describe('globals.css theme variables (premium.md §3.1)', () => {
     for (let i = 1; i < points.length; i += 1) {
       expect(points[i]).toBeLessThanOrEqual(1);
       expect(points[i]).toBeGreaterThanOrEqual(points[i - 1]);
+    }
+  });
+
+  it('mirrors ACCENT_PALETTES under :root[data-accent] for both light and dark themes', () => {
+    for (const accent of ACCENT_NAMES) {
+      if (accent === 'ember') continue;
+      const darkBlock = block(
+        new RegExp(
+          `:root\\[data-accent="${accent}"\\],\\s*:root\\[data-theme="dark"\\]\\[data-accent="${accent}"\\]\\s*\\{([^}]*)\\}`,
+        ),
+      );
+      const lightBlock = block(
+        new RegExp(
+          `:root\\[data-theme="light"\\]\\[data-accent="${accent}"\\]\\s*\\{([^}]*)\\}`,
+        ),
+      );
+      const darkTokens = getAccentTokens(accent, 'dark');
+      const lightTokens = getAccentTokens(accent, 'light');
+      expect(Object.fromEntries(darkBlock)).toEqual({
+        '--ember': darkTokens.ember.toLowerCase(),
+        '--ember-mark': darkTokens.emberMark.toLowerCase(),
+        '--ember-ink': darkTokens.emberInk.toLowerCase(),
+        '--ember-soft': darkTokens.emberSoft.toLowerCase(),
+        '--bin-ink-0': darkTokens.emberMark.toLowerCase(),
+      });
+      expect(Object.fromEntries(lightBlock)).toEqual({
+        '--ember': lightTokens.ember.toLowerCase(),
+        '--ember-mark': lightTokens.emberMark.toLowerCase(),
+        '--ember-ink': lightTokens.emberInk.toLowerCase(),
+        '--ember-soft': lightTokens.emberSoft.toLowerCase(),
+        '--bin-ink-0': lightTokens.emberMark.toLowerCase(),
+      });
+    }
+  });
+});
+
+describe('user-selectable accent palettes (data-accent)', () => {
+  it('defines ember, cobalt, jade, and violet with ember matching THEME_TOKENS', () => {
+    expect(ACCENT_NAMES).toEqual(['ember', 'cobalt', 'jade', 'violet']);
+    expect(ACCENT_PALETTES.ember.light).toEqual({
+      ember: THEME_TOKENS.light.ember,
+      emberMark: THEME_TOKENS.light.emberMark,
+      emberInk: THEME_TOKENS.light.emberInk,
+      emberSoft: THEME_TOKENS.light.emberSoft,
+    });
+    expect(ACCENT_PALETTES.ember.dark).toEqual({
+      ember: THEME_TOKENS.dark.ember,
+      emberMark: THEME_TOKENS.dark.emberMark,
+      emberInk: THEME_TOKENS.dark.emberInk,
+      emberSoft: THEME_TOKENS.dark.emberSoft,
+    });
+  });
+
+  it('meets contrast floors across all 4 accents on light paper #F6F3EE, dark surfaces, and dark silicon disc', () => {
+    const L = THEME_TOKENS.light;
+    const D = THEME_TOKENS.dark;
+    const discMid = parseHexColor(WAFER_TOKENS.discMid);
+    const passTile = compositeRgbaOverRgb(parseRgbaString(WAFER_TOKENS.passTile), discMid);
+
+    for (const accent of ACCENT_NAMES) {
+      const light = ACCENT_PALETTES[accent].light;
+      const dark = ACCENT_PALETTES[accent].dark;
+
+      // Disc failing die: theme-independent, >= 5.9:1 on disc-mid and >= 5.0:1 on pass tile
+      expect(light.ember).toBe(dark.ember);
+      expect(getFailDieColor(accent)).toBe(dark.ember);
+      const failRgb = parseHexColor(dark.ember);
+      expect(wcagContrastRatio(failRgb, discMid), `${accent} failDie on discMid`).toBeGreaterThanOrEqual(5.9 - ROUNDING);
+      expect(wcagContrastRatio(failRgb, passTile), `${accent} failDie on passTile`).toBeGreaterThanOrEqual(5.0 - ROUNDING);
+
+      // Marks: >= 3:1 on light paper #F6F3EE and white surface, >= 6.6:1 on dark surface
+      expect(ratio(light.emberMark, L.bg), `${accent} light mark on bg`).toBeGreaterThanOrEqual(3.0);
+      expect(ratio(light.emberMark, L.surface), `${accent} light mark on surface`).toBeGreaterThanOrEqual(3.0);
+      expect(ratio(dark.emberMark, D.surface), `${accent} dark mark on surface`).toBeGreaterThanOrEqual(6.6 - ROUNDING);
+      expect(ratio(dark.emberMark, D.bg), `${accent} dark mark on bg`).toBeGreaterThanOrEqual(7.3 - ROUNDING);
+
+      // Ink: >= 4.5:1 on all dark surfaces; cobalt/jade/violet >= 4.5:1 on light paper #F6F3EE as well
+      for (const darkBg of [D.bg, D.surface, D.surfaceSunken]) {
+        expect(ratio(dark.emberInk, darkBg), `${accent} dark ink on ${darkBg}`).toBeGreaterThanOrEqual(4.5);
+      }
+      if (accent === 'ember') {
+        expect(ratio(light.emberInk, L.bg)).toBeGreaterThanOrEqual(3.8 - ROUNDING);
+      } else {
+        expect(ratio(light.emberInk, L.bg), `${accent} light ink on #F6F3EE`).toBeGreaterThanOrEqual(4.5);
+        expect(ratio(light.emberInk, L.surface), `${accent} light ink on #FFFFFF`).toBeGreaterThanOrEqual(4.5);
+      }
+
+      // Soft tint parses cleanly as a translucent rgba()
+      const softLight = parseRgbaString(light.emberSoft);
+      const softDark = parseRgbaString(dark.emberSoft);
+      expect(softLight.a).toBeGreaterThan(0);
+      expect(softLight.a).toBeLessThanOrEqual(0.25);
+      expect(softDark.a).toBeGreaterThan(0);
+      expect(softDark.a).toBeLessThanOrEqual(0.25);
+    }
+  });
+
+  it('routes rank-0 bin colours through the active accent while keeping secondary ranks unchanged', () => {
+    const nonDefault: readonly AccentName[] = ['cobalt', 'jade', 'violet'];
+    for (const accent of nonDefault) {
+      expect(getBinColor(0, 'disc', accent)).toBe(ACCENT_PALETTES[accent].dark.ember);
+      expect(getBinColor(0, 'light', accent)).toBe(ACCENT_PALETTES[accent].light.emberMark);
+      expect(getBinColor(0, 'dark', accent)).toBe(ACCENT_PALETTES[accent].dark.emberMark);
+      expect(getFailBinColor(0, accent)).toBe(ACCENT_PALETTES[accent].dark.ember);
+
+      // Secondary ranks stay invariant
+      expect(getBinColor(1, 'disc', accent)).toBe(BIN_DISC_PALETTE[1]);
+      expect(getBinColor(1, 'light', accent)).toBe(BIN_INK_PALETTE_LIGHT[1]);
+      expect(getFailBinColor(1, accent)).toBe(BIN_DISC_PALETTE[1]);
     }
   });
 });

@@ -165,12 +165,19 @@ export function AppShell({
       cssSize: number,
       dpr: number,
       highContrast?: boolean,
+      failColor?: string,
     ): Promise<ImageBitmap | null> => {
       const client = getWorkerClient();
       if (!client.renderDemoThumbnail) {
         return null;
       }
-      return client.renderDemoThumbnail(presetId, cssSize, dpr, highContrast);
+      return client.renderDemoThumbnail(
+        presetId,
+        cssSize,
+        dpr,
+        highContrast,
+        failColor,
+      );
     },
     [getWorkerClient],
   );

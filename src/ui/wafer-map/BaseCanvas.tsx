@@ -6,8 +6,10 @@ import type { LotModel } from '@/core/model';
 import {
   areHiddenBinSetsEqual,
   type SelectionStoreState,
+  useAccent,
   type WaferColorMode,
 } from '@/ui/state';
+import type { AccentName } from '@/ui/tokens';
 import {
   type CameraState,
   cameraToViewportTransform,
@@ -72,10 +74,14 @@ interface LastBasePaint {
   readonly cssHeight: number;
   readonly dpr: number | undefined;
   readonly highContrast: boolean;
+  readonly accent: AccentName;
   readonly scale: number;
   readonly panX: number;
   readonly panY: number;
 }
+
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
 function areBaseCanvasPropsEqual(
   prev: BaseCanvasProps,
@@ -140,6 +146,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
     /** Inputs of the last full base-layer paint; lets the effect skip repainting identical content. */
     const lastPaintRef = React.useRef<LastBasePaint | null>(null);
 
+    const accent = useAccent();
     const safeCssWidth = Math.max(1, Math.round(cssWidth));
     const safeCssHeight = Math.max(1, Math.round(cssHeight));
 
@@ -153,6 +160,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       dpr,
       layout,
       highContrast,
+      accent,
     });
     latestInputsRef.current = {
       lot,
@@ -164,6 +172,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       dpr,
       layout,
       highContrast,
+      accent,
     };
 
     /** Re-raster for a hidden-bin change; reassigned every render so it sees current props. */
@@ -243,6 +252,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           activeTestNum: cur.activeTestNum,
           hiddenBins: hiddenBinsRef.current,
           highContrast: cur.highContrast,
+          accent: cur.accent,
         });
         lastPaintRef.current = {
           lot: cur.lot,
@@ -254,6 +264,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
           cssHeight: cur.safeCssHeight,
           dpr: cur.dpr,
           highContrast: cur.highContrast,
+          accent: cur.accent,
           scale: vp.scale,
           panX: vp.panX,
           panY: vp.panY,
@@ -385,7 +396,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       paintWithViewport(vp, layout);
     };
 
-    React.useEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       if (suppressAutoPaintRef.current) {
         return;
       }
@@ -406,6 +417,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
         last.cssHeight === safeCssHeight &&
         last.dpr === dpr &&
         last.highContrast === highContrast &&
+        last.accent === accent &&
         last.scale === vp.scale &&
         last.panX === vp.panX &&
         last.panY === vp.panY &&
@@ -427,6 +439,7 @@ const BaseCanvasImpl = React.forwardRef<BaseCanvasHandle, BaseCanvasProps>(
       dpr,
       layout,
       highContrast,
+      accent,
       paintWithViewport,
       hiddenBinsRef,
     ]);

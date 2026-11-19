@@ -101,6 +101,7 @@ export interface AutopsyWorkerClient {
     cssSize: number,
     dpr: number,
     highContrast?: boolean,
+    failColor?: string,
   ): Promise<ImageBitmap | null>;
   resumeLargeFile(
     mode: ParseMode,
@@ -306,6 +307,7 @@ export function createAutopsyWorkerClient(
       cssSize: number,
       dpr: number,
       highContrast?: boolean,
+      failColor?: string,
     ): Promise<ImageBitmap | null> {
       const workerRemote = ensureRemote();
       return workerRemote.renderDemoThumbnail(
@@ -313,6 +315,7 @@ export function createAutopsyWorkerClient(
         cssSize,
         dpr,
         highContrast,
+        failColor,
       );
     },
 

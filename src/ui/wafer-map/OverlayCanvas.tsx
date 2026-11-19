@@ -6,7 +6,11 @@ import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { LotModel } from '@/core/model';
 import { CLASSIFIER_THRESHOLDS } from '@/core/patterns';
-import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
+import {
+  type SelectionStoreState,
+  useAccent,
+  useSelectionStore,
+} from '@/ui/state';
 import {
   computeOrderedGlowSchedule,
   DIM_SCRIM_MAX_ALPHA,
@@ -129,6 +133,7 @@ const OverlayCanvasImpl = React.forwardRef<
   ref,
 ): React.JSX.Element {
   const shouldReduceMotion = useReducedMotion();
+  const accent = useAccent();
   const wrapperRef = React.useRef<HTMLDivElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const ctxRef = React.useRef<CanvasRenderingContext2D | null>(null);
@@ -202,6 +207,7 @@ const OverlayCanvasImpl = React.forwardRef<
     hoveredDieIndex,
     brush,
     highlightIsSelectionOnly,
+    accent,
   });
   latestRef.current = {
     lot,
@@ -219,6 +225,7 @@ const OverlayCanvasImpl = React.forwardRef<
     hoveredDieIndex,
     brush,
     highlightIsSelectionOnly,
+    accent,
   };
 
   const lotHighlightStats = React.useMemo(() => {
@@ -380,6 +387,7 @@ const OverlayCanvasImpl = React.forwardRef<
         liveBrushScreenRect: liveBrushRectRef.current,
         probeHeadDieIndex: probeHeadDieIndexRef.current,
         probeHeadOpacity: probeHeadOpacityRef.current,
+        accent: cur.accent,
       });
       syncWrapperDebugAttrs();
     },
@@ -837,6 +845,7 @@ const OverlayCanvasImpl = React.forwardRef<
     hoveredDieIndex,
     brush,
     highlightIsSelectionOnly,
+    accent,
     paintCurrentNow,
   ]);
 

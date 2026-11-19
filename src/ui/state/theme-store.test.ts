@@ -43,4 +43,29 @@ describe('theme store slice (premium.md §3.1)', () => {
     expect(store.getState().preference).toBe('system');
     expect(store.getState().resolved).toBe('dark');
   });
+
+  it('tracks accent independently of light/dark/system and rejects invalid accents', () => {
+    const store = createThemeStore({ preference: 'light', accent: 'cobalt' });
+    expect(store.getState().accent).toBe('cobalt');
+    expect(store.getState().resolved).toBe('light');
+
+    let calls = 0;
+    store.subscribe(() => {
+      calls += 1;
+    });
+    store.getState().setAccent('cobalt');
+    expect(calls).toBe(0);
+
+    store.getState().setAccent('jade');
+    expect(calls).toBe(1);
+    expect(store.getState().accent).toBe('jade');
+    expect(store.getState().resolved).toBe('light');
+
+    store.getState().setPreference('dark');
+    expect(store.getState().resolved).toBe('dark');
+    expect(store.getState().accent).toBe('jade');
+
+    store.getState().setAccent('bogus' as never);
+    expect(store.getState().accent).toBe('ember');
+  });
 });

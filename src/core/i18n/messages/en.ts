@@ -33,6 +33,11 @@ export const en = {
   'theme.light': 'Light',
   'theme.dark': 'Dark',
   'theme.systemNote': 'Match system follows your device setting.',
+  'accent.label': 'Colour',
+  'accent.ember': 'Ember',
+  'accent.cobalt': 'Cobalt',
+  'accent.jade': 'Jade',
+  'accent.violet': 'Violet',
 
   // Glossary (premium §2.3, §9.5): `glossary.term.*` is line 1 of the Term popover and the word it matches
   'glossary.stdf': 'The standard binary file a chip tester writes. It records every die it tested and every measurement.',

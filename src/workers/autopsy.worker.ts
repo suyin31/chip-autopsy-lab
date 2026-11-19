@@ -179,6 +179,7 @@ export interface AutopsyWorkerApi {
     cssSize: number,
     dpr: number,
     highContrast?: boolean,
+    failColor?: string,
   ): Promise<ImageBitmap | null>;
   resumeLargeFileParse(
     mode: ParseMode,
@@ -686,6 +687,7 @@ export function createAutopsyWorkerApi(options?: {
       cssSize: number,
       dpr: number,
       highContrast?: boolean,
+      failColor?: string,
     ): Promise<ImageBitmap | null> {
       if (typeof OffscreenCanvas === 'undefined') {
         return null;
@@ -831,7 +833,7 @@ export function createAutopsyWorkerApi(options?: {
 
       const facets = !dense && p >= 10;
       const failR = Math.min(failRadius, failSize * 0.45);
-      ctx.fillStyle = '#FF6B2C';
+      ctx.fillStyle = failColor ?? '#FF6B2C';
       ctx.beginPath();
       for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
         if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] !== 0) continue;

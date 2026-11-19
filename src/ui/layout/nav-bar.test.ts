@@ -82,9 +82,13 @@ describe('NavBar, LotPicker, LanguageSwitcher, and legacy chrome removal (Task R
       expect(mobileHtml).toContain(`data-testid="theme-option-${option}"`);
     }
     expect(mobileHtml).toContain('Match system');
+    expect(mobileHtml).toContain('>Colour<');
+    for (const accent of ['ember', 'cobalt', 'jade', 'violet']) {
+      expect(mobileHtml).toContain(`data-testid="accent-option-${accent}"`);
+    }
   });
 
-  it('renders the quiet theme toggle (§7.1): 32 x 32 icon button, preference aria-label, 200 px menu with one check and the note', () => {
+  it('renders the quiet theme & accent popover toggle (§7.1): 32 x 32 icon button, 200 px menu with Appearance + Colour radio groups', () => {
     const html = renderToStaticMarkup(
       React.createElement(
         I18nProvider,
@@ -96,16 +100,31 @@ describe('NavBar, LotPicker, LanguageSwitcher, and legacy chrome removal (Task R
     expect(trigger).toContain('size-8');
     expect(trigger).toContain('aria-label="Appearance: System, currently light"');
     expect(trigger).toContain('data-preference="system"');
+    expect(trigger).toContain('data-accent="ember"');
     expect(trigger).toContain('text-text-secondary');
     expect(html).toContain('w-[200px]');
-    expect(html.match(/role="menuitemradio"/g)).toHaveLength(3);
-    expect(html.match(/aria-checked="true"/g)).toHaveLength(1);
+    // 3 appearance radio rows + 4 accent radio swatches
+    expect(html.match(/role="menuitemradio"/g)).toHaveLength(7);
+    expect(html.match(/aria-checked="true"/g)).toHaveLength(2);
     expect(html).toMatch(/data-testid="theme-option-system"[^>]*aria-checked="true"|aria-checked="true"[^>]*data-testid="theme-option-system"/);
+    expect(html).toMatch(/data-testid="accent-option-ember"[^>]*aria-checked="true"|aria-checked="true"[^>]*data-testid="accent-option-ember"/);
     expect(html).toContain('Match system');
     expect(html).toContain('>Light<');
     expect(html).toContain('>Dark<');
     expect(html).toContain('Match system follows your device setting.');
     expect(html).toContain('type-subhead');
+    expect(html).toContain('>Colour<');
+    for (const [id, name] of [
+      ['ember', 'Ember'],
+      ['cobalt', 'Cobalt'],
+      ['jade', 'Jade'],
+      ['violet', 'Violet'],
+    ]) {
+      const swatch = html.match(new RegExp(`<button\\b[^>]*data-testid="accent-option-${id}"[^>]*>`))?.[0] ?? '';
+      expect(swatch).toContain('size-5');
+      expect(swatch).toContain('rounded-full');
+      expect(swatch).toContain(`aria-label="${name}"`);
+    }
   });
 
   it('builds the Appearance aria-label from the preference, not the result', () => {

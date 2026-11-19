@@ -10,6 +10,12 @@
 import { create, type StateCreator } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
+  type AccentPreference,
+  DEFAULT_ACCENT_PREFERENCE,
+  parseAccentPreference,
+  readStoredAccentPreference,
+} from '@/ui/theme/accent-preference';
+import {
   DARK_SCHEME_QUERY,
   DEFAULT_THEME_PREFERENCE,
   parseThemePreference,
@@ -23,13 +29,16 @@ export interface ThemeStoreState {
   readonly preference: ThemePreference;
   readonly systemPrefersDark: boolean;
   readonly resolved: ResolvedTheme;
+  readonly accent: AccentPreference;
   readonly setPreference: (preference: ThemePreference) => void;
   readonly setSystemPrefersDark: (prefersDark: boolean) => void;
+  readonly setAccent: (accent: AccentPreference) => void;
 }
 
 export interface ThemeStoreInit {
   readonly preference?: ThemePreference;
   readonly systemPrefersDark?: boolean;
+  readonly accent?: AccentPreference;
 }
 
 function buildThemeStoreSlice(
@@ -39,10 +48,14 @@ function buildThemeStoreSlice(
     init.preference ?? DEFAULT_THEME_PREFERENCE,
   );
   const systemPrefersDark = init.systemPrefersDark ?? false;
+  const accent = parseAccentPreference(
+    init.accent ?? DEFAULT_ACCENT_PREFERENCE,
+  );
   return (set, get) => ({
     preference,
     systemPrefersDark,
     resolved: resolveTheme(preference, systemPrefersDark),
+    accent,
     setPreference: (next) => {
       const safe = parseThemePreference(next);
       const { preference: current, systemPrefersDark: dark } = get();
@@ -57,6 +70,11 @@ function buildThemeStoreSlice(
         resolved: resolveTheme(current, prefersDark),
       });
     },
+    setAccent: (next) => {
+      const safe = parseAccentPreference(next);
+      if (safe === get().accent) return;
+      set({ accent: safe });
+    },
   });
 }
 
@@ -66,7 +84,7 @@ export function createThemeStore(
   return createStore<ThemeStoreState>(buildThemeStoreSlice(init));
 }
 
-/** Same inputs as the pre-hydration script, so the first client read matches the painted page. */
+/** Same inputs as the pre-hydration scripts, so the first client read matches the painted page. */
 function readClientThemeInit(): ThemeStoreInit {
   if (typeof window === 'undefined') return {};
   let storage: Storage | null = null;
@@ -86,6 +104,7 @@ function readClientThemeInit(): ThemeStoreInit {
   return {
     preference: readStoredThemePreference(storage),
     systemPrefersDark,
+    accent: readStoredAccentPreference(storage),
   };
 }
 
@@ -96,4 +115,9 @@ export const useThemeStore = create<ThemeStoreState>(
 /** Resolved `"light" | "dark"` theme; re-renders only when it changes. */
 export function useResolvedTheme(): ResolvedTheme {
   return useThemeStore((state) => state.resolved);
+}
+
+/** Selected accent colour (`"ember" | "cobalt" | "jade" | "violet"`); re-renders only when it changes. */
+export function useAccent(): AccentPreference {
+  return useThemeStore((state) => state.accent);
 }

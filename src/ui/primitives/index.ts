@@ -35,6 +35,8 @@ export {
   type DropdownMenuProps,
   DropdownMenuRadioItem,
   type DropdownMenuRadioItemProps,
+  DropdownMenuRadioSwatch,
+  type DropdownMenuRadioSwatchProps,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,

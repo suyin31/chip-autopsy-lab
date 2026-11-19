@@ -19,7 +19,11 @@ import {
   DropdownMenuTrigger,
   resolveButtonClassName,
 } from '@/ui/primitives';
-import { AppearanceRadioRows, useThemeMenuState } from './ThemeToggle';
+import {
+  AccentSwatchGroup,
+  AppearanceRadioRows,
+  useThemeMenuState,
+} from './ThemeToggle';
 
 export interface LanguageSwitcherProps {
   readonly defaultOpen?: boolean;
@@ -41,8 +45,9 @@ export function LanguageSwitcher({
   className,
 }: LanguageSwitcherProps): React.JSX.Element {
   const { locale, setLocale, t } = useT();
-  const { preference } = useThemeMenuState();
+  const { preference, resolved, accent } = useThemeMenuState();
   const appearanceLabelId = React.useId();
+  const accentLabelId = React.useId();
 
   return (
     <DropdownMenu defaultOpen={defaultOpen}>
@@ -105,6 +110,12 @@ export function LanguageSwitcher({
               </DropdownMenuLabel>
               <AppearanceRadioRows preference={preference} />
             </div>
+            <DropdownMenuSeparator className="mx-3 my-1" />
+            <AccentSwatchGroup
+              accent={accent}
+              resolved={resolved}
+              labelId={accentLabelId}
+            />
           </>
         ) : null}
       </DropdownMenuContent>

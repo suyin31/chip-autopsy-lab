@@ -51,6 +51,108 @@ export const COLOR_TOKENS = {
 
 export type ThemeName = 'light' | 'dark';
 
+export type AccentName = 'ember' | 'cobalt' | 'jade' | 'violet';
+
+export const ACCENT_NAMES: readonly AccentName[] = [
+  'ember',
+  'cobalt',
+  'jade',
+  'violet',
+] as const;
+
+export const DEFAULT_ACCENT: AccentName = 'ember';
+
+/** Accent token set for one theme (failing dies, page marks, large ink, and soft tint). */
+export interface AccentThemeTokens {
+  /** Failing dies on the dark silicon disc and rank-0 bin on the disc (>= 5.9:1 on disc-mid). */
+  readonly ember: string;
+  /** Page marks: dominant Pareto bar, fail legend swatch, rank-0 bin ink (>= 3:1 on bg/surface). */
+  readonly emberMark: string;
+  /** Verdict cause phrase & accent word (cobalt/jade/violet >= 4.5:1 on light bg and dark surfaces). */
+  readonly emberInk: string;
+  /** Soft translucent tint derived from the active accent. */
+  readonly emberSoft: string;
+}
+
+export type AccentPalette = Readonly<Record<ThemeName, AccentThemeTokens>>;
+
+/**
+ * User-selectable accent palettes independent of light/dark (`data-accent` on `<html>`).
+ * Every palette satisfies the disc contrast floor (>= 5.9:1 on `disc-mid`, >= 5.0:1 on pass tiles)
+ * and mark contrast floor (>= 3:1 on light paper `#F6F3EE` and dark surfaces). Cobalt, Jade, and
+ * Violet also satisfy `emberInk >= 4.5:1` on both `#F6F3EE` and dark surfaces.
+ */
+export const ACCENT_PALETTES: Readonly<Record<AccentName, AccentPalette>> = {
+  ember: {
+    light: {
+      ember: '#FF6B2C',
+      emberMark: '#E8591E',
+      emberInk: '#D94E14',
+      emberSoft: 'rgba(232, 89, 30, 0.12)',
+    },
+    dark: {
+      ember: '#FF6B2C',
+      emberMark: '#FF6B2C',
+      emberInk: '#FF8A57',
+      emberSoft: 'rgba(255, 107, 44, 0.16)',
+    },
+  },
+  cobalt: {
+    light: {
+      ember: '#5C9CFF',
+      emberMark: '#2563EB',
+      emberInk: '#1D4ED8',
+      emberSoft: 'rgba(37, 99, 235, 0.12)',
+    },
+    dark: {
+      ember: '#5C9CFF',
+      emberMark: '#5C9CFF',
+      emberInk: '#82B4FF',
+      emberSoft: 'rgba(92, 156, 255, 0.16)',
+    },
+  },
+  jade: {
+    light: {
+      ember: '#22C58B',
+      emberMark: '#0F8A5F',
+      emberInk: '#0C7651',
+      emberSoft: 'rgba(15, 138, 95, 0.12)',
+    },
+    dark: {
+      ember: '#22C58B',
+      emberMark: '#22C58B',
+      emberInk: '#4ADEA8',
+      emberSoft: 'rgba(34, 197, 139, 0.16)',
+    },
+  },
+  violet: {
+    light: {
+      ember: '#B388FF',
+      emberMark: '#7C3AED',
+      emberInk: '#6D28D9',
+      emberSoft: 'rgba(124, 58, 237, 0.12)',
+    },
+    dark: {
+      ember: '#B388FF',
+      emberMark: '#B388FF',
+      emberInk: '#C9A8FF',
+      emberSoft: 'rgba(179, 136, 255, 0.16)',
+    },
+  },
+};
+
+export function getAccentTokens(
+  accent: AccentName,
+  theme: ThemeName,
+): AccentThemeTokens {
+  return ACCENT_PALETTES[accent][theme];
+}
+
+/** Failing die / rank-0 disc colour for the given accent (theme-independent dark silicon disc). */
+export function getFailDieColor(accent: AccentName = DEFAULT_ACCENT): string {
+  return ACCENT_PALETTES[accent].dark.ember;
+}
+
 /** A translucent material: fill colour plus its `backdrop-filter` value (`premium.md` §3.8). */
 export interface MaterialToken {
   readonly color: string;
@@ -79,6 +181,7 @@ export interface ThemeTokens {
   readonly ember: string;
   readonly emberMark: string;
   readonly emberInk: string;
+  readonly emberSoft: string;
   readonly focusRing: string;
   readonly selection: string;
   readonly barNeutral: string;
@@ -152,6 +255,7 @@ export const THEME_TOKENS: Readonly<Record<ThemeName, ThemeTokens>> = {
     ember: '#FF6B2C',
     emberMark: '#E8591E',
     emberInk: '#D94E14',
+    emberSoft: 'rgba(232, 89, 30, 0.12)',
     focusRing: '0 0 0 2px var(--bg), 0 0 0 4px #201E1F',
     selection: 'rgba(29, 29, 31, 0.14)',
     barNeutral: 'rgba(0, 0, 0, 0.16)',
@@ -198,6 +302,7 @@ export const THEME_TOKENS: Readonly<Record<ThemeName, ThemeTokens>> = {
     ember: '#FF6B2C',
     emberMark: '#FF6B2C',
     emberInk: '#FF8A57',
+    emberSoft: 'rgba(255, 107, 44, 0.16)',
     focusRing: '0 0 0 2px #000000, 0 0 0 4px rgba(255, 255, 255, 0.92)',
     selection: 'rgba(255, 255, 255, 0.22)',
     barNeutral: 'rgba(255, 255, 255, 0.22)',
@@ -296,18 +401,21 @@ export const WAFER_TOKENS = {
 export type BinColorSurface = 'disc' | ThemeName;
 
 /**
- * Bin colour by yield-loss rank (`premium.md` §3.5). Rank 0 is always ember;
+ * Bin colour by yield-loss rank (`premium.md` §3.5). Rank 0 follows the active accent;
  * ranks 1+ cycle through the 7 hues.
  */
 export function getBinColor(
   rankZeroBased: number,
   surface: BinColorSurface,
+  accent: AccentName = DEFAULT_ACCENT,
 ): string {
   const palette =
     surface === 'disc' ? BIN_DISC_PALETTE : THEME_TOKENS[surface].binInk;
   const safeRank = Math.max(0, Math.trunc(rankZeroBased));
   if (safeRank === 0) {
-    return palette[0];
+    return surface === 'disc'
+      ? ACCENT_PALETTES[accent].dark.ember
+      : ACCENT_PALETTES[accent][surface].emberMark;
   }
   return palette[1 + ((safeRank - 1) % (palette.length - 1))];
 }
@@ -328,12 +436,15 @@ export const SECONDARY_FAIL_BIN_PALETTE = [
 
 /**
  * Returns the deterministic categorical colour for a failing bin ordered by
- * yield-loss rank (`0` = dominant yield-loss failing bin -> `#FF6B2C`).
+ * yield-loss rank (`0` = dominant yield-loss failing bin -> active accent fail die colour).
  */
-export function getFailBinColor(rankZeroBased: number): string {
+export function getFailBinColor(
+  rankZeroBased: number,
+  accent: AccentName = DEFAULT_ACCENT,
+): string {
   const safeRank = Math.max(0, Math.trunc(rankZeroBased));
   if (safeRank === 0) {
-    return COLOR_TOKENS.failure;
+    return getFailDieColor(accent);
   }
   const index = (safeRank - 1) % SECONDARY_FAIL_BIN_PALETTE.length;
   return SECONDARY_FAIL_BIN_PALETTE[index];

@@ -7,7 +7,7 @@ import type { YieldMetrics } from "@/core/analytics";
 import type { ColumnarDies, WaferSummaryMeta } from "@/core/model";
 import { Untranslated, useT } from "@/ui/i18n";
 import { cn } from "@/ui/primitives/cn";
-import { registerPendingWaferCommit } from "@/ui/state";
+import { registerPendingWaferCommit, useAccent } from "@/ui/state";
 import { usePrefersMoreContrast } from "./use-prefers-more-contrast";
 import { paintWaferThumbnail, resolveCanvasPixelSize } from "./wafer-geometry";
 
@@ -125,6 +125,7 @@ export const WaferSelector = React.memo(function WaferSelector({
   }
 
   const highContrast = usePrefersMoreContrast();
+  const accent = useAccent();
 
   React.useEffect(() => {
     if (count === 0) {
@@ -165,6 +166,7 @@ export const WaferSelector = React.memo(function WaferSelector({
           cssSize: dims.cssWidth,
           dpr: dims.dpr,
           highContrast,
+          accent,
         });
       }
     };
@@ -225,7 +227,7 @@ export const WaferSelector = React.memo(function WaferSelector({
         }
       }
     };
-  }, [count, wafers, dies, dpr, highContrast]);
+  }, [count, wafers, dies, dpr, highContrast, accent]);
 
   const measureGeometry = React.useCallback((): void => {
     const listEl = listRef.current;

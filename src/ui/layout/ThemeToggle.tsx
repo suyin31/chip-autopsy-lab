@@ -8,19 +8,27 @@ import {
   cn,
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuRadioItem,
+  DropdownMenuRadioSwatch,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   resolveButtonClassName,
   Tooltip,
 } from '@/ui/primitives';
 import { useThemeStore } from '@/ui/state/theme-store';
 import {
+  ACCENT_PREFERENCES,
+  type AccentPreference,
+  DEFAULT_ACCENT_PREFERENCE,
   DEFAULT_THEME_PREFERENCE,
   type ResolvedTheme,
+  switchAccentPreference,
   switchThemePreference,
   THEME_PREFERENCES,
   type ThemePreference,
 } from '@/ui/theme';
+import { getAccentTokens } from '@/ui/tokens';
 
 /** The icon shows the preference, not the result (premium §7.1). */
 export const THEME_PREFERENCE_ICONS: Readonly<Record<ThemePreference, LucideIcon>> = {
@@ -34,6 +42,13 @@ export const THEME_PREFERENCE_LABEL_KEYS = {
   light: 'theme.light',
   dark: 'theme.dark',
 } as const satisfies Record<ThemePreference, MessageKey>;
+
+export const ACCENT_LABEL_KEYS = {
+  ember: 'accent.ember',
+  cobalt: 'accent.cobalt',
+  jade: 'accent.jade',
+  violet: 'accent.violet',
+} as const satisfies Record<AccentPreference, MessageKey>;
 
 export type ThemeAriaPreferenceKey =
   | 'theme.ariaSystemLight'
@@ -55,10 +70,11 @@ function subscribeTheme(onChange: () => void): () => void {
   return useThemeStore.subscribe(onChange);
 }
 
-/** Stored preference and resolved theme; the server snapshot is the default so hydration matches. */
+/** Stored preference, resolved theme, and accent; server snapshot uses defaults so hydration matches. */
 export function useThemeMenuState(): {
   readonly preference: ThemePreference;
   readonly resolved: ResolvedTheme;
+  readonly accent: AccentPreference;
 } {
   const preference = React.useSyncExternalStore(
     subscribeTheme,
@@ -70,7 +86,12 @@ export function useThemeMenuState(): {
     () => useThemeStore.getState().resolved,
     () => 'light' as const,
   );
-  return { preference, resolved };
+  const accent = React.useSyncExternalStore(
+    subscribeTheme,
+    () => useThemeStore.getState().accent,
+    () => DEFAULT_ACCENT_PREFERENCE,
+  );
+  return { preference, resolved, accent };
 }
 
 export interface AppearanceRadioRowsProps {
@@ -111,23 +132,100 @@ export function AppearanceRadioRows({
   );
 }
 
+export interface AccentSwatchGroupProps {
+  readonly accent: AccentPreference;
+  readonly resolved: ResolvedTheme;
+  readonly labelId: string;
+}
+
+/**
+ * Accent colour swatch group: 4 circular 20 px swatches (Ember, Cobalt, Jade, Violet)
+ * with radio semantics, 2 px ink focus/selected ring, and Left/Right + Up/Down keyboard stepping.
+ */
+export function AccentSwatchGroup({
+  accent,
+  resolved,
+  labelId,
+}: AccentSwatchGroupProps): React.JSX.Element {
+  const { t } = useT();
+  const swatchRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+
+  const handleGroupKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+  ): void => {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
+      return;
+    }
+    const active =
+      typeof document !== 'undefined' ? document.activeElement : null;
+    const idx = swatchRefs.current.findIndex((el) => el === active);
+    if (idx < 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const count = ACCENT_PREFERENCES.length;
+    const nextIdx =
+      event.key === 'ArrowRight'
+        ? (idx + 1) % count
+        : (idx - 1 + count) % count;
+    swatchRefs.current[nextIdx]?.focus();
+  };
+
+  return (
+    <div
+      role="group"
+      aria-labelledby={labelId}
+      data-testid="accent-swatch-group"
+      onKeyDown={handleGroupKeyDown}
+    >
+      <DropdownMenuLabel id={labelId} className="pt-1.5 pb-1">
+        {t('accent.label')}
+      </DropdownMenuLabel>
+      <div className="flex items-center gap-4 px-3 pt-1.5 pb-2">
+        {ACCENT_PREFERENCES.map((item, index) => {
+          const label = t(ACCENT_LABEL_KEYS[item]);
+          const swatchColor = getAccentTokens(item, resolved).emberMark;
+          return (
+            <DropdownMenuRadioSwatch
+              key={item}
+              ref={(node) => {
+                swatchRefs.current[index] = node;
+              }}
+              value={item}
+              checked={item === accent}
+              label={label}
+              color={swatchColor}
+              data-testid={`accent-option-${item}`}
+              data-accent-option={item}
+              onSelect={() => switchAccentPreference(item)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export interface ThemeToggleProps {
   readonly defaultOpen?: boolean;
   readonly className?: string;
 }
 
 /**
- * Quiet theme toggle (premium §7.1): 32 x 32 icon button showing the preference icon in
- * `text-secondary`, tooltip "Appearance"; opens a 200 px menu with a radio group and the
- * `subhead` tertiary note under it.
+ * Quiet theme & accent popover toggle (premium §7.1): 32 x 32 icon button showing the
+ * preference icon in `text-secondary`, tooltip "Appearance"; opens a 200 px popover menu
+ * with Appearance (Match system / Light / Dark) and Colour (Ember / Cobalt / Jade / Violet).
  */
 export function ThemeToggle({
   defaultOpen = false,
   className,
 }: ThemeToggleProps): React.JSX.Element {
   const { t } = useT();
-  const { preference, resolved } = useThemeMenuState();
+  const { preference, resolved, accent } = useThemeMenuState();
   const [open, setOpen] = React.useState(defaultOpen);
+  const appearanceLabelId = React.useId();
+  const accentLabelId = React.useId();
   const Icon = THEME_PREFERENCE_ICONS[preference];
 
   return (
@@ -136,6 +234,7 @@ export function ThemeToggle({
         <DropdownMenuTrigger
           data-testid="theme-toggle-trigger"
           data-preference={preference}
+          data-accent={accent}
           aria-label={t('theme.ariaLabel', {
             preference: t(resolveThemeAriaPreferenceKey(preference, resolved)),
           })}
@@ -156,12 +255,21 @@ export function ThemeToggle({
         data-testid="theme-menu"
         className="w-[200px]"
       >
-        <div role="group" aria-label={t('theme.label')}>
+        <div role="group" aria-labelledby={appearanceLabelId}>
+          <DropdownMenuLabel id={appearanceLabelId} className="pt-1 pb-1">
+            {t('theme.label')}
+          </DropdownMenuLabel>
           <AppearanceRadioRows preference={preference} />
         </div>
-        <p className="px-3 pt-2 pb-1 type-subhead text-pretty text-text-tertiary">
+        <p className="px-3 pt-1.5 pb-1.5 type-subhead text-pretty text-text-tertiary">
           {t('theme.systemNote')}
         </p>
+        <DropdownMenuSeparator className="mx-3 my-1" />
+        <AccentSwatchGroup
+          accent={accent}
+          resolved={resolved}
+          labelId={accentLabelId}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

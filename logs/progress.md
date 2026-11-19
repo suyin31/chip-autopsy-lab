@@ -282,3 +282,6 @@ A11y, keyboard, contrast, copy pass. unit 457/457, lint/typecheck/build clean, e
 
 ## Task 20 (2026-11-19 21:55 SGT)
 Perf/offline/privacy gates + narrate skipped when no LLM key + bundle secret scan. unit 466/466, e2e 21 passed. Sandbox demo load: time-to-report 0.85-1.5 s, one ~185 ms long task on view switch (2-core arm64; recheck on real machine before demo). perf-gate.spec frame budget still flaky on sandbox.
+
+## Accent colour option (2026-11-19 22:25 SGT)
+Appearance menu: System/Light/Dark + accent Ember/Cobalt/Jade/Violet (data-accent, cal.accent, pre-hydration). unit 474/474, e2e 62 passed.

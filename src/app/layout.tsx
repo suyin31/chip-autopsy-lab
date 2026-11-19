@@ -2,7 +2,11 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { en } from '@/core/i18n';
 import { I18nProvider, LOCALE_INIT_SCRIPT } from '@/ui/i18n';
-import { THEME_INIT_SCRIPT, ThemeController } from '@/ui/theme';
+import {
+  ACCENT_INIT_SCRIPT,
+  THEME_INIT_SCRIPT,
+  ThemeController,
+} from '@/ui/theme';
 import './globals.css';
 
 const inter = localFont({
@@ -74,6 +78,7 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: ACCENT_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: LOCALE_INIT_SCRIPT }} />
       </head>
       <body className="min-h-screen bg-bg text-text-primary antialiased">

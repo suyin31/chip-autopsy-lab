@@ -35,6 +35,11 @@ export const zhTW = {
   'theme.light': '淺色',
   'theme.dark': '深色',
   'theme.systemNote': '「跟隨系統」會使用裝置的設定。',
+  'accent.label': '強調色',
+  'accent.ember': '餘燼橘',
+  'accent.cobalt': '鈷藍',
+  'accent.jade': '翡翠綠',
+  'accent.violet': '紫羅蘭',
 
   // Glossary (premium §2.3)
   'glossary.lot': '一起製造的一批晶圓。同一批次的問題通常有共同原因。',

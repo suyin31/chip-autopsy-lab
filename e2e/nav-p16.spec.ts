@@ -50,7 +50,7 @@ test('A28: nav at 1440 places wordmark, centred lot picker, language, theme icon
     'Open file',
   );
 
-  // Appearance menu: three rows, one check, note under the group
+  // Appearance menu: three appearance rows + four colour swatches, one checked per group
   await page.getByTestId('theme-toggle-trigger').click();
   const menu = page.getByTestId('theme-menu');
   await expect(menu).toBeVisible();
@@ -58,12 +58,17 @@ test('A28: nav at 1440 places wordmark, centred lot picker, language, theme icon
   await expect
     .poll(async () => Math.round((await menu.boundingBox())?.width ?? 0))
     .toBe(200);
-  await expect(menu.getByRole('menuitemradio')).toHaveText([
+  await expect(menu.locator('[data-testid^="theme-option-"]')).toHaveText([
     'Match system',
     'Light',
     'Dark',
   ]);
-  await expect(menu.locator('[aria-checked="true"]')).toHaveCount(1);
+  await expect(
+    menu.locator('[data-testid^="theme-option-"][aria-checked="true"]'),
+  ).toHaveCount(1);
+  await expect(
+    menu.locator('[data-testid^="accent-option-"][aria-checked="true"]'),
+  ).toHaveCount(1);
   await expect(menu).toContainText('Match system follows your device setting.');
   await page.keyboard.press('Escape');
   await expect(menu).toHaveCount(0);
@@ -105,7 +110,9 @@ test('A2 (menu path): choosing Light on a dark OS turns the page light and persi
     'true',
   );
   await expect(
-    page.getByTestId('theme-menu').locator('[aria-checked="true"]'),
+    page
+      .getByTestId('theme-menu')
+      .locator('[data-testid^="theme-option-"][aria-checked="true"]'),
   ).toHaveCount(1);
 });
 

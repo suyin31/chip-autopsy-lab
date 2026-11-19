@@ -30,7 +30,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/ui/primitives';
-import { MOTION_TOKENS, SPRING_TOKENS, WAFER_TOKENS } from '@/ui/tokens';
+import { useAccent } from '@/ui/state';
+import {
+  getFailDieColor,
+  MOTION_TOKENS,
+  SPRING_TOKENS,
+  WAFER_TOKENS,
+} from '@/ui/tokens';
 import {
   buildWaferDiscMaskImage,
   computeSheenEllipseRestStyle,
@@ -80,6 +86,7 @@ export interface EmptyStateCardProps {
     cssSize: number,
     dpr: number,
     highContrast?: boolean,
+    failColor?: string,
   ) => Promise<ImageBitmap | null>;
   readonly parseError?: {
     readonly error: ParseFatalError;
@@ -231,6 +238,7 @@ interface LandingWaferDiscProps {
     cssSize: number,
     dpr: number,
     highContrast?: boolean,
+    failColor?: string,
   ) => Promise<ImageBitmap | null>;
 }
 
@@ -253,6 +261,7 @@ function LandingWaferDisc({
     [presetId],
   );
   const highContrast = usePrefersMoreContrast();
+  const accent = useAccent();
 
   React.useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -279,6 +288,7 @@ function LandingWaferDisc({
       dpr: dims.dpr,
       highContrast,
       thinFilm: hero,
+      accent,
     });
 
     // The worker thumbnail mirrors the card rules (no thin film), so the hero stays on the main-thread paint
@@ -291,6 +301,7 @@ function LandingWaferDisc({
       size,
       dims.dpr,
       highContrast,
+      getFailDieColor(accent),
     )
       .then((bitmap) => {
         if (!bitmap) {
@@ -326,7 +337,7 @@ function LandingWaferDisc({
     return () => {
       cancelled = true;
     };
-  }, [presetId, preview, renderWorkerThumbnail, highContrast, size, hero]);
+  }, [presetId, preview, renderWorkerThumbnail, highContrast, size, hero, accent]);
 
   const center = size / 2;
   const layers = computeStageDiscLayerRects(
@@ -434,6 +445,7 @@ interface DemoLotCardButtonProps {
     cssSize: number,
     dpr: number,
     highContrast?: boolean,
+    failColor?: string,
   ) => Promise<ImageBitmap | null>;
 }
 

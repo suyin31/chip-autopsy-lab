@@ -38,6 +38,7 @@
   --ember: #ff6b2c;
   --ember-mark: #ff6b2c;
   --ember-ink: #ff8a57;
+  --ember-soft: rgba(255, 107, 44, 0.16);
   --focus-ring: 0 0 0 2px #000000, 0 0 0 4px rgba(255, 255, 255, 0.92);
   --selection: rgba(255, 255, 255, 0.22);
   --bar-neutral: rgba(255, 255, 255, 0.22);
@@ -80,6 +81,7 @@
   --ember: #ff6b2c;
   --ember-mark: #e8591e;
   --ember-ink: #d94e14;
+  --ember-soft: rgba(232, 89, 30, 0.12);
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px #201e1f;
   --selection: rgba(29, 29, 31, 0.14);
   --bar-neutral: rgba(0, 0, 0, 0.16);
@@ -96,6 +98,61 @@
   --elevation-popover: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.08), 0 24px 48px rgba(0, 0, 0, 0.12);
   --elevation-thumb: 0 0 0 0.5px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.10), 0 3px 8px rgba(0, 0, 0, 0.05);
   --elevation-chevron: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.10);
+}
+
+/*
+ * User-selectable accent palettes (`data-accent` on `<html>`, independent of `data-theme`).
+ * Mirrors ACCENT_PALETTES in src/ui/tokens/palette.ts.
+ */
+:root[data-accent="cobalt"],
+:root[data-theme="dark"][data-accent="cobalt"] {
+  --ember: #5c9cff;
+  --ember-mark: #5c9cff;
+  --ember-ink: #82b4ff;
+  --ember-soft: rgba(92, 156, 255, 0.16);
+  --bin-ink-0: #5c9cff;
+}
+
+:root[data-theme="light"][data-accent="cobalt"] {
+  --ember: #5c9cff;
+  --ember-mark: #2563eb;
+  --ember-ink: #1d4ed8;
+  --ember-soft: rgba(37, 99, 235, 0.12);
+  --bin-ink-0: #2563eb;
+}
+
+:root[data-accent="jade"],
+:root[data-theme="dark"][data-accent="jade"] {
+  --ember: #22c58b;
+  --ember-mark: #22c58b;
+  --ember-ink: #4adea8;
+  --ember-soft: rgba(34, 197, 139, 0.16);
+  --bin-ink-0: #22c58b;
+}
+
+:root[data-theme="light"][data-accent="jade"] {
+  --ember: #22c58b;
+  --ember-mark: #0f8a5f;
+  --ember-ink: #0c7651;
+  --ember-soft: rgba(15, 138, 95, 0.12);
+  --bin-ink-0: #0f8a5f;
+}
+
+:root[data-accent="violet"],
+:root[data-theme="dark"][data-accent="violet"] {
+  --ember: #b388ff;
+  --ember-mark: #b388ff;
+  --ember-ink: #c9a8ff;
+  --ember-soft: rgba(179, 136, 255, 0.16);
+  --bin-ink-0: #b388ff;
+}
+
+:root[data-theme="light"][data-accent="violet"] {
+  --ember: #b388ff;
+  --ember-mark: #7c3aed;
+  --ember-ink: #6d28d9;
+  --ember-soft: rgba(124, 58, 237, 0.12);
+  --bin-ink-0: #7c3aed;
 }
 
 /* Reduced transparency: every material is opaque surface, no filter (premium.md §3.8) */
@@ -131,6 +188,7 @@
   --color-ember: var(--ember);
   --color-ember-mark: var(--ember-mark);
   --color-ember-ink: var(--ember-ink);
+  --color-ember-soft: var(--ember-soft);
   --color-bar-neutral: var(--bar-neutral);
   --color-bin-ink-0: var(--bin-ink-0);
   --color-bin-ink-1: var(--bin-ink-1);
@@ -952,6 +1010,19 @@
 ::view-transition-new(root) {
   animation-duration: var(--dur-4);
   animation-timing-function: var(--ease-in-out);
+}
+
+/* Accent switch cross-fade: 240 ms (dur-3) ease-in-out over root snapshots or CSS fallback */
+:root[data-accent-transition]::view-transition-old(root),
+:root[data-accent-transition]::view-transition-new(root) {
+  animation-duration: var(--dur-3);
+  animation-timing-function: var(--ease-in-out);
+}
+
+:root[data-accent-fading] * {
+  transition-property: color, background-color, text-decoration-color;
+  transition-duration: var(--dur-3);
+  transition-timing-function: var(--ease-in-out);
 }
 
 :root[data-theme-switching] *,

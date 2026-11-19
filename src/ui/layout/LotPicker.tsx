@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
   Tooltip,
 } from '@/ui/primitives';
+import { useAccent } from '@/ui/state';
 import { SPRING_TOKENS } from '@/ui/tokens';
 import { usePrefersMoreContrast } from '@/ui/wafer-map/use-prefers-more-contrast';
 import {
@@ -67,6 +68,7 @@ function DemoThumbCanvas({ presetId }: DemoThumbCanvasProps): React.JSX.Element 
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const preview = React.useMemo(() => getDemoPresetPreview(presetId), [presetId]);
   const highContrast = usePrefersMoreContrast();
+  const accent = useAccent();
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -96,8 +98,9 @@ function DemoThumbCanvas({ presetId }: DemoThumbCanvasProps): React.JSX.Element 
       cssSize: DEMO_THUMB_SIZE_PX,
       dpr: dims.dpr,
       highContrast,
+      accent,
     });
-  }, [preview, highContrast]);
+  }, [preview, highContrast, accent]);
 
   return (
     <canvas
