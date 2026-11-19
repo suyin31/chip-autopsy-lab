@@ -24,6 +24,12 @@ async function loadDemoLot(
   await expect(page.getByTestId('bin-pareto')).toBeAttached();
   await expect(page.getByTestId('yield-summary')).toBeAttached();
   await expect(page.getByTestId('parametric-panel')).toBeAttached();
+  // Wait for Pareto pill CountUp animations to settle before capturing baseline text
+  const paretoCountUps = page.locator('[data-testid="bin-pareto-pill"] .count-up');
+  await expect(paretoCountUps.first()).toBeAttached();
+  await expect(
+    page.locator('[data-testid="bin-pareto-pill"] .count-up:not([data-settled="true"])'),
+  ).toHaveCount(0);
 }
 
 test.describe('Task 14 - live cross-chart brushing', () => {

@@ -4,11 +4,21 @@ test('renders dark clinical scaffold with self-hosted fonts and zero third-party
   page,
 }) => {
   const externalRequests: string[] = [];
+  const consoleErrors: string[] = [];
+  const pageErrors: string[] = [];
   page.on('request', (req) => {
     const url = new URL(req.url());
     if (url.hostname !== '127.0.0.1' && url.hostname !== 'localhost') {
       externalRequests.push(req.url());
     }
+  });
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      consoleErrors.push(msg.text());
+    }
+  });
+  page.on('pageerror', (err) => {
+    pageErrors.push(err.message);
   });
 
   await page.goto('/');
@@ -18,6 +28,8 @@ test('renders dark clinical scaffold with self-hosted fonts and zero third-party
   const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(bodyBg).toBe('rgb(0, 0, 0)');
   expect(externalRequests).toEqual([]);
+  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
 });
 
 test('NavBar acceptance: 52px desktop / 48px mobile, language reload persistence, focus-ring token, and Tab order', async ({

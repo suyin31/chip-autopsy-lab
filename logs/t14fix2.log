@@ -1,0 +1,28 @@
+root agent idle; waiting for 1 background task(s) to finish
+I'm running typecheck and lint now; I'll continue with the unit tests, production build, and Playwright verification as soon as they finish.
+Typecheck and lint passed cleanly. Running `pnpm test` and `pnpm build` now.
+Unit tests (408/408) and production build passed. Running `e2e/brushing-t14.spec.ts --repeat-each=3` now.
+`e2e/brushing-t14.spec.ts --repeat-each=3` passed 6/6. Running `stacked-heatmap-t12`, `parametric-t13`, `scaffold`, and `landing-p26a` specs now.
+Both Task 14 follow-ups are fixed and verified:
+
+### 1. Landing Hydration Mismatch (`next dev`)
+- **Root cause:** Opening `/` in `next dev -p 3125` with Playwright showed the mismatch was on the 72 probe-station reticle `<line data-reticle-tick="">` SVG attributes (`x1`, `y1`, `x2`, `y2`) inside `LandingHero` (`src/ui/layout/EmptyStateCard.tsx`). Unrounded `Math.sin` / `Math.cos` results differed by 1 ULP between Node SSR and Chromium V8 (e.g. `y1="99.33733542039141"` vs `99.3373354203914`).
+- **Fix:** Added `roundSvgCoord` and `computeLandingReticleTickLines` (rounding to 3 decimal places, normalizing `-0`) in [landing-layout.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/landing-layout.ts#L70-L103) and used them in [EmptyStateCard.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/EmptyStateCard.tsx#L580-L639).
+- **Regression checks:**
+  - Verified 0 `console.error`, 0 `pageerror`, and `data-error="false"` on the Next.js dev badge in `next dev -p 3125` across desktop light/dark, mobile light, reduced motion, and stored `cal.theme`/`cal.locale` states.
+  - Added coordinate precision unit assertions in [landing-layout.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/landing-layout.test.ts#L49-L71) and SSR markup assertions in [empty-state.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/layout/empty-state.test.ts#L110-L120).
+  - Added `consoleErrors` / `pageErrors` assertions on `/` in [scaffold.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/scaffold.spec.ts#L3-L35).
+
+### 2. Flaky `brushing-t14` Pareto Baseline
+- **Root cause:** `loadDemoLot` returned once `wafer-stage` reached `data-sweep="done"` (~280 ms ignite), while Pareto share-of-fails pills in `BinParetoChart` were still partway through their 600 ms `CountUp` animation, capturing mid-count values (e.g. `90.0%` instead of `91.3%`) in `paretoBefore`.
+- **Fix:** Updated [count-up.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/primitives/count-up.tsx#L76-L108) to imperatively set `data-settled="false"` while its `requestAnimationFrame` count-up runs and `data-settled="true"` once the final text is written (or immediately under reduced motion / interrupt / `play={false}`), without changing SSR output or adding React re-renders. Updated `loadDemoLot` in [brushing-t14.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/brushing-t14.spec.ts#L24-L33) to wait until all `[data-testid="bin-pareto-pill"] .count-up` elements have `data-settled="true"` before snapshotting baseline text.
+
+### Verification & Cleanup
+- `pnpm typecheck`: 0 errors
+- `pnpm lint`: clean (0 warnings/errors)
+- `pnpm test`: 408/408 passed across 70 test files
+- `pnpm build`: succeeded
+- `npx playwright test e2e/brushing-t14.spec.ts --repeat-each=3`: 6/6 passed
+- `npx playwright test e2e/stacked-heatmap-t12.spec.ts e2e/parametric-t13.spec.ts e2e/scaffold.spec.ts e2e/landing-p26a.spec.ts`: 11/11 passed
+- Stopped the `next dev` server and confirmed ports `3125` and `3130` are free.
+- Appended a note under Task 14 in [progress.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/progress.md#L271-L275).

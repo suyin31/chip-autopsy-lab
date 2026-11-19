@@ -47,7 +47,7 @@ import {
 } from '@/ui/wafer-map/wafer-geometry';
 import { ErrorDetailsSheet } from './ErrorDetailsSheet';
 import {
-  buildLandingReticleTicks,
+  computeLandingReticleTickLines,
   LANDING_EXAMPLE_EDGE_SHARE,
   LANDING_HERO_WAFER_SIZE_DEFAULT,
   LANDING_RETICLE_GAP_PX,
@@ -578,13 +578,16 @@ function LandingHero({
     LANDING_HERO_WAFER_SIZE_DEFAULT,
   );
   const hydrated = useHydrated();
-  const ticks = React.useMemo(() => buildLandingReticleTicks(), []);
   const reticleD = size + LANDING_RETICLE_GAP_PX * 2;
   const reticleR = reticleD / 2;
   const frameW = reticleD + RETICLE_LABEL_SLOT_X * 2;
   const frameH = reticleD + RETICLE_LABEL_SLOT_Y * 2;
   const cx = frameW / 2;
   const cy = frameH / 2;
+  const tickLines = React.useMemo(
+    () => computeLandingReticleTickLines(cx, cy, reticleR),
+    [cx, cy, reticleR],
+  );
   const sampleLabel = t('landing.primary');
   const patternName = 'Edge-Ring';
   const [titleBefore = '', titleAfter = ''] = t('verdict.pattern', {
@@ -621,25 +624,18 @@ function LandingHero({
             strokeWidth={1}
             className="stroke-hairline"
           />
-          {ticks.map((tick) => {
-            const a = (tick.angleDeg * Math.PI) / 180;
-            const sin = Math.sin(a);
-            const cos = Math.cos(a);
-            const outer = reticleR - 0.5;
-            const inner = outer - tick.lengthPx;
-            return (
-              <line
-                key={tick.angleDeg}
-                data-reticle-tick=""
-                x1={cx + sin * outer}
-                y1={cy - cos * outer}
-                x2={cx + sin * inner}
-                y2={cy - cos * inner}
-                strokeWidth={1}
-                className="stroke-hairline-strong"
-              />
-            );
-          })}
+          {tickLines.map((tick) => (
+            <line
+              key={tick.angleDeg}
+              data-reticle-tick=""
+              x1={tick.x1}
+              y1={tick.y1}
+              x2={tick.x2}
+              y2={tick.y2}
+              strokeWidth={1}
+              className="stroke-hairline-strong"
+            />
+          ))}
         </svg>
 
         {RETICLE_LABELS.map((label) => {

@@ -76,20 +76,24 @@ export function CountUp({
     if (completed || prefersReduced || typeof requestAnimationFrame !== 'function') {
       stop();
       el.textContent = finalText;
+      el.dataset.settled = 'true';
       return;
     }
     if (!firstRunForKey) {
       if (rafRef.current === null) {
         el.textContent = finalText;
+        el.dataset.settled = 'true';
       }
       return;
     }
     stop();
     if (!play) {
       el.textContent = finalText;
+      el.dataset.settled = 'true';
       return;
     }
 
+    el.dataset.settled = 'false';
     el.textContent = format(0);
     const startMs = performance.now() + Math.max(0, delayMs);
     const tick = (nowMs: number): void => {
@@ -98,6 +102,7 @@ export function CountUp({
       if (elapsedMs >= STAT_INITIAL_COUNTUP_MS) {
         rafRef.current = null;
         el.textContent = latest.finalText;
+        el.dataset.settled = 'true';
         return;
       }
       el.textContent = latest.format(

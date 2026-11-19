@@ -107,7 +107,17 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     // premium §11.1 hero: 320 px edge-ring-etch disc with stage shadows inside a 72-tick reticle,
     // and the "Example result" card; the wafer button opens the sample lot
     expect(html).toContain('data-testid="landing-hero-wafer" aria-label="Open the sample lot"');
-    expect(html.match(/data-reticle-tick=""/g)).toHaveLength(72);
+    const reticleTicks = Array.from(
+      html.matchAll(
+        /<line data-reticle-tick="" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g,
+      ),
+    );
+    expect(reticleTicks).toHaveLength(72);
+    for (const [, x1, y1, x2, y2] of reticleTicks) {
+      for (const coord of [x1, y1, x2, y2]) {
+        expect(coord).toMatch(/^\d+(?:\.\d{1,3})?$/);
+      }
+    }
     for (const label of ['0°', '90°', '180°', '270°']) {
       expect(html).toContain(`>${label}</span>`);
     }

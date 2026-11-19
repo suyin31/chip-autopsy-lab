@@ -68,6 +68,43 @@ export function buildLandingReticleTicks(): readonly LandingReticleTick[] {
 }
 
 /**
+ * Rounds SVG coordinates to 3 decimals so SSR (Node) and browser JS engines emit identical
+ * attribute strings despite last-ULP `Math.sin` / `Math.cos` differences.
+ */
+export function roundSvgCoord(value: number): number {
+  const rounded = Math.round(value * 1000) / 1000;
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+export interface LandingReticleTickLine extends LandingReticleTick {
+  readonly x1: number;
+  readonly y1: number;
+  readonly x2: number;
+  readonly y2: number;
+}
+
+export function computeLandingReticleTickLines(
+  cx: number,
+  cy: number,
+  reticleRadiusPx: number,
+): readonly LandingReticleTickLine[] {
+  const outer = reticleRadiusPx - 0.5;
+  return buildLandingReticleTicks().map((tick) => {
+    const a = (tick.angleDeg * Math.PI) / 180;
+    const sin = Math.sin(a);
+    const cos = Math.cos(a);
+    const inner = outer - tick.lengthPx;
+    return {
+      ...tick,
+      x1: roundSvgCoord(cx + sin * outer),
+      y1: roundSvgCoord(cy - cos * outer),
+      x2: roundSvgCoord(cx + sin * inner),
+      y2: roundSvgCoord(cy - cos * inner),
+    };
+  });
+}
+
+/**
  * Example result card fact (§11.1, "93.8% of fails sit in the outer 3 rings."): the share of
  * `edge-ring-etch` failing dies in the outer 3 rings, the lead stat of that sample lot. A unit test
  * checks it against the engine's `stats.edgeShare` value.
