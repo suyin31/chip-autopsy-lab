@@ -1,0 +1,7 @@
+Running `npx playwright test e2e/motion-t18.spec.ts --reporter=line` and waiting for completion.
+root agent idle; waiting for 1 background task(s) to finish
+Running `pnpm typecheck`, `pnpm lint`, and `pnpm test`.
+Running `npx playwright test e2e/scaffold.spec.ts e2e/landing-p26a.spec.ts e2e/palette-t17.spec.ts e2e/narrator-t16.spec.ts e2e/brushing-t14.spec.ts`.
+- Filtered the expected unconfigured-LLM `HTTP 503` network console notice from `/api/autopsy/narrate` in [motion-t18.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/motion-t18.spec.ts#L13-L37) while keeping strict `console.error` and `pageerror` checks.
+- Targeted `[data-testid="wafer-strip-thumb-ring"]` inside `[data-testid="wafer-strip"]` in [motion-t18.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/motion-t18.spec.ts#L312-L326) to match [WaferSelector.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/wafer-map/WaferSelector.tsx#L548-L560) (`opacity: 0.32` on non-evidence thumbnail rings).
+- Verified `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm test` (78/78 files, 455/455 tests), `e2e/motion-t18.spec.ts` (5/5 passed), and all 5 regression E2E suites (13/13 passed).

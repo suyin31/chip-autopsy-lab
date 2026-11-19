@@ -1,5 +1,6 @@
 'use client';
 
+import { LayoutGroup } from 'motion/react';
 import * as React from 'react';
 import { toast } from 'sonner';
 import {
@@ -11,6 +12,7 @@ import type { ParseFatalError, ParseMode } from '@/core/stdf';
 import { formatByteSize } from '@/ui/format';
 import { CommandPalette } from '@/ui/command-palette';
 import { useT } from '@/ui/i18n';
+import { WORKSPACE_LAYOUT_GROUP_ID } from '@/ui/motion';
 import { ClinicalToaster, cn } from '@/ui/primitives';
 import {
   type AutopsyWorkerClient,
@@ -684,62 +686,66 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       >
         <section
           aria-label={t('a11y.workspace')}
+          data-testid="workspace-view-shell"
+          data-view-status={workspace.status}
           className="flex-1"
         >
-          {workspace.status === 'empty' ? (
-            <EmptyStateCard
-              cause="first-run"
-              presets={presets}
-              selectedPresetId={selectedPresetId}
-              onSelectPreset={setSelectedPresetId}
-              onLoadDemoLot={(presetId) => handleLoadDemoLot(presetId)}
-              onDownloadDemoLot={handleDownloadDemoLot}
-              downloadingPresetId={downloadingPresetId}
-              onSelectFile={(file) => handleLoadFile(file)}
-              renderWorkerThumbnail={handleRenderWorkerThumbnail}
-            />
-          ) : null}
+          <LayoutGroup id={WORKSPACE_LAYOUT_GROUP_ID}>
+            {workspace.status === 'empty' ? (
+              <EmptyStateCard
+                cause="first-run"
+                presets={presets}
+                selectedPresetId={selectedPresetId}
+                onSelectPreset={setSelectedPresetId}
+                onLoadDemoLot={(presetId) => handleLoadDemoLot(presetId)}
+                onDownloadDemoLot={handleDownloadDemoLot}
+                downloadingPresetId={downloadingPresetId}
+                onSelectFile={(file) => handleLoadFile(file)}
+                renderWorkerThumbnail={handleRenderWorkerThumbnail}
+              />
+            ) : null}
 
-          {workspace.status === 'parse-failed' ? (
-            <EmptyStateCard
-              cause="parse-failed"
-              presets={presets}
-              selectedPresetId={selectedPresetId}
-              onSelectPreset={setSelectedPresetId}
-              onLoadDemoLot={(presetId) => handleLoadDemoLot(presetId)}
-              onDownloadDemoLot={handleDownloadDemoLot}
-              downloadingPresetId={downloadingPresetId}
-              onSelectFile={(file) => handleLoadFile(file)}
-              renderWorkerThumbnail={handleRenderWorkerThumbnail}
-              parseError={{
-                error: workspace.error,
-                ...(workspace.fileName !== undefined
-                  ? { fileName: workspace.fileName }
-                  : {}),
-              }}
-            />
-          ) : null}
+            {workspace.status === 'parse-failed' ? (
+              <EmptyStateCard
+                cause="parse-failed"
+                presets={presets}
+                selectedPresetId={selectedPresetId}
+                onSelectPreset={setSelectedPresetId}
+                onLoadDemoLot={(presetId) => handleLoadDemoLot(presetId)}
+                onDownloadDemoLot={handleDownloadDemoLot}
+                downloadingPresetId={downloadingPresetId}
+                onSelectFile={(file) => handleLoadFile(file)}
+                renderWorkerThumbnail={handleRenderWorkerThumbnail}
+                parseError={{
+                  error: workspace.error,
+                  ...(workspace.fileName !== undefined
+                    ? { fileName: workspace.fileName }
+                    : {}),
+                }}
+              />
+            ) : null}
 
-          {workspace.status === 'loading' ? (
-            <IngestProgressPanel
-              label={workspace.label}
-              progress={workspace.progress}
-            />
-          ) : null}
+            {workspace.status === 'loading' ? (
+              <IngestProgressPanel
+                label={workspace.label}
+                progress={workspace.progress}
+              />
+            ) : null}
 
-          {workspace.status === 'ready' ? (
-            <LoadedLotOverview
-              data={workspace.payload}
-              presets={presets}
-              selectedPresetId={selectedPresetId}
-              onSelectPreset={setSelectedPresetId}
-              onLoadDemoLot={(presetId) => handleLoadDemoLot(presetId)}
-              onDownloadDemoLot={handleDownloadDemoLot}
-              downloadingPresetId={downloadingPresetId}
-              onSelectFile={(file) => handleLoadFile(file)}
-              onParseEverything={handleParseEverythingFromNotice}
-            />
-          ) : null}
+            {workspace.status === 'ready' ? (
+              <LoadedLotOverview
+                data={workspace.payload}
+                presets={presets}
+                selectedPresetId={selectedPresetId}
+                onSelectPreset={setSelectedPresetId}
+                onLoadDemoLot={(presetId) => handleLoadDemoLot(presetId)}
+                onDownloadDemoLot={handleDownloadDemoLot}
+                downloadingPresetId={downloadingPresetId}
+                onSelectFile={(file) => handleLoadFile(file)}
+                onParseEverything={handleParseEverythingFromNotice}
+              />
+            ) : null}
+          </LayoutGroup>
         </section>
       </main>
 

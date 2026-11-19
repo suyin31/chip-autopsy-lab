@@ -1,0 +1,9 @@
+Created [t18-contract.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/prompts/t18-contract.md) (187 lines, `< 220` lines) with:
+
+- **Exact Motion Tokens & Physics Specs**: `spring-ui` (`0.35 s, bounce 0`, stiffness `320` / damping `36`), `spring-snappy` (`0.22 s, bounce 0`, stiffness `810` / damping `57`), `spring-camera` (`170 / 26`), `spring-throw` (`260 / 22`), `spring-sheen` (`120 / 22`), `ease-out`, `ease-out-expo`, `ease-in-out`, durations (`dur-0` to `dur-4` + reveal ceilings), and per-surface `press-scale` tokens (`0.97` buttons, `0.985` cards/rows, `0.94` icon/thumbnails), strictly animating `transform` and `opacity`.
+- **Per-Element & View-Switch Specs**:
+  - Landing $\to$ Report & Lot Switcher (`< 450 ms`, zero blank flash) via `<LayoutGroup id="cal-workspace-layout">` and shared `layoutId="cal-wafer-disc-morph"` bridging `EmptyStateCard` $\to$ `IngestProgressPanel` $\to$ `LoadedLotOverview` stage disc, plus 6-block staggered verdict rise.
+  - Original Task 18 reveals: skippable once-per-session probe-sweep load (`cal.sweep.v1`, `<= 1.2 s` sweep + `280 ms` ignite, `~3 s` total budget), cause-of-death type-on (`<= 1.5 s`, SSR/layout-safe `useTypeOn`), pattern-ordered claim evidence light-up stagger (`<= 600 ms`, `420 ms` stagger + `180 ms` fade), panel/popover/finding springs, segmented control `layoutId` thumb slide, card hover lift (`-2 px`), and full `prefers-reduced-motion: reduce` instant fallbacks.
+- **Exact `src/ui/motion/**` Signatures & Non-Overlapping File Ownership**:
+  - **CORE**: `src/ui/motion/{tokens,reveal,hooks,index}.ts` + `src/ui/motion/motion.test.ts`.
+  - **UI**: `src/ui/layout/{AppShell,EmptyStateCard,IngestProgressPanel,LoadedLotOverview}.tsx`, `src/ui/report/{VerdictHero,AutopsyReportCard}.tsx`, and `e2e/motion-t18.spec.ts`.

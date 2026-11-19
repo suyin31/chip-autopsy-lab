@@ -34,7 +34,7 @@ import {
   VERDICT_REVEAL_SETTLE_MS,
   type VerdictRiseBlockId,
   type VerdictRiseStepSpec,
-} from '@/ui/wafer-map/probe-sweep';
+} from '@/ui/motion';
 import { ConfidencePill } from './ConfidencePill';
 import { FindingsList } from './FindingsList';
 import { StatRow } from './StatRow';
@@ -649,6 +649,9 @@ export function AutopsyReportCard({
             isActive={headlineActive && headlineSource !== 'button'}
             onToggleClaim={() => toggleHeadlineFrom('phrase')}
             renderRiseBlock={renderRiseBlock}
+            revealed={effectiveRevealed}
+            completed={riseCompleted}
+            reducedMotion={prefersReduced}
           />
 
           {renderRiseBlock(

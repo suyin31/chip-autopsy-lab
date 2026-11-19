@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducedMotion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
@@ -10,13 +10,17 @@ import { sanitizeReportProseText } from '@/core/report';
 import { BinParetoChart, ParametricPanel, YieldSummaryPanel } from '@/ui/charts';
 import { formatGroupedInt } from '@/ui/format';
 import { useT } from '@/ui/i18n';
+import {
+  readPrefersReducedMotionSync,
+  resolveViewMorphTransition,
+  WAFER_MORPH_LAYOUT_ID,
+} from '@/ui/motion';
 import { Button } from '@/ui/primitives/button';
 import { AutopsyReportCard } from '@/ui/report';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
   EVIDENCE_SCROLL_NAV_GAP_PX,
   navBarHeightPx,
-  readPrefersReducedMotionSync,
   shouldDeferEvidenceForStage,
   StackedWaferPanel,
   WaferMapCanvas,
@@ -110,6 +114,22 @@ export function LoadedLotOverview({
   }, [lot]);
 
   const verdictRevealed = prefersReduced || revealedLot === lot;
+
+  const [morphSettledLot, setMorphSettledLot] = React.useState<
+    typeof lot | null
+  >(() => (prefersReduced ? lot : null));
+  const morphSettled = prefersReduced || morphSettledLot === lot;
+
+  React.useEffect(() => {
+    if (prefersReduced) {
+      setMorphSettledLot(lot);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setMorphSettledLot(lot);
+    }, 420);
+    return () => window.clearTimeout(timer);
+  }, [lot, prefersReduced]);
 
   React.useEffect(() => {
     store.getState().setLot(lot);
@@ -325,14 +345,26 @@ export function LoadedLotOverview({
         data-testid="stage-column"
         className="order-2 -mx-4 mt-5 w-[calc(100%+2rem)] sm:mx-0 sm:w-full lg:sticky lg:top-[52px] lg:order-none lg:col-start-1 lg:row-start-1 lg:mt-0 lg:h-[calc(100dvh-52px)] lg:min-h-[640px] lg:pt-5 lg:pb-4 xl:col-span-7"
       >
-        <WaferMapCanvas
-          lot={lot}
-          byWaferYield={yieldSummary.byWafer}
-          probeOrderByWafer={probeOrderByWafer}
-          enableInitialReveal
-          onVerdictRevealTrigger={handleVerdictRevealTrigger}
-          store={store}
-        />
+        <div className="relative h-full w-full">
+          <motion.div
+            key={lot.lotId}
+            aria-hidden="true"
+            data-testid="wafer-shared-morph"
+            data-morph-state={morphSettled ? 'settled' : 'morphing'}
+            layoutId={prefersReduced ? undefined : WAFER_MORPH_LAYOUT_ID}
+            transition={resolveViewMorphTransition(prefersReduced)}
+            onLayoutAnimationComplete={() => setMorphSettledLot(lot)}
+            className="pointer-events-none absolute inset-0 rounded-full"
+          />
+          <WaferMapCanvas
+            lot={lot}
+            byWaferYield={yieldSummary.byWafer}
+            probeOrderByWafer={probeOrderByWafer}
+            enableInitialReveal
+            onVerdictRevealTrigger={handleVerdictRevealTrigger}
+            store={store}
+          />
+        </div>
       </div>
 
       {/* Premium §2.4, §7.18: first-use hints (portalled; at most one visible) */}

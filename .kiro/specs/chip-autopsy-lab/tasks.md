@@ -160,7 +160,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - **Property 13** (DSL part) in `src/core/query/filter-dsl-codec.prop.test.ts`
     - _Requirements: 12.2_
 
-- [ ] 18. Add the reveal motion moments
+- [x] 18. Add the reveal motion moments
   - Skippable probe-sweep load (`~3 s`, once per session), cause-of-death type-on (`<= 1.5 s`), claim evidence light-up stagger (`<= 600 ms`), panel springs, and full `prefers-reduced-motion` handling.
   - _Requirements: 1.11, 10.1, 14.5, 17.5_
 

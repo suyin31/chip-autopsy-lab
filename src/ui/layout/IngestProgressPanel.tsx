@@ -1,8 +1,14 @@
 'use client';
 
+import { motion } from 'motion/react';
 import * as React from 'react';
 import { formatByteSize, formatGroupedInt } from '@/ui/format';
 import { Untranslated, useT } from '@/ui/i18n';
+import {
+  resolveViewMorphTransition,
+  useReducedMotionPreference,
+  WAFER_MORPH_LAYOUT_ID,
+} from '@/ui/motion';
 import { WAFER_TOKENS } from '@/ui/tokens';
 import { computeStageDiscLayerRects } from '@/ui/wafer-map/stage-layers';
 import {
@@ -32,6 +38,7 @@ interface AreaSize {
  * `WCR` geometry is not known yet.
  */
 function LoadingDisc(): React.JSX.Element {
+  const reduced = useReducedMotionPreference();
   const areaRef = React.useRef<HTMLDivElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const [size, setSize] = React.useState<AreaSize | null>(null);
@@ -100,6 +107,14 @@ function LoadingDisc(): React.JSX.Element {
       data-wafer-diameter-px={Math.round(diameter)}
       className="relative aspect-square w-full lg:aspect-auto lg:min-h-0 lg:flex-1"
     >
+      <motion.div
+        aria-hidden="true"
+        data-testid="wafer-shared-morph"
+        data-morph-state={reduced ? 'settled' : 'morphing'}
+        layoutId={reduced ? undefined : WAFER_MORPH_LAYOUT_ID}
+        transition={resolveViewMorphTransition(reduced)}
+        className="pointer-events-none absolute inset-0 rounded-full"
+      />
       {rects ? (
         <>
           <div

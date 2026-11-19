@@ -1,7 +1,7 @@
 'use client';
 
 import { Download } from 'lucide-react';
-import { animate, useReducedMotion } from 'motion/react';
+import { animate, motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import {
   DEMO_DIES_PER_WAFER,
@@ -14,6 +14,12 @@ import {
 import { isCjkLocale, type MessageKey } from '@/core/i18n';
 import type { ParseFatalError } from '@/core/stdf';
 import { Untranslated, useT } from '@/ui/i18n';
+import {
+  resolvePressScale,
+  resolveViewMorphTransition,
+  useReducedMotionPreference,
+  WAFER_MORPH_LAYOUT_ID,
+} from '@/ui/motion';
 import {
   Button,
   cn,
@@ -218,6 +224,8 @@ interface LandingWaferDiscProps {
    * (light ambient + contact, dark halo). Card wafers keep the §5.3 thumbnail rules.
    */
   readonly hero?: boolean;
+  /** Enables the shared-element wafer morph (`WAFER_MORPH_LAYOUT_ID`) on the active demo card. */
+  readonly enableSharedMorph?: boolean;
   readonly renderWorkerThumbnail?: (
     presetId: DemoPresetId,
     cssSize: number,
@@ -231,8 +239,10 @@ function LandingWaferDisc({
   size,
   testId,
   hero = false,
+  enableSharedMorph = false,
   renderWorkerThumbnail,
 }: LandingWaferDiscProps): React.JSX.Element {
+  const reduced = useReducedMotionPreference();
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const frameRef = React.useRef<HTMLDivElement | null>(null);
   const sheenRef = React.useRef<HTMLDivElement | null>(null);
@@ -336,6 +346,16 @@ function LandingWaferDisc({
       style={{ width: `${size}px`, height: `${size}px` }}
       className="relative shrink-0"
     >
+      {enableSharedMorph ? (
+        <motion.div
+          aria-hidden="true"
+          data-testid="wafer-shared-morph"
+          data-morph-state="ready"
+          layoutId={reduced ? undefined : WAFER_MORPH_LAYOUT_ID}
+          transition={resolveViewMorphTransition(reduced)}
+          className="pointer-events-none absolute inset-0 rounded-full"
+        />
+      ) : null}
       {hero ? (
         <div
           aria-hidden="true"
@@ -405,7 +425,9 @@ function LandingWaferDisc({
 
 interface DemoLotCardButtonProps {
   readonly presetId: DemoPresetId;
+  readonly isSelected: boolean;
   readonly disabled: boolean;
+  readonly onSelectPreset: (presetId: DemoPresetId) => void;
   readonly onLoadDemoLot: (presetId: DemoPresetId) => void;
   readonly renderWorkerThumbnail?: (
     presetId: DemoPresetId,
@@ -417,12 +439,15 @@ interface DemoLotCardButtonProps {
 
 function DemoLotCardButton({
   presetId,
+  isSelected,
   disabled,
+  onSelectPreset,
   onLoadDemoLot,
   renderWorkerThumbnail,
 }: DemoLotCardButtonProps): React.JSX.Element {
   const { t, formatInteger } = useT();
   const shouldReduceMotion = useReducedMotion();
+  const reduced = Boolean(shouldReduceMotion);
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
   const pressedRef = React.useRef(false);
   const descId = React.useId();
@@ -446,27 +471,26 @@ function DemoLotCardButton({
     }
     pressedRef.current = false;
     const el = buttonRef.current;
-    if (el && !shouldReduceMotion) {
+    if (el && !reduced) {
       animate(el, { scale: 1 }, SPRING_TOKENS.snappy);
     }
-  }, [shouldReduceMotion]);
+  }, [reduced]);
 
   const handlePointerDown = (
     event: React.PointerEvent<HTMLButtonElement>,
   ): void => {
-    if (
-      event.button !== 0 ||
-      disabled ||
-      shouldReduceMotion ||
-      !buttonRef.current
-    ) {
+    if (event.button !== 0 || disabled) {
+      return;
+    }
+    onSelectPreset(presetId);
+    if (reduced || !buttonRef.current) {
       return;
     }
     pressedRef.current = true;
     animate(
       buttonRef.current,
-      { scale: 0.985 },
-      { duration: 0.1, ease: MOTION_TOKENS.easeOutTuple },
+      { scale: resolvePressScale('card', reduced) },
+      { duration: 0.08, ease: MOTION_TOKENS.easeOutTuple },
     );
   };
 
@@ -509,6 +533,7 @@ function DemoLotCardButton({
         <LandingWaferDisc
           presetId={presetId}
           size={size}
+          enableSharedMorph={isSelected}
           testId={(part) =>
             part ? `landing-demo-wafer-${part}-${presetId}` : `landing-demo-wafer-${presetId}`
           }
@@ -755,6 +780,7 @@ export function EmptyStateCard({
   cause = 'first-run',
   presets,
   selectedPresetId,
+  onSelectPreset,
   onLoadDemoLot,
   onDownloadDemoLot,
   downloadingPresetId = null,
@@ -1019,7 +1045,9 @@ export function EmptyStateCard({
                 <DemoLotCardButton
                   key={preset.id}
                   presetId={preset.id}
+                  isSelected={preset.id === selectedPresetId}
                   disabled={disabled}
+                  onSelectPreset={onSelectPreset}
                   onLoadDemoLot={onLoadDemoLot}
                   {...(renderWorkerThumbnail !== undefined
                     ? { renderWorkerThumbnail }

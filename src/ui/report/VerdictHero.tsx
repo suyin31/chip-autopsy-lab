@@ -3,11 +3,16 @@
 import * as React from 'react';
 import { isCjkLocale } from '@/core/i18n';
 import type { RenderedVerdictHero, ReportClaim } from '@/core/report';
+import { GlossaryText } from '@/ui/i18n/GlossaryText';
+import { useT } from '@/ui/i18n/use-t';
+import {
+  TYPE_ON_DEFAULT_MS,
+  useReducedMotionPreference,
+  useTypeOn,
+  type VerdictRiseBlockId,
+} from '@/ui/motion';
 import { AccentWord } from '@/ui/primitives/accent-word';
 import { cn } from '@/ui/primitives/cn';
-import type { VerdictRiseBlockId } from '@/ui/wafer-map/probe-sweep';
-import { useT } from '@/ui/i18n/use-t';
-import { GlossaryText } from '@/ui/i18n/GlossaryText';
 import { renderWithUntranslatedTokens } from './render-untranslated';
 
 const TAKEAWAY_TERMS = ['yield'] as const;
@@ -22,6 +27,9 @@ export interface VerdictHeroProps {
     id: VerdictRiseBlockId,
     children: React.ReactNode,
   ) => React.ReactNode;
+  readonly revealed?: boolean;
+  readonly completed?: boolean;
+  readonly reducedMotion?: boolean;
 }
 
 /** Lines the verdict may take before it steps down a size (premium §7.3, §4.3): 2 in Latin, 3 in CJK. */
@@ -49,14 +57,27 @@ export function VerdictHero({
   isActive,
   onToggleClaim,
   renderRiseBlock,
+  revealed = true,
+  completed = false,
+  reducedMotion,
 }: VerdictHeroProps): React.JSX.Element {
   const { locale } = useT();
+  const hookReduced = useReducedMotionPreference();
+  const effectiveReduced = reducedMotion ?? hookReduced;
   const headingRef = React.useRef<HTMLHeadingElement | null>(null);
   const [step, setStep] = React.useState<0 | 1 | 2>(0);
   const maxLines = resolveVerdictMaxLines(locale);
 
   // Reset the step-down whenever the headline text or locale changes so we measure at display-l first
   const measureKey = `${locale}|${verdict.fullHeadline}`;
+  const typeOn = useTypeOn({
+    text: verdict.fullHeadline,
+    durationMs: TYPE_ON_DEFAULT_MS,
+    enabled: revealed,
+    completed,
+    reducedMotion: effectiveReduced,
+    playKey: measureKey,
+  });
   const prevMeasureKeyRef = React.useRef(measureKey);
   if (prevMeasureKeyRef.current !== measureKey) {
     prevMeasureKeyRef.current = measureKey;
@@ -121,6 +142,7 @@ export function VerdictHero({
   const handlePointerDown = (
     event: React.PointerEvent<HTMLButtonElement>,
   ): void => {
+    typeOn.skip();
     if (typeof performance !== 'undefined') {
       event.currentTarget.dataset.ack = String(performance.now());
     }
@@ -131,6 +153,10 @@ export function VerdictHero({
       ref={headingRef}
       data-testid="verdict-headline"
       data-stepped-down={step > 0 ? String(step) : undefined}
+      data-typeon-settled={typeOn.settled ? 'true' : 'false'}
+      data-typeon-progress={typeOn.progress.toFixed(2)}
+      data-typeon-count={String(typeOn.visibleCount)}
+      data-typeon-text={typeOn.visibleText}
       className="type-display-l max-w-[520px] text-text-primary"
     >
       {verdict.isHealthy ? (
