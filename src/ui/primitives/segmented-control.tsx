@@ -185,8 +185,10 @@ export function SegmentedControl<T extends string = string>({
             }}
             onKeyDown={(event) => handleKeyDown(event, idx)}
             className={cn(
-              'group relative inline-flex h-full cursor-pointer items-center justify-center rounded-pill px-3.5 type-control whitespace-nowrap',
-              '[:is(:lang(zh),:lang(ja),:lang(ko))_&]:px-2.5',
+              'group relative inline-flex h-full cursor-pointer items-center justify-center rounded-pill type-control whitespace-nowrap',
+              options.length >= 4
+                ? 'px-2 sm:px-3.5 [:is(:lang(zh),:lang(ja),:lang(ko))_&]:px-2 sm:[:is(:lang(zh),:lang(ja),:lang(ko))_&]:px-2.5'
+                : 'px-3.5 [:is(:lang(zh),:lang(ja),:lang(ko))_&]:px-2.5',
               "after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] pointer-coarse:after:-inset-y-2",
               'transition-[color] duration-[120ms] ease-[var(--ease-out)]',
               'focus-visible:shadow-focus-ring focus-visible:outline-none',

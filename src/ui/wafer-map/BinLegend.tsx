@@ -13,6 +13,11 @@ import {
   type WaferColorMode,
 } from '@/ui/state';
 import {
+  paintMagmaLegendCanvas,
+  STACKED_LEGEND_HEIGHT_PX,
+  STACKED_LEGEND_WIDTH_PX,
+} from './stacked-heatmap-view';
+import {
   buildStageLegendModel,
   INLINE_FAIL_BIN_ENTRIES,
   LEGEND_FAILED_KEY,
@@ -20,11 +25,17 @@ import {
   resolveGroupToggleCodes,
   type StageLegendBin,
 } from './stage-legend';
+import {
+  computeParametricRange,
+  resolveCanvasPixelSize,
+} from './wafer-geometry';
 
 export interface BinLegendProps {
   readonly lot: LotModel;
   readonly waferIndex: number;
   readonly colorMode: WaferColorMode;
+  /** Active parametric `TEST_NUM` when `colorMode === 'parametric'`. */
+  readonly activeTestNum?: number | null;
   /** Final-state pass and fail die counts of the active wafer (Pass/fail legend). */
   readonly passCount: number;
   readonly failCount: number;
@@ -150,15 +161,17 @@ export function BinLegend({
   lot,
   waferIndex,
   colorMode,
+  activeTestNum = null,
   passCount,
   failCount,
   store,
   className,
 }: BinLegendProps): React.JSX.Element {
-  const { t, formatInteger } = useT();
+  const { t, formatInteger, formatParametricValue } = useT();
   const [moreOpen, setMoreOpen] = React.useState(false);
   const moreButtonRef = React.useRef<HTMLButtonElement>(null);
   const popoverRef = React.useRef<HTMLDivElement>(null);
+  const magmaLegendCanvasRef = React.useRef<HTMLCanvasElement>(null);
 
   const storeLot = useStore(store, (s) => s.lot);
   const storeHiddenBins = useStore(store, (s) => s.hiddenBins);
@@ -222,6 +235,124 @@ export function BinLegend({
       document.removeEventListener('pointerdown', onPointerDown, true);
     };
   }, [moreOpen]);
+
+  const parametricCol = React.useMemo(() => {
+    if (colorMode !== 'parametric') return undefined;
+    if (activeTestNum !== null && lot.tests.has(activeTestNum)) {
+      return lot.tests.get(activeTestNum);
+    }
+    return lot.tests.values().next().value;
+  }, [colorMode, activeTestNum, lot.tests]);
+
+  const parametricRange = React.useMemo(
+    () => (colorMode === 'parametric' ? computeParametricRange(parametricCol) : null),
+    [colorMode, parametricCol],
+  );
+
+  // Paint the 160 x 6 px magma color-bar legend when in Parametric mode (premium §3.6, Req 8.6)
+  React.useEffect(() => {
+    if (colorMode !== 'parametric') return;
+    const canvas = magmaLegendCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const dpr =
+      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const dims = resolveCanvasPixelSize(
+      STACKED_LEGEND_WIDTH_PX,
+      STACKED_LEGEND_HEIGHT_PX,
+      dpr,
+    );
+    if (canvas.width !== dims.pixelWidth) canvas.width = dims.pixelWidth;
+    if (canvas.height !== dims.pixelHeight) canvas.height = dims.pixelHeight;
+    paintMagmaLegendCanvas(
+      ctx,
+      STACKED_LEGEND_WIDTH_PX,
+      STACKED_LEGEND_HEIGHT_PX,
+      dims.dpr,
+    );
+  }, [colorMode, parametricCol]);
+
+  if (colorMode === 'parametric') {
+    const testLabel =
+      parametricCol?.testName && parametricCol.testName.length > 0
+        ? parametricCol.testName
+        : parametricCol
+          ? `Test ${parametricCol.testNum}`
+          : '';
+    const minStr =
+      parametricCol && parametricRange
+        ? formatParametricValue(
+            parametricRange.min,
+            parametricCol.units,
+            parametricCol.resScal,
+          )
+        : null;
+    const maxStr =
+      parametricCol && parametricRange
+        ? formatParametricValue(
+            parametricRange.max,
+            parametricCol.units,
+            parametricCol.resScal,
+          )
+        : null;
+
+    return (
+      <div
+        data-testid="stage-legend"
+        data-legend-mode="parametric"
+        className={cn(
+          'flex flex-wrap items-center gap-x-2.5 gap-y-1 type-caption',
+          className,
+        )}
+      >
+        {testLabel ? (
+          <Untranslated className="max-w-[120px] truncate text-text-secondary">
+            {testLabel}
+          </Untranslated>
+        ) : null}
+        {minStr !== null && maxStr !== null ? (
+          <div
+            data-testid="parametric-magma-legend"
+            role="img"
+            aria-label={t('parametric.legendAria', {
+              test: testLabel,
+              min: minStr,
+              max: maxStr,
+            })}
+            className="flex items-center gap-2"
+          >
+            <span
+              data-testid="parametric-legend-min"
+              className="type-caption text-text-tertiary tabular-nums"
+            >
+              <Untranslated>{minStr}</Untranslated>
+            </span>
+            <canvas
+              ref={magmaLegendCanvasRef}
+              data-testid="parametric-magma-legend-bar"
+              aria-hidden="true"
+              style={{
+                width: `${STACKED_LEGEND_WIDTH_PX}px`,
+                height: `${STACKED_LEGEND_HEIGHT_PX}px`,
+              }}
+              className="block shrink-0 rounded-[3px]"
+            />
+            <span
+              data-testid="parametric-legend-max"
+              className="type-caption text-text-tertiary tabular-nums"
+            >
+              <Untranslated>{maxStr}</Untranslated>
+            </span>
+          </div>
+        ) : (
+          <span className="type-caption text-text-tertiary">
+            {t('parametric.legendNoData')}
+          </span>
+        )}
+      </div>
+    );
+  }
 
   if (colorMode !== 'hbin' && colorMode !== 'sbin') {
     const interactive = colorMode === 'pass-fail';

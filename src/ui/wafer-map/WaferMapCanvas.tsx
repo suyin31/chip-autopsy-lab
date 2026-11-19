@@ -2116,12 +2116,13 @@ function WaferMapCanvasImpl({
 
   // Premium §5.6: "Hard bins" and "Soft bins" are Terms; the definition shows after 600 ms
   const modeTermId = React.useId();
+  const hasParametricTests = lot.tests.size > 0;
   const modeOptions = React.useMemo<
-    readonly SegmentedControlOption<'pass-fail' | 'hbin' | 'sbin'>[]
+    readonly SegmentedControlOption<WaferColorMode>[]
   >(() => {
     const hard = resolveGlossaryEntry(locale, 'hardBin');
     const soft = resolveGlossaryEntry(locale, 'softBin');
-    return [
+    const base: SegmentedControlOption<WaferColorMode>[] = [
       { value: 'pass-fail', label: t('mode.passFail') },
       {
         value: 'hbin',
@@ -2154,10 +2155,18 @@ function WaferMapCanvasImpl({
         ariaDescribedBy: `${modeTermId}-soft`,
       },
     ];
-  }, [locale, modeTermId, t]);
+    if (hasParametricTests) {
+      base.push({ value: 'parametric', label: t('mode.parametric') });
+    }
+    return base;
+  }, [hasParametricTests, locale, modeTermId, t]);
 
-  const segmentedValue: 'pass-fail' | 'hbin' | 'sbin' =
-    colorMode === 'hbin' || colorMode === 'sbin' ? colorMode : 'pass-fail';
+  const segmentedValue: WaferColorMode =
+    colorMode === 'hbin' ||
+    colorMode === 'sbin' ||
+    (colorMode === 'parametric' && hasParametricTests)
+      ? colorMode
+      : 'pass-fail';
 
   const evidencePresence = React.useMemo(
     () =>
@@ -2530,12 +2539,17 @@ function WaferMapCanvasImpl({
           lot={lot}
           waferIndex={safeWaferIndex}
           colorMode={colorMode}
+          activeTestNum={activeTestNum}
           passCount={passCount}
           failCount={failCount}
           store={store}
-          className="order-last col-span-2 mt-2 min-h-6 px-4 sm:basis-full sm:px-0 xl:order-none xl:mt-0 xl:ml-6 xl:min-h-0 xl:basis-auto"
+          className={cn(
+            'order-last col-span-2 mt-2 min-h-6 px-4 sm:basis-full sm:px-0',
+            colorMode !== 'parametric' &&
+              'xl:order-none xl:mt-0 xl:ml-6 xl:min-h-0 xl:basis-auto',
+          )}
         />
-        <div className="mt-2 ml-auto flex h-9 items-center gap-2 pr-4 pl-3 sm:mt-0 sm:h-10 sm:pr-0">
+        <div className="mt-2 ml-auto flex h-9 items-center gap-2 pr-4 pl-2 sm:mt-0 sm:h-10 sm:pr-0 sm:pl-3">
           <div
             ref={resetViewRef}
             data-testid="stage-reset-view"

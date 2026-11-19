@@ -734,16 +734,17 @@ export function resolveDieFillColor(
     return getFailBinColor(rank);
   }
 
-  // Parametric magma heatmap mode
+  // Parametric magma heatmap mode (premium §3.6: magma on t in [0.18, 1.0])
   if (!parametricCol || !parametricRange) {
-    return COLOR_TOKENS.surface2;
+    return resolvePassTileColor(highContrast);
   }
   const val = parametricCol.values[dieIndex]!;
   if (!Number.isFinite(val)) {
-    return COLOR_TOKENS.surface2;
+    return resolvePassTileColor(highContrast);
   }
   const span = parametricRange.max - parametricRange.min;
-  const t = span > 0 ? (val - parametricRange.min) / span : 0.5;
+  const u = span > 0 ? Math.min(1, Math.max(0, (val - parametricRange.min) / span)) : 0.5;
+  const t = 0.18 + u * (1.0 - 0.18);
   return sampleMagmaHex(t);
 }
 

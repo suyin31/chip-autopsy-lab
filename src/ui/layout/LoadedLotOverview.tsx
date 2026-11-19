@@ -5,7 +5,7 @@ import * as React from 'react';
 import type { StoreApi } from 'zustand';
 import type { DemoPresetId, DemoPresetMeta } from '@/core/demo';
 import { sanitizeReportProseText } from '@/core/report';
-import { BinParetoChart, YieldSummaryPanel } from '@/ui/charts';
+import { BinParetoChart, ParametricPanel, YieldSummaryPanel } from '@/ui/charts';
 import { formatGroupedInt } from '@/ui/format';
 import { useT } from '@/ui/i18n';
 import { AutopsyReportCard } from '@/ui/report';
@@ -179,6 +179,13 @@ export function LoadedLotOverview({
               <StackedWaferPanel
                 lot={lot}
                 byWaferYield={yieldSummary.byWafer}
+                store={store}
+                className="mt-12 lg:mt-24"
+              />
+            ) : null}
+            {lot.tests.size > 0 ? (
+              <ParametricPanel
+                lot={lot}
                 store={store}
                 className="mt-12 lg:mt-24"
               />

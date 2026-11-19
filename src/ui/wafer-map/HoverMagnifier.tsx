@@ -225,7 +225,11 @@ const HoverMagnifierImpl = React.forwardRef<
   // A finding click only reorders the readout's key tests; defer that so the click frame
   // carries just the urgent highlight render (§5.10)
   const preferredTestNum = React.useDeferredValue(
-    isSynced ? (rawClaimCitedTestNum ?? rawActiveTestNum) : null,
+    isSynced
+      ? colorMode === 'parametric'
+        ? (rawActiveTestNum ?? rawClaimCitedTestNum)
+        : (rawClaimCitedTestNum ?? rawActiveTestNum)
+      : null,
   );
 
   const [pinnedDieIndex, setPinnedDieIndex] = React.useState<number | null>(
@@ -726,7 +730,9 @@ const HoverMagnifierImpl = React.forwardRef<
       ? (hbinRankMap.get(hbin) ?? 0)
       : (sbinRankMap.get(sbin) ?? 0);
     const swatchInkIndex =
-      !isPass && colorMode !== 'pass-fail' ? binInkIndexForRank(rank) : null;
+      !isPass && (colorMode === 'hbin' || colorMode === 'sbin')
+        ? binInkIndexForRank(rank)
+        : null;
 
     return {
       xText: formatDieCoordinate(x),
