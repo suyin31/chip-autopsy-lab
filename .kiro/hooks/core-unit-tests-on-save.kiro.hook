@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Core unit tests on save",
+  "description": "When a file under src/core/ is saved, run its colocated unit and property tests and update them if the behavior change is intended.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["src/core/**/*.ts"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A file under src/core/ was just saved. Find its colocated tests (<name>.test.ts and <name>.prop.test.ts in the same folder, or other tests in that folder that import it) and run them with `pnpm exec vitest run <test files>`. If the saved file is itself a test, run it. If a test fails, decide whether the source change is a bug or an intended behavior change: fix the source for a bug, or update the test for an intended change. Never weaken a fast-check property from design.md to make it pass. If an exported function has no test, add a focused *.test.ts beside it. Reply with one line: the tests run and the result."
+  }
+}

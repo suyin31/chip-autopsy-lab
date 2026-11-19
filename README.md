@@ -103,6 +103,16 @@ Chip Autopsy Lab is local-first by design:
 
 Development followed a strict spec -> tasks -> agent implementation -> verification loop logged in `logs/progress.md`. Each task in `.kiro/specs/chip-autopsy-lab/tasks.md` referenced specific EARS requirements and design properties, implemented pure logic in `src/core/` before wiring `src/workers/` and `src/ui/`, and required clean `pnpm typecheck`, `pnpm lint`, Vitest unit/property suites, and Playwright browser checks before completion. The repository currently verifies **474 unit and property tests across 82 test files** (including **16 `fast-check` property suites**) and **54 Playwright E2E spec files** in `e2e/`.
 
+### Hooks
+
+Agent hooks in `.kiro/hooks/` run on file save:
+
+| Hook file | Trigger | What the agent does |
+|---|---|---|
+| `lint-typecheck-on-save.kiro.hook` | `src/**/*.ts`, `src/**/*.tsx` | Runs ESLint on the saved file and `pnpm typecheck`, then fixes errors the change introduced. |
+| `core-unit-tests-on-save.kiro.hook` | `src/core/**/*.ts` | Runs the colocated `*.test.ts` and `*.prop.test.ts` suites and fixes the source or updates the tests. |
+| `i18n-key-parity-on-save.kiro.hook` | `src/core/i18n/**`, `src/ui/i18n/**` | Runs `src/core/i18n/i18n.test.ts` and checks that `en`, `zh-CN`, and `zh-TW` have matching keys and placeholders. |
+
 ## Architecture
 
 ```text

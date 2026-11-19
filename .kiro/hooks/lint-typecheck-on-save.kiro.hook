@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Lint and typecheck on save",
+  "description": "When a TypeScript source file under src/ is saved, run ESLint on it and the project typecheck, then fix any errors the change introduced.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["src/**/*.ts", "src/**/*.tsx"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A TypeScript file under src/ was just saved. Run `pnpm exec eslint <saved file>` and `pnpm typecheck`. If the saved change introduced lint or type errors, fix them with the smallest edit in that file. Keep src/core/ free of React, Next.js, and DOM imports, and never reference NEXT_PUBLIC_LLM_*. Do not refactor unrelated code. Reply with one line: clean, or the errors you fixed."
+  }
+}

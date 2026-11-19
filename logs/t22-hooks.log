@@ -1,0 +1,49 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=11
+[tool] Inspect repo layout and existing hooks
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=71
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Locate i18n files and README sections
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=72
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read README Kiro section and i18n structure
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Create three hook files and validate JSON
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=554
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the README section, placed after the "How Kiro was used" workflow paragraph, before Architecture.
+[tool] Replace in File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=146
+[tool] status: Pending
+[tool] status: Completed
+[tool] Confirm only intended files changed
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=32
+[tool] status: Completed
+I added three hooks in `.kiro/hooks/` and a "Hooks" section to `README.md`. The section is a table under "How Kiro was used", just before "Architecture". All three files parse as valid JSON and contain no secrets. I haven't watched them fire in Kiro, and I wrote the hook format from memory without checking it against the Kiro docs.
+
+Each hook runs when a matching file is saved and asks the agent to do the check:
+
+| File | Runs on save of | What the agent does |
+|---|---|---|
+| `lint-typecheck-on-save.kiro.hook` | `src/**/*.ts`, `src/**/*.tsx` | Runs `pnpm exec eslint <saved file>` and `pnpm typecheck`, then makes the smallest fix for errors the change introduced. It also keeps `src/core/` free of React and DOM imports and blocks `NEXT_PUBLIC_LLM_*`. |
+| `core-unit-tests-on-save.kiro.hook` | `src/core/**/*.ts` | Runs the saved file's `*.test.ts` and `*.prop.test.ts` files with Vitest. If a test fails, it fixes the source for a bug or updates the test for an intended change. It never weakens a property from `design.md`. |
+| `i18n-key-parity-on-save.kiro.hook` | `src/core/i18n/**`, `src/ui/i18n/**` | Runs the existing parity test in `src/core/i18n/i18n.test.ts`. It also compares `en.ts` directly with `zh-cn.ts` and `zh-tw.ts` for missing or extra keys and mismatched placeholders, and adds missing translations without removing any `en` key. |
+
+Things you should know:
+- **No separate strings folder:** this repo has no `src/i18n`. The UI strings live in `src/core/i18n/messages/`, so the third hook watches that folder plus `src/ui/i18n/`.
+- **Chinese means both variants:** I read "zh" as both `zh-CN` and `zh-TW`. The existing test also covers `ja` and `ko`.
+- **Overlap in `src/core/`:** saving a file there runs both the lint/typecheck hook and the tests hook.
+- **Files I left alone:** `logs/t22-hooks.log` and `prompts/t22-hooks.md` were already untracked in the repo, so I didn't touch them.
+
+No other code was changed.[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=148
+
