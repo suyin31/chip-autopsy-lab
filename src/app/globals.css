@@ -847,6 +847,28 @@
     color: var(--ember-ink);
   }
 
+  /* CJK accent: a Song/Ming serif in the accent colour, upright (no synthetic oblique on Han
+     glyphs); Latin runs inside it keep Instrument Serif italic. */
+  :is(:lang(zh-CN), :lang(zh-TW), :lang(ja), :lang(ko)) .type-accent {
+    font-family: var(--font-accent), "Songti SC", "STSong", "Songti TC", "Hiragino Mincho ProN",
+      "AppleMyungjo", "Noto Serif CJK SC", "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
+    font-synthesis: none;
+    font-weight: 600;
+    font-size: 1.04em;
+  }
+  :lang(zh-TW) .type-accent {
+    font-family: var(--font-accent), "Songti TC", "LiSong Pro", "Noto Serif CJK TC", "Noto Serif TC",
+      "Source Han Serif TC", "PMingLiU", serif;
+  }
+  :lang(ja) .type-accent {
+    font-family: var(--font-accent), "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif CJK JP",
+      "Noto Serif JP", "Source Han Serif JP", "MS PMincho", serif;
+  }
+  :lang(ko) .type-accent {
+    font-family: var(--font-accent), "AppleMyungjo", "Noto Serif CJK KR", "Noto Serif KR",
+      "Source Han Serif KR", "Batang", serif;
+  }
+
   /* Instrument notes (premium.md §12.4): mono 12/16, tracking +0.02em; numbers stay Inter elsewhere */
   .type-mono-note {
     font-family: var(--font-mono);

@@ -11,7 +11,7 @@ import {
   getDemoPresetPreview,
   getDemoStdfFileName,
 } from '@/core/demo';
-import { isCjkLocale, type MessageKey } from '@/core/i18n';
+import { type MessageKey } from '@/core/i18n';
 import type { ParseFatalError } from '@/core/stdf';
 import { Untranslated, useT } from '@/ui/i18n';
 import {
@@ -966,7 +966,7 @@ export function EmptyStateCard({
             {renderAccentPhrase(
               t('landing.headline'),
               t('landing.headlineAccent'),
-              !isCjkLocale(locale),
+              true,
             )}
           </h1>
 

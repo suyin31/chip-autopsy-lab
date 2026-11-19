@@ -244,9 +244,10 @@ function generateArchetypeWaferGrid(params: {
         break;
       }
       case 'Random': {
-        // Spatially uniform 2x2 sublattice + mild Bernoulli noise avoids clumped clusters
-        const onSubgrid = ((x & 1) === 0 && (y & 1) === 0) || rng.nextBool(0.03);
-        failed = onSubgrid && rng.nextBool(0.42);
+        // Spatially uniform heavy scatter. Real WM-811K 'Random' wafers fail ~42-55% of dies
+        // (train-split IQR); a sparse ~11% scatter is what expert-labeled 'None' wafers look like
+        // (median ~10%), so the archetype follows the real labels since the WM-811K-fit stage.
+        failed = rng.nextBool(0.47);
         break;
       }
       case 'Edge-Loc': {

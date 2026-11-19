@@ -150,8 +150,10 @@ function buildSyntheticScenarioLot(
           softBin = 9;
         }
       } else if (scenario === 'tier4-random') {
-        // Uniform deterministic pseudo-random ~10% loss balanced across sites (coprime stride)
-        fail = ((idx * 37 + w * 13 + (seedBits & 7)) % 11) === 0;
+        // Uniform deterministic pseudo-random ~45% loss balanced across sites (coprime stride).
+        // Real WM-811K 'Random' wafers fail ~42-55% of dies; a ~10% uniform scatter is what
+        // expert-labeled 'None' wafers look like, so the WM-811K-fit classifier calls it 'None'.
+        fail = ((idx * 37 + w * 13 + (seedBits & 7)) % 11) < 5;
         if (fail) {
           hardBin = 5;
           softBin = 11;

@@ -135,8 +135,8 @@ describe('UI I18nProvider, useT hook, pre-hydration script, and persistence (Tas
   it('renders localized copy and bound Intl formatters for all 5 locales via I18nProvider', () => {
     const expectedHeadlines: Readonly<Record<Locale, string>> = {
       en: 'Drop the body.',
-      'zh-CN': '把遗体放这里。',
-      'zh-TW': '把遺體放這裡。',
+      'zh-CN': '把晶圆送来验尸。',
+      'zh-TW': '把晶圓送來驗屍。',
       ja: '遺体をここに。',
       ko: '시신을 여기에.',
     };

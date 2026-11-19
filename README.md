@@ -13,7 +13,7 @@ Test, product, and yield engineers at small fabless teams and OSATs routinely tr
 - **Stacked multi-wafer heatmap**: Aggregates per-`(X, Y)` failure rates across wafers on a perceptually uniform `magma` ramp with a numeric scale legend, cell hover readout, rectangular region selection, and animated wafer-gallery collapse.
 - **Bin Pareto and yield summary**: Pairs a visx Bin Pareto chart (`SBIN`/`HBIN` toggle, dominant failure highlight, click-to-filter) with lot, wafer, and test-site yield breakdowns covering first-pass yield, final yield, retest counts, and single-site anomaly detection.
 - **Parametric analysis**: Computes Welford mean and sigma, two-sided and single-sided `Cp`/`Cpk`, SI-prefixed scaled measurements, sortable test catalogs, histograms with `LO_LIMIT`/`HI_LIMIT` markers and scrub readout, and a parametric wafer heatmap mode.
-- **WM-811K spatial signature classification**: Runs a deterministic, D4-symmetry-robust TypeScript classifier across all 9 WM-811K classes (`Center`, `Donut`, `Edge-Loc`, `Edge-Ring`, `Loc`, `Near-full`, `Random`, `Scratch`, `None`) with confidence scores and hedged root-cause hypotheses.
+- **WM-811K spatial signature classification**: Runs a deterministic, D4-symmetry-robust TypeScript classifier across all 9 WM-811K classes (`Center`, `Donut`, `Edge-Loc`, `Edge-Ring`, `Loc`, `Near-full`, `Random`, `Scratch`, `None`) with confidence scores and hedged root-cause hypotheses. Measured on real WM-811K wafers: 97.8% accuracy / macro-F1 0.885 on a held-out test split (see [Real-data accuracy](#real-data-accuracy-wm-811k)).
 - **Verdict-first Autopsy Report with clickable evidence**: Evaluates a 6-tier deterministic verdict engine that leads with a plain-language cause of death and findings; clicking the verdict, summary stats, or any finding highlights the supporting dies on the wafer map and the matching bar in the Bin Pareto chart.
 - **Live cross-chart brushing**: Brushing a region on the single-wafer map or stacked heatmap immediately cross-filters the Bin Pareto, yield summary, and parametric views, with removable filter chips and `Escape` or click-out clearing.
 - **`Cmd-K` / `Ctrl-K` filter palette**: Opens an instant `cmdk` command palette backed by a typed Filter DSL and an offline natural-language grammar supporting queries such as `only bin 7`, `edge 3 rings`, `tests with Cpk < 1.33`, and `show edge failures with Cpk < 1.33`.
@@ -113,6 +113,34 @@ Agent hooks in `.kiro/hooks/` run on file save:
 | `core-unit-tests-on-save.kiro.hook` | `src/core/**/*.ts` | Runs the colocated `*.test.ts` and `*.prop.test.ts` suites and fixes the source or updates the tests. |
 | `i18n-key-parity-on-save.kiro.hook` | `src/core/i18n/**`, `src/ui/i18n/**` | Runs `src/core/i18n/i18n.test.ts` and checks that `en`, `zh-CN`, and `zh-TW` have matching keys and placeholders. |
 
+## Real-data accuracy (WM-811K)
+
+Measured on the real, expert-labeled **WM-811K** wafer maps (Wu, Jang & Chen, "Wafer Map Failure Pattern Recognition and Similarity Ranking for Large-Scale Data Sets", *IEEE Trans. Semiconductor Manufacturing* 28(1):1–12, 2015, doi:10.1109/TSM.2014.2364237), downloaded from the public mirror https://huggingface.co/datasets/lslattery/wafer-defect-detection. All 172,950 labeled wafers, fixed stratified 70/30 split (seed 20261120). Everything that was tuned or learned used the **train ids only**; the **test** split (51,886 wafers) was run once after freezing.
+
+| Classifier | Test accuracy | Test macro-F1 | `None` wafers called a defect |
+|---|---:|---:|---:|
+| Original rules only (baseline) | 51.3% | 0.289 | 44.5% |
+| **Current: rules + handcrafted features + small logistic regression** | **97.8%** | **0.885** | **0.5%** |
+
+Test recall per class: Center 0.92 · Donut 0.91 · Edge-Loc 0.82 · Edge-Ring 0.98 · Loc 0.70 · Near-full 0.98 · Random 0.88 · Scratch 0.66 · None 0.995. (Train split, in-sample: 98.0% / macro-F1 0.898.) About 0.35 ms per wafer in Node, single thread.
+
+How it works: features are computed on the raw map and on 3×3-neighbour-denoised maps (zone/ring densities relative to each wafer's own background, geometry of the largest denoised region, clustering), as in feature-based WM-811K work; a multinomial logistic regression (87 features, ~970 plain TypeScript constants in `src/core/patterns/wm811k-model.ts`) makes the call; decisive rule scores still win for clean, STDF-style wafers. Sources and design notes: `logs/wm811k-tuning-notes.md`. Full tables and confusion matrices: `logs/wm811k-benchmark.md` / `.json`.
+
+Limitations:
+- Faint Loc, Edge-Loc and Scratch patterns are still the main misses (most go to `None`); Loc ↔ Edge-Loc is the main confusion.
+- The learned part follows WM-811K's labels (one fab, labels known to be somewhat noisy): a uniform ~10% scatter counts as `None`. Confidence is a WM-811K class probability, not calibrated for other fabs' STDF data.
+- Not directly comparable to published numbers that use other splits (e.g. Wu et al.'s own partition) or balanced subsets; accuracy here is dominated by `None` (85% of wafers), so read macro-F1 and per-class recall.
+
+Reproduce (the dataset is not stored in this repo):
+
+```bash
+curl -L -o /path/to/wm811k/LSWMD.pkl https://huggingface.co/datasets/lslattery/wafer-defect-detection/resolve/main/LSWMD.pkl
+(cd /path/to/wm811k && python3 /path/to/repo/tools/wm811k-export.py)   # -> labeled.jsonl, split.json (needs pandas)
+npx tsx tools/bench-wm811k.ts /path/to/wm811k                     # benchmark
+npx tsx tools/wm811k-export-features.ts /path/to/wm811k feats.csv  # optional: re-train (needs scikit-learn)
+python3 tools/train-wm811k.py feats.csv                            # uses split == train rows only
+```
+
 ## Architecture
 
 ```text
@@ -193,7 +221,7 @@ src/
 
 ### External data
 
-No external dataset or pre-trained model weights are bundled in this repository. The WM-811K wafer map dataset is referenced only for its 9 canonical spatial defect class names; classification is performed by a deterministic feature-based TypeScript implementation, and all demo lots and test fixtures are synthesized locally.
+No external dataset is bundled in this repository, and all demo lots and test fixtures are synthesized locally. The WM-811K dataset (Wu, Jang & Chen 2015; MIR Lab, mirrored at https://huggingface.co/datasets/lslattery/wafer-defect-detection) defines the 9 spatial defect classes and was used offline to fit and benchmark the classifier: the only thing derived from it in the repo is `src/core/patterns/wm811k-model.ts`, about 970 logistic-regression constants (no wafer maps). The mirror states no license; check the original MIR Lab / Kaggle terms before redistributing.
 
 ## License
 

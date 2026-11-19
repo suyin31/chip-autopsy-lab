@@ -257,7 +257,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
 
     // §7 exact deadpan examples
     expect(t('en', 'landing.headline')).toBe('Drop the body.');
-    expect(t('zh-CN', 'landing.headline')).toBe('把遗体放这里。');
+    expect(t('zh-CN', 'landing.headline')).toBe('把晶圆送来验尸。');
     expect(t('ja', 'landing.headline')).toBe('遺体をここに。');
   });
 

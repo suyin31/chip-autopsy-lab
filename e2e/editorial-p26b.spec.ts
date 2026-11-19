@@ -3,7 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 /**
  * Premium P26b editorial accent (premium §12): warm paper bg (A45), one Instrument Serif accent
- * per viewport in Latin locales and none in CJK (A46), landing headline >= 88 px at 1440 (A47),
+ * per viewport in every locale, CJK using a native serif (Songti/Ming/Mincho/Myeongjo) (A46), landing headline >= 88 px at 1440 (A47),
  * and the mono eyebrow (A48).
  */
 
@@ -106,12 +106,12 @@ test.describe("P26b editorial accent (premium §12)", () => {
   });
 
   for (const locale of ["ja", "zh-CN", "zh-TW", "ko"] as const) {
-    test(`A46: no accent face in ${locale}, landing and loaded`, async ({ page }) => {
+    test(`A46 (rev 11-20): one serif accent run in ${locale}, landing and loaded`, async ({ page }) => {
       await open(page, locale, false);
-      expect(await countAccentElements(page)).toBe(0);
+      expect(await countAccentElements(page)).toBe(1);
       await page.getByTestId("landing-open-sample-button").click();
       await expect(page.getByTestId("verdict-headline")).toBeVisible({ timeout: 5_000 });
-      expect(await countAccentElements(page)).toBe(0);
+      expect(await countAccentElements(page)).toBe(1);
       await expect(page.getByTestId("autopsy-headline-button")).toHaveCSS(
         "color",
         "rgb(217, 78, 20)",

@@ -1,10 +1,15 @@
 /**
- * Deterministic, weightless, D4-invariant 9-class WM-811K spatial failure-pattern
- * classifier for single wafers and multi-wafer stacked failure heatmaps
- * (`src/core/patterns/wm811k-classifier.ts`).
+ * Deterministic, D4-invariant 9-class WM-811K spatial failure-pattern classifier for single
+ * wafers and multi-wafer stacked failure heatmaps (`src/core/patterns/wm811k-classifier.ts`).
  *
- * Pure deterministic TypeScript with zero ML weights, zero bundled datasets,
- * zero network calls, and zero React/Next.js/DOM imports.
+ * Two stages: the original hand-written rule scores (design.md 3.4), then a small multinomial
+ * logistic regression over handcrafted features (`wm811k-features.ts`) whose ~970 constants in
+ * `wm811k-model.ts` were fit only on the WM-811K train split (`tools/train-wm811k.py`). Decisive
+ * structured rule calls and site-driven STDF lots keep the rule result. Benchmark and protocol:
+ * `logs/wm811k-benchmark.md`.
+ *
+ * Pure deterministic TypeScript: no ML runtime, zero bundled datasets, zero network calls, and
+ * zero React/Next.js/DOM imports.
  *
  * Validates: Requirements 9.1, 9.2, 9.3, 9.4, 17.7
  */
@@ -16,6 +21,15 @@ import {
   packWaferCoord,
   STDF_MISSING_COORD,
 } from '../model/types';
+import { computeRealFeatures, REAL_FEATURE_NAMES } from './wm811k-features';
+import {
+  WM811K_MODEL_BIAS,
+  WM811K_MODEL_CLASSES,
+  WM811K_MODEL_CLIP,
+  WM811K_MODEL_MEAN,
+  WM811K_MODEL_SCALE,
+  WM811K_MODEL_WEIGHTS,
+} from './wm811k-model';
 import {
   formatPatternCandidateHypotheses,
   type ScoredWm811kClass,
@@ -64,6 +78,16 @@ const CLASS_PRIORITY_ORDER: readonly ScoredWm811kClass[] = [
   'Loc',
   'Random',
 ] as const;
+
+/**
+ * Decisive-rule override: when the hand-written rule score of a structured class (anything but
+ * `Random`) reaches this value, the rule's class is kept instead of the learned model's.
+ * Chosen on an inner validation split of the WM-811K train ids only: such rule calls were 99.7%
+ * correct (870/873) and keeping them changed validation accuracy / macro-F1 by < 0.001
+ * (0.9799 / 0.8876 with the override vs 0.9800 / 0.8880 for the model alone). It keeps the
+ * design-doc behavior on clean, sparse STDF-style maps that are far from the noisy WM-811K training distribution.
+ */
+export const HEURISTIC_OVERRIDE_MIN_SCORE = 0.6;
 
 const MIN_VALID_I2_COORD = -32767;
 const MAX_VALID_I2_COORD = 32767;
@@ -138,7 +162,10 @@ export interface PatternClassification {
    * (surface this distinction in UI tooltips).
    */
   readonly confidence: number;
-  /** Raw unrounded `[0, 1]` feature scores for the 8 non-`'None'` classes (`design.md` 3.4). */
+  /**
+   * Unrounded `[0, 1]` scores for the 8 non-`'None'` classes. Since the WM-811K real-data stage
+   * these are the learned model's class probabilities (zero when the noise gate decided `'None'`).
+   */
   readonly rawClassScores: Readonly<Record<ScoredWm811kClass, number>>;
   /** Per-class scores across all 9 `Wm811kClass` labels including `'None'`. */
   readonly classScores: Readonly<Record<Wm811kClass, number>>;
@@ -172,6 +199,8 @@ interface SpatialGridInput {
   readonly isActiveFail: Uint8Array;
   /** Maps each cell `0 .. testedCount - 1` to its failing `LotModel.dies` index(es). */
   readonly cellFailDieIndices: ReadonlyArray<number | Uint32Array>;
+  /** Fails concentrate on one test site (see `isSiteDrivenFailSet`): use the rule path only. */
+  readonly siteDriven?: boolean;
 }
 
 interface PcaShapeMetrics {
@@ -495,6 +524,74 @@ const ZERO_RAW_SCORES: Readonly<Record<ScoredWm811kClass, number>> = {
 
 const EMPTY_DIE_INDICES = new Uint32Array(0);
 const EMPTY_STRING_LIST: readonly string[] = [];
+
+/**
+ * True when the failing dies in `[start, end)` are dominated by one test site: that site's fail
+ * rate is at least `SITE_DRIVEN_MIN_RATE_RATIO` times the pooled rate of the other sites and it
+ * holds at least half of the fails. WM-811K maps carry no tester-site information, so the learned
+ * stage cannot represent a site-periodic fail lattice (it looks like ordinary background scatter);
+ * for such lots the hand-written rules decide alone, and the report's site-anomaly tier explains
+ * the fails. Lots without per-die site data (e.g. the WM-811K benchmark) never trigger this.
+ */
+const SITE_DRIVEN_MIN_RATE_RATIO = 3;
+function isSiteDrivenFailSet(lot: LotModel, start: number, end: number): boolean {
+  const siteIndex = (lot.dies as { readonly siteIndex?: Uint8Array }).siteIndex;
+  if (siteIndex === undefined || siteIndex.length < end) {
+    return false;
+  }
+  const tested = new Map<number, number>();
+  const failed = new Map<number, number>();
+  let totalFail = 0;
+  for (let i = start; i < end; i += 1) {
+    if (lot.dies.hasValidCoords[i] === 0) continue;
+    const site = siteIndex[i]!;
+    tested.set(site, (tested.get(site) ?? 0) + 1);
+    if (lot.dies.finalPass[i] === 0) {
+      failed.set(site, (failed.get(site) ?? 0) + 1);
+      totalFail += 1;
+    }
+  }
+  if (tested.size < 2 || totalFail < CLASSIFIER_THRESHOLDS.MIN_FAIL_COUNT) {
+    return false;
+  }
+  let totalTested = 0;
+  for (const t of tested.values()) totalTested += t;
+  for (const [site, t] of tested) {
+    const f = failed.get(site) ?? 0;
+    const otherTested = totalTested - t;
+    const otherRate = (totalFail - f) / Math.max(1, otherTested);
+    if (f >= 0.5 * totalFail && f / t >= SITE_DRIVEN_MIN_RATE_RATIO * Math.max(otherRate, 1e-9)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Softmax probabilities of the generated logistic-regression model, in WM811K_MODEL_CLASSES order. */
+function scoreWm811kModel(vector: readonly number[]): number[] {
+  const F = WM811K_MODEL_MEAN.length;
+  const z = new Array<number>(F);
+  for (let j = 0; j < F; j += 1) {
+    const v = (vector[j]! - WM811K_MODEL_MEAN[j]!) / WM811K_MODEL_SCALE[j]!;
+    z[j] = Number.isFinite(v)
+      ? Math.max(-WM811K_MODEL_CLIP, Math.min(WM811K_MODEL_CLIP, v))
+      : 0;
+  }
+  const logits = WM811K_MODEL_WEIGHTS.map((w, k) => {
+    let acc = WM811K_MODEL_BIAS[k]!;
+    for (let j = 0; j < F; j += 1) acc += w[j]! * z[j]!;
+    return acc;
+  });
+  let mx = -Infinity;
+  for (const l of logits) mx = Math.max(mx, l);
+  let sum = 0;
+  const e = logits.map((l) => {
+    const v = Math.exp(l - mx);
+    sum += v;
+    return v;
+  });
+  return e.map((v) => v / sum);
+}
 
 function clamp01(value: number): number {
   if (value <= 0) return 0;
@@ -829,6 +926,7 @@ function collectSignatureDieIndices(
 function classifySpatialGrid(
   grid: SpatialGridInput,
   lotDieIds: readonly DieId[],
+  capture?: (vector: readonly number[]) => void,
 ): PatternClassification {
   const N = grid.testedCount;
   if (N === 0) {
@@ -1155,7 +1253,63 @@ function classifySpatialGrid(
       (1 - 0.8 * maxStructuredScore),
   );
 
-  const rawClassScores: Readonly<Record<ScoredWm811kClass, number>> = {
+
+  const real = computeRealFeatures({
+    testedCount: N,
+    x: grid.x,
+    y: grid.y,
+    ringIndex: grid.ringIndex,
+    isActiveFail: grid.isActiveFail,
+    cx,
+    cy,
+    rMax,
+  });
+  const featureVector: number[] = real.values.concat([
+    centerScore,
+    donutScore,
+    edgeLocScore,
+    edgeRingScore,
+    locScore,
+    nearFullScore,
+    randomScore,
+    scratchScore,
+    Math.min(radialDisparity, 20),
+    Math.min(edgeBalanceZ, 20),
+    excessClust8,
+    rawScratchMax,
+    rawLocMax,
+    maxEdgeComponentShare,
+    edgeAngularResultant,
+    maxComponentShare,
+  ]);
+  if (capture !== undefined) {
+    capture(featureVector);
+  }
+
+  // Step 7 (real-data stage): small multinomial logistic regression over the handcrafted
+  // feature vector (raw + denoised zone densities, salient-region geometry, and the heuristic
+  // scores above), fit only on the WM-811K train split (see wm811k-model.ts, train-wm811k.py).
+  const probs = scoreWm811kModel(featureVector);
+  let topIdx = 0;
+  for (let k = 1; k < probs.length; k += 1) {
+    if (probs[k]! > probs[topIdx]! + SCORE_TIE_EPSILON) {
+      topIdx = k;
+    }
+  }
+  const modelClass = WM811K_MODEL_CLASSES[topIdx]!;
+  const modelScores: Record<ScoredWm811kClass, number> = { ...ZERO_RAW_SCORES };
+  let pNone = 0;
+  for (let k = 0; k < probs.length; k += 1) {
+    const cls = WM811K_MODEL_CLASSES[k]!;
+    if (cls === 'None') {
+      pNone = probs[k]!;
+    } else {
+      modelScores[cls] = probs[k]!;
+    }
+  }
+
+  // Hand-written rule ranking (design.md 3.4 Step 7), kept for decisive structured calls.
+  const heuristicScores: Readonly<Record<ScoredWm811kClass, number>> = {
     Center: centerScore,
     Donut: donutScore,
     'Edge-Loc': edgeLocScore,
@@ -1165,37 +1319,47 @@ function classifySpatialGrid(
     Random: randomScore,
     Scratch: scratchScore,
   };
-
-  // Step 7: Top-2 ranking with deterministic priority tie-breaking
-  let topClass: ScoredWm811kClass = CLASS_PRIORITY_ORDER[0]!;
+  let ruleClass: ScoredWm811kClass = CLASS_PRIORITY_ORDER[0]!;
   let s1 = -1;
   let s2 = 0;
-
   for (let i = 0; i < CLASS_PRIORITY_ORDER.length; i += 1) {
     const cls = CLASS_PRIORITY_ORDER[i]!;
-    const score = rawClassScores[cls];
+    const score = heuristicScores[cls];
     if (score > s1 + SCORE_TIE_EPSILON) {
       if (s1 >= 0) {
         s2 = s1;
       }
       s1 = score;
-      topClass = cls;
+      ruleClass = cls;
     } else if (score > s2) {
       s2 = score;
     }
   }
-
-  if (s1 < CLASSIFIER_THRESHOLDS.MIN_CLASS_CONFIDENCE) {
-    return buildNoneClassification(1.0 - s1, features, rawClassScores);
+  const ruleOnly = grid.siteDriven === true;
+  if (ruleOnly && s1 < CLASSIFIER_THRESHOLDS.MIN_CLASS_CONFIDENCE) {
+    return buildNoneClassification(1.0 - s1, features, heuristicScores);
   }
+  const ruleIsDecisive =
+    ruleOnly || (s1 >= HEURISTIC_OVERRIDE_MIN_SCORE && ruleClass !== 'Random');
 
-  // MINOR-5: Because s1 >= MIN_CLASS_CONFIDENCE (0.45) here, this linear heuristic
-  // mapping spans [0.67, 0.98]; 0.67 marks the marginal admission floor rather than a
-  // calibrated posterior probability (UI tooltips should note this heuristic scale).
+  if (!ruleIsDecisive && modelClass === 'None') {
+    return buildNoneClassification(pNone, features, modelScores);
+  }
+  const topClass: ScoredWm811kClass = ruleIsDecisive
+    ? ruleClass
+    : (modelClass as ScoredWm811kClass);
+  const reportedScores = ruleIsDecisive ? heuristicScores : modelScores;
+  const reportedNone = ruleIsDecisive ? Math.max(0, 1 - s1) : pNone;
+
+  // Rule path: the original linear heuristic mapping (uncalibrated). Model path: the model's
+  // class probability (fit on WM-811K train; not recalibrated for STDF-derived wafers).
+  // Both are rounded to 2 decimals and capped at CONFIDENCE_CAP.
   const confidence = round2(
     Math.min(
       CLASSIFIER_THRESHOLDS.CONFIDENCE_CAP,
-      0.52 + 0.34 * s1 + 0.12 * clamp01((s1 - s2) / 0.4),
+      ruleIsDecisive
+        ? 0.52 + 0.34 * s1 + 0.12 * clamp01((s1 - s2) / 0.4)
+        : probs[topIdx]!,
     ),
   );
 
@@ -1285,6 +1449,19 @@ function classifySpatialGrid(
     }
   }
 
+  // When the heuristic structures found no support for the model's class (typical on noisy
+  // real maps), bind the most salient denoised region instead.
+  if (selectedFailLocal.length === 0 && real.salientCells.length > 0) {
+    const cellToFail = new Int32Array(N).fill(-1);
+    for (let f = 0; f < activeFailCount; f += 1) {
+      cellToFail[failToCellIndex[f]!] = f;
+    }
+    for (let k = 0; k < real.salientCells.length; k += 1) {
+      const f = cellToFail[real.salientCells[k]!]!;
+      if (f >= 0) selectedFailLocal.push(f);
+    }
+  }
+
   // Defensive fallback ensuring every non-'None' classification binds >= 1 failing die
   if (selectedFailLocal.length === 0) {
     for (let f = 0; f < activeFailCount; f += 1) {
@@ -1305,10 +1482,10 @@ function classifySpatialGrid(
   return {
     pattern: topClass,
     confidence,
-    rawClassScores,
+    rawClassScores: reportedScores,
     classScores: {
-      ...rawClassScores,
-      None: Math.max(0, 1 - s1),
+      ...reportedScores,
+      None: reportedNone,
     },
     features,
     signatureDieIndices,
@@ -1387,6 +1564,51 @@ export function classifyWaferPattern(
   lot: LotModel,
   waferIndex: number,
 ): PatternClassification {
+  return classifyWaferPatternInternal(lot, waferIndex);
+}
+
+/** Names of the entries of the vector returned by `extractWm811kFeatureVector`. */
+export const WM811K_FEATURE_NAMES: readonly string[] = [
+  ...REAL_FEATURE_NAMES,
+  'h_center',
+  'h_donut',
+  'h_edgeLoc',
+  'h_edgeRing',
+  'h_loc',
+  'h_nearFull',
+  'h_random',
+  'h_scratch',
+  'h_radialDisparity',
+  'h_edgeBalanceZ',
+  'h_excessClust8',
+  'h_rawScratch',
+  'h_rawLoc',
+  'h_maxEdgeCompShare',
+  'h_edgeAngRes',
+  'h_maxCompShare',
+];
+
+/**
+ * Returns the handcrafted feature vector the learned stage sees for one wafer, or `null` when the
+ * wafer is decided by the noise gate before any scoring (too few fails). Used by the offline
+ * WM-811K training / benchmark tools; not needed by the app.
+ */
+export function extractWm811kFeatureVector(
+  lot: LotModel,
+  waferIndex: number,
+): readonly number[] | null {
+  let captured: readonly number[] | null = null;
+  classifyWaferPatternInternal(lot, waferIndex, (v) => {
+    captured = v;
+  });
+  return captured;
+}
+
+function classifyWaferPatternInternal(
+  lot: LotModel,
+  waferIndex: number,
+  capture?: (vector: readonly number[]) => void,
+): PatternClassification {
   if (waferIndex < 0 || waferIndex >= lot.wafers.length) {
     return buildNoneClassification(1.0, createZeroFeatures(0));
   }
@@ -1440,8 +1662,10 @@ export function classifyWaferPattern(
       ringIndex,
       isActiveFail,
       cellFailDieIndices,
+      siteDriven: isSiteDrivenFailSet(lot, start, end),
     },
     lot.dieIds,
+    capture,
   );
 }
 
@@ -1515,6 +1739,7 @@ export function classifyStackedPattern(
       ringIndex,
       isActiveFail,
       cellFailDieIndices,
+      siteDriven: isSiteDrivenFailSet(lot, 0, lot.dies.count),
     },
     lot.dieIds,
   );

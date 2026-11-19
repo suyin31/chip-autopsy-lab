@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { isCjkLocale } from '@/core/i18n';
 import type { RenderedVerdictHero, ReportClaim } from '@/core/report';
 import { GlossaryText } from '@/ui/i18n/GlossaryText';
 import { useT } from '@/ui/i18n/use-t';
@@ -188,19 +187,12 @@ export function VerdictHero({
                 'focus-visible:shadow-focus-ring focus-visible:outline-none',
               )}
             >
-              {isCjkLocale(locale) ? (
-                renderWithUntranslatedTokens(
+              <AccentWord>
+                {renderWithUntranslatedTokens(
                   verdict.cause,
                   verdict.untranslatedTokens,
-                )
-              ) : (
-                <AccentWord>
-                  {renderWithUntranslatedTokens(
-                    verdict.cause,
-                    verdict.untranslatedTokens,
-                  )}
-                </AccentWord>
-              )}
+                )}
+              </AccentWord>
             </button>
           </span>
         </>
