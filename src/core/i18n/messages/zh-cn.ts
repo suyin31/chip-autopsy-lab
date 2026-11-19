@@ -431,4 +431,11 @@ export const zhCN = {
   'palette.action.modeParametric': '晶圆模式：参数分布',
   'palette.action.loadSample': '加载示例：{name}',
   'palette.action.exportDemo': '下载示例 STDF',
+
+  // Accessibility announcements and screen-reader table headers (Task 19)
+  'a11y.filtersCleared': '已清除筛选。显示全部 {dies}。',
+  'a11y.waferSelected': '晶圆 {wafer}，已测 {dies}，失效 {fails}。',
+  'a11y.diePinned': '坐标 X {x}、Y {y} 芯片：{status}，{bin}。',
+  'a11y.range': '区间',
+  'a11y.count': '数量',
 } as const satisfies Dictionary;

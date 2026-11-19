@@ -9,7 +9,6 @@ import {
   listDemoPresets,
 } from '@/core/demo';
 import type { ParseFatalError, ParseMode } from '@/core/stdf';
-import { formatByteSize } from '@/ui/format';
 import { CommandPalette } from '@/ui/command-palette';
 import { useT } from '@/ui/i18n';
 import { WORKSPACE_LAYOUT_GROUP_ID } from '@/ui/motion';
@@ -106,7 +105,7 @@ const INITIAL_PROGRESS: WorkerParseProgress = {
  * Validates: Requirements 1.1, 1.2, 1.4, 1.10, 2.2, 2.5, 3.2, 3.3, 14.4, 17.1–17.6 & redesign §3.1, §3.2, §3.7, §3.8
  */
 export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
-  const { locale, t, formatInteger, formatPercent } = useT();
+  const { locale, t, formatInteger, formatPercent, formatFileSize } = useT();
   const presets = React.useMemo(() => listDemoPresets(), []);
   const [selectedPresetId, setSelectedPresetId] =
     React.useState<DemoPresetId>('edge-ring-etch');
@@ -331,7 +330,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         });
         setLiveAnnouncement(
           t('binsOnly.sheetTitle', {
-            size: formatByteSize(response.bytesObserved),
+            size: formatFileSize(response.bytesObserved),
           }),
         );
         return;
@@ -352,7 +351,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         resolveParseErrorViewModel(response.error, locale).title,
       );
     },
-    [formatInteger, formatPercent, locale, t],
+    [formatFileSize, formatInteger, formatPercent, locale, t],
   );
 
   const handleUnexpectedWorkerError = React.useCallback(
@@ -621,7 +620,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
           triggerBrowserBlobDownload(exported.bytes, exported.fileName);
           toast.message(t('toast.downloaded', { fileName: exported.fileName }), {
             id: `demo-download-${exported.fileName}`,
-            description: formatByteSize(exported.bytes.byteLength),
+            description: formatFileSize(exported.bytes.byteLength),
           });
           setLiveAnnouncement(
             t('toast.downloaded', { fileName: exported.fileName }),
@@ -634,7 +633,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
           setDownloadingPresetId((prev) => (prev === presetId ? null : prev));
         });
     },
-    [getWorkerClient, t],
+    [formatFileSize, getWorkerClient, t],
   );
 
   const recentLotEntries = React.useMemo(
@@ -651,7 +650,12 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
       onFileDrop={(file) => handleLoadFile(file)}
     >
       <ClinicalToaster dismissLabel={t('toast.dismiss')} />
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
+      <div
+        data-testid="app-live-region"
+        className="sr-only"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         {liveAnnouncement}
       </div>
       <input

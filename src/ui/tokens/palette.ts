@@ -130,7 +130,7 @@ export const THEME_TOKENS: Readonly<Record<ThemeName, ThemeTokens>> = {
     fill2: '#E6E1D8',
     fill3: 'rgba(0, 0, 0, 0.08)',
     material: {
-      color: 'rgba(250, 250, 252, 0.80)',
+      color: 'rgba(246, 243, 238, 0.80)',
       backdropFilter: 'blur(20px) saturate(180%)',
     },
     materialThick: {

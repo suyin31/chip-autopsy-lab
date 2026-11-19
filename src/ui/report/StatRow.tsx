@@ -318,7 +318,10 @@ export function StatRow({
               {stat.captionSecondaryText !== null ? (
                 <span
                   data-testid="verdict-stat-caption-secondary"
-                  className="line-clamp-2 block text-text-tertiary tabular-nums"
+                  className={cn(
+                    'line-clamp-2 block tabular-nums',
+                    isSelected ? 'text-text-secondary' : 'text-text-tertiary',
+                  )}
                 >
                   <GlossaryText
                     text={stat.captionSecondaryText}

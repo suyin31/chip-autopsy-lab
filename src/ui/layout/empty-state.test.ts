@@ -143,10 +143,10 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(html).not.toContain('role="radiogroup"');
     expect(html).not.toContain('>Load demo lot<');
 
-    // Accessible file input linkage and ink focus rings
+    // Accessible file input linkage and focus-ring token
     expect(html).toContain('id="cal-file-picker"');
     expect(html).toContain('for="cal-file-picker"');
-    expect(html).toContain('focus-visible:outline-ink');
+    expect(html).toContain('focus-visible:shadow-focus-ring');
     expect(html).toContain(
       'accept=".stdf,.std,.stdf.gz,.gz,application/gzip,application/octet-stream"',
     );

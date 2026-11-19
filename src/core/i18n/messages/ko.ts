@@ -435,4 +435,11 @@ export const ko = {
   'palette.action.modeParametric': '웨이퍼 모드: 파라메트릭',
   'palette.action.loadSample': '샘플 불러오기: {name}',
   'palette.action.exportDemo': '샘플 STDF 다운로드',
+
+  // Accessibility announcements and screen-reader table headers (Task 19)
+  'a11y.filtersCleared': '필터를 해제했습니다. 전체 {dies}을 표시합니다.',
+  'a11y.waferSelected': '웨이퍼 {wafer}, 테스트 {dies}, 불량 {fails}.',
+  'a11y.diePinned': '좌표 X {x}, Y {y} 다이: {status}, {bin}.',
+  'a11y.range': '구간',
+  'a11y.count': '개수',
 } as const satisfies Dictionary;

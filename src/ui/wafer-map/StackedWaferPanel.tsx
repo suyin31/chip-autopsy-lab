@@ -1132,6 +1132,51 @@ export function StackedWaferPanel({
           </AnimatePresence>
         </div>
       </LayoutGroup>
+
+      {/* Accessible tabular summary of stacked coordinate failure rates (Req 14.4) */}
+      <div className="sr-only">
+        <table data-testid="stacked-heatmap-sr-table">
+          <caption>
+            {t('stacked.canvasAria', {
+              wafers: formatInteger(lot.wafers.length),
+            })}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">X, Y</th>
+              <th scope="col">{t('legend.failed')}</th>
+              <th scope="col">{t('stacked.legendUnit')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cells
+              .filter((cell) => cell.failCount > 0)
+              .slice()
+              .sort(
+                (a, b) =>
+                  b.failRate - a.failRate ||
+                  b.failCount - a.failCount ||
+                  a.y - b.y ||
+                  a.x - b.x,
+              )
+              .slice(0, 25)
+              .map((cell) => (
+                <tr key={`${cell.x},${cell.y}`}>
+                  <th scope="row">
+                    ({formatDieCoordinate(cell.x)}, {formatDieCoordinate(cell.y)})
+                  </th>
+                  <td>
+                    {t('stacked.readout.wafers', {
+                      failed: formatInteger(cell.failCount),
+                      tested: formatInteger(cell.testedWaferCount),
+                    })}
+                  </td>
+                  <td>{formatPercent(cell.failRate)}</td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

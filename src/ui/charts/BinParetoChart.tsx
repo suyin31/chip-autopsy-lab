@@ -360,7 +360,14 @@ export function BinParetoChart({
                     <span className="text-right type-subhead text-text-primary tabular-nums">
                       {formatPercent(entry.shareOfTested)}
                     </span>
-                    <span className="truncate text-right type-subhead text-text-tertiary tabular-nums @max-md:hidden">
+                    <span
+                      className={cn(
+                        'truncate text-right type-subhead tabular-nums @max-md:hidden',
+                        isSelected
+                          ? 'text-text-secondary'
+                          : 'text-text-tertiary',
+                      )}
+                    >
                       {diesLabel}
                     </span>
                     <span
@@ -401,6 +408,39 @@ export function BinParetoChart({
               </Button>
             </DisclosureGlide>
           ) : null}
+
+          {/* Accessible tabular summary for screen readers (Req 14.4, premium §7.9) */}
+          <div className="sr-only">
+            <table data-testid="bin-pareto-sr-table">
+              <caption>{t('pareto.chartLabel')}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">
+                    {mode === 'SBIN'
+                      ? t('mode.softBins')
+                      : t('mode.hardBins')}
+                  </th>
+                  <th scope="col">{t('legend.failed')}</th>
+                  <th scope="col">{t('pareto.lossLabel')}</th>
+                  <th scope="col">{t('pareto.axisLabel')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pareto.entries.map((entry) => {
+                  const code = `${mode} ${entry.binCode}`;
+                  const label = `${code}${entry.binName ? ` ${entry.binName}` : ''}`;
+                  return (
+                    <tr key={entry.binCode}>
+                      <th scope="row">{label}</th>
+                      <td>{tPlural('findings.dieCount', entry.count)}</td>
+                      <td>{formatPercent(entry.shareOfTested)}</td>
+                      <td>{formatPercent(entry.shareOfFailures)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </section>

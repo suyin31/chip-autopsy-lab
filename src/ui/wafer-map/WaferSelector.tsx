@@ -542,7 +542,7 @@ export const WaferSelector = React.memo(function WaferSelector({
               }}
               onKeyDown={handleItemKeyDown}
               className={cn(
-                "group relative flex h-[52px] w-11 shrink-0 [scroll-snap-align:center] cursor-pointer flex-col items-center gap-0.5 pt-0.5 outline-none select-none sm:h-16 sm:w-12 sm:gap-1.5 sm:pt-1",
+                "group relative flex h-[52px] w-11 shrink-0 [scroll-snap-align:center] cursor-pointer flex-col items-center gap-1 pt-0.5 outline-none focus-visible:shadow-none select-none sm:h-16 sm:w-12 sm:gap-1.5 sm:pt-1",
               )}
             >
               <span

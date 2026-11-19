@@ -515,7 +515,7 @@ function DemoLotCardButton({
         // §8.9 hover lift -2 px (the tile cross-fades its `shadow-card`)
         'transition-[translate] duration-[160ms] ease-[var(--ease-out)] [@media(hover:hover)]:enabled:hover:duration-[240ms]',
         '[@media(hover:hover)]:motion-safe:enabled:hover:-translate-y-0.5',
-        'focus-visible:outline-none',
+        'rounded-2xl focus-visible:shadow-focus-ring focus-visible:outline-none',
         'disabled:cursor-not-allowed disabled:opacity-40',
       )}
     >
@@ -527,7 +527,6 @@ function DemoLotCardButton({
           "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:shadow-card before:content-['']",
           'before:transition-opacity before:duration-[160ms] before:ease-[var(--ease-out)]',
           '[@media(hover:hover)]:group-enabled:group-hover:before:opacity-100 [@media(hover:hover)]:group-enabled:group-hover:before:duration-[240ms]',
-          'group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-ink',
         )}
       >
         <LandingWaferDisc
@@ -1075,7 +1074,7 @@ export function EmptyStateCard({
                   'relative cursor-pointer rounded-pill bg-transparent p-0 type-control text-text-secondary shadow-none select-none',
                   "after:absolute after:-inset-2 after:content-['']",
                   'transition-[color,opacity] duration-[120ms] ease-[var(--ease-out)] [@media(hover:hover)]:enabled:hover:text-text-primary enabled:active:opacity-64',
-                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink',
+                  'focus-visible:shadow-focus-ring focus-visible:outline-none',
                   'disabled:cursor-not-allowed disabled:text-text-disabled',
                 )}
               >

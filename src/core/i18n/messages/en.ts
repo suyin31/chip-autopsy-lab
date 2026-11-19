@@ -434,4 +434,11 @@ export const en = {
   'palette.action.modeParametric': 'Wafer mode: Parametric',
   'palette.action.loadSample': 'Load sample: {name}',
   'palette.action.exportDemo': 'Download sample STDF',
+
+  // Accessibility announcements and screen-reader table headers (Task 19)
+  'a11y.filtersCleared': 'Filters cleared. Showing all {dies}.',
+  'a11y.waferSelected': 'Wafer {wafer}, {dies} tested, {fails} failed.',
+  'a11y.diePinned': 'Die at X {x}, Y {y}: {status}, {bin}.',
+  'a11y.range': 'Range',
+  'a11y.count': 'Count',
 } as const;

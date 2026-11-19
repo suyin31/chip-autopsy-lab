@@ -431,4 +431,11 @@ export const zhTW = {
   'palette.action.modeParametric': '晶圓模式：參數分佈',
   'palette.action.loadSample': '載入範例：{name}',
   'palette.action.exportDemo': '下載範例 STDF',
+
+  // Accessibility announcements and screen-reader table headers (Task 19)
+  'a11y.filtersCleared': '已清除篩選。顯示全部 {dies}。',
+  'a11y.waferSelected': '晶圓 {wafer}，已測 {dies}，失效 {fails}。',
+  'a11y.diePinned': '座標 X {x}、Y {y} 晶片：{status}，{bin}。',
+  'a11y.range': '區間',
+  'a11y.count': '數量',
 } as const satisfies Dictionary;

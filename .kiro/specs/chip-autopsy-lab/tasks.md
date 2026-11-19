@@ -164,7 +164,7 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
   - Skippable probe-sweep load (`~3 s`, once per session), cause-of-death type-on (`<= 1.5 s`), claim evidence light-up stagger (`<= 600 ms`), panel springs, and full `prefers-reduced-motion` handling.
   - _Requirements: 1.11, 10.1, 14.5, 17.5_
 
-- [ ] 19. Accessibility and copy pass
+- [x] 19. Accessibility and copy pass
   - WCAG 2.2 AA contrast checks, non-colour cues on every mark, keyboard operability with `#7CF2C1` focus rings, screen-reader tables for canvas/SVG views, live-region announcements, number formats, and clinical copy.
   - _Requirements: 14.1, 14.2, 14.3, 14.4, 17.4_
 

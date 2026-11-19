@@ -18,6 +18,7 @@ import {
   type ReportClaim,
 } from '@/core/report';
 import { useT } from '@/ui/i18n';
+import { buildAutopsyLiveAnnouncement } from '@/ui/layout/a11y-announcements';
 import { Button } from '@/ui/primitives/button';
 import { CountUpCompleteContext } from '@/ui/primitives/count-up';
 import { cn } from '@/ui/primitives/cn';
@@ -587,28 +588,34 @@ export function AutopsyReportCard({
 
   const liveAnnouncement = React.useMemo(() => {
     const fullHeadline = rendered.verdict.fullHeadline;
-    if (!effectiveActiveClaimId) {
-      return fullHeadline;
+    let activeClaimText: string | null = null;
+    if (effectiveActiveClaimId) {
+      if (effectiveActiveClaimId === activeReport.causeOfDeathHeadline.claimId) {
+        const dieCountLabel = tPlural(
+          'findings.dieCount',
+          activeReport.causeOfDeathHeadline.resolvedDieIndices.length,
+        );
+        activeClaimText = `${fullHeadline} (${dieCountLabel})`;
+      } else {
+        const matchedFinding = visibleFindings.find(
+          (f) => f.claimId === effectiveActiveClaimId,
+        );
+        if (matchedFinding) {
+          activeClaimText = `${matchedFinding.headline} (${matchedFinding.dieCountLabel})`;
+        }
+      }
     }
-    if (effectiveActiveClaimId === activeReport.causeOfDeathHeadline.claimId) {
-      const dieCountLabel = tPlural(
-        'findings.dieCount',
-        activeReport.causeOfDeathHeadline.resolvedDieIndices.length,
-      );
-      return `${fullHeadline} (${dieCountLabel})`;
-    }
-    const matchedFinding = visibleFindings.find(
-      (f) => f.claimId === effectiveActiveClaimId,
-    );
-    if (matchedFinding) {
-      return `${matchedFinding.headline} (${matchedFinding.dieCountLabel})`;
-    }
-    return fullHeadline;
+    return buildAutopsyLiveAnnouncement({
+      fullHeadline,
+      activeClaimText,
+      narrationStatusText,
+    });
   }, [
     rendered.verdict.fullHeadline,
     effectiveActiveClaimId,
     activeReport.causeOfDeathHeadline,
     visibleFindings,
+    narrationStatusText,
     tPlural,
   ]);
 

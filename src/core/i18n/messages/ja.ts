@@ -435,4 +435,11 @@ export const ja = {
   'palette.action.modeParametric': 'ウェーハ表示：パラメトリック',
   'palette.action.loadSample': 'サンプルを読み込む：{name}',
   'palette.action.exportDemo': 'サンプル STDF をダウンロード',
+
+  // Accessibility announcements and screen-reader table headers (Task 19)
+  'a11y.filtersCleared': 'フィルターを解除しました。全 {dies} を表示しています。',
+  'a11y.waferSelected': 'ウェーハ {wafer}、テスト済み {dies}、不良 {fails}。',
+  'a11y.diePinned': '座標 X {x}、Y {y} のダイ：{status}、{bin}。',
+  'a11y.range': '範囲',
+  'a11y.count': '件数',
 } as const satisfies Dictionary;

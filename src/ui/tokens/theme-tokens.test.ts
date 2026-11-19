@@ -84,7 +84,7 @@ describe('premium UI colour tokens (premium.md §3.2)', () => {
 
   it('locks materials, scrim, and focus ring per theme (§3.2, §3.8)', () => {
     expect(THEME_TOKENS.light.material).toEqual({
-      color: 'rgba(250, 250, 252, 0.80)',
+      color: 'rgba(246, 243, 238, 0.80)',
       backdropFilter: 'blur(20px) saturate(180%)',
     });
     expect(THEME_TOKENS.dark.material).toEqual({

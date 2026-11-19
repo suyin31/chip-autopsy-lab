@@ -381,12 +381,24 @@ export function ParametricPanel({
                       <Untranslated className="type-row-title text-text-primary">
                         {row.testName || `Test ${row.testNum}`}
                       </Untranslated>
-                      <Untranslated className="font-mono-id type-caption text-text-tertiary tabular-nums">
+                      <Untranslated
+                        className={cn(
+                          'font-mono-id type-caption tabular-nums',
+                          isSelected
+                            ? 'text-text-secondary'
+                            : 'text-text-tertiary',
+                        )}
+                      >
                         {row.testNum}
                       </Untranslated>
                     </button>
                   </td>
-                  <td className="py-2.5 pr-2 type-subhead text-text-tertiary">
+                  <td
+                    className={cn(
+                      'py-2.5 pr-2 type-subhead',
+                      isSelected ? 'text-text-secondary' : 'text-text-tertiary',
+                    )}
+                  >
                     <Untranslated>
                       {unitInfo.unitLabel || '\u2013'}
                     </Untranslated>
@@ -400,7 +412,12 @@ export function ParametricPanel({
                   <td className="py-2.5 pl-2 text-right type-subhead whitespace-nowrap text-text-secondary tabular-nums">
                     <Untranslated>{meanText}</Untranslated>
                   </td>
-                  <td className="py-2.5 pl-2 text-right type-subhead whitespace-nowrap text-text-tertiary tabular-nums">
+                  <td
+                    className={cn(
+                      'py-2.5 pl-2 text-right type-subhead whitespace-nowrap tabular-nums',
+                      isSelected ? 'text-text-secondary' : 'text-text-tertiary',
+                    )}
+                  >
                     <Untranslated>{sigmaText}</Untranslated>
                   </td>
                   <td className="py-2.5 pl-2 text-right type-subhead text-text-secondary tabular-nums">

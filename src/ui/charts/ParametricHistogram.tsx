@@ -473,24 +473,32 @@ export function ParametricHistogram({
           </svg>
 
           {/* Accessible tabular summary for screen readers (Req 14.4) */}
-          <table className="sr-only">
-            <caption>
-              {t('parametric.histogramAria', {
-                test: testLabel,
-                n: formatInteger(histogram.n),
-              })}
-            </caption>
-            <tbody>
-              {histogram.bins.map((bin) => (
-                <tr key={bin.index}>
-                  <th>
-                    {formatVal(bin.x0)} – {formatVal(bin.x1)}
-                  </th>
-                  <td>{tPlural('findings.dieCount', bin.count)}</td>
+          <div className="sr-only">
+            <table data-testid="parametric-histogram-sr-table">
+              <caption>
+                {t('parametric.histogramAria', {
+                  test: testLabel,
+                  n: formatInteger(histogram.n),
+                })}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">{t('a11y.range')}</th>
+                  <th scope="col">{t('a11y.count')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {histogram.bins.map((bin) => (
+                  <tr key={bin.index}>
+                    <th scope="row">
+                      {formatVal(bin.x0)} – {formatVal(bin.x1)}
+                    </th>
+                    <td>{tPlural('findings.dieCount', bin.count)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

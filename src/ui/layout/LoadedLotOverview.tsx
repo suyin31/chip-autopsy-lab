@@ -8,8 +8,11 @@ import type { DemoPresetId, DemoPresetMeta } from '@/core/demo';
 import { formatFilterDslSummary } from '@/core/query';
 import { sanitizeReportProseText } from '@/core/report';
 import { BinParetoChart, ParametricPanel, YieldSummaryPanel } from '@/ui/charts';
-import { formatGroupedInt } from '@/ui/format';
 import { useT } from '@/ui/i18n';
+import {
+  buildWorkspaceSelectionAnnouncement,
+  type WorkspaceSelectionSnapshot,
+} from './a11y-announcements';
 import {
   readPrefersReducedMotionSync,
   resolveViewMorphTransition,
@@ -65,19 +68,65 @@ export function LoadedLotOverview({
   store = useSelectionStore,
 }: LoadedLotOverviewProps): React.JSX.Element {
   const { lot, probeOrderByWafer, yieldSummary, facts, verdict, report } = data;
-  const { t } = useT();
+  const { locale, t, formatInteger } = useT();
   const shouldReduceMotion = useReducedMotion();
   const prefersReduced = readPrefersReducedMotionSync(shouldReduceMotion);
 
-  const { storeLot, hasActiveFilter, selectedDieCount, dslFilter } = useStore(
+  const {
+    storeLot,
+    hasActiveFilter,
+    selectedDieCount,
+    dslFilter,
+    activeWaferIndex,
+  } = useStore(
     store,
     useShallow((s) => ({
       storeLot: s.lot,
       hasActiveFilter: s.hasActiveFilter,
       selectedDieCount: s.selectedDieCount,
       dslFilter: s.dslFilter,
+      activeWaferIndex: s.activeWaferIndex,
     })),
   );
+  const [selectionAnnouncement, setSelectionAnnouncement] = React.useState('');
+  const prevSelectionRef = React.useRef<{
+    readonly lotId: string;
+    readonly snapshot: WorkspaceSelectionSnapshot;
+  } | null>(null);
+
+  React.useEffect(() => {
+    if (storeLot !== lot) {
+      return;
+    }
+    const nextSnapshot: WorkspaceSelectionSnapshot = {
+      hasActiveFilter,
+      selectedDieCount,
+      activeWaferIndex,
+      pinnedDieIndex: null,
+    };
+    const prevEntry = prevSelectionRef.current;
+    const prevSnapshot =
+      prevEntry && prevEntry.lotId === lot.lotId ? prevEntry.snapshot : null;
+    prevSelectionRef.current = { lotId: lot.lotId, snapshot: nextSnapshot };
+    const message = buildWorkspaceSelectionAnnouncement({
+      lot,
+      byWaferYield: yieldSummary.byWafer,
+      locale,
+      prev: prevSnapshot,
+      next: nextSnapshot,
+    });
+    if (message !== null) {
+      setSelectionAnnouncement(message);
+    }
+  }, [
+    storeLot,
+    lot,
+    yieldSummary.byWafer,
+    locale,
+    hasActiveFilter,
+    selectedDieCount,
+    activeWaferIndex,
+  ]);
   const isZeroMatches =
     storeLot === lot && hasActiveFilter && selectedDieCount === 0;
   const noResultsFilterSummary = React.useMemo(() => {
@@ -370,14 +419,24 @@ export function LoadedLotOverview({
       {/* Premium §2.4, §7.18: first-use hints (portalled; at most one visible) */}
       <CoachMarks lot={lot} verdictRevealed={verdictRevealed} store={store} />
 
+      {/* Persistent polite live region for filter, wafer, and die selection changes (Req 14.4) */}
+      <div
+        data-testid="selection-live-region"
+        className="sr-only"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {selectionAnnouncement}
+      </div>
+
       {sanitizedWarnings.length > 0 ? (
         <div className="sr-only" role="status">
-          Recovered with {formatGroupedInt(lot.warnings.length)} stream warning
+          Recovered with {formatInteger(lot.warnings.length)} stream warning
           {lot.warnings.length === 1 ? '' : 's'}:{' '}
           {sanitizedWarnings
             .map(
               (w) =>
-                `[${w.code}] byte ${formatGroupedInt(w.byteOffset)} (REC_TYP ${w.recTyp}, REC_SUB ${w.recSub}): ${w.cleanDetail}`,
+                `[${w.code}] byte ${formatInteger(w.byteOffset)} (REC_TYP ${w.recTyp}, REC_SUB ${w.recSub}): ${w.cleanDetail}`,
             )
             .join(' | ')}
         </div>

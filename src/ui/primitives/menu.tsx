@@ -846,7 +846,7 @@ export function DropdownMenuShortcut({
   return (
     <kbd
       className={cn(
-        'ml-auto rounded-xs bg-fill-2 px-1.5 py-0.5 font-sans type-caption text-text-tertiary tabular-nums',
+        'ml-auto rounded-xs bg-fill-2 px-1.5 py-0.5 font-sans type-caption text-text-secondary tabular-nums',
         className,
       )}
       {...props}

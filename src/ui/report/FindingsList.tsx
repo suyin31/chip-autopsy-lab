@@ -526,7 +526,7 @@ export function FindingsList({
                         </p>
                         {row.checkNextSteps.length > 0 ? (
                           <div data-testid="finding-check-next" className="mt-3">
-                            <p className="type-subhead text-text-tertiary">
+                            <p className="type-subhead text-text-secondary">
                               {checkNextLabel}
                             </p>
                             <ul className="mt-1 flex flex-col gap-1">
@@ -537,7 +537,7 @@ export function FindingsList({
                                 >
                                   <span
                                     aria-hidden="true"
-                                    className="absolute left-0 top-[calc(0.5lh-2px)] size-1 rounded-full bg-text-tertiary"
+                                    className="absolute left-0 top-[calc(0.5lh-2px)] size-1 rounded-full bg-text-secondary"
                                   />
                                   {step}
                                 </li>
@@ -547,7 +547,7 @@ export function FindingsList({
                         ) : null}
                         <p
                           data-testid="finding-meta"
-                          className="mt-3 type-subhead text-text-tertiary tabular-nums"
+                          className="mt-3 type-subhead text-text-secondary tabular-nums"
                         >
                           {metaLabel}
                         </p>

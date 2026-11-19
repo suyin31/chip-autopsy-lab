@@ -942,7 +942,14 @@ export function CommandPalette({
                         {item.label}
                       </span>
                       {item.preview ? (
-                        <span className="hidden max-w-[200px] shrink-0 truncate type-caption text-text-tertiary sm:inline">
+                        <span
+                          className={cn(
+                            'hidden max-w-[200px] shrink-0 truncate type-caption sm:inline',
+                            isActive
+                              ? 'text-text-secondary'
+                              : 'text-text-tertiary',
+                          )}
+                        >
                           {item.preview}
                         </span>
                       ) : null}

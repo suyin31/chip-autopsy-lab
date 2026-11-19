@@ -13,6 +13,7 @@ import {
   packWaferCoord,
 } from '@/core/model';
 import { Untranslated, useT } from '@/ui/i18n';
+import { formatPinnedDieAnnouncement } from '@/ui/layout/a11y-announcements';
 import {
   Button,
   SegmentedControl,
@@ -37,6 +38,7 @@ import {
   computeLiveBoxSelectStats,
   computePopoverPlacement,
   computeWaferEvidencePresence,
+  formatDieCoordinate,
   sampleCubicEaseOut,
   type ScreenBox,
   screenRectToWaferGridBounds,
@@ -253,31 +255,33 @@ const FailingDiesTable = React.memo(function FailingDiesTable({
   }, [wafer, lot.dies, lot.sites, t]);
 
   return (
-    <table className="sr-only">
-      <caption>
-        {t('a11y.failingDiesTable', { wafer: waferId })}
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">X, Y</th>
-          <th scope="col">{t('yield.col.site')}</th>
-          <th scope="col">SBIN</th>
-          <th scope="col">HBIN</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, rowPos) => (
-          <tr key={rowPos}>
-            <td>
-              ({row.x}, {row.y})
-            </td>
-            <td>{row.siteLabel}</td>
-            <td>SBIN {row.sbin}</td>
-            <td>HBIN {row.hbin}</td>
+    <div className="sr-only">
+      <table data-testid="wafer-sr-table">
+        <caption>
+          {t('a11y.failingDiesTable', { wafer: waferId })}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">X, Y</th>
+            <th scope="col">{t('yield.col.site')}</th>
+            <th scope="col">SBIN</th>
+            <th scope="col">HBIN</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row, rowPos) => (
+            <tr key={rowPos}>
+              <th scope="row">
+                ({formatDieCoordinate(row.x)}, {formatDieCoordinate(row.y)})
+              </th>
+              <td>{row.siteLabel}</td>
+              <td>SBIN {row.sbin}</td>
+              <td>HBIN {row.hbin}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 });
 
@@ -351,6 +355,7 @@ function WaferMapCanvasImpl({
 
   const stageToolRef = React.useRef<StageToolMode>('pan');
   stageToolRef.current = stageTool;
+  const stageLiveRef = React.useRef<HTMLSpanElement | null>(null);
 
   const {
     storeLot,
@@ -982,6 +987,9 @@ function WaferMapCanvasImpl({
         overlayCanvasRef.current?.setProbeHeadDieIndex(null);
         // Header caption swaps from "Reading…" to the fail count at ignite start (0 ms)
         setSweepReading(false);
+        if (skipHintRef.current) {
+          skipHintRef.current.hidden = true;
+        }
         // Premium §8.2: the verdict rise-in starts at ignite start
         if (!verdictTriggered) {
           verdictTriggered = true;
@@ -1860,6 +1868,10 @@ function WaferMapCanvasImpl({
         if (curHovered !== null) {
           event.preventDefault();
           magnifierRef.current?.togglePinAtDie(curHovered);
+          if (stageLiveRef.current && magnifierRef.current?.hasPin()) {
+            stageLiveRef.current.textContent =
+              formatPinnedDieAnnouncement(lot, locale, curHovered) ?? '';
+          }
         }
         return;
       }
@@ -2364,6 +2376,14 @@ function WaferMapCanvasImpl({
             </span>
           ))}
         </p>
+        <p
+          ref={skipHintRef}
+          hidden
+          data-testid="probe-sweep-skip-hint"
+          className="pointer-events-none ml-auto self-baseline type-subhead whitespace-nowrap text-text-tertiary"
+        >
+          {t('loading.skipHint')}
+        </p>
         <ActiveFilterChips lot={lot} store={store} className="ml-auto self-end" />
       </div>
 
@@ -2410,7 +2430,7 @@ function WaferMapCanvasImpl({
             // Premium §6.2: square below 1024 (390 x 390 full-bleed, sm column width), flex-1 wafer area from 1024
             'lg:aspect-auto lg:min-h-0 lg:flex-1',
             // Premium §7.7: keyboard-only 2 px ink ring with 28 px corners, inset 8 px from the wafer area
-            'focus-visible:outline-none',
+            'focus-visible:shadow-none focus-visible:outline-none',
             "focus-visible:after:pointer-events-none focus-visible:after:absolute focus-visible:after:inset-2 focus-visible:after:z-[var(--z-stage-hud)] focus-visible:after:rounded-3xl focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ink focus-visible:after:content-['']",
           )}
         >
@@ -2525,17 +2545,15 @@ function WaferMapCanvasImpl({
             store={store}
           />
 
-          {/* Stage HUD Bottom-Centre: Sweep Skip Hint (§3.3) */}
-          <p
-            ref={skipHintRef}
-            hidden
-            data-testid="probe-sweep-skip-hint"
-            className="pointer-events-none absolute bottom-3 left-1/2 z-[var(--z-stage-hud)] -translate-x-1/2 type-subhead whitespace-nowrap text-text-tertiary md:bottom-4"
-          >
-            {t('loading.skipHint')}
-          </p>
           {/* Visually hidden table of failing dies on the active wafer (§4.7, §6.8) */}
           <FailingDiesTable lot={lot} waferIndex={safeWaferIndex} />
+          <span
+            ref={stageLiveRef}
+            data-testid="stage-live-region"
+            className="sr-only"
+            aria-live="polite"
+            aria-atomic="true"
+          />
         </div>
 
         {/* Floating Hover Magnifier (z: 20, outside overflow-hidden so placedAboveStage never clips, §4.8) */}

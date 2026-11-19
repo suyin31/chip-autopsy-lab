@@ -2,7 +2,6 @@
 
 import { motion } from 'motion/react';
 import * as React from 'react';
-import { formatByteSize, formatGroupedInt } from '@/ui/format';
 import { Untranslated, useT } from '@/ui/i18n';
 import {
   resolveViewMorphTransition,
@@ -154,28 +153,28 @@ export function IngestProgressPanel({
   label,
   progress,
 }: IngestProgressPanelProps): React.JSX.Element {
-  const { t } = useT();
+  const { t, formatPercent, formatFileSize, formatInteger } = useT();
 
   const ratio =
     progress.totalBytes !== null && progress.totalBytes > 0
       ? Math.min(1, Math.max(0, progress.bytesProcessed / progress.totalBytes))
       : null;
   const pct = ratio !== null ? ratio * 100 : null;
-  const pctLabel = pct !== null ? `${pct.toFixed(1)}%` : null;
+  const pctLabel = ratio !== null ? formatPercent(ratio) : null;
 
   const statusCopy = t('loading.readingRecords');
   const bytesCopy =
     progress.totalBytes !== null && progress.totalBytes > 0
       ? t('loading.bytes', {
-          done: formatByteSize(progress.bytesProcessed),
-          total: formatByteSize(progress.totalBytes),
+          done: formatFileSize(progress.bytesProcessed),
+          total: formatFileSize(progress.totalBytes),
         })
-      : formatByteSize(progress.bytesProcessed);
+      : formatFileSize(progress.bytesProcessed);
 
   const valueText =
     pctLabel !== null
-      ? `${statusCopy}, ${pctLabel} (${bytesCopy}, ${formatGroupedInt(progress.diesResolved)} dies)`
-      : `${statusCopy}, ${bytesCopy} (${formatGroupedInt(progress.diesResolved)} dies)`;
+      ? `${statusCopy}, ${pctLabel} (${bytesCopy}, ${formatInteger(progress.diesResolved)} dies)`
+      : `${statusCopy}, ${bytesCopy} (${formatInteger(progress.diesResolved)} dies)`;
 
   return (
     <div

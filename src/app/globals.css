@@ -63,7 +63,7 @@
   --fill-1: #efebe4;
   --fill-2: #e6e1d8;
   --fill-3: rgba(0, 0, 0, 0.08);
-  --material: rgba(250, 250, 252, 0.80);
+  --material: rgba(246, 243, 238, 0.80);
   --material-filter: blur(20px) saturate(180%);
   --material-thick: rgba(255, 255, 255, 0.92);
   --material-thick-filter: blur(24px) saturate(180%);
@@ -573,10 +573,11 @@
     font-family: var(--font-mono);
   }
 
-  /* Ice #D6E6FF focus rings across keyboard-operable controls (redesign.md §4) */
+  /* Theme ink focus rings across keyboard-operable controls (premium.md §3.2, WCAG 2.2 SC 2.4.7 & 2.4.11) */
   :focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: var(--focus-ring);
+    scroll-margin-top: 72px;
   }
 
   ::selection {

@@ -276,3 +276,6 @@
 - 2026-11-19 Task 16 done: optional LLM narrator (server-only LLM_API_KEY), citation validator, Properties 11/14; unit 431, e2e narrator-t16 3/3. Split: contract argon, core argon-high, ui neon-high.
 - 2026-11-19 Task 17 done: Filter DSL + offline NL grammar + Cmd-K palette, Property 13; unit 445, e2e 8/8.
 - 2026-11-19 Task 18 done: motion tokens/hooks, landing->report morph, verdict type-on, evidence stagger, springs, reduced-motion; unit 455, e2e motion 5/5 + 13 regressions. TODO T20: narrate 503 shows a browser console network error when LLM key unset; skip the call when unconfigured.
+
+## Task 19 (2026-11-19 15:20 SGT)
+A11y, keyboard, contrast, copy pass. unit 457/457, lint/typecheck/build clean, e2e a11y-t19 6/6 + regression 18 passed.
