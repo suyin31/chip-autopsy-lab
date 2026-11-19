@@ -1,0 +1,29 @@
+root agent idle; waiting for 1 background task(s) to finish
+Testing the fix now — waiting for `pnpm typecheck && pnpm lint` to finish.
+Waiting for `pnpm test && pnpm build` to finish.
+Waiting for the Playwright test run to finish so we can inspect the test 2 failure.
+Waiting for the Playwright e2e run to finish.
+Running final `pnpm typecheck && pnpm lint && pnpm test` verification.
+Build succeeded; waiting for the Playwright e2e suite to finish.
+### Root cause & fixes
+
+1. **App bug (`Untranslated` dropped `data-testid`)**:
+   - In [StackedWaferPanel.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/wafer-map/StackedWaferPanel.tsx#L1093-L1102), the stacked brush coordinate range was rendered inside `<Untranslated data-testid="stacked-selection-coords">`.
+   - [I18nProvider.tsx](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/i18n/I18nProvider.tsx#L152-L173) only accepted `children` and `className`, silently discarding `data-testid` (and any other HTML/`data-*`/`aria-*` attributes) when rendering `<bdi translate="no">`.
+   - **Fix**: Extended `UntranslatedProps` with `Omit<React.HTMLAttributes<HTMLElement>, 'translate'>` and forwarded `{...rest}` to `<bdi {...rest} translate="no" className={className}>`, plus added a regression assertion in [i18n-provider.test.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/ui/i18n/i18n-provider.test.ts#L251-L268).
+
+2. **Test assumption mismatch (`prefers-reduced-motion` transition duration)**:
+   - Once `stacked-selection-coords` was visible, [brushing-t14.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/brushing-t14.spec.ts#L196-L207) failed expecting `getComputedStyle(el).transitionDuration === '0s'`, whereas [globals.css](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/src/app/globals.css#L977-L986) intentionally sets `transition-duration: 0.01ms !important` (`1e-05s`) under `@media (prefers-reduced-motion: reduce)` while `ActiveFilterChips` sets `motion-reduce:transition-none` (`transitionProperty === 'none'`).
+   - **Fix**: Updated [brushing-t14.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/brushing-t14.spec.ts#L196-L207) to assert both `transitionProperty === 'none'` and `durationSeconds <= 0.001`, matching [parametric-t13.spec.ts](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/e2e/parametric-t13.spec.ts#L195-L206).
+
+### Spec & progress updates
+- Ticked Task 14 and 14.1 in [tasks.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/.kiro/specs/chip-autopsy-lab/tasks.md#L129-L134).
+- Appended `## 2026-11-19 — Task 14 complete` to [progress.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/logs/progress.md#L271-L273).
+
+### Verification
+- `pnpm typecheck`: passed (0 errors)
+- `pnpm lint`: passed (0 warnings/errors)
+- `pnpm test`: **407/407 passed** across **70 test files**
+- `pnpm build`: passed
+- `npx playwright test e2e/brushing-t14.spec.ts e2e/stacked-heatmap-t12.spec.ts e2e/parametric-t13.spec.ts`: **6/6 passed** (18.0 s)
+- Port `3130` verified free with no Next.js server left running.

@@ -149,7 +149,8 @@ export interface I18nProviderProps {
   readonly initialLocale?: Locale;
 }
 
-export interface UntranslatedProps {
+export interface UntranslatedProps
+  extends Omit<React.HTMLAttributes<HTMLElement>, 'translate'> {
   readonly children?: React.ReactNode;
   readonly className?: string;
 }
@@ -161,9 +162,10 @@ export interface UntranslatedProps {
 export function Untranslated({
   children,
   className,
+  ...rest
 }: UntranslatedProps): React.ReactElement {
   return (
-    <bdi translate="no" className={className}>
+    <bdi {...rest} translate="no" className={className}>
       {children}
     </bdi>
   );

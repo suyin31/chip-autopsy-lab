@@ -249,17 +249,22 @@ describe('UI I18nProvider, useT hook, pre-hydration script, and persistence (Tas
     expect(fallbackAnnouncement).toBe('Language changed to English.');
 
     // §6.6 Untranslated wrapper renders <bdi translate="no"> around bin & test names
+    // and forwards standard HTML/data-* attributes while preserving translate="no"
     const bdiHtml = renderToStaticMarkup(
       React.createElement(
         'p',
         null,
         React.createElement(Untranslated, null, 'SBIN 7 IDDQ_EDGE_LEAK'),
         ' · ',
-        React.createElement(Untranslated, null, '204 IDDQ_LEAK'),
+        React.createElement(
+          Untranslated,
+          { 'data-testid': 'untranslated-probe', className: 'font-mono-id' } as React.ComponentProps<typeof Untranslated> & { 'data-testid': string },
+          '204 IDDQ_LEAK',
+        ),
       ),
     );
     expect(bdiHtml).toBe(
-      '<p><bdi translate="no">SBIN 7 IDDQ_EDGE_LEAK</bdi> · <bdi translate="no">204 IDDQ_LEAK</bdi></p>',
+      '<p><bdi translate="no">SBIN 7 IDDQ_EDGE_LEAK</bdi> · <bdi data-testid="untranslated-probe" translate="no" class="font-mono-id">204 IDDQ_LEAK</bdi></p>',
     );
   });
 });

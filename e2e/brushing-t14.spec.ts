@@ -193,11 +193,18 @@ test.describe('Task 14 - live cross-chart brushing', () => {
     await expect(brushChip).toContainText('All wafers');
     await expect(page.getByTestId('stacked-selection-coords')).toBeVisible();
 
-    // Under prefers-reduced-motion: reduce, chip remove button transitions are instant (0s)
-    const removeTransitionDuration = await page
+    // Under prefers-reduced-motion: reduce, chip remove button transitions are disabled/instant
+    const removeTransition = await page
       .getByTestId('brush-filter-chip-clear')
-      .evaluate((el) => getComputedStyle(el).transitionDuration);
-    expect(removeTransitionDuration).toBe('0s');
+      .evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return {
+          property: cs.transitionProperty,
+          durationSeconds: Number.parseFloat(cs.transitionDuration),
+        };
+      });
+    expect(removeTransition.property).toBe('none');
+    expect(removeTransition.durationSeconds).toBeLessThanOrEqual(0.001);
 
     const stackedBrushedCount = Number(await brushChip.getAttribute('data-selected-dies'));
     expect(stackedBrushedCount).toBeGreaterThan(25);

@@ -126,10 +126,10 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - **Property 7** in `src/core/analytics/parametric-stats.prop.test.ts`
     - _Requirements: 8.3, 8.4_
 
-- [ ] 14. Add live cross-chart brushing
+- [x] 14. Add live cross-chart brushing
   - Rectangular brush on the single-wafer map and stacked heatmap, removable filter chip, combined brush and attribute filters, `Escape` and click-out clearing; all linked views update within 100 ms at 25 x 10,000 dies.
   - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 15.5_
-  - [ ]* 14.1 Property test: brush and selection filter idempotence, containment, and commutativity
+  - [x]* 14.1 Property test: brush and selection filter idempotence, containment, and commutativity
     - **Property 12** in `src/core/query/selection-predicates.prop.test.ts`
     - _Requirements: 11.1, 11.2, 11.4, 12.2, 12.5_
 
