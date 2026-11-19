@@ -228,6 +228,10 @@ export const zhTW = {
   'stage.selectArea': '框選區域',
   'stage.selectAreaHint': '框選區域（S 或 Shift 拖曳）',
   'stage.resetView': '重設檢視',
+  'stage.zoomIn': '放大',
+  'stage.zoomInHint': '放大（+）',
+  'stage.zoomOut': '縮小',
+  'stage.zoomOutHint': '縮小（−）',
   // Bin Pareto
   'pareto.title': '良率損失在哪裡',
   'pareto.takeaway': '一個 Bin 佔了失效晶粒的 {share}。',

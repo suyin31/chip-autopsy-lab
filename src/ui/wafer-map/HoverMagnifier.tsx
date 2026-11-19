@@ -449,12 +449,20 @@ const HoverMagnifierImpl = React.forwardRef<
     };
   }, [clearHideTimer]);
 
-  // Reposition whenever displayedDieIndex or pinned state changes (e.g. after first layout measure)
+  // Reposition whenever displayedDieIndex, pinned state, or stage size changes (e.g. after first layout measure)
   React.useLayoutEffect(() => {
     if (visible && displayedDieIndex !== null) {
       applyPlacementNow(displayedDieIndex, pinnedDieIndex !== null);
     }
-  }, [visible, displayedDieIndex, pinnedDieIndex, touchPinned, applyPlacementNow]);
+  }, [
+    visible,
+    displayedDieIndex,
+    pinnedDieIndex,
+    touchPinned,
+    stageWidth,
+    stageHeight,
+    applyPlacementNow,
+  ]);
 
   React.useImperativeHandle(
     ref,
@@ -470,6 +478,7 @@ const HoverMagnifierImpl = React.forwardRef<
         }
         if (hitDieIndex !== null) {
           clearHideTimer();
+          applyPlacementNow(hitDieIndex, false);
           setHoverActive((prev) => (prev ? prev : true));
           schedulePointerPlacement(hitDieIndex);
         } else if (pinnedRef.current === null) {
@@ -686,6 +695,7 @@ const HoverMagnifierImpl = React.forwardRef<
     lot,
     wafer,
     colorMode,
+    rawActiveTestNum,
     hiddenBins,
     stageWidth,
     stageHeight,
@@ -735,6 +745,12 @@ const HoverMagnifierImpl = React.forwardRef<
         : null;
 
     return {
+      dieId: lot.dieIds[displayedDieIndex] ?? '',
+      waferId: wafer?.waferId ?? '',
+      x,
+      y,
+      hbin,
+      sbin,
       xText: formatDieCoordinate(x),
       yText: formatDieCoordinate(y),
       siteText,
@@ -747,6 +763,7 @@ const HoverMagnifierImpl = React.forwardRef<
   }, [
     displayedDieIndex,
     lot,
+    wafer,
     colorMode,
     hbinRankMap,
     sbinRankMap,
@@ -789,6 +806,12 @@ const HoverMagnifierImpl = React.forwardRef<
       data-visible={isShown ? 'true' : 'false'}
       data-pinned={pinnedDieIndex !== null ? 'true' : 'false'}
       data-pin-source={pinnedDieIndex !== null ? (pinSource ?? 'keyboard') : undefined}
+      data-die-id={readout?.dieId}
+      data-wafer-id={readout?.waferId}
+      data-die-x={readout !== null ? String(readout.x) : undefined}
+      data-die-y={readout !== null ? String(readout.y) : undefined}
+      data-hbin={readout !== null ? String(readout.hbin) : undefined}
+      data-sbin={readout !== null ? String(readout.sbin) : undefined}
       aria-hidden={!isShown}
       style={{
         transform: `translate3d(${lastPlacedRef.current.x}px, ${lastPlacedRef.current.y}px, 0)`,

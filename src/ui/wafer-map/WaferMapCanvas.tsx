@@ -1,6 +1,6 @@
 'use client';
 
-import { SquareDashed } from 'lucide-react';
+import { Minus, Plus, SquareDashed } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
@@ -60,6 +60,7 @@ import {
 import { type WaferSelectOptions, WaferSelector } from './WaferSelector';
 import {
   applyKeyboardZoom,
+  BUTTON_ZOOM_STEP_FACTOR,
   type CameraState,
   cameraToViewportTransform,
   computeRelativeWrapperTransform,
@@ -68,6 +69,7 @@ import {
   ensurePointWithinMargin,
   formatWrapperCssTransform,
   isCameraAtFit,
+  MAX_CAMERA_SCALE,
   stepSpring1D,
   type WaferCameraController,
 } from './wafer-camera';
@@ -305,6 +307,8 @@ function WaferMapCanvasImpl({
   const sheenFollowerRef = React.useRef<SheenFollower | null>(null);
   const sheenPointerRef = React.useRef<{ x: number; y: number } | null>(null);
   const resetViewRef = React.useRef<HTMLDivElement>(null);
+  const zoomInBtnRef = React.useRef<HTMLButtonElement>(null);
+  const zoomOutBtnRef = React.useRef<HTMLButtonElement>(null);
   const skipHintRef = React.useRef<HTMLParagraphElement>(null);
   const finishSweepRef = React.useRef<(() => void) | null>(null);
   // Premium §8.1: the stage caption reads "Reading…" while the sweep runs, until ignite start.
@@ -607,6 +611,54 @@ function WaferMapCanvasImpl({
     [],
   );
 
+  const syncCameraHud = React.useCallback((camera: CameraState): void => {
+    const stageEl = stageRef.current;
+    const atFit = isCameraAtFit(camera);
+    if (stageEl) {
+      const zoomed = camera.scale > 1.001 ? 'true' : 'false';
+      if (stageEl.dataset.zoomed !== zoomed) {
+        stageEl.dataset.zoomed = zoomed;
+      }
+      stageEl.dataset.cameraScale = camera.scale.toFixed(4);
+      stageEl.dataset.cameraTx = camera.tx.toFixed(2);
+      stageEl.dataset.cameraTy = camera.ty.toFixed(2);
+    }
+    const resetViewEl = resetViewRef.current;
+    if (resetViewEl) {
+      resetViewEl.hidden = atFit;
+      if (!atFit) {
+        const label = `${Math.round(camera.scale * 100)}%`;
+        resetViewEl
+          .querySelectorAll<HTMLElement>('[data-zoom-value]')
+          .forEach((el) => {
+            if (el.textContent !== label) {
+              el.textContent = label;
+            }
+          });
+      }
+    }
+    const zoomOutEl = zoomOutBtnRef.current;
+    if (zoomOutEl) {
+      const outDisabled = atFit;
+      zoomOutEl.disabled = outDisabled;
+      if (outDisabled) {
+        zoomOutEl.setAttribute('aria-disabled', 'true');
+      } else {
+        zoomOutEl.removeAttribute('aria-disabled');
+      }
+    }
+    const zoomInEl = zoomInBtnRef.current;
+    if (zoomInEl) {
+      const inDisabled = camera.scale >= MAX_CAMERA_SCALE - 0.001;
+      zoomInEl.disabled = inDisabled;
+      if (inDisabled) {
+        zoomInEl.setAttribute('aria-disabled', 'true');
+      } else {
+        zoomInEl.removeAttribute('aria-disabled');
+      }
+    }
+  }, []);
+
   const controllerRef = React.useRef<WaferCameraController | null>(null);
   const cameraMotionActiveRef = React.useRef(false);
   if (controllerRef.current === null) {
@@ -626,28 +678,8 @@ function WaferMapCanvasImpl({
               ? 'none'
               : 'pan-y';
         }
-        // Premium §7.7: Reset view hidden at zoom 1; zoom value and cursor set without a React render
-        const atFit = isCameraAtFit(camera);
-        if (stageEl) {
-          const zoomed = camera.scale > 1.001 ? 'true' : 'false';
-          if (stageEl.dataset.zoomed !== zoomed) {
-            stageEl.dataset.zoomed = zoomed;
-          }
-        }
-        const resetViewEl = resetViewRef.current;
-        if (resetViewEl) {
-          resetViewEl.hidden = atFit;
-          if (!atFit) {
-            const label = `${Math.round(camera.scale * 100)}%`;
-            resetViewEl
-              .querySelectorAll<HTMLElement>('[data-zoom-value]')
-              .forEach((el) => {
-                if (el.textContent !== label) {
-                  el.textContent = label;
-                }
-              });
-          }
-        }
+        // Premium §7.7 + Task 15: Reset view, zoom buttons, and camera attributes sync without a React render
+        syncCameraHud(camera);
         overlayCanvasRef.current?.paintForCamera(camera);
         // Premium §8.4: the magnifier hides while a gesture, spring, or inertia moves the camera
         if (cameraMotionActiveRef.current !== motionActive) {
@@ -1095,8 +1127,9 @@ function WaferMapCanvasImpl({
       stageEl.style.touchAction =
         stageTool === 'select' || cam.scale > 1.001 ? 'none' : 'pan-y';
     }
+    syncCameraHud(cam);
     syncDiscLayersForRaster(rasterCam.scale, rasterCam.tx, rasterCam.ty);
-  }, [fitLayout, safeWaferIndex, stageTool, syncDiscLayersForRaster]);
+  }, [fitLayout, safeWaferIndex, stageTool, syncCameraHud, syncDiscLayersForRaster]);
 
   // Measure actual stage CSS dimensions via ResizeObserver
   React.useEffect(() => {
@@ -2352,6 +2385,12 @@ function WaferMapCanvasImpl({
           data-wafer-diameter-px={Math.round(fitWaferDiameter)}
           data-disc-center-x={Math.round(fitLayout?.centerXCss ?? stageDims.width / 2)}
           data-disc-center-y={Math.round(fitLayout?.centerYCss ?? stageDims.height / 2)}
+          data-wcr-flat={wafer?.geometry.wfFlat ?? ' '}
+          data-wcr-pos-x={wafer?.geometry.posX ?? 'R'}
+          data-wcr-pos-y={wafer?.geometry.posY ?? 'U'}
+          data-camera-scale="1.0000"
+          data-camera-tx="0.00"
+          data-camera-ty="0.00"
           data-stage-tool={stageTool}
           tabIndex={0}
           style={{ touchAction: stageTool === 'select' ? 'none' : 'pan-y' }}
@@ -2550,15 +2589,15 @@ function WaferMapCanvasImpl({
           className={cn(
             'order-last col-span-2 mt-2 min-h-6 px-4 sm:basis-full sm:px-0',
             colorMode !== 'parametric' &&
-              'xl:order-none xl:mt-0 xl:ml-6 xl:min-h-0 xl:basis-auto',
+              'xl:order-none xl:mt-0 xl:ml-2 xl:min-h-0 xl:basis-auto',
           )}
         />
-        <div className="mt-2 ml-auto flex h-9 items-center gap-2 pr-4 pl-2 sm:mt-0 sm:h-10 sm:pr-0 sm:pl-3">
+        <div className="mt-2 ml-auto flex h-9 items-center gap-1.5 pr-4 pl-1 sm:mt-0 sm:h-10 sm:pr-0 sm:pl-1">
           <div
             ref={resetViewRef}
             data-testid="stage-reset-view"
             hidden
-            className="flex items-center gap-2"
+            className="flex items-center gap-1"
           >
             <span
               data-zoom-value=""
@@ -2571,7 +2610,9 @@ function WaferMapCanvasImpl({
               variant="ghost"
               data-testid="stage-reset-view-button"
               aria-label={t('stage.resetView')}
+              className="px-1.5"
               onClick={() => {
+                finishSweepRef.current?.();
                 userMovedCameraSinceFindingRef.current = true;
                 controllerRef.current?.resetToFit(true);
               }}
@@ -2580,6 +2621,40 @@ function WaferMapCanvasImpl({
               <span data-zoom-value="" className="tabular-nums sm:hidden">
                 100%
               </span>
+            </Button>
+          </div>
+          <div className="hidden items-center gap-1.5 sm:flex">
+            <Button
+              ref={zoomOutBtnRef}
+              variant="icon"
+              data-testid="stage-zoom-out"
+              aria-label={t('stage.zoomOut')}
+              title={t('stage.zoomOutHint')}
+              className="size-7 after:-inset-x-0.5 after:-inset-y-1.5"
+              onClick={() => {
+                finishSweepRef.current?.();
+                userMovedCameraSinceFindingRef.current = true;
+                controllerRef.current?.zoomByFactor(
+                  1 / BUTTON_ZOOM_STEP_FACTOR,
+                );
+              }}
+            >
+              <Minus aria-hidden="true" strokeWidth={1.5} />
+            </Button>
+            <Button
+              ref={zoomInBtnRef}
+              variant="icon"
+              data-testid="stage-zoom-in"
+              aria-label={t('stage.zoomIn')}
+              title={t('stage.zoomInHint')}
+              className="size-7 after:-inset-x-0.5 after:-inset-y-1.5"
+              onClick={() => {
+                finishSweepRef.current?.();
+                userMovedCameraSinceFindingRef.current = true;
+                controllerRef.current?.zoomByFactor(BUTTON_ZOOM_STEP_FACTOR);
+              }}
+            >
+              <Plus aria-hidden="true" strokeWidth={1.5} />
             </Button>
           </div>
           <Button

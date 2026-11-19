@@ -229,6 +229,10 @@ export const en = {
   'stage.selectArea': 'Select an area',
   'stage.selectAreaHint': 'Select an area (S, or Shift-drag)',
   'stage.resetView': 'Reset view',
+  'stage.zoomIn': 'Zoom in',
+  'stage.zoomInHint': 'Zoom in (+)',
+  'stage.zoomOut': 'Zoom out',
+  'stage.zoomOutHint': 'Zoom out (−)',
   // Bin Pareto
   'pareto.title': 'Where the yield went',
   'pareto.takeaway': 'One bin holds {share} of the lost dies.',

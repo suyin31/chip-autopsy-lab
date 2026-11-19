@@ -35,6 +35,7 @@ export const DEFAULT_CAMERA_STATE: CameraState = {
 export const MIN_CAMERA_SCALE = 1 as const;
 export const MAX_CAMERA_SCALE = 8 as const;
 export const DOUBLE_CLICK_ZOOM_SCALE = 2.5 as const;
+export const BUTTON_ZOOM_STEP_FACTOR = 1.5 as const;
 export const DRAG_THRESHOLD_PX = 4 as const;
 export const RUBBER_BAND_CONSTANT = 0.55 as const;
 export const SETTLE_RERASTER_DELAY_MS = 120 as const;
@@ -475,9 +476,10 @@ export function applyKeyboardZoom(
   current: CameraState,
   factor: number,
   input: StageCameraMetrics & { readonly anchorX: number; readonly anchorY: number },
+  fromScale: number = current.scale,
 ): CameraState {
   const nextScale = clamp(
-    current.scale * factor,
+    fromScale * factor,
     MIN_CAMERA_SCALE,
     MAX_CAMERA_SCALE,
   );
@@ -601,6 +603,11 @@ export interface WaferCameraController {
   resetRasterToFit(): void;
   setCameraImmediate(next: CameraState): void;
   animateToCamera(target: CameraState): void;
+  zoomByFactor(
+    factor: number,
+    anchor?: { readonly x: number; readonly y: number },
+    animate?: boolean,
+  ): void;
   resetToFit(animate?: boolean): void;
   handleWheel(input: {
     readonly deltaY: number;
@@ -983,6 +990,35 @@ export function createWaferCameraController(
     },
 
     animateToCamera,
+
+    zoomByFactor(factor, anchor, animate = true) {
+      const metrics = options.getStageMetrics();
+      const anchorX = anchor?.x ?? metrics.stageWidth / 2;
+      const anchorY = anchor?.y ?? metrics.stageHeight / 2;
+      if (!animate || options.getPrefersReducedMotion()) {
+        stopRaf();
+        clearSettleTimer();
+        camera = applyKeyboardZoom(camera, factor, {
+          ...metrics,
+          anchorX,
+          anchorY,
+        });
+        emitFrame();
+        scheduleSettleCheck();
+        return;
+      }
+      const fromScale =
+        animScale.active && animScale.mode === 'spring'
+          ? animScale.target
+          : camera.scale;
+      const target = applyKeyboardZoom(
+        camera,
+        factor,
+        { ...metrics, anchorX, anchorY },
+        fromScale,
+      );
+      animateToCamera(target);
+    },
 
     resetToFit(animate = true) {
       if (!animate || options.getPrefersReducedMotion()) {

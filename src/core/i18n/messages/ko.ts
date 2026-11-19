@@ -232,6 +232,10 @@ export const ko = {
   'stage.selectArea': '영역 선택',
   'stage.selectAreaHint': '영역 선택 (S 또는 Shift 드래그)',
   'stage.resetView': '보기 초기화',
+  'stage.zoomIn': '확대',
+  'stage.zoomInHint': '확대 (+)',
+  'stage.zoomOut': '축소',
+  'stage.zoomOutHint': '축소 (−)',
   // Bin Pareto
   'pareto.title': '수율이 사라진 곳',
   'pareto.takeaway': '빈 하나가 불량 다이의 {share}를 차지합니다.',

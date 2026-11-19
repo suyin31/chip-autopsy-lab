@@ -232,6 +232,10 @@ export const ja = {
   'stage.selectArea': '範囲を選択',
   'stage.selectAreaHint': '範囲を選択（S または Shift + ドラッグ）',
   'stage.resetView': '表示をリセット',
+  'stage.zoomIn': '拡大',
+  'stage.zoomInHint': '拡大（+）',
+  'stage.zoomOut': '縮小',
+  'stage.zoomOutHint': '縮小（−）',
   // Bin Pareto
   'pareto.title': '歩留まりはどこで失われたか',
   'pareto.takeaway': '1 つのビンが不良ダイの {share} を占めます。',

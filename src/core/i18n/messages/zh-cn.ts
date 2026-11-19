@@ -228,6 +228,10 @@ export const zhCN = {
   'stage.selectArea': '框选区域',
   'stage.selectAreaHint': '框选区域（S 或 Shift 拖动）',
   'stage.resetView': '重置视图',
+  'stage.zoomIn': '放大',
+  'stage.zoomInHint': '放大（+）',
+  'stage.zoomOut': '缩小',
+  'stage.zoomOutHint': '缩小（−）',
   // Bin Pareto
   'pareto.title': '良率损失在哪里',
   'pareto.takeaway': '一个 Bin 占了失效晶粒的 {share}。',

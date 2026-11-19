@@ -119,6 +119,7 @@ export {
   applyKeyboardZoom,
   applyPanWithRubberBand,
   applyPinchGesture,
+  BUTTON_ZOOM_STEP_FACTOR,
   type CameraPanBounds,
   type CameraState,
   type CameraTransformFramePayload,
