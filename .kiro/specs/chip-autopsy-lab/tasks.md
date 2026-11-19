@@ -116,13 +116,13 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
     - **Property 6** in `src/core/analytics/stacked-heatmap.prop.test.ts`
     - _Requirements: 5.2, 5.4_
 
-- [ ] 13. Add parametric analysis
-  - [ ] 13.1 Implement `parametric-stats.ts`
+- [x] 13. Add parametric analysis
+  - [x] 13.1 Implement `parametric-stats.ts`
     - Welford mean and sigma, two-sided and single-sided `Cp`/`Cpk`, histogram bins, `formatScaledMeasurement` with SI prefixes from the display exponent.
     - _Requirements: 8.3, 8.4, 17.4_
-  - [ ] 13.2 Build the test catalog, `ParametricHistogram` with limit markers and scrub readout, and the wafer map Parametric mode
+  - [x] 13.2 Build the test catalog, `ParametricHistogram` with limit markers and scrub readout, and the wafer map Parametric mode
     - _Requirements: 8.1, 8.2, 8.5, 8.6_
-  - [ ]* 13.3 Property test: `Cp`/`Cpk` invariants and affine scale equivariance
+  - [x]* 13.3 Property test: `Cp`/`Cpk` invariants and affine scale equivariance
     - **Property 7** in `src/core/analytics/parametric-stats.prop.test.ts`
     - _Requirements: 8.3, 8.4_
 

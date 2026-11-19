@@ -263,3 +263,7 @@
 ## 2026-11-19 — Task 12 complete
 - Stacked multi-wafer heatmap and wafer gallery (`src/core/analytics/stacked-heatmap.ts`, `src/ui/wafer-map/StackedWaferPanel.tsx`, `stacked-heatmap-view.ts`): magma ramp with numeric legend, hover readout, region selection, gallery collapse into the stack (<= 800 ms, instant cross-fade under reduced motion). Property 6 in `stacked-heatmap.prop.test.ts`. Code by Antigravity CLI (Gemini 4 Neon) from the Kiro spec.
 - Verified: typecheck and lint clean, `pnpm test` 381/381 (63 files), e2e `stacked-heatmap-t12` 2/2.
+
+## 2026-11-19 — Task 13 complete
+- Parametric analysis (`src/core/analytics/parametric-stats.ts`, `src/ui/charts/ParametricPanel.tsx`, `ParametricHistogram.tsx`, `parametric-view.ts`): Welford mean/sigma, two- and single-sided Cp/Cpk, histogram bins, SI-prefixed scaled measurements, sortable test catalog, LO/HI limit markers with scrub readout, wafer map Parametric mode. Property 7 in `parametric-stats.prop.test.ts`. Code by Antigravity CLI (Gemini 4 Neon) from the Kiro spec.
+- Verified: typecheck and lint clean, `pnpm test` 400/400 (67 files), `pnpm build` ok, e2e `parametric-t13` 2/2 plus `stacked-heatmap-t12` 2/2.
