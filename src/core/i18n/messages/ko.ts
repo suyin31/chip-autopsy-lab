@@ -419,4 +419,20 @@ export const ko = {
   'verdict.narration.loading': '엔진 사실 데이터와 AI 요약을 대조하는 중…',
   'verdict.narration.verified': 'AI 요약이 인용된 엔진 사실 데이터와 검증되었습니다.',
   'verdict.narration.fallback': '내장 템플릿 요약을 표시합니다.',
+
+  // Command palette (Task 17)
+  'palette.ariaLabel': '명령 팔레트',
+  'palette.placeholder': '다이 필터링 또는 명령 실행…',
+  'palette.group.recents': '최근 쿼리',
+  'palette.group.filters': '필터 쿼리',
+  'palette.group.actions': '작업',
+  'palette.runQuery': '필터 적용: {query}',
+  'palette.error.invalidQuery': '쿼리를 인식할 수 없습니다. 다음 필터 예시를 사용해 보세요:',
+  'palette.action.clearFilters': '적용된 필터 해제',
+  'palette.action.modePassFail': '웨이퍼 모드: 양불',
+  'palette.action.modeHbin': '웨이퍼 모드: 하드 빈',
+  'palette.action.modeSbin': '웨이퍼 모드: 소프트 빈',
+  'palette.action.modeParametric': '웨이퍼 모드: 파라메트릭',
+  'palette.action.loadSample': '샘플 불러오기: {name}',
+  'palette.action.exportDemo': '샘플 STDF 다운로드',
 } as const satisfies Dictionary;

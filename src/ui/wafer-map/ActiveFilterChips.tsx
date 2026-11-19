@@ -1,10 +1,14 @@
 'use client';
 
-import { SquareDashed, X } from 'lucide-react';
+import { SlidersHorizontal, SquareDashed, X } from 'lucide-react';
 import * as React from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import type { LotModel } from '@/core/model';
+import {
+  formatFilterDslChipDescriptors,
+  removeFilterDslClause,
+} from '@/core/query';
 import { Untranslated, useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/primitives/cn';
@@ -95,6 +99,7 @@ export function ActiveFilterChips({
     binFilter,
     siteFilter,
     waferFilter,
+    dslFilter,
     selectedDieCount,
     hasActiveFilter,
   } = useStore(
@@ -105,6 +110,7 @@ export function ActiveFilterChips({
       binFilter: s.binFilter,
       siteFilter: s.siteFilter,
       waferFilter: s.waferFilter,
+      dslFilter: s.dslFilter,
       selectedDieCount: s.selectedDieCount,
       hasActiveFilter: s.hasActiveFilter,
     })),
@@ -115,15 +121,19 @@ export function ActiveFilterChips({
   const activeBin = synced ? binFilter : null;
   const activeSite = synced ? siteFilter : null;
   const activeWafer = synced ? waferFilter : null;
+  const activeDsl = synced ? dslFilter : null;
   const activeCount = synced ? selectedDieCount : 0;
+  const dslDescriptors =
+    activeDsl !== null ? formatFilterDslChipDescriptors(activeDsl, lot) : [];
 
   if (
     !synced ||
-    !hasActiveFilter ||
+    (!hasActiveFilter && dslDescriptors.length === 0) ||
     (activeBrush === null &&
       activeBin === null &&
       activeSite === null &&
-      activeWafer === null)
+      activeWafer === null &&
+      dslDescriptors.length === 0)
   ) {
     return null;
   }
@@ -155,7 +165,8 @@ export function ActiveFilterChips({
     (activeBrush !== null ? 1 : 0) +
     (binLabel !== null ? 1 : 0) +
     (siteLabel !== null ? 1 : 0) +
-    (waferLabel !== null ? 1 : 0);
+    (waferLabel !== null ? 1 : 0) +
+    dslDescriptors.length;
 
   return (
     <div
@@ -264,6 +275,49 @@ export function ActiveFilterChips({
           </button>
         </span>
       ) : null}
+
+      {activeDsl !== null
+        ? dslDescriptors.map((descriptor) => (
+            <span
+              key={descriptor.id}
+              data-testid="dsl-filter-chip"
+              data-clause-id={descriptor.id}
+              data-clause-section={descriptor.ref.section}
+              className={CHIP_CLASS}
+            >
+              <SlidersHorizontal
+                aria-hidden="true"
+                size={12}
+                strokeWidth={1.75}
+                className="shrink-0 text-text-secondary"
+              />
+              <span className="text-text-primary tabular-nums">
+                {descriptor.label}
+              </span>
+              <button
+                type="button"
+                data-testid="dsl-filter-chip-clear"
+                aria-label={t('filter.removeChipAria', {
+                  label: descriptor.label,
+                })}
+                onPointerDown={stampAck}
+                onClick={() => {
+                  const latest = store.getState().dslFilter;
+                  if (latest !== null) {
+                    store
+                      .getState()
+                      .setDslFilter(
+                        removeFilterDslClause(latest, descriptor.ref),
+                      );
+                  }
+                }}
+                className={CHIP_REMOVE_BUTTON_CLASS}
+              >
+                <X aria-hidden="true" size={12} strokeWidth={1.75} />
+              </button>
+            </span>
+          ))
+        : null}
 
       {chipCount >= 2 ? (
         <Button

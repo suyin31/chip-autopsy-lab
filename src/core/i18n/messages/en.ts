@@ -418,4 +418,20 @@ export const en = {
   'verdict.narration.loading': 'Verifying AI summary against engine facts…',
   'verdict.narration.verified': 'AI summary verified against cited engine facts.',
   'verdict.narration.fallback': 'Showing built-in template summary.',
+
+  // Command palette (Task 17)
+  'palette.ariaLabel': 'Command palette',
+  'palette.placeholder': 'Filter dies or run a command…',
+  'palette.group.recents': 'Recent queries',
+  'palette.group.filters': 'Filter queries',
+  'palette.group.actions': 'Actions',
+  'palette.runQuery': 'Apply filter: {query}',
+  'palette.error.invalidQuery': 'Query not recognized. Try one of these filter examples:',
+  'palette.action.clearFilters': 'Clear active filters',
+  'palette.action.modePassFail': 'Wafer mode: Pass/fail',
+  'palette.action.modeHbin': 'Wafer mode: Hard bins',
+  'palette.action.modeSbin': 'Wafer mode: Soft bins',
+  'palette.action.modeParametric': 'Wafer mode: Parametric',
+  'palette.action.loadSample': 'Load sample: {name}',
+  'palette.action.exportDemo': 'Download sample STDF',
 } as const;

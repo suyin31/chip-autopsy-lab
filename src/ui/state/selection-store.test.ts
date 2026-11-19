@@ -456,4 +456,124 @@ describe('SelectionStore and Uint8Array mask derivation (Sub-task 5.1)', () => {
 
     unsub();
   });
+
+  it('auto-selects lowestCpkTestNum in setDslFilter when capabilityClauses are present (Task 17, Req 12.5)', () => {
+    const spec: StdfWriteLotSpec = {
+      endianness: 'little',
+      mir: { lotId: 'LOT-CAP-01', partTyp: 'CAL-TEST', jobNam: 'SORT1' },
+      hbrs: [
+        { headNum: 255, siteNum: 0, hbinNum: 1, hbinCnt: 2, hbinPf: 'P', hbinNam: 'PASS' },
+        { headNum: 255, siteNum: 0, hbinNum: 4, hbinCnt: 2, hbinPf: 'F', hbinNam: 'LEAK' },
+      ],
+      sbrs: [
+        { headNum: 255, siteNum: 0, sbinNum: 1, sbinCnt: 2, sbinPf: 'P', sbinNam: 'GOOD' },
+        { headNum: 255, siteNum: 0, sbinNum: 7, sbinCnt: 2, sbinPf: 'F', sbinNam: 'IDDQ_LEAK' },
+      ],
+      sdrs: [{ headNum: 1, siteGrp: 1, siteNums: [1] }],
+      wcr: { wfFlat: 'D', posX: 'R', posY: 'U' },
+      wafers: [
+        {
+          wir: { headNum: 1, waferId: 'W01' },
+          touchdowns: [
+            [
+              {
+                headNum: 1,
+                siteNum: 1,
+                partFlg: 0x00,
+                hardBin: 1,
+                softBin: 1,
+                xCoord: 0,
+                yCoord: 0,
+                ptrs: [
+                  {
+                    testNum: 101,
+                    result: 1.0,
+                    testTxt: 'VDD_GOOD',
+                    units: 'V',
+                    resScal: 0,
+                    llmScal: 0,
+                    hlmScal: 0,
+                    loLimit: 0.5,
+                    hiLimit: 1.5,
+                  },
+                  {
+                    testNum: 204,
+                    result: 14.8,
+                    testTxt: 'IDDQ_LEAK',
+                    units: 'A',
+                    resScal: 6,
+                    llmScal: 6,
+                    hlmScal: 6,
+                    loLimit: 0.2,
+                    hiLimit: 15.0,
+                  },
+                ],
+              },
+            ],
+            [
+              {
+                headNum: 1,
+                siteNum: 1,
+                partFlg: 0x00,
+                hardBin: 1,
+                softBin: 1,
+                xCoord: 1,
+                yCoord: 0,
+                ptrs: [
+                  { testNum: 101, result: 1.01 },
+                  { testNum: 204, result: 15.4 },
+                ],
+              },
+            ],
+            [
+              {
+                headNum: 1,
+                siteNum: 1,
+                partFlg: 0x08,
+                hardBin: 4,
+                softBin: 7,
+                xCoord: 2,
+                yCoord: 0,
+                ptrs: [
+                  { testNum: 101, result: 0.99 },
+                  { testNum: 204, result: 18.2 },
+                ],
+              },
+            ],
+            [
+              {
+                headNum: 1,
+                siteNum: 1,
+                partFlg: 0x08,
+                hardBin: 4,
+                softBin: 7,
+                xCoord: 3,
+                yCoord: 0,
+                ptrs: [
+                  { testNum: 101, result: 1.0 },
+                  { testNum: 204, result: 22.5 },
+                ],
+              },
+            ],
+          ],
+        },
+      ],
+    };
+    const parsed = parseStdfBytes(writeStdfBytes(spec), { mode: 'full' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const capLot = buildLotModel(parsed.value);
+
+    const store = createSelectionStore();
+    store.getState().setLot(capLot);
+    expect(store.getState().activeTestNum).toBe(101);
+
+    store.getState().setDslFilter({
+      dieClauses: [{ kind: 'pass-status', status: 'fail' }],
+      capabilityClauses: [{ kind: 'capability', metric: 'cpk', op: '<', threshold: 1.33 }],
+    });
+    expect(store.getState().hasActiveFilter).toBe(true);
+    expect(store.getState().selectedDieCount).toBe(2);
+    expect(store.getState().activeTestNum).toBe(204);
+  });
 });

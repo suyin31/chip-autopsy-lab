@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { StoreApi } from 'zustand';
 import { SUPPORTED_LOCALES } from '@/core/i18n';
+import { removeFilterDslClause } from '@/core/query';
 import { I18nProvider } from '@/ui/i18n';
 import { createSelectionStore, type SelectionStoreState } from '@/ui/state';
 import { ingestDemoPreset } from '@/workers';
@@ -103,5 +104,59 @@ describe('ActiveFilterChips (Task 14, Req 11.3 & 11.4)', () => {
       const locHtml = renderChips(locale);
       expect(locHtml).toContain('data-brush-scope="stacked"');
     }
+  });
+
+  it('renders removable dsl-filter-chip pills for die and capability clauses with zero ember tokens (Task 17)', async () => {
+    const res = await ingestDemoPreset('edge-ring-etch');
+    expect(res.kind).toBe('ok');
+    if (res.kind !== 'ok') return;
+
+    const store = createClientTestStore();
+    store.getState().setLot(res.lot);
+
+    const renderChips = () =>
+      renderToStaticMarkup(
+        React.createElement(
+          I18nProvider,
+          { initialLocale: 'en' },
+          React.createElement(ActiveFilterChips, { lot: res.lot, store }),
+        ),
+      );
+
+    // Multi-clause DSL: outer 3 rings + failures + Cpk < 1.33 -> 3 removable chips + Clear all
+    store.getState().setDslFilter({
+      dieClauses: [
+        { kind: 'edge-ring', maxRing: 3 },
+        { kind: 'pass-status', status: 'fail' },
+      ],
+      capabilityClauses: [
+        { kind: 'capability', metric: 'cpk', op: '<', threshold: 1.33 },
+      ],
+    });
+    const dslHtml = renderChips();
+    const chipMatches = dslHtml.match(/data-testid="dsl-filter-chip"/g) ?? [];
+    const clearMatches =
+      dslHtml.match(/data-testid="dsl-filter-chip-clear"/g) ?? [];
+    expect(chipMatches).toHaveLength(3);
+    expect(clearMatches).toHaveLength(3);
+    expect(dslHtml).toContain('Outer 3 rings');
+    expect(dslHtml).toContain('Failures');
+    expect(dslHtml).toContain('Cpk &lt; 1.33');
+    expect(dslHtml).toContain('data-testid="filter-chips-clear-all"');
+    expect(dslHtml).not.toMatch(/ember|orange/);
+
+    // Removing the two die clauses leaves only capability clause -> still renders chip
+    let nextDsl = removeFilterDslClause(store.getState().dslFilter!, {
+      section: 'die',
+      index: 0,
+    });
+    nextDsl = removeFilterDslClause(nextDsl!, { section: 'die', index: 0 });
+    store.getState().setDslFilter(nextDsl);
+    const capOnlyHtml = renderChips();
+    expect(capOnlyHtml.match(/data-testid="dsl-filter-chip"/g) ?? []).toHaveLength(
+      1,
+    );
+    expect(capOnlyHtml).toContain('Cpk &lt; 1.33');
+    expect(capOnlyHtml).not.toContain('data-testid="filter-chips-clear-all"');
   });
 });

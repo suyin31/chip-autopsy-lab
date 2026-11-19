@@ -12,6 +12,7 @@ import {
 } from '@/core/analytics';
 import type { GlossaryTermId } from '@/core/i18n';
 import type { LotModel } from '@/core/model';
+import { evaluateSelection } from '@/core/query';
 import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/primitives/cn';
@@ -61,6 +62,11 @@ export function ParametricPanel({
     colorMode,
     hasActiveFilter,
     selectedDieMask,
+    brush,
+    binFilter,
+    siteFilter,
+    waferFilter,
+    dslFilter,
   } = useStore(
     store,
     useShallow((s) => ({
@@ -69,6 +75,11 @@ export function ParametricPanel({
       colorMode: s.colorMode,
       hasActiveFilter: s.hasActiveFilter,
       selectedDieMask: s.selectedDieMask,
+      brush: s.brush,
+      binFilter: s.binFilter,
+      siteFilter: s.siteFilter,
+      waferFilter: s.waferFilter,
+      dslFilter: s.dslFilter,
     })),
   );
   const synced = storeLot === lot;
@@ -83,28 +94,52 @@ export function ParametricPanel({
     [lot, activeMask],
   );
 
+  const matchingTestNumSet = React.useMemo<ReadonlySet<number> | null>(() => {
+    if (
+      !synced ||
+      dslFilter === null ||
+      dslFilter.capabilityClauses.length === 0
+    ) {
+      return null;
+    }
+    const evaluated = evaluateSelection(lot, brush, dslFilter, {
+      bin: binFilter,
+      siteIndex: siteFilter,
+      waferIndex: waferFilter,
+    });
+    return new Set<number>(evaluated.matchingTestNums);
+  }, [synced, lot, brush, dslFilter, binFilter, siteFilter, waferFilter]);
+
+  const visibleSummaries = React.useMemo(
+    () =>
+      matchingTestNumSet === null
+        ? summaries
+        : summaries.filter((s) => matchingTestNumSet.has(s.testNum)),
+    [summaries, matchingTestNumSet],
+  );
+
   const sortedSummaries = React.useMemo(
-    () => sortParametricSummaries(summaries, sort),
-    [summaries, sort],
+    () => sortParametricSummaries(visibleSummaries, sort),
+    [visibleSummaries, sort],
   );
 
   const resolvedTestNum = React.useMemo(
     () =>
       resolveActiveParametricTestNum(
-        summaries,
+        visibleSummaries,
         synced ? activeTestNum : null,
       ),
-    [summaries, synced, activeTestNum],
+    [visibleSummaries, synced, activeTestNum],
   );
 
   const selectedSummary = React.useMemo(
     () =>
       resolvedTestNum !== null
-        ? (summaries.find((s) => s.testNum === resolvedTestNum) ??
+        ? (visibleSummaries.find((s) => s.testNum === resolvedTestNum) ??
           sortedSummaries[0] ??
           null)
         : null,
-    [summaries, sortedSummaries, resolvedTestNum],
+    [visibleSummaries, sortedSummaries, resolvedTestNum],
   );
 
   const selectedCol =
@@ -119,8 +154,8 @@ export function ParametricPanel({
   );
 
   const takeaway = React.useMemo(
-    () => resolveParametricTakeaway(summaries),
-    [summaries],
+    () => resolveParametricTakeaway(visibleSummaries),
+    [visibleSummaries],
   );
 
   const handleSort = React.useCallback((key: ParametricSortKey): void => {
@@ -289,7 +324,18 @@ export function ParametricPanel({
             </tr>
           </thead>
           <tbody>
-            {sortedSummaries.map((row) => {
+            {sortedSummaries.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={8}
+                  data-testid="parametric-catalog-empty"
+                  className="py-4 type-subhead text-text-secondary"
+                >
+                  {t('parametric.empty')}
+                </td>
+              </tr>
+            ) : (
+              sortedSummaries.map((row) => {
               const isSelected = selectedSummary?.testNum === row.testNum;
               const unitInfo = resolveScaledUnitLabel(
                 row.units,
@@ -372,7 +418,8 @@ export function ParametricPanel({
                   </td>
                 </tr>
               );
-            })}
+            })
+            )}
           </tbody>
         </table>
       </div>

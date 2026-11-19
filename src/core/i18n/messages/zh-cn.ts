@@ -415,4 +415,20 @@ export const zhCN = {
   'verdict.narration.loading': '正在对照引擎事实校验 AI 摘要…',
   'verdict.narration.verified': 'AI 摘要已通过引擎事实引用校验。',
   'verdict.narration.fallback': '当前显示内置模板摘要。',
+
+  // Command palette (Task 17)
+  'palette.ariaLabel': '命令面板',
+  'palette.placeholder': '筛选晶粒或运行命令…',
+  'palette.group.recents': '最近查询',
+  'palette.group.filters': '筛选查询',
+  'palette.group.actions': '操作',
+  'palette.runQuery': '应用筛选：{query}',
+  'palette.error.invalidQuery': '无法识别该查询。可尝试以下筛选示例：',
+  'palette.action.clearFilters': '清除当前筛选',
+  'palette.action.modePassFail': '晶圆模式：良率/失效',
+  'palette.action.modeHbin': '晶圆模式：硬分档',
+  'palette.action.modeSbin': '晶圆模式：软分档',
+  'palette.action.modeParametric': '晶圆模式：参数分布',
+  'palette.action.loadSample': '加载示例：{name}',
+  'palette.action.exportDemo': '下载示例 STDF',
 } as const satisfies Dictionary;

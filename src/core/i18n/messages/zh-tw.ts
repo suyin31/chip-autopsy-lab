@@ -415,4 +415,20 @@ export const zhTW = {
   'verdict.narration.loading': '正在對照引擎事實校驗 AI 摘要…',
   'verdict.narration.verified': 'AI 摘要已通過引擎事實引用校驗。',
   'verdict.narration.fallback': '目前顯示內建範本摘要。',
+
+  // Command palette (Task 17)
+  'palette.ariaLabel': '命令面板',
+  'palette.placeholder': '篩選晶粒或執行命令…',
+  'palette.group.recents': '最近查詢',
+  'palette.group.filters': '篩選查詢',
+  'palette.group.actions': '操作',
+  'palette.runQuery': '套用篩選：{query}',
+  'palette.error.invalidQuery': '無法識別該查詢。可嘗試以下篩選範例：',
+  'palette.action.clearFilters': '清除目前篩選',
+  'palette.action.modePassFail': '晶圓模式：良率/失效',
+  'palette.action.modeHbin': '晶圓模式：硬分級',
+  'palette.action.modeSbin': '晶圓模式：軟分級',
+  'palette.action.modeParametric': '晶圓模式：參數分佈',
+  'palette.action.loadSample': '載入範例：{name}',
+  'palette.action.exportDemo': '下載範例 STDF',
 } as const satisfies Dictionary;

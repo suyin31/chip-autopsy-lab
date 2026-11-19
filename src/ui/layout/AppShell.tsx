@@ -9,6 +9,7 @@ import {
 } from '@/core/demo';
 import type { ParseFatalError, ParseMode } from '@/core/stdf';
 import { formatByteSize } from '@/ui/format';
+import { CommandPalette } from '@/ui/command-palette';
 import { useT } from '@/ui/i18n';
 import { ClinicalToaster, cn } from '@/ui/primitives';
 import {
@@ -121,6 +122,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
   >([]);
   const [downloadingPresetId, setDownloadingPresetId] =
     React.useState<DemoPresetId | null>(null);
+  const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [liveAnnouncement, setLiveAnnouncement] = React.useState('');
 
   const navFileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -182,6 +184,19 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         (event.metaKey || event.ctrlKey) &&
         !event.shiftKey &&
         !event.altKey &&
+        event.key.toLowerCase() === 'k'
+      ) {
+        if (largeFilePrompt !== null || truncatedDetails !== null) {
+          return;
+        }
+        event.preventDefault();
+        setPaletteOpen((prev) => !prev);
+        return;
+      }
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
         event.key.toLowerCase() === 'o'
       ) {
         event.preventDefault();
@@ -190,7 +205,7 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isLoading]);
+  }, [isLoading, largeFilePrompt, truncatedDetails]);
 
   const applyWorkerResponse = React.useCallback(
     (requestId: number, response: AutopsyWorkerResponse): void => {
@@ -750,6 +765,18 @@ export function AppShell({ createClient }: AppShellProps): React.JSX.Element {
         {...(truncatedDetails?.fileName !== undefined
           ? { fileName: truncatedDetails.fileName }
           : {})}
+      />
+
+      {/* Task 17: Instant (0 ms) Cmd-K / Ctrl-K Command Palette */}
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        lot={workspace.status === 'ready' ? workspace.payload.lot : null}
+        presets={presets}
+        selectedPresetId={selectedPresetId}
+        onLoadDemoLot={(presetId) => handleLoadDemoLot(presetId)}
+        onOpenFilePicker={handleOpenFilePicker}
+        onDownloadDemoLot={handleDownloadDemoLot}
       />
     </FullWindowDropZone>
   );

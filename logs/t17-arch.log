@@ -1,0 +1,9 @@
+Created the parallel implementation contract in [t17-contract.md](file:///workspace/projects/90e552d5-724b-49e1-bd52-acbbadbf680c/repos/chip-autopsy-lab/prompts/t17-contract.md) (184 lines, no source files modified):
+
+1. **Exact TypeScript Types & Signatures (`src/core/query/`)**:
+   - `src/core/query/filter-dsl.ts`: `FilterDslClauseRef`, `FilterDslChipDescriptor`, `EMPTY_FILTER_DSL_AST`, `isFilterDslEmpty`, `normalizeFilterDslAst`, `serializeFilterDsl`, `deserializeFilterDsl`, `parseFilterDsl`, `applyFilterDslToSelection`, `removeFilterDslClause`, `formatFilterDslChipDescriptors`, and `formatFilterDslSummary`.
+   - `src/core/query/nl-grammar.ts`: `OFFLINE_QUERY_EXAMPLES` and `parseOfflineNaturalQuery` covering `"only bin 7"`, `"tests with Cpk < 1.33"`, `"edge 3 rings"`, `"show edge failures with Cpk < 1.33"`, and strict `{ ok: false, error }` rejection on unrecognized inputs without mutating selection state.
+2. **Disjoint File Ownership & i18n Keys**:
+   - **CORE** owns `src/core/query/{filter-dsl.ts,nl-grammar.ts,index.ts,filter-dsl.test.ts,filter-dsl-codec.prop.test.ts}`.
+   - **UI** owns `src/ui/command-palette/**`, `src/ui/state/selection-store.{ts,test.ts}`, `src/ui/wafer-map/ActiveFilterChips.tsx`, `src/ui/charts/ParametricPanel.tsx`, `src/ui/layout/{LoadedLotOverview.tsx,AppShell.tsx}`, the 14 appended `palette.*` keys across `src/core/i18n/messages/{en,zh-cn,zh-tw,ja,ko}.ts`, the key count update (`356`) in `src/core/i18n/i18n.test.ts`, and `e2e/palette-t17.spec.ts`.
+3. **Test Checklists**: Unit, Property 13 round-trip (`fast-check`), and Playwright E2E checklists per side within the existing premium light design tokens.

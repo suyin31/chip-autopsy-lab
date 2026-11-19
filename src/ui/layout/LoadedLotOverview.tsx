@@ -2,12 +2,15 @@
 
 import { useReducedMotion } from 'motion/react';
 import * as React from 'react';
-import type { StoreApi } from 'zustand';
+import { useStore, type StoreApi } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import type { DemoPresetId, DemoPresetMeta } from '@/core/demo';
+import { formatFilterDslSummary } from '@/core/query';
 import { sanitizeReportProseText } from '@/core/report';
 import { BinParetoChart, ParametricPanel, YieldSummaryPanel } from '@/ui/charts';
 import { formatGroupedInt } from '@/ui/format';
 import { useT } from '@/ui/i18n';
+import { Button } from '@/ui/primitives/button';
 import { AutopsyReportCard } from '@/ui/report';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
 import {
@@ -52,6 +55,8 @@ export interface LoadedLotOverviewProps {
  */
 export function LoadedLotOverview({
   data,
+  selectedPresetId = 'edge-ring-etch',
+  onLoadDemoLot,
   onParseEverything,
   store = useSelectionStore,
 }: LoadedLotOverviewProps): React.JSX.Element {
@@ -59,6 +64,24 @@ export function LoadedLotOverview({
   const { t } = useT();
   const shouldReduceMotion = useReducedMotion();
   const prefersReduced = readPrefersReducedMotionSync(shouldReduceMotion);
+
+  const { storeLot, hasActiveFilter, selectedDieCount, dslFilter } = useStore(
+    store,
+    useShallow((s) => ({
+      storeLot: s.lot,
+      hasActiveFilter: s.hasActiveFilter,
+      selectedDieCount: s.selectedDieCount,
+      dslFilter: s.dslFilter,
+    })),
+  );
+  const isZeroMatches =
+    storeLot === lot && hasActiveFilter && selectedDieCount === 0;
+  const noResultsFilterSummary = React.useMemo(() => {
+    if (!isZeroMatches || dslFilter === null) {
+      return '';
+    }
+    return formatFilterDslSummary(dslFilter, lot);
+  }, [isZeroMatches, dslFilter, lot]);
 
   const [revealedLot, setRevealedLot] = React.useState<typeof lot | null>(() => {
     if (typeof window === 'undefined') {
@@ -119,7 +142,7 @@ export function LoadedLotOverview({
         return;
       }
       const state = store.getState();
-      if (state.hasActiveFilter) {
+      if (state.hasActiveFilter || state.dslFilter !== null) {
         event.preventDefault();
         state.setBrush(null);
         state.setBinFilter(null);
@@ -197,10 +220,52 @@ export function LoadedLotOverview({
   );
 
   return (
-    <div
-      data-testid="verdict-wafer-hero-grid"
-      className="flex w-full flex-col sm:max-lg:mx-auto sm:max-lg:max-w-[640px] lg:grid lg:grid-cols-[540px_minmax(0,1fr)] lg:items-start lg:gap-x-5 xl:grid-cols-12 xl:gap-x-6"
-    >
+    <>
+      {isZeroMatches ? (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          data-testid="no-results-empty-state"
+          className="mb-5 flex flex-col gap-4 rounded-2xl bg-surface p-5 shadow-card sm:flex-row sm:items-center sm:justify-between lg:mt-5 lg:mb-0"
+        >
+          <div className="min-w-0">
+            <h2 className="type-headline text-text-primary">
+              {t('empty.noResults.title')}
+            </h2>
+            <p className="mt-1 type-subhead text-pretty text-text-secondary">
+              {noResultsFilterSummary
+                ? t('empty.noResults.bodyFilter', {
+                    filter: noResultsFilterSummary,
+                  })
+                : t('empty.noResults.body')}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+            <Button
+              variant="secondary"
+              size="md"
+              data-testid="no-results-clear-filters"
+              onClick={() => store.getState().clearFilters()}
+            >
+              {t('empty.noResults.clear')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              data-testid="no-results-load-demo"
+              onClick={() => onLoadDemoLot?.(selectedPresetId)}
+              disabled={!onLoadDemoLot}
+            >
+              {t('landing.primary')}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      <div
+        data-testid="verdict-wafer-hero-grid"
+        className="flex w-full flex-col sm:max-lg:mx-auto sm:max-lg:max-w-[640px] lg:grid lg:grid-cols-[540px_minmax(0,1fr)] lg:items-start lg:gap-x-5 xl:grid-cols-12 xl:gap-x-6"
+      >
       <AutopsyReportCard
         lot={lot}
         report={report}
@@ -286,5 +351,6 @@ export function LoadedLotOverview({
         </div>
       ) : null}
     </div>
+    </>
   );
 }

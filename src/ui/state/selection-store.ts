@@ -518,9 +518,39 @@ const buildSelectionStoreSlice: StateCreator<SelectionStoreState> = (
     },
 
     setDslFilter: (dslFilter) => {
-      const patch = recomputeWith(get().lot, { dslFilter });
+      const current = get();
+      const lot = current.lot;
+      const patch = recomputeWith(lot, { dslFilter });
+      let nextActiveTestNum = current.activeTestNum;
+      if (
+        lot !== null &&
+        dslFilter !== null &&
+        dslFilter.capabilityClauses.length > 0
+      ) {
+        const evaluated = evaluateSelection(
+          lot,
+          patch ? patch.brush : current.brush,
+          dslFilter,
+          {
+            bin: patch ? patch.binFilter : current.binFilter,
+            siteIndex: patch ? patch.siteFilter : current.siteFilter,
+            waferIndex: patch ? patch.waferFilter : current.waferFilter,
+          },
+        );
+        if (evaluated.lowestCpkTestNum !== null) {
+          nextActiveTestNum = evaluated.lowestCpkTestNum;
+        } else if (evaluated.matchingTestNums.length > 0) {
+          nextActiveTestNum = evaluated.matchingTestNums[0]!;
+        }
+      }
       if (patch) {
-        set(patch);
+        set(
+          nextActiveTestNum !== current.activeTestNum
+            ? { ...patch, activeTestNum: nextActiveTestNum }
+            : patch,
+        );
+      } else if (nextActiveTestNum !== current.activeTestNum) {
+        set({ activeTestNum: nextActiveTestNum });
       }
     },
 

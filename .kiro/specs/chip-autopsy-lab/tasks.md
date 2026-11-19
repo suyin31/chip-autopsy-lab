@@ -138,25 +138,25 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
   - _Requirements: 4.2, 4.5, 4.7_
 
 - [x] 16. Add the LLM narrator route with citation validation
-  - [ ] 16.1 Implement `sanitizeOutboundNarratePayload` and `validateLlmNarration` in `citation-validator.ts`
+  - [x] 16.1 Implement `sanitizeOutboundNarratePayload` and `validateLlmNarration` in `citation-validator.ts`
     - _Requirements: 10.6, 10.7, 16.3_
-  - [ ] 16.2 Implement `src/app/api/autopsy/narrate/route.ts`
+  - [x] 16.2 Implement `src/app/api/autopsy/narrate/route.ts`
     - Server-only `LLM_API_KEY` (no `NEXT_PUBLIC_`), schema validation in and out, 4 s client timeout, template report kept on missing key, error, or failed validation.
     - _Requirements: 10.5, 10.6, 16.3, 16.4_
-  - [ ]* 16.3 Property test: citation validator soundness and deterministic fallback
+  - [x]* 16.3 Property test: citation validator soundness and deterministic fallback
     - **Property 11** in `src/core/report/citation-validator.prop.test.ts`
     - _Requirements: 10.6, 10.7_
-  - [ ]* 16.4 Property test: outbound LLM payload privacy
+  - [x]* 16.4 Property test: outbound LLM payload privacy
     - **Property 14** in `src/core/report/llm-payload-privacy.prop.test.ts`
     - _Requirements: 16.1, 16.3_
 
-- [ ] 17. Add the Filter DSL and the Cmd-K / Ctrl-K palette
-  - [ ] 17.1 Implement `filter-dsl.ts` and the offline `nl-grammar.ts`
+- [x] 17. Add the Filter DSL and the Cmd-K / Ctrl-K palette
+  - [x] 17.1 Implement `filter-dsl.ts` and the offline `nl-grammar.ts`
     - Handles `"only bin 7"`, `"tests with Cpk < 1.33"`, `"edge 3 rings"`, and `"show edge failures with Cpk < 1.33"`; invalid input leaves the selection unchanged.
     - _Requirements: 12.2, 12.4, 12.5_
-  - [ ] 17.2 Build `CommandPalette` (cmdk) with `0 ms` open, recents first, right-aligned shortcuts, filter chips, and the no-results empty state
+  - [x] 17.2 Build `CommandPalette` (cmdk) with `0 ms` open, recents first, right-aligned shortcuts, filter chips, and the no-results empty state
     - _Requirements: 12.1, 12.5, 12.6, 17.6_
-  - [ ]* 17.3 Property test: Filter DSL round-trip serialization
+  - [x]* 17.3 Property test: Filter DSL round-trip serialization
     - **Property 13** (DSL part) in `src/core/query/filter-dsl-codec.prop.test.ts`
     - _Requirements: 12.2_
 

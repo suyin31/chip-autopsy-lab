@@ -419,4 +419,20 @@ export const ja = {
   'verdict.narration.loading': 'エンジンの事実データと AI 要約を照合しています…',
   'verdict.narration.verified': 'AI 要約は引用されたエンジンの事実データと照合済みです。',
   'verdict.narration.fallback': '内蔵テンプレートの要約を表示しています。',
+
+  // Command palette (Task 17)
+  'palette.ariaLabel': 'コマンドパレット',
+  'palette.placeholder': 'ダイを絞り込むかコマンドを実行…',
+  'palette.group.recents': '最近のクエリ',
+  'palette.group.filters': 'フィルタークエリ',
+  'palette.group.actions': 'アクション',
+  'palette.runQuery': 'フィルターを適用：{query}',
+  'palette.error.invalidQuery': 'クエリを認識できません。次のフィルター例をお試しください：',
+  'palette.action.clearFilters': '適用中のフィルターを解除',
+  'palette.action.modePassFail': 'ウェーハ表示：合否',
+  'palette.action.modeHbin': 'ウェーハ表示：ハードビン',
+  'palette.action.modeSbin': 'ウェーハ表示：ソフトビン',
+  'palette.action.modeParametric': 'ウェーハ表示：パラメトリック',
+  'palette.action.loadSample': 'サンプルを読み込む：{name}',
+  'palette.action.exportDemo': 'サンプル STDF をダウンロード',
 } as const satisfies Dictionary;
