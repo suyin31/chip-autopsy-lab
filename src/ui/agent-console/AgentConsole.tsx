@@ -25,6 +25,7 @@ import type { DemoPresetId } from '@/core/demo';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
 import { createAutopsyWorkerClient, type AutopsyWorkerClient } from '@/workers';
 import { Button, cn } from '@/ui/primitives';
+import { ThemeToggle } from '@/ui/layout/ThemeToggle';
 import {
   createLabSiteActions,
   type LabBridge,
@@ -386,6 +387,7 @@ export function AgentConsole() {
             >
               Network &amp; manifest
             </button>
+            <ThemeToggle />
             <button
               type="button"
               onClick={() => setShowSettings(true)}
@@ -473,7 +475,7 @@ export function AgentConsole() {
                       </span>
                     </div>
                     {item.summary ? (
-                      <p className="line-clamp-3 text-[12px] leading-relaxed text-text-tertiary">{item.summary}</p>
+                      <p className="line-clamp-2 text-[12px] leading-relaxed text-text-tertiary">{item.summary}</p>
                     ) : null}
                   </div>
                 );
