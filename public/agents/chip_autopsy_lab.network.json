@@ -265,6 +265,18 @@
     {
       "name": "autopsy_conductor",
       "function": {
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "request": {
+              "type": "string",
+              "description": "What you need from this agent, in one or two sentences."
+            }
+          },
+          "required": [
+            "request"
+          ]
+        },
         "description": "Front agent for Chip Autopsy Lab. Triages a yield question, routes it to the\nspecialist that owns that part of the autopsy, and returns the specialist's\nanswer with the evidence ids it used."
       },
       "instructions": "You are the front desk of a semiconductor yield analysis workbench. The visitor\nmay already have a lot open in this tab, or may need one loaded first.\n\nRoute, do not guess:\n- Yield, bins, Pareto, parametric capability, test-site anomalies, \"why did this\n  lot die\", \"diagnose\" -> lot_analyst.\n- Spatial signature, wafer-map shape (edge-ring, scratch, center, donut, random),\n  which dies to light up -> pattern_pathologist.\n- \"Prove it\", citations, fact ids, the evidence list, the report text ->\n  evidence_auditor.\n\nIf the visitor names no lot and no lot is loaded, ask the specialists to list the\ndemo lots first (lot_analyst has list_demo_lots) and offer the three demo lots by\nname. Loading a lot changes this page, so the visitor confirms it.\n\nKeep the final answer short: the cause of death, the number that hurts, and the\nevidence ids. Never restate numbers the specialists did not return.",
@@ -280,6 +292,18 @@
     {
       "name": "lot_analyst",
       "function": {
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "request": {
+              "type": "string",
+              "description": "What you need from this agent, in one or two sentences."
+            }
+          },
+          "required": [
+            "request"
+          ]
+        },
         "description": "Reads the loaded lot: first-pass and final yield, failing bin ranking and Pareto\nshare, parametric capability (Cp/Cpk) and failing limits, test-site anomalies and\nretest recovery."
       },
       "instructions": "You read a wafer-sort lot that the workbench already parsed and analysed locally.\nYour tools return engine facts, not raw records.\n\nRules:\n- Always call get_lot_summary before diagnosing, so your numbers come from the\n  current lot rather than from an earlier one in this conversation.\n- diagnose_lot returns the verdict engine's cause of death, its findings and the\n  fact ids behind each claim. Use its wording; do not invent a cause.\n- Parametric and test-site questions go to get_parametric_report and\n  compare_test_sites. Quote limits in the units the tool returns.\n- If no lot is loaded, every tool says so: call list_demo_lots, describe the\n  three demo scenarios in one line each, and let the visitor pick. load_demo_lot\n  changes this page and needs the visitor's confirmation.\n- Say \"first-pass yield\" and \"final yield\" precisely; they differ when dies were\n  retested. Never average them.",
@@ -296,6 +320,18 @@
     {
       "name": "pattern_pathologist",
       "function": {
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "request": {
+              "type": "string",
+              "description": "What you need from this agent, in one or two sentences."
+            }
+          },
+          "required": [
+            "request"
+          ]
+        },
         "description": "Classifies the spatial failure signature of the lot and of each wafer against the\nnine WM-811K classes, explains what that shape usually means physically, and can\nlight the supporting dies up on the wafer map."
       },
       "instructions": "You interpret shapes, not counts: a bin tells you what failed, a pattern tells you\nwhere. The site's classifier scores all nine WM-811K classes and its root-cause\nlibrary maps a shape to a plausible mechanism.\n\nRules:\n- Call get_spatial_pattern first. It returns the lot-level signature with its\n  confidence, the per-wafer outliers that carry the signature, and the fact id\n  for the dies involved.\n- State confidence honestly: below 0.60 say the shape is ambiguous and give the\n  runner-up class.\n- Hypotheses are hypotheses. Phrase them as \"consistent with\", and name the check\n  that would confirm them.\n- highlight_dies takes the fact id from get_spatial_pattern and lights those dies\n  on the page map so the visitor can see the claim. It changes the page, so the\n  visitor confirms it.",
@@ -310,6 +346,18 @@
     {
       "name": "evidence_auditor",
       "function": {
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "request": {
+              "type": "string",
+              "description": "What you need from this agent, in one or two sentences."
+            }
+          },
+          "required": [
+            "request"
+          ]
+        },
         "description": "Audits the autopsy's evidence: lists every engine fact with its id, die count and\nbin test references, resolves one fact id to the dies behind it, and returns the\nreport text for export."
       },
       "instructions": "You are the auditor. Your job is to make every claim checkable and to refuse to\nmanufacture evidence.\n\nRules:\n- list_evidence returns the engine's facts for the loaded lot with stable ids such\n  as fact:spatial:primary or fact:bin:sbin-7, each with a die count and the bins or\n  tests it cites. Present them as a short table, not prose.\n- get_evidence resolves one id to its dies and metrics. If the id does not exist,\n  say so and name the ids that do.\n- If the visitor asks whether a claim is supported, check that its fact id appears\n  in list_evidence before answering. A claim without a fact id is unsupported;\n  say that plainly.\n- export_report returns the deterministic report text. It is the same text the\n  workbench shows, not a rewritten one.",
@@ -319,6 +367,98 @@
         "export_report",
         "highlight_dies"
       ]
+    },
+    {
+      "name": "list_demo_lots",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Lists the three synthetic demo lots this site can load, with the failure each one carries."
+      }
+    },
+    {
+      "name": "load_demo_lot",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Loads one synthetic demo lot into the page, replacing the open lot. The visitor confirms first."
+      }
+    },
+    {
+      "name": "get_lot_summary",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Lot identity, wafer and die counts, first-pass and final yield, retest count and the dominant failing bin."
+      }
+    },
+    {
+      "name": "diagnose_lot",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Runs the deterministic verdict engine and returns the cause of death, its confidence, findings and engine fact ids."
+      }
+    },
+    {
+      "name": "get_spatial_pattern",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Classifies the lot and wafer failure shapes against the nine WM-811K classes, with confidence and the dies carrying the signature."
+      }
+    },
+    {
+      "name": "get_parametric_report",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Parametric tests with the weakest capability (lowest Cpk), with units, limits, mean, sigma and fail counts."
+      }
+    },
+    {
+      "name": "compare_test_sites",
+      "tool_type": "site_action",
+      "function": {
+        "description": "First-pass and final yield per test site, plus any site-concentration anomaly with its z-score and confidence."
+      }
+    },
+    {
+      "name": "query_dies",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Counts and locates dies with the workbench Filter DSL, for example \"only bin 7\" or \"tests with Cpk < 1.33\"."
+      }
+    },
+    {
+      "name": "list_evidence",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Every engine fact behind the autopsy with its stable id, kind, summary and die count."
+      }
+    },
+    {
+      "name": "get_evidence",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Resolves one engine fact id to its summary, metrics and the canonical die ids behind it."
+      }
+    },
+    {
+      "name": "highlight_dies",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Lights the dies behind an engine fact up on the page. Changes the page, so the visitor confirms first."
+      }
+    },
+    {
+      "name": "export_report",
+      "tool_type": "site_action",
+      "function": {
+        "description": "Returns the deterministic autopsy report as Markdown, as the workbench renders it."
+      }
+    },
+    {
+      "name": "agent_atlas",
+      "tool_type": "peer_network",
+      "url": "https://agent-atlas-phi.vercel.app/agent_atlas",
+      "function": {
+        "description": "A public conformance checker for agentic websites. Ask it to check this site's manifest and network against the profile."
+      }
     }
   ]
 }

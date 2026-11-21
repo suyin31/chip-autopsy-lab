@@ -532,11 +532,37 @@ export function resolveNetwork(raw, options = {}) {
 
   /** @type {Map<string, AgentSpec>} */
   const agents = new Map();
+  /**
+   * Capabilities the network declares but does not own: site actions this
+   * origin registers, or peer networks resolved through `links.json`. They are
+   * data too, so a caller can see every capability before it runs anything.
+   * @type {Map<string, {name: string, description: string, toolType: string, url?: string}>}
+   */
+  const capabilities = new Map();
   for (const [i, entry] of entries.entries()) {
     if (!isPlainObject(entry)) {
       fail(ERROR_CODES.networkInvalid, `Network "${name}": tools[${i}] must be an object.`);
     }
     const agentName = entry.name;
+    if (typeof entry.tool_type === 'string') {
+      if (typeof agentName !== 'string' || agentName.trim() === '') {
+        fail(ERROR_CODES.networkInvalid, `Network "${name}": tools[${i}] capability is missing its name.`);
+      }
+      if (capabilities.has(agentName)) {
+        fail(ERROR_CODES.networkInvalid, `Network "${name}": duplicate capability "${agentName}".`);
+      }
+      const capabilityDescription =
+        (isPlainObject(entry.function) && typeof entry.function.description === 'string'
+          ? entry.function.description
+          : '') || '';
+      capabilities.set(agentName, {
+        name: agentName,
+        description: capabilityDescription,
+        toolType: entry.tool_type,
+        ...(typeof entry.url === 'string' ? { url: entry.url } : {}),
+      });
+      continue;
+    }
     if (typeof agentName !== 'string' || agentName.trim() === '') {
       fail(ERROR_CODES.networkInvalid, `Network "${name}": tools[${i}] is missing its name.`);
     }
@@ -558,6 +584,10 @@ export function resolveNetwork(raw, options = {}) {
         : typeof entry.description === 'string'
           ? entry.description
           : '') || '';
+    const declaredParameters =
+      isPlainObject(entry.function) && isPlainObject(entry.function.parameters)
+        ? entry.function.parameters
+        : undefined;
     if (description.trim() === '') {
       fail(
         ERROR_CODES.networkInvalid,
@@ -595,6 +625,7 @@ export function resolveNetwork(raw, options = {}) {
       description,
       instructions: typeof entry.instructions === 'string' ? entry.instructions : '',
       tools,
+      ...(declaredParameters ? { parameters: declaredParameters } : {}),
     });
   }
 
@@ -616,7 +647,7 @@ export function resolveNetwork(raw, options = {}) {
     for (const tool of agent.tools) {
       if (typeof tool !== 'string') continue;
       const isUrl = /^https?:\/\//i.test(tool);
-      if (!isUrl && agents.has(tool)) continue;
+      if (!isUrl && (agents.has(tool) || capabilities.has(tool))) continue;
       if (isUrl) {
         try {
           new URL(tool);
@@ -630,6 +661,15 @@ export function resolveNetwork(raw, options = {}) {
       }
       // A remaining bare name is a site action (or MCP/coded tool) that the
       // caller's registry must provide; dispatch fails closed when it cannot.
+    }
+  }
+
+  for (const capabilityName of capabilities.keys()) {
+    if (agents.has(capabilityName)) {
+      fail(
+        ERROR_CODES.networkInvalid,
+        `Network "${name}": "${capabilityName}" is declared as both an agent and a capability.`,
+      );
     }
   }
 
@@ -647,6 +687,7 @@ export function resolveNetwork(raw, options = {}) {
           : '',
     frontMan: declaredFront,
     agents,
+    capabilities,
     metadata,
     raw,
     modelName: typeof llmConfig.model_name === 'string' ? llmConfig.model_name : undefined,
@@ -1523,14 +1564,56 @@ export function createAgentRuntime(options = {}) {
           function: {
             name: localAgent.name,
             description: localAgent.description,
-            parameters: {
-              type: 'object',
-              properties: { request: { type: 'string', description: 'What you need from this agent.' } },
-              required: ['request'],
-            },
+            parameters:
+              isPlainObject(localAgent.parameters) && localAgent.parameters.type
+                ? localAgent.parameters
+                : {
+                    type: 'object',
+                    properties: { request: { type: 'string', description: 'What you need from this agent.' } },
+                    required: ['request'],
+                  },
           },
         });
         byName.set(localAgent.name, { kind: 'agent', agent: localAgent.name });
+        continue;
+      }
+      const capability = network.capabilities?.get(tool);
+      if (capability) {
+        const peerUrl = capability.url ?? siteLinks[network.name]?.[tool] ?? peerBindings.get(tool);
+        if (peerUrl) {
+          const exposedName = `peer_${slugify(tool)}`;
+          if (byName.has(exposedName)) continue;
+          exposed.push({
+            type: 'function',
+            function: {
+              name: exposedName,
+              description: capability.description || `Asks ${peerUrl} for help with one request.`,
+              parameters: {
+                type: 'object',
+                properties: { query: { type: 'string', description: 'The request for that site.' } },
+                required: ['query'],
+              },
+            },
+          });
+          byName.set(exposedName, { kind: 'peer', url: peerUrl });
+          continue;
+        }
+        const capabilityAction = actions.get(tool);
+        if (capabilityAction) {
+          exposed.push({
+            type: 'function',
+            function: {
+              name: capabilityAction.name,
+              description: `${capabilityAction.purpose}${capabilityAction.effect && capabilityAction.effect !== 'read' ? ` (effect: ${capabilityAction.effect}; the visitor confirms first)` : ''}`,
+              parameters: isPlainObject(capabilityAction.inputSchema)
+                ? capabilityAction.inputSchema
+                : { type: 'object' },
+            },
+          });
+          byName.set(capabilityAction.name, { kind: 'action', action: capabilityAction });
+          continue;
+        }
+        byName.set(tool, { kind: 'missing' });
         continue;
       }
       const linkedPeer =

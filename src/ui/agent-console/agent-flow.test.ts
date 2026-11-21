@@ -135,6 +135,34 @@ describe('published site bundle', () => {
     }
   });
 
+  it('declares every site action and peer as a capability the network can name', async () => {
+    const { runtime, actions } = await createConsoleRuntime();
+    const network = runtime.getNetwork('chip_autopsy_lab');
+    expect(network).not.toBeNull();
+    expect(network!.capabilities.size).toBe(13);
+    const manifest = JSON.parse(await fs.readFile(path.join(PUBLIC, 'agent-manifest.json'), 'utf8')) as {
+      actions: { agentTools: string[] };
+    };
+    for (const [name, capability] of network!.capabilities) {
+      if (capability.toolType === 'site_action') {
+        expect(manifest.actions.agentTools, name).toContain(name);
+        expect(actions.some((action) => action.name === name), name).toBe(true);
+        expect(capability.description.length, name).toBeGreaterThan(20);
+      } else {
+        expect(capability.url, name).toMatch(/^https:\/\//);
+      }
+    }
+  });
+
+  it('gives every agent a declared input schema and instructions', async () => {
+    const { runtime } = await createConsoleRuntime();
+    const network = runtime.getNetwork('chip_autopsy_lab');
+    for (const agent of network!.agents.values()) {
+      expect(agent.instructions.length, agent.name).toBeGreaterThan(100);
+      expect(agent.parameters, agent.name).toMatchObject({ type: 'object' });
+    }
+  });
+
   it('answers every sample query in the manifest with real engine numbers', async () => {
     const { runtime } = await createConsoleRuntime({ payload: buildPayload('edge-ring-etch') });
     const manifest = JSON.parse(await fs.readFile(path.join(PUBLIC, 'agent-manifest.json'), 'utf8')) as {

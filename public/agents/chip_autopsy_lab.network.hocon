@@ -178,6 +178,16 @@ verdict-first cause of death where every claim points at engine fact ids.
     {
       name = autopsy_conductor
       function {
+        parameters {
+          type = object
+          properties {
+            request {
+              type = string
+              description = "What you need from this agent, in one or two sentences."
+            }
+          }
+          required = [request]
+        }
         description = """
 Front agent for Chip Autopsy Lab. Triages a yield question, routes it to the
 specialist that owns that part of the autopsy, and returns the specialist's
@@ -216,6 +226,16 @@ evidence ids. Never restate numbers the specialists did not return.
     {
       name = lot_analyst
       function {
+        parameters {
+          type = object
+          properties {
+            request {
+              type = string
+              description = "What you need from this agent, in one or two sentences."
+            }
+          }
+          required = [request]
+        }
         description = """
 Reads the loaded lot: first-pass and final yield, failing bin ranking and Pareto
 share, parametric capability (Cp/Cpk) and failing limits, test-site anomalies and
@@ -253,6 +273,16 @@ Rules:
     {
       name = pattern_pathologist
       function {
+        parameters {
+          type = object
+          properties {
+            request {
+              type = string
+              description = "What you need from this agent, in one or two sentences."
+            }
+          }
+          required = [request]
+        }
         description = """
 Classifies the spatial failure signature of the lot and of each wafer against the
 nine WM-811K classes, explains what that shape usually means physically, and can
@@ -288,6 +318,16 @@ Rules:
     {
       name = evidence_auditor
       function {
+        parameters {
+          type = object
+          properties {
+            request {
+              type = string
+              description = "What you need from this agent, in one or two sentences."
+            }
+          }
+          required = [request]
+        }
         description = """
 Audits the autopsy's evidence: lists every engine fact with its id, die count and
 bin test references, resolves one fact id to the dies behind it, and returns the
@@ -316,6 +356,108 @@ Rules:
         export_report,
         highlight_dies
       ]
+    }
+    # ---------------------------------------------------------------------
+    # Site actions this origin registers for the network. They are declared
+    # here so the network is self-describing (a caller can see every
+    # capability an agent may use), and they are dispatched only by a runtime
+    # running on this site, where the handlers live. Cross-origin invocation
+    # of these actions is outside MVP Profile 0.3.
+    # ---------------------------------------------------------------------
+
+    {
+      name = list_demo_lots
+      tool_type = site_action
+      function {
+        description = "Lists the three synthetic demo lots this site can load, with the failure each one carries."
+      }
+    },
+    {
+      name = load_demo_lot
+      tool_type = site_action
+      function {
+        description = "Loads one synthetic demo lot into the page, replacing the open lot. The visitor confirms first."
+      }
+    },
+    {
+      name = get_lot_summary
+      tool_type = site_action
+      function {
+        description = "Lot identity, wafer and die counts, first-pass and final yield, retest count and the dominant failing bin."
+      }
+    },
+    {
+      name = diagnose_lot
+      tool_type = site_action
+      function {
+        description = "Runs the deterministic verdict engine and returns the cause of death, its confidence, findings and engine fact ids."
+      }
+    },
+    {
+      name = get_spatial_pattern
+      tool_type = site_action
+      function {
+        description = "Classifies the lot and wafer failure shapes against the nine WM-811K classes, with confidence and the dies carrying the signature."
+      }
+    },
+    {
+      name = get_parametric_report
+      tool_type = site_action
+      function {
+        description = "Parametric tests with the weakest capability (lowest Cpk), with units, limits, mean, sigma and fail counts."
+      }
+    },
+    {
+      name = compare_test_sites
+      tool_type = site_action
+      function {
+        description = "First-pass and final yield per test site, plus any site-concentration anomaly with its z-score and confidence."
+      }
+    },
+    {
+      name = query_dies
+      tool_type = site_action
+      function {
+        description = "Counts and locates dies with the workbench Filter DSL, for example \"only bin 7\" or \"tests with Cpk < 1.33\"."
+      }
+    },
+    {
+      name = list_evidence
+      tool_type = site_action
+      function {
+        description = "Every engine fact behind the autopsy with its stable id, kind, summary and die count."
+      }
+    },
+    {
+      name = get_evidence
+      tool_type = site_action
+      function {
+        description = "Resolves one engine fact id to its summary, metrics and the canonical die ids behind it."
+      }
+    },
+    {
+      name = highlight_dies
+      tool_type = site_action
+      function {
+        description = "Lights the dies behind an engine fact up on the page. Changes the page, so the visitor confirms first."
+      }
+    },
+    {
+      name = export_report
+      tool_type = site_action
+      function {
+        description = "Returns the deterministic autopsy report as Markdown, as the workbench renders it."
+      }
+    },
+
+    # A peer network, resolved through this site's published links.json.
+    {
+      name = agent_atlas
+      tool_type = peer_network
+      url = "https://agent-atlas-phi.vercel.app/agent_atlas"
+      function {
+        description = "A public conformance checker for agentic websites. Ask it to check this site's manifest and network against the profile."
+      }
     }
   ]
 }

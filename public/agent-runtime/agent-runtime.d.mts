@@ -38,6 +38,7 @@ export interface AgentSpec {
   readonly name: string;
   readonly description: string;
   readonly instructions: string;
+  readonly parameters?: Record<string, unknown>;
   readonly tools: ReadonlyArray<string | { readonly url: string; readonly tools?: readonly string[] }>;
 }
 
@@ -46,6 +47,10 @@ export interface Network {
   readonly description: string;
   readonly frontMan: string;
   readonly agents: ReadonlyMap<string, AgentSpec>;
+  readonly capabilities: ReadonlyMap<
+    string,
+    { readonly name: string; readonly description: string; readonly toolType: string; readonly url?: string }
+  >;
   readonly metadata: Record<string, unknown>;
   readonly raw: Record<string, unknown>;
   readonly source: { readonly baseUrl: string; readonly origin: string; readonly isPeer: boolean };
