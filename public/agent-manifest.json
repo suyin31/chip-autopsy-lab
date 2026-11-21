@@ -6,7 +6,13 @@
       "front_man": "autopsy_conductor",
       "hocon": "/agents/chip_autopsy_lab.network.json",
       "description": "Wafer-lot failure autopsy: read yield, rank failing bins, check parametric capability, classify the WM-811K spatial signature, and get a verdict-first cause of death where every claim cites an engine fact id.",
-      "tags": ["deployed", "static", "local-first", "semiconductor", "yield-analysis"],
+      "tags": [
+        "deployed",
+        "static",
+        "local-first",
+        "semiconductor",
+        "yield-analysis"
+      ],
       "sample_queries": [
         "Why did this lot lose yield? Give me the cause of death and the evidence.",
         "Which failing bin took the most dies, and what share of the failures is that?",
@@ -24,7 +30,9 @@
     "mock": false,
     "note": "The site funds no inference. Visitors bring their own OpenAI-compatible router, model and key; with no key the console runs the same network on a deterministic demo router that assembles answers from real tool results."
   },
-  "allowed_peers": ["https://agent-atlas-phi.vercel.app"],
+  "allowed_peers": [
+    "https://agent-atlas-phi.vercel.app"
+  ],
   "peer_policy": {
     "mode": "closed",
     "deny_origins": [],
@@ -47,7 +55,7 @@
       "highlight_dies",
       "export_report"
     ],
-    "note": "Handlers are registered by the page that hosts the runtime and run on this origin only. list_demo_lots, get_lot_summary, diagnose_lot, get_spatial_pattern, get_parametric_report, compare_test_sites, query_dies, list_evidence, get_evidence and export_report read aggregate engine facts; load_demo_lot and highlight_dies change the page and wait for the visitor's confirmation. Cross-origin invocation of these actions is outside MVP Profile 0.3."
+    "note": "Handlers are registered by the page that hosts the runtime and run on this origin only; the network names them as tool_type=site_action in the toolbox site_actions, which is a registry the page fills at boot, not a downloadable bundle. list_demo_lots, get_lot_summary, diagnose_lot, get_spatial_pattern, get_parametric_report, compare_test_sites, query_dies, list_evidence, get_evidence and export_report read aggregate engine facts; load_demo_lot and highlight_dies change the page and wait for the visitor's confirmation. Cross-origin invocation of these actions is outside MVP Profile 0.3, so a remote runtime fails closed and reports the capability as unavailable."
   },
   "linking": {
     "protocol": "nsdeploy-link/v1",
@@ -55,12 +63,17 @@
       {
         "network": "chip_autopsy_lab",
         "front_man": "autopsy_conductor",
-        "aliases": ["chip_autopsy_lab", "autopsy_conductor"],
+        "aliases": [
+          "chip_autopsy_lab",
+          "autopsy_conductor"
+        ],
         "url": "chip_autopsy_lab"
       }
     ],
     "imports": [],
-    "link_updates": { "mode": "browser-local" }
+    "link_updates": {
+      "mode": "browser-local"
+    }
   },
   "deployment": {
     "mode": "static",

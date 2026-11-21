@@ -368,6 +368,7 @@ Rules:
     {
       name = list_demo_lots
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Lists the three synthetic demo lots this site can load, with the failure each one carries."
       }
@@ -375,6 +376,7 @@ Rules:
     {
       name = load_demo_lot
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Loads one synthetic demo lot into the page, replacing the open lot. The visitor confirms first."
       }
@@ -382,6 +384,7 @@ Rules:
     {
       name = get_lot_summary
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Lot identity, wafer and die counts, first-pass and final yield, retest count and the dominant failing bin."
       }
@@ -389,6 +392,7 @@ Rules:
     {
       name = diagnose_lot
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Runs the deterministic verdict engine and returns the cause of death, its confidence, findings and engine fact ids."
       }
@@ -396,6 +400,7 @@ Rules:
     {
       name = get_spatial_pattern
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Classifies the lot and wafer failure shapes against the nine WM-811K classes, with confidence and the dies carrying the signature."
       }
@@ -403,6 +408,7 @@ Rules:
     {
       name = get_parametric_report
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Parametric tests with the weakest capability (lowest Cpk), with units, limits, mean, sigma and fail counts."
       }
@@ -410,6 +416,7 @@ Rules:
     {
       name = compare_test_sites
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "First-pass and final yield per test site, plus any site-concentration anomaly with its z-score and confidence."
       }
@@ -417,6 +424,7 @@ Rules:
     {
       name = query_dies
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Counts and locates dies with the workbench Filter DSL, for example \"only bin 7\" or \"tests with Cpk < 1.33\"."
       }
@@ -424,6 +432,7 @@ Rules:
     {
       name = list_evidence
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Every engine fact behind the autopsy with its stable id, kind, summary and die count."
       }
@@ -431,6 +440,7 @@ Rules:
     {
       name = get_evidence
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Resolves one engine fact id to its summary, metrics and the canonical die ids behind it."
       }
@@ -438,6 +448,7 @@ Rules:
     {
       name = highlight_dies
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Lights the dies behind an engine fact up on the page. Changes the page, so the visitor confirms first."
       }
@@ -445,6 +456,7 @@ Rules:
     {
       name = export_report
       tool_type = site_action
+      toolbox = site_actions
       function {
         description = "Returns the deterministic autopsy report as Markdown, as the workbench renders it."
       }
