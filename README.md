@@ -24,6 +24,8 @@ Test, product, and yield engineers at small fabless teams and OSATs routinely tr
 
 Live demo: `https://chip-autopsy-lab.netlify.app`
 
+Demo video: https://youtu.be/h5vQuVODXHA
+
 ### Demo lots
 
 Three seeded, deterministic synthetic STDF V4 demo lots are loadable in one click from the landing page (and downloadable as binary `.stdf` files to drag back into the viewport). Each lot contains 25 wafers x 633 dies (15,825 dies) serialized through the same STDF V4 writer and parsed through the same Web Worker pipeline as user-dropped files:

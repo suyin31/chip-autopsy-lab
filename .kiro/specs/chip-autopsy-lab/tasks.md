@@ -178,6 +178,9 @@ Tasks 1-8 build one working vertical slice: built-in demo lot -> Web Worker pars
 
 - [ ] 22. Deploy and prepare the demo video
   - Deploy to Vercel; update `README.md` with the Kiro usage table (specs, steering, hooks, MCP), third-party disclosures, and demo lot downloads; script and record the five demo moments in under 3 minutes with the problem stated in the first 15 seconds; write the phase summary in `logs/`.
+  - [x] 22.1 Deploy the app (deployed to Netlify instead of Vercel: https://chip-autopsy-lab.netlify.app)
+  - [x] 22.2 Record and publish the demo video (https://youtu.be/h5vQuVODXHA)
+  - [ ] 22.3 Submit on Devpost (draft ready in `docs/devpost-submission.md`)
   - _Requirements: 3.4, 15.6, 16.2_
 
 ## Redesign
