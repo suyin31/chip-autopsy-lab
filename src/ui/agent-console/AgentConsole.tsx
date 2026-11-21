@@ -848,7 +848,7 @@ export function AgentConsole() {
     <div className="flex min-h-dvh flex-col bg-bg text-text-primary">
       <header
         data-testid="agent-console-header"
-        className="sticky top-0 z-[var(--z-nav)] w-full bg-material [backdrop-filter:var(--material-filter)] [-webkit-backdrop-filter:var(--material-filter)]"
+        className="sticky top-0 z-[var(--z-nav)] w-full bg-material max-lg:bg-bg [backdrop-filter:var(--material-filter)] [-webkit-backdrop-filter:var(--material-filter)]"
       >
         <div className="mx-auto grid h-12 w-full grid-cols-[auto_1fr_auto] items-center gap-2 px-4 lg:h-[52px] lg:grid-cols-[1fr_auto_1fr] lg:px-8 xl:px-10">
           <div className="flex min-w-0 items-center justify-self-start">
