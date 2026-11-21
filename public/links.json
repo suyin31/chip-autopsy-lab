@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "networks": {
+    "chip_autopsy_lab": {
+      "agent_atlas": "https://agent-atlas-phi.vercel.app/agent_atlas"
+    }
+  }
+}

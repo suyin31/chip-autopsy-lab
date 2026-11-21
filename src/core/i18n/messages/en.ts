@@ -12,6 +12,7 @@ export const en = {
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
   'nav.openFile': 'Open file',
+  'nav.agent': 'Agent console',
   'nav.openStdfAria': 'Open an STDF file',
   'nav.languageAria': 'Change language',
   'nav.home': 'Back to start',

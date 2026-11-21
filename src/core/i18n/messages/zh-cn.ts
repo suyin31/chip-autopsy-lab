@@ -14,6 +14,7 @@ export const zhCN = {
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
   'nav.openFile': '打开文件',
+  'nav.agent': '智能体',
   'nav.openStdfAria': '打开 STDF 文件',
   'nav.languageAria': '切换语言',
   'nav.home': '返回起始页',

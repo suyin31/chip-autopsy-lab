@@ -252,6 +252,7 @@ describe('NavBar, LotPicker, LanguageSwitcher, and legacy chrome removal (Task R
     expect(extractFocusableTestIds(loadedNavHtml)).toEqual([
       'nav-wordmark',
       'lot-picker-trigger',
+      'nav-agent-console',
       'language-switcher-trigger',
       'theme-toggle-trigger',
       'nav-open-stdf',
@@ -269,7 +270,7 @@ describe('NavBar, LotPicker, LanguageSwitcher, and legacy chrome removal (Task R
       loadedNavHtml.matchAll(/<(?:button|a)\b[^>]*>/g),
       (m) => m[0],
     );
-    expect(controlTags).toHaveLength(5);
+    expect(controlTags).toHaveLength(6);
     for (const tag of controlTags) {
       expect(tag).toContain('focus-visible:shadow-focus-ring');
       expect(tag).not.toContain('outline-accent');
@@ -278,13 +279,13 @@ describe('NavBar, LotPicker, LanguageSwitcher, and legacy chrome removal (Task R
 
     // Spacing: language, 4 px, theme (desktop only), 12 px, Open file secondary 32 h
     expect(loadedNavHtml).toContain('ml-1 max-lg:hidden');
-    expect(controlTags[4]).toContain('lg:ml-3');
-    expect(controlTags[4]).toContain('data-variant="secondary"');
-    expect(controlTags[4]).toContain('h-8');
+    expect(controlTags[5]).toContain('lg:ml-3');
+    expect(controlTags[5]).toContain('data-variant="secondary"');
+    expect(controlTags[5]).toContain('h-8');
 
     // Mobile: globe and folder-open render as 44 x 44 icon buttons
-    expect(controlTags[2]).toContain('max-lg:size-11');
-    expect(controlTags[4]).toContain('max-lg:size-11');
+    expect(controlTags[3]).toContain('max-lg:size-11');
+    expect(controlTags[5]).toContain('max-lg:size-11');
 
     // Language switch updates <html lang> and survives full reload via LOCALE_INIT_SCRIPT
     const storageMap = new Map<string, string>();

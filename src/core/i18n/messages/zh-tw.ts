@@ -14,6 +14,7 @@ export const zhTW = {
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
   'nav.openFile': '開啟檔案',
+  'nav.agent': '智慧代理',
   'nav.openStdfAria': '開啟 STDF 檔案',
   'nav.languageAria': '切換語言',
   'nav.home': '回到首頁',

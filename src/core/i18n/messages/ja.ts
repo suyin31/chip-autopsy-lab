@@ -15,6 +15,7 @@ export const ja = {
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
   'nav.openFile': 'ファイルを開く',
+  'nav.agent': 'エージェント',
   'nav.openStdfAria': 'STDF ファイルを開く',
   'nav.languageAria': '言語を切り替え',
   'nav.home': 'トップへ戻る',
