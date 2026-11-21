@@ -737,7 +737,7 @@ export function AutopsyReportCard({
           <div
             data-testid="verdict-below-findings"
             className={cn(
-              'mt-10 min-w-0 pb-6 md:mt-12 lg:mt-24 lg:pb-16',
+              'mt-12 min-w-0 border-t border-hairline pt-8 pb-6 md:mt-14 md:pt-10 lg:mt-16 lg:pb-16',
               splitForMobileStage && 'order-5 lg:order-none',
             )}
           >

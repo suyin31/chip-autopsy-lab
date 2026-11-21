@@ -1158,3 +1158,83 @@
     max-width: 560px;
   }
 }
+
+/*
+ * Agent console surfaces (`/agents`). Terracotta is the console's one accent, and it lives here
+ * with the other token owners: the component files stay free of accent utilities, and the
+ * workbench's failures and the console's citations share the same warm hue.
+ */
+.agent-accent-text {
+  color: var(--ember-ink);
+}
+
+.agent-accent-fill {
+  background-color: var(--ember-ink);
+  color: #ffffff;
+}
+
+:root[data-theme='dark'] .agent-accent-fill {
+  background-color: var(--ember);
+  color: #0b0b0c;
+}
+
+.agent-accent-soft {
+  background-color: var(--ember-soft);
+  color: var(--ember-ink);
+}
+
+/* A tinted chip that carries words: the tint sets it apart, the text stays at body contrast. */
+.agent-accent-chip {
+  background-color: var(--ember-soft);
+  color: var(--text-primary);
+}
+
+.agent-accent-dot {
+  background-color: var(--ember-ink);
+}
+
+:root[data-theme='dark'] .agent-accent-dot {
+  background-color: var(--ember);
+}
+
+/* Cited dies on the console's evidence disc read as terracotta, like a failing die on `/`. */
+.agent-wafer-cited {
+  color: var(--ember-ink);
+}
+
+:root[data-theme='dark'] .agent-wafer-cited {
+  color: var(--ember);
+}
+
+/* Console entrance: 12 px rise on the workbench's out-expo curve; global reduced motion wins. */
+@keyframes agent-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.agent-rise {
+  animation: agent-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* A live agent's presence: one 6 px terracotta dot with a slow breathing ring. */
+@keyframes agent-live {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.82);
+  }
+}
+
+.agent-live-dot {
+  animation: agent-live 1.8s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}

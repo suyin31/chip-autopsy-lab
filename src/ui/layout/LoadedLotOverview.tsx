@@ -356,26 +356,26 @@ export function LoadedLotOverview({
               yieldSummary={yieldSummary}
               facts={facts}
               store={store}
-              className="mt-12 lg:mt-24"
+              className="mt-10 lg:mt-16"
             />
             {lot.wafers.length >= 2 ? (
               <StackedWaferPanel
                 lot={lot}
                 byWaferYield={yieldSummary.byWafer}
                 store={store}
-                className="mt-12 lg:mt-24"
+                className="mt-10 lg:mt-16"
               />
             ) : null}
             {lot.tests.size > 0 ? (
               <ParametricPanel
                 lot={lot}
                 store={store}
-                className="mt-12 lg:mt-24"
+                className="mt-10 lg:mt-16"
               />
             ) : null}
             <p
               data-testid="verdict-footer"
-              className="mt-12 type-subhead text-text-tertiary lg:mt-24"
+              className="mt-10 type-subhead text-text-tertiary lg:mt-16"
             >
               {t('report.footer')}
             </p>

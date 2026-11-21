@@ -8,10 +8,29 @@
  * spoke, which tool ran and with what arguments, which consent card was
  * answered, and which dies a claim actually points at. The same runtime file can
  * be loaded by any other agentic site.
+ *
+ * Reading order on purpose: the conversation is the page. Tool calls collapse to
+ * one-line pills, the answer is unboxed prose with clickable evidence, and the
+ * wafer sits in one quiet rail that never competes with the reply.
  */
 
 import * as React from 'react';
 import Link from 'next/link';
+import {
+  Activity,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  Gauge,
+  Globe,
+  Layers,
+  Loader2,
+  SlidersHorizontal,
+} from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   AgentRuntimeError,
   createAgentRuntime,
@@ -24,12 +43,15 @@ import {
 import type { DemoPresetId } from '@/core/demo';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
 import { createAutopsyWorkerClient, type AutopsyWorkerClient } from '@/workers';
-import { Button, cn } from '@/ui/primitives';
-import { ThemeToggle } from '@/ui/layout/ThemeToggle';
 import {
-  createLabSiteActions,
-  type LabBridge,
-} from './site-actions';
+  AccentWord,
+  Button,
+  cn,
+  ModalSheet,
+  SegmentedControl,
+} from '@/ui/primitives';
+import { ThemeToggle } from '@/ui/layout/ThemeToggle';
+import { createLabSiteActions, type LabBridge } from './site-actions';
 import {
   ModelSettingsPanel,
   routerForSettings,
@@ -61,13 +83,62 @@ type TranscriptItem =
 let counter = 0;
 const nextId = (prefix: string) => `${prefix}-${(counter += 1)}`;
 
-const SUGGESTIONS = [
-  'Load the edge-ring demo lot and diagnose it.',
-  'Why did this lot lose yield? Give me the cause of death and the evidence.',
-  'What spatial signature does this lot show, and which dies carry it?',
-  'Which parametric test has the worst Cpk?',
-  'Compare yield across test sites.',
-];
+const STARTERS = [
+  {
+    label: 'Load the edge-ring demo lot and diagnose it.',
+    hint: 'Runs the sample lot end to end',
+    icon: Layers,
+  },
+  {
+    label: 'Why did this lot lose yield? Give me the cause of death and the evidence.',
+    hint: 'Verdict, failing bins, and the dies behind them',
+    icon: Activity,
+  },
+  {
+    label: 'Which parametric test has the worst Cpk?',
+    hint: 'Capability by test, from the engine',
+    icon: Gauge,
+  },
+] as const;
+
+const AGENT_NAMES: Record<string, string> = {
+  autopsy_conductor: 'the autopsy conductor',
+  lot_analyst: 'the lot analyst',
+  pattern_pathologist: 'the pattern pathologist',
+  evidence_auditor: 'the evidence auditor',
+};
+
+const TOOL_LABELS: Record<string, string> = {
+  list_demo_lots: 'Listed demo lots',
+  load_demo_lot: 'Loaded demo lot',
+  get_lot_summary: 'Read lot summary',
+  diagnose_lot: 'Diagnosed the lot',
+  highlight_dies: 'Highlighted dies',
+  set_bin_filter: 'Filtered by bin',
+};
+
+const AGENT_ROLES: Record<string, string> = {
+  autopsy_conductor: 'Orchestrator',
+  lot_analyst: 'Lot analyst',
+  pattern_pathologist: 'Spatial',
+  evidence_auditor: 'Evidence',
+};
+
+const ARG_LABELS: Record<string, string> = {
+  presetId: 'Preset',
+  lotId: 'Lot',
+  waferIndex: 'Wafer',
+  bin: 'Bin',
+  preset: 'Preset',
+};
+
+const WRITE_COPY: Record<string, { title: string; body: string }> = {
+  load_demo_lot: {
+    title: 'Load a demo lot?',
+    body:
+      'The Edge-Ring Plasma Etch sample lot will replace the lot that is open in this console. It is generated and parsed in this browser — nothing leaves this device.',
+  },
+};
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -83,6 +154,283 @@ function eventSummary(event: TraceEvent): string {
     if (value !== undefined && value !== null && value !== '') parts.push(`${key}=${String(value)}`);
   }
   return parts.join(' · ');
+}
+
+function titleForTool(name: string, status: 'running' | 'ok' | 'error'): string {
+  const agent = AGENT_NAMES[name];
+  if (agent) {
+    return status === 'running' ? `Asking ${agent}…` : `Asked ${agent}`;
+  }
+  const base = TOOL_LABELS[name] ?? name.replace(/_/g, ' ');
+  if (status === 'running') return `${base}…`;
+  if (status === 'error') return `${base} — failed`;
+  return base;
+}
+
+type ToolItem = Extract<TranscriptItem, { kind: 'tool' }>;
+
+/**
+ * Consecutive tool calls collapse into one trail: five bordered rows would
+ * out-shout the answer they produced.
+ */
+function ToolTrail({
+  items,
+  expanded,
+  onToggle,
+  expandedTools,
+  onToggleTool,
+}: {
+  readonly items: readonly ToolItem[];
+  readonly expanded: boolean;
+  readonly onToggle: () => void;
+  readonly expandedTools: ReadonlySet<string>;
+  readonly onToggleTool: (id: string) => void;
+}): React.JSX.Element {
+  const running = items.some((item) => item.status === 'running');
+  const errored = items.some((item) => item.status === 'error');
+  const last = items[items.length - 1]!;
+  const label =
+    items.length === 1
+      ? titleForTool(last.name, last.status)
+      : `${items.length} steps · ${titleForTool(last.name, last.status)}`;
+
+  if (items.length === 1) {
+    return (
+      <ToolPill
+        item={last}
+        expanded={expandedTools.has(last.id)}
+        onToggle={() => onToggleTool(last.id)}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-start">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className={cn(
+          'group inline-flex max-w-full items-center gap-2 rounded-pill bg-fill-1 py-1 pr-2.5 pl-2.5 type-subhead text-text-secondary',
+          'transition-[background-color,color] duration-[120ms] ease-[var(--ease-out)]',
+          'cursor-pointer hover:bg-fill-2 hover:text-text-primary',
+          'focus-visible:shadow-focus-ring focus-visible:outline-none',
+        )}
+      >
+        {running ? (
+          <Loader2 className="size-3 shrink-0 animate-spin text-text-tertiary" aria-hidden="true" />
+        ) : errored ? (
+          <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+        ) : (
+          <Check className="size-3 shrink-0 text-text-secondary" strokeWidth={2.2} aria-hidden="true" />
+        )}
+        <span className="min-w-0 truncate">{label}</span>
+        <ChevronDown
+          className={cn(
+            'size-3 shrink-0 text-text-tertiary transition-[transform] duration-[160ms] ease-[var(--ease-out)]',
+            expanded && 'rotate-180',
+          )}
+          aria-hidden="true"
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {expanded ? (
+          <motion.div
+            key="trail"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-1.5 flex flex-col items-start gap-1.5 border-l border-hairline pl-2.5"
+          >
+            {items.map((item) => (
+              <ToolPill
+                key={item.id}
+                item={item}
+                expanded={expandedTools.has(item.id)}
+                onToggle={() => onToggleTool(item.id)}
+              />
+            ))}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/** Splits an answer into paragraphs, bullets, and inline evidence chips. */
+function AnswerBody({
+  text,
+  onCite,
+  cited,
+}: {
+  readonly text: string;
+  readonly onCite?: (factId: string) => void;
+  readonly cited?: ReadonlySet<string>;
+}): React.JSX.Element {
+  const blocks = React.useMemo(() => splitAnswer(text), [text]);
+  return (
+    <div className="flex flex-col gap-3">
+      {blocks.map((block, index) =>
+        block.kind === 'list' ? (
+          <ul key={index} className="flex flex-col gap-1.5">
+            {block.items.map((item, itemIndex) => (
+              <li key={itemIndex} className="flex gap-2.5">
+                <span aria-hidden="true" className="mt-[0.62em] size-1 shrink-0 rounded-full bg-text-tertiary" />
+                <span className="min-w-0 flex-1">
+                  <Inline text={item} {...(onCite ? { onCite } : {})} {...(cited ? { cited } : {})} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p key={index} className="max-w-[68ch]">
+            <Inline text={block.text} {...(onCite ? { onCite } : {})} {...(cited ? { cited } : {})} />
+          </p>
+        ),
+      )}
+    </div>
+  );
+}
+
+type AnswerBlock =
+  | { readonly kind: 'p'; readonly text: string }
+  | { readonly kind: 'list'; readonly items: string[] };
+
+function splitAnswer(text: string): AnswerBlock[] {
+  const blocks: AnswerBlock[] = [];
+  for (const chunk of text.split(/\n{2,}/)) {
+    const lines = chunk.split('\n').map((line) => line.trim()).filter(Boolean);
+    if (lines.length === 0) continue;
+    const bullets = lines.filter((line) => /^[-•*]\s+/.test(line));
+    if (bullets.length === lines.length) {
+      blocks.push({ kind: 'list', items: lines.map((line) => line.replace(/^[-•*]\s+/, '')) });
+      continue;
+    }
+    // A lead sentence followed by bullets ("Findings:" then "- ...") is its own paragraph + list.
+    const lead = lines.filter((line) => !/^[-•*]\s+/.test(line));
+    const rest = lines.filter((line) => /^[-•*]\s+/.test(line));
+    if (lead.length > 0) blocks.push({ kind: 'p', text: lead.join('\n') });
+    if (rest.length > 0) {
+      blocks.push({ kind: 'list', items: rest.map((line) => line.replace(/^[-•*]\s+/, '')) });
+    }
+  }
+  return blocks;
+}
+
+function Inline({
+  text,
+  onCite,
+  cited,
+}: {
+  readonly text: string;
+  readonly onCite?: (factId: string) => void;
+  readonly cited?: ReadonlySet<string>;
+}): React.JSX.Element {
+  const parts = text.split(/(\[fact:[a-z0-9:._-]+\])/gi);
+  return (
+    <>
+      {parts.map((part, index) => {
+        const match = /^\[(fact:[a-z0-9:._-]+)\]$/i.exec(part);
+        if (!match) return <React.Fragment key={index}>{part}</React.Fragment>;
+        const factId = match[1]!;
+        const isActive = cited?.has(factId) ?? false;
+        if (!onCite) {
+          return (
+            <span key={index} className="font-mono text-[12px] text-text-tertiary">
+              {factId}
+            </span>
+          );
+        }
+        return (
+          <button
+            key={index}
+            type="button"
+            onClick={() => onCite(factId)}
+            title="Show the dies behind this evidence"
+            className={cn(
+              'mx-0.5 inline-flex translate-y-[-1px] items-center gap-1 rounded-pill px-1.5 py-0.5 align-baseline font-mono text-[11px]',
+              'transition-[background-color,color] duration-[120ms] ease-[var(--ease-out)]',
+              'focus-visible:shadow-focus-ring focus-visible:outline-none',
+              isActive
+                ? 'agent-accent-chip'
+                : 'bg-fill-1 text-text-tertiary hover:bg-fill-2 hover:text-text-secondary',
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className={cn('size-1 rounded-full', isActive ? 'agent-accent-dot' : 'bg-current')}
+            />
+            {factId.replace('fact:', '')}
+          </button>
+        );
+      })}
+    </>
+  );
+}
+
+function ToolPill({
+  item,
+  expanded,
+  onToggle,
+}: {
+  readonly item: ToolItem;
+  readonly expanded: boolean;
+  readonly onToggle: () => void;
+}): React.JSX.Element {
+  const hasDetail = Boolean(item.summary) || Boolean(item.toolKind);
+  return (
+    <div className="flex flex-col items-start">
+      <button
+        type="button"
+        onClick={hasDetail ? onToggle : undefined}
+        aria-expanded={hasDetail ? expanded : undefined}
+        className={cn(
+          'group inline-flex max-w-full items-center gap-2 rounded-pill bg-fill-1 py-1 pr-2.5 pl-2.5 type-subhead text-text-secondary',
+          'transition-[background-color,color] duration-[120ms] ease-[var(--ease-out)]',
+          'focus-visible:shadow-focus-ring focus-visible:outline-none',
+          hasDetail && 'cursor-pointer hover:bg-fill-2 hover:text-text-primary',
+          !hasDetail && 'cursor-default',
+          item.status === 'error' && 'text-text-primary',
+        )}
+      >
+        {item.status === 'running' ? (
+          <span className="agent-accent-dot size-1.5 shrink-0 animate-pulse rounded-full" aria-hidden="true" />
+        ) : item.status === 'ok' ? (
+          <Check className="size-3 shrink-0 text-text-secondary" strokeWidth={2.2} aria-hidden="true" />
+        ) : (
+          <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+        )}
+        <span className="min-w-0 truncate">{titleForTool(item.name, item.status)}</span>
+        {item.summary ? (
+          <span className="hidden min-w-0 max-w-[34ch] truncate type-caption text-text-tertiary sm:inline">
+            {item.summary}
+          </span>
+        ) : null}
+        {hasDetail ? (
+          <ChevronDown
+            className={cn(
+              'size-3 shrink-0 text-text-tertiary transition-[transform] duration-[160ms] ease-[var(--ease-out)]',
+              expanded && 'rotate-180',
+            )}
+            aria-hidden="true"
+          />
+        ) : null}
+      </button>
+      {expanded && hasDetail ? (
+        <div className="mt-1 max-w-[62ch] rounded-control bg-fill-1 px-3 py-2">
+          {item.toolKind ? (
+            <p className="type-caption text-text-tertiary">
+              {item.toolKind === 'read' ? 'Read-only tool' : `${item.toolKind} tool`} · {item.status}
+            </p>
+          ) : null}
+          {item.summary ? (
+            <p className="mt-1 type-subhead whitespace-pre-wrap text-text-secondary">{item.summary}</p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function AgentConsole() {
@@ -103,11 +451,14 @@ export function AgentConsole() {
   }>({ ids: new Set<string>() });
   const [waferIndex, setWaferIndex] = React.useState(0);
   const [showSettings, setShowSettings] = React.useState(false);
-  const [showManifest, setShowManifest] = React.useState(false);
+  const [showNetwork, setShowNetwork] = React.useState(false);
   const [peerUrl, setPeerUrl] = React.useState('https://agent-atlas-phi.vercel.app/agent_atlas');
   const [peers, setPeers] = React.useState<{ url: string; network: string; origin: string }[]>([]);
   const [activePeer, setActivePeer] = React.useState<string | null>(null);
   const [manifestJson, setManifestJson] = React.useState<string>('');
+  const [railTab, setRailTab] = React.useState<'facts' | 'peers' | 'trace'>('facts');
+  const [expandedTools, setExpandedTools] = React.useState<ReadonlySet<string>>(new Set());
+  const [expandedTrails, setExpandedTrails] = React.useState<ReadonlySet<string>>(new Set());
   const [networkSummary, setNetworkSummary] = React.useState<{
     readonly name: string;
     readonly frontMan: string;
@@ -123,6 +474,10 @@ export function AgentConsole() {
   const consentResolver = React.useRef<((approved: boolean) => void) | null>(null);
   const rememberedWrites = React.useRef<Set<string>>(new Set());
   const transcriptEndRef = React.useRef<HTMLDivElement | null>(null);
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const nearBottomRef = React.useRef(true);
+  const inputRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const consentPrimaryRef = React.useRef<HTMLButtonElement | null>(null);
 
   const bridge = React.useMemo<LabBridge>(
     () => ({
@@ -249,9 +604,29 @@ export function AgentConsole() {
     };
   }, [append, bridge, pushEvent]);
 
+  // Follow the conversation only while the reader is already at the bottom.
   React.useEffect(() => {
+    if (!nearBottomRef.current) return;
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [transcript, streamText]);
+  }, [transcript, streamText, consentRequest]);
+
+  const handleScroll = React.useCallback(() => {
+    const node = scrollRef.current;
+    if (!node) return;
+    nearBottomRef.current = node.scrollHeight - node.scrollTop - node.clientHeight < 160;
+  }, []);
+
+  React.useEffect(() => {
+    if (consentRequest) consentPrimaryRef.current?.focus();
+  }, [consentRequest]);
+
+  // Composer grows with its text up to six lines, then scrolls.
+  React.useEffect(() => {
+    const node = inputRef.current;
+    if (!node) return;
+    node.style.height = 'auto';
+    node.style.height = `${Math.min(node.scrollHeight, 168)}px`;
+  }, [draft]);
 
   const answerConsent = (approved: boolean, remember: boolean) => {
     if (approved && remember && consentRequest?.kind === 'action' && consentRequest.name) {
@@ -261,6 +636,7 @@ export function AgentConsole() {
     consentResolver.current = null;
     setConsentRequest(null);
     resolve?.(approved);
+    window.requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const send = async (text: string) => {
@@ -307,6 +683,7 @@ export function AgentConsole() {
     } finally {
       setRunning(false);
       setStreamText('');
+      window.requestAnimationFrame(() => inputRef.current?.focus());
     }
   };
 
@@ -319,7 +696,7 @@ export function AgentConsole() {
   const revealCitedFact = (text: string) => {
     const loaded = payloadRef.current;
     if (!loaded || highlight.ids.size > 0) return;
-    const cited = text.match(/fact:[a-z0-9:.-]+/gi);
+    const cited = text.match(/fact:[a-z0-9:.:_-]+/gi);
     if (!cited || cited.length === 0) return;
     for (const id of cited) {
       const fact = loaded.facts.find((entry) => entry.factId === id);
@@ -332,6 +709,19 @@ export function AgentConsole() {
       setWaferIndex(0);
       return;
     }
+  };
+
+  const highlightFact = (factId: string) => {
+    const loaded = payloadRef.current;
+    if (!loaded) return;
+    const fact = loaded.facts.find((entry) => entry.factId === factId);
+    if (!fact) return;
+    setHighlight({
+      ids: new Set(fact.dieIds),
+      label: `${fact.factId} — ${fact.summary}`,
+      factId: fact.factId,
+    });
+    setWaferIndex(0);
   };
 
   const connectPeer = async () => {
@@ -347,7 +737,7 @@ export function AgentConsole() {
       append({
         id: nextId('n'),
         kind: 'notice',
-        text: `Loaded "${peer.network.name}" from ${peer.origin}. It runs in this tab, on the router above, with this site's limits.`,
+        text: `Loaded “${peer.network.name}” from ${peer.origin}. It runs in this tab, on the router above, with this site’s limits.`,
       });
     } catch (error) {
       append({
@@ -361,418 +751,744 @@ export function AgentConsole() {
 
   const facts = payload?.facts ?? [];
   const factsPreview = facts.slice(0, 8);
+  const hasConversation = transcript.length > 0 || running || consentRequest !== null;
+  const citedIds = React.useMemo(
+    () => new Set<string>(highlight.factId ? [highlight.factId] : []),
+    [highlight.factId],
+  );
+  const citedCount = highlight.ids.size;
+  const roster = networks(settings.mode);
+  function networks(_mode: string): string[] {
+    const agents = networkSummary?.agents ?? [];
+    if (agents.length === 0) {
+      return ['Orchestrator', 'Lot analyst', 'Spatial', 'Evidence'];
+    }
+    return agents.map((agent) => AGENT_ROLES[agent.name] ?? agent.name.replace(/_/g, ' '));
+  }
+  const modelLabel = settings.mode === 'demo' ? 'Demo router' : settings.model || 'Your model';
+
+  const renderComposer = (docked: boolean) => (
+    <div
+      className={
+        docked
+          ? 'mx-auto w-full max-w-[720px] px-4 pb-[max(16px,env(safe-area-inset-bottom))] sm:px-6 lg:pb-5'
+          : 'w-full'
+      }
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void send(draft);
+        }}
+        className="rounded-2xl bg-surface p-2 shadow-card has-[:focus-visible]:shadow-focus-ring"
+      >
+        <label className="sr-only" htmlFor="agent-input">
+          Ask the agent network
+        </label>
+        <div className="flex items-end gap-2">
+          <textarea
+            id="agent-input"
+            ref={inputRef}
+            value={draft}
+            rows={1}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                void send(draft);
+              }
+            }}
+            placeholder={
+              activePeer
+                ? `Ask ${activePeer.split('/').filter(Boolean).pop() ?? 'the peer network'}…`
+                : payload
+                  ? 'Ask about this lot…'
+                  : 'Ask what this lab can do…'
+            }
+            className={cn(
+              'max-h-[168px] min-h-[40px] flex-1 resize-none bg-transparent px-2 py-2 text-[16px] leading-[1.45] text-text-primary sm:text-[15px]',
+              'placeholder:text-text-tertiary focus:outline-none focus-visible:shadow-none',
+            )}
+          />
+          <button
+            type="submit"
+            disabled={running || draft.trim() === ''}
+            aria-label="Send"
+            data-ready={!running && draft.trim() !== '' ? 'true' : undefined}
+            className={cn(
+              'mb-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full pointer-coarse:size-11',
+              'transition-[background-color,color,opacity,transform] duration-[160ms] ease-[var(--ease-out)]',
+              'enabled:active:scale-[0.92]',
+              draft.trim() !== '' && !running
+                ? 'agent-accent-fill enabled:hover:opacity-90'
+                : 'bg-fill-2 text-text-tertiary',
+              'focus-visible:shadow-focus-ring focus-visible:outline-none',
+            )}
+          >
+            <ArrowUp className="size-4" strokeWidth={2.2} aria-hidden="true" />
+          </button>
+        </div>
+      </form>
+      <div className="mt-2 flex items-center gap-2 px-1 max-lg:hidden">
+        <p className="type-caption text-text-tertiary">
+          Enter to send · Shift+Enter for a new line
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowSettings(true)}
+          className="ml-auto cursor-pointer rounded-sm type-caption text-text-tertiary transition-[color] duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
+        >
+          {modelLabel}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-dvh bg-bg text-text-primary">
-      <header className="sticky top-0 z-20 border-b border-hairline bg-[var(--material)] backdrop-blur-[var(--material-filter)]">
-        <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
-          <Link href="/" className="text-[13px] text-text-secondary transition-[color] duration-[120ms] hover:text-text-primary">
-            ← Chip Autopsy Lab
-          </Link>
-          <span className="h-4 w-px bg-hairline" aria-hidden="true" />
-          <h1 className="text-[15px] leading-none">Agent console</h1>
-          <span className="rounded-pill border border-hairline px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-text-tertiary">
-            MVP Profile 0.3
-          </span>
-          {networkSummary ? (
-            <span className="font-mono text-[11px] text-text-tertiary">
-              {networkSummary.name} · front {networkSummary.frontMan}
-            </span>
-          ) : null}
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowManifest(true)}
-              className="rounded-control border border-hairline px-3 py-1.5 text-[12px] text-text-secondary transition-[background-color,color] duration-[120ms] hover:bg-fill-1 hover:text-text-primary"
+    <div className="flex min-h-dvh flex-col bg-bg text-text-primary">
+      <header
+        data-testid="agent-console-header"
+        className="sticky top-0 z-[var(--z-nav)] w-full bg-material [backdrop-filter:var(--material-filter)] [-webkit-backdrop-filter:var(--material-filter)]"
+      >
+        <div className="mx-auto grid h-12 w-full grid-cols-[auto_1fr_auto] items-center gap-2 px-4 lg:h-[52px] lg:grid-cols-[1fr_auto_1fr] lg:px-8 xl:px-10">
+          <div className="flex min-w-0 items-center justify-self-start">
+            <Link
+              href="/"
+              className="relative inline-flex h-11 items-center gap-1.5 rounded-pill px-1 text-text-secondary no-underline transition-[color,opacity] duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none lg:h-10"
             >
-              Network &amp; manifest
-            </button>
-            <ThemeToggle />
-            <button
-              type="button"
+              <ArrowLeft className="size-4 shrink-0" strokeWidth={1.6} aria-hidden="true" />
+              <span className="max-sm:hidden type-control">Chip Autopsy Lab</span>
+              <span className="sr-only sm:hidden">Chip Autopsy Lab</span>
+            </Link>
+            <span aria-hidden="true" className="mx-3 h-4 w-px bg-hairline" />
+            <h1 className="truncate type-control text-text-primary">Agent console</h1>
+          </div>
+
+          <div className="hidden min-w-0 items-center justify-self-center lg:flex">
+            {payload ? (
+              <span className="inline-flex h-8 max-w-[min(420px,40vw)] items-center gap-2 rounded-pill bg-fill-2 px-3.5 type-control text-text-primary">
+                <span className="font-mono-id truncate">{payload.lot.lotId}</span>
+                <span className="truncate type-caption text-text-secondary">
+                  {payload.lot.wafers.length} wafers
+                </span>
+              </span>
+            ) : (
+              <span className="type-subhead text-text-tertiary">No lot loaded</span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-self-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowNetwork(true)}
+              aria-label="Network and manifest"
+              className="max-sm:w-8 max-sm:px-0"
+            >
+              <Globe className="size-4" strokeWidth={1.6} aria-hidden="true" />
+              <span className="max-sm:sr-only">Network</span>
+            </Button>
+            <ThemeToggle className="ml-1" />
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setShowSettings(true)}
-              className="rounded-control border border-hairline px-3 py-1.5 text-[12px] text-text-secondary transition-[background-color,color] duration-[120ms] hover:bg-fill-1 hover:text-text-primary"
+              className="ml-3 max-sm:w-8 max-sm:px-0"
+              aria-label={`Model: ${modelLabel}`}
             >
-              {settings.mode === 'demo' ? 'Model: demo router' : `Model: ${settings.model || 'set up'}`}
-            </button>
+              <SlidersHorizontal className="size-4 sm:hidden" strokeWidth={1.6} aria-hidden="true" />
+              <span className="max-sm:sr-only">{modelLabel}</span>
+            </Button>
           </div>
         </div>
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-hairline" />
       </header>
 
-      <div className="mx-auto grid max-w-[1360px] gap-6 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="flex min-h-[70vh] flex-col rounded-panel border border-hairline bg-surface">
-          <div className="flex-1 space-y-4 overflow-y-auto p-5">
-            {transcript.length === 0 && !running ? (
-              <div className="flex flex-col gap-4">
-                <p className="max-w-[56ch] text-[14px] leading-relaxed text-text-secondary">
-                  This network reads the lot you have open and answers from the deterministic
-                  engine: yield, failing bins, parametric capability, the WM-811K spatial
-                  signature, and the evidence behind each claim. Raw STDF bytes stay in the
-                  Web Worker; the agents only ever see aggregate facts.
+      <div className="mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 lg:h-[calc(100dvh-52px)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_396px] lg:overflow-hidden">
+        <section
+          aria-label="Conversation"
+          data-testid="agent-conversation"
+          className="flex min-h-[calc(100dvh-48px)] flex-col lg:min-h-0"
+        >
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6"
+            aria-busy={running}
+          >
+            {!hasConversation ? (
+              <div className="mx-auto flex min-h-full w-full max-w-[680px] flex-col justify-center py-10 sm:py-14">
+                <h2 className="agent-rise type-display-l text-text-primary">
+                  Ask the <AccentWord>wafer</AccentWord>.
+                </h2>
+                <p
+                  className="agent-rise mt-3 max-w-[52ch] type-body text-text-secondary"
+                  style={{ animationDelay: '60ms' }}
+                >
+                  The lot you have open, read back to you — yield, failing bins, parametric
+                  capability, and the dies behind every claim. Raw bytes stay in this browser.
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {SUGGESTIONS.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onClick={() => void send(suggestion)}
-                      className="rounded-pill border border-hairline px-3 py-1.5 text-left text-[12px] text-text-secondary transition-[background-color,color] duration-[120ms] hover:bg-fill-1 hover:text-text-primary"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-                {settings.mode === 'demo' ? (
-                  <p className="rounded-control border border-hairline bg-fill-1 p-3 text-[12px] leading-relaxed text-text-tertiary">
-                    Running on the <strong className="text-text-secondary">deterministic demo router</strong>:
-                    no model, no key. Every answer is assembled from the site tools’ own
-                    summaries. Add a model and key in model settings to run the same network on
-                    your own inference.
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
 
-            {transcript.map((item) => {
-              if (item.kind === 'user') {
-                return (
-                  <div key={item.id} className="ml-auto max-w-[80%] rounded-panel border border-hairline bg-fill-2 px-4 py-2.5">
-                    <p className="text-[14px] leading-relaxed text-text-primary">{item.text}</p>
-                  </div>
-                );
-              }
-              if (item.kind === 'assistant') {
-                return (
-                  <div key={item.id} className="max-w-[92%]">
-                    <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-text-tertiary">
-                      {item.peerOrigin ? `peer · ${item.peerOrigin}` : 'agent'} · {item.routerLabel}
-                    </p>
-                    <div className="whitespace-pre-wrap rounded-panel border border-hairline bg-surface-sunken px-4 py-3 text-[14px] leading-relaxed text-text-primary">
-                      {item.text}
-                    </div>
-                  </div>
-                );
-              }
-              if (item.kind === 'tool') {
-                return (
-                  <div key={item.id} className="flex flex-col gap-1 rounded-control border border-hairline bg-fill-1 px-3 py-2">
-                    <div className="flex items-center gap-2 font-mono text-[11px]">
-                      <span
+                <div className="mt-7 grid grid-cols-1 gap-2.5 sm:gap-3">
+                  {STARTERS.map((starter, index) => {
+                    const Icon = starter.icon;
+                    return (
+                      <button
+                        key={starter.label}
+                        type="button"
+                        onClick={() => void send(starter.label)}
+                        style={{ animationDelay: `${120 + index * 60}ms` }}
                         className={cn(
-                          'size-1.5 rounded-full',
-                          item.status === 'running'
-                            ? 'bg-text-secondary'
-                            : item.status === 'ok'
-                              ? 'bg-[var(--bin-ink-5)]'
-                              : 'bg-[var(--bin-ink-3)]',
+                          'agent-rise group relative flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-hairline bg-surface p-3.5 text-left shadow-card sm:p-4',
+                          'transition-[transform,background-color] duration-[200ms] ease-[var(--ease-out)]',
+                          'hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.995] motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100',
+                          'focus-visible:shadow-focus-ring focus-visible:outline-none',
                         )}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-hairline-strong opacity-0 transition-opacity duration-[160ms] ease-[var(--ease-out)] group-hover:opacity-100 group-focus-visible:opacity-100"
+                        />
+                        <span className="agent-accent-soft flex size-9 shrink-0 items-center justify-center rounded-xl">
+                          <Icon className="size-4" strokeWidth={1.7} aria-hidden="true" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block type-callout text-text-primary">{starter.label}</span>
+                          <span className="mt-0.5 block type-caption text-text-tertiary">{starter.hint}</span>
+                        </span>
+                        <ArrowRight
+                          aria-hidden="true"
+                          className="size-4 shrink-0 text-text-tertiary opacity-45 transition-[transform,opacity] duration-[200ms] ease-[var(--ease-out)] group-hover:translate-x-0.5 group-hover:opacity-100"
+                          strokeWidth={1.7}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p
+                  className="agent-rise mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 type-subhead text-text-tertiary"
+                  style={{ animationDelay: '340ms' }}
+                >
+                  {settings.mode === 'demo'
+                    ? 'Running on the deterministic demo router — answers come from the engine, no model.'
+                    : `Running on ${modelLabel}.`}
+                  <button
+                    type="button"
+                    onClick={() => setShowSettings(true)}
+                    className="cursor-pointer rounded-sm type-subhead text-text-secondary underline decoration-hairline-strong underline-offset-4 transition-[color] duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
+                  >
+                    {settings.mode === 'demo' ? 'Add a model' : 'Model settings'}
+                  </button>
+                </p>
+
+                <div className="agent-rise mt-7" style={{ animationDelay: '300ms' }}>
+                  {renderComposer(false)}
+                </div>
+              </div>
+            ) : (
+              <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5 py-6">
+                <div
+                  data-testid="agent-live-region"
+                  className="sr-only"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {running ? 'Agent working' : ''}
+                </div>
+
+                {transcript.map((item, index) => {
+                  if (item.kind === 'tool') {
+                    const previous = transcript[index - 1];
+                    if (previous?.kind === 'tool') return null;
+                    const run: ToolItem[] = [];
+                    for (let cursor = index; cursor < transcript.length; cursor += 1) {
+                      const entry = transcript[cursor];
+                      if (entry?.kind !== 'tool') break;
+                      run.push(entry);
+                    }
+                    const trailId = run[0]?.id ?? item.id;
+                    return (
+                      <ToolTrail
+                        key={trailId}
+                        items={run}
+                        expanded={expandedTrails.has(trailId)}
+                        onToggle={() =>
+                          setExpandedTrails((current) => {
+                            const next = new Set(current);
+                            if (next.has(trailId)) next.delete(trailId);
+                            else next.add(trailId);
+                            return next;
+                          })
+                        }
+                        expandedTools={expandedTools}
+                        onToggleTool={(id) =>
+                          setExpandedTools((current) => {
+                            const next = new Set(current);
+                            if (next.has(id)) next.delete(id);
+                            else next.add(id);
+                            return next;
+                          })
+                        }
+                      />
+                    );
+                  }
+
+                  if (item.kind === 'user') {
+                    return (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                        className="flex justify-end"
+                      >
+                        <p className="max-w-[85%] rounded-2xl bg-fill-2 px-4 py-2.5 type-callout text-text-primary">
+                          {item.text}
+                        </p>
+                      </motion.div>
+                    );
+                  }
+
+                  if (item.kind === 'assistant') {
+                    return (
+                      <motion.article
+                        key={item.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                        className="max-w-[72ch]"
+                      >
+                        <div className="type-body leading-[1.62] text-text-primary">
+                          <AnswerBody text={item.text} onCite={highlightFact} cited={citedIds} />
+                        </div>
+                        <p className="mt-2.5 flex flex-wrap items-center gap-x-1.5 type-caption text-text-tertiary">
+                          <span aria-hidden="true" className="agent-accent-dot size-1 rounded-full" />
+                          {item.peerOrigin ? (
+                            <span className="truncate">peer · {item.peerOrigin}</span>
+                          ) : (
+                            <span>Agent</span>
+                          )}
+                          <span aria-hidden="true">·</span>
+                          <span className="truncate">{item.routerLabel}</span>
+                        </p>
+                      </motion.article>
+                    );
+                  }
+
+                  if (item.kind === 'notice') {
+                    return (
+                      <p key={item.id} className="flex items-start gap-2 type-subhead text-text-secondary">
+                        <span aria-hidden="true" className="mt-[0.55em] size-1 shrink-0 rounded-full bg-text-tertiary" />
+                        <span className="min-w-0">{item.text}</span>
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={item.id}
+                      role="alert"
+                      className="flex items-start gap-2.5 rounded-control bg-fill-1 px-3 py-2.5"
+                    >
+                      <AlertTriangle
+                        className="mt-0.5 size-4 shrink-0 text-[var(--bin-ink-3)]"
+                        strokeWidth={1.8}
                         aria-hidden="true"
                       />
-                      <span className="text-text-secondary">{item.name}</span>
-                      <span className="text-text-tertiary">{item.toolKind}</span>
-                      <span className="ml-auto text-text-tertiary">
-                        {item.status === 'running' ? 'running' : item.status}
+                      <div className="min-w-0">
+                        <p className="type-caption text-[var(--bin-ink-3)]">{item.code.replace(/_/g, ' ')}</p>
+                        <p className="mt-0.5 type-subhead text-text-secondary">{item.message}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {consentRequest ? (
+                  <motion.div
+                    role="group"
+                    aria-labelledby="agent-consent-title"
+                    data-testid="agent-consent-card"
+                    initial={{ opacity: 0, y: 10, scale: 0.995 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="rounded-2xl bg-surface p-5 shadow-card"
+                  >
+                    <h2
+                      id="agent-consent-title"
+                      className="flex items-center gap-2 type-headline text-text-primary"
+                    >
+                      <span aria-hidden="true" className="agent-accent-dot size-1.5 shrink-0 rounded-full" />
+                      {consentRequest.kind === 'action'
+                        ? WRITE_COPY[consentRequest.name ?? '']?.title ??
+                          `Run “${consentRequest.name ?? 'this action'}”?`
+                        : `Contact ${consentRequest.origin ?? 'another agent site'}?`}
+                    </h2>
+                    <p className="mt-1.5 max-w-[58ch] type-callout text-text-secondary">
+                      {consentRequest.kind === 'action'
+                        ? WRITE_COPY[consentRequest.name ?? '']?.body ??
+                          'This action runs here in your browser. Nothing leaves this device.'
+                        : `Its published network would run in this tab, on your router and this site’s limits. Nothing is fetched before you allow it.`}
+                    </p>
+
+                    {consentRequest.args && Object.keys(consentRequest.args).length > 0 ? (
+                      <dl className="mt-4 flex flex-col gap-1.5 border-t border-hairline pt-3">
+                        {Object.entries(consentRequest.args).map(([key, value]) => (
+                          <div key={key} className="flex items-baseline justify-between gap-4">
+                            <dt className="type-subhead text-text-tertiary">{ARG_LABELS[key] ?? key}</dt>
+                            <dd className="min-w-0 truncate font-mono text-[12px] text-text-primary">
+                              {typeof value === 'string' ? value : JSON.stringify(value)}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : null}
+
+                    <div className="mt-5 flex flex-wrap items-center gap-2">
+                      <Button
+                        ref={consentPrimaryRef}
+                        variant="primary"
+                        size="md"
+                        onClick={() => answerConsent(true, false)}
+                      >
+                        Allow once
+                      </Button>
+                      {consentRequest.kind === 'action' ? (
+                        <Button variant="secondary" size="md" onClick={() => answerConsent(true, true)}>
+                          Allow for this session
+                        </Button>
+                      ) : null}
+                      <Button variant="text" size="md" onClick={() => answerConsent(false, false)}>
+                        Deny
+                      </Button>
+                      <span className="ml-auto type-caption text-text-tertiary">
+                        The runtime, not the model, asks.
                       </span>
                     </div>
-                    {item.summary ? (
-                      <p className="line-clamp-2 text-[12px] leading-relaxed text-text-tertiary">{item.summary}</p>
+
+                    {consentRequest.args && Object.keys(consentRequest.args).length > 0 ? (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer type-caption text-text-tertiary">
+                          Inspect the exact request
+                        </summary>
+                        <pre className="mt-2 overflow-x-auto rounded-control bg-fill-1 p-3 font-mono text-[11px] leading-relaxed text-text-secondary">
+                          {JSON.stringify(consentRequest.args, null, 2)}
+                        </pre>
+                      </details>
                     ) : null}
-                  </div>
-                );
-              }
-              if (item.kind === 'notice') {
-                return (
-                  <p key={item.id} className="rounded-control border border-dashed border-hairline px-3 py-2 text-[12px] text-text-tertiary">
-                    {item.text}
-                  </p>
-                );
-              }
-              return (
-                <div key={item.id} className="rounded-control border border-[var(--bin-ink-3)] bg-[rgba(253,117,132,0.08)] px-3 py-2">
-                  <p className="font-mono text-[11px] text-[var(--bin-ink-3)]">{item.code}</p>
-                  <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">{item.message}</p>
-                </div>
-              );
-            })}
-
-            {running && streamText ? (
-              <div className="max-w-[92%]">
-                <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-text-tertiary">streaming</p>
-                <div className="whitespace-pre-wrap rounded-panel border border-hairline bg-surface px-4 py-3 text-[14px] leading-relaxed text-text-primary">
-                  {streamText}
-                </div>
-              </div>
-            ) : null}
-
-            {running && !streamText ? (
-              <p className="font-mono text-[11px] text-text-tertiary">working…</p>
-            ) : null}
-
-            {consentRequest ? (
-              <div className="rounded-panel border border-hairline-strong bg-fill-2 p-4">
-                <p className="font-mono text-[10px] uppercase tracking-wide text-text-secondary">
-                  {consentRequest.kind === 'action' ? `confirm ${consentRequest.effect ?? 'write'}` : 'third-party contact'}
-                </p>
-                <p className="mt-1 text-[14px] leading-relaxed text-text-primary">
-                  {consentRequest.kind === 'action'
-                    ? `Run "${consentRequest.name}" on this page?`
-                    : consentRequest.kind === 'mcp'
-                      ? `Contact ${consentRequest.origin} to ${consentRequest.purpose ?? 'call an MCP tool'}?`
-                      : `Contact ${consentRequest.origin} to ${consentRequest.purpose ?? 'load another agent site'}?`}
-                </p>
-                {consentRequest.args && Object.keys(consentRequest.args).length > 0 ? (
-                  <pre className="mt-2 overflow-x-auto rounded-control bg-fill-1 p-2 font-mono text-[11px] text-text-secondary">
-                    {JSON.stringify(consentRequest.args, null, 2)}
-                  </pre>
+                  </motion.div>
                 ) : null}
-                <p className="mt-2 text-[12px] leading-relaxed text-text-tertiary">
-                  The runtime, not the model, owns this decision. Nothing is sent before you answer.
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Button variant="primary" size="sm" onClick={() => answerConsent(true, false)}>
-                    Allow once
-                  </Button>
-                  {consentRequest.kind === 'action' ? (
-                    <Button variant="secondary" size="sm" onClick={() => answerConsent(true, true)}>
-                      Allow for this session
-                    </Button>
-                  ) : null}
-                  <Button variant="text" size="sm" onClick={() => answerConsent(false, false)}>
-                    Decline
-                  </Button>
-                </div>
-              </div>
-            ) : null}
 
-            <div ref={transcriptEndRef} />
+                {running ? (
+                  <div className="flex items-center gap-2 type-subhead text-text-tertiary" aria-hidden="true">
+                    <span className="flex gap-1">
+                      <span className="size-1.5 animate-pulse rounded-full bg-text-tertiary" />
+                      <span className="size-1.5 animate-pulse rounded-full bg-text-tertiary [animation-delay:120ms]" />
+                      <span className="size-1.5 animate-pulse rounded-full bg-text-tertiary [animation-delay:240ms]" />
+                    </span>
+                    {streamText ? 'Writing…' : 'Working…'}
+                  </div>
+                ) : null}
+
+                {running && streamText ? (
+                  <div className="max-w-[72ch] type-body leading-[1.62] text-text-primary">
+                    <AnswerBody text={streamText} />
+                  </div>
+                ) : null}
+
+                <div ref={transcriptEndRef} />
+              </div>
+            )}
           </div>
 
-          <form
-            className="flex items-end gap-2 border-t border-hairline p-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void send(draft);
-            }}
-          >
-            {activePeer ? (
-              <span className="mb-2 inline-flex items-center gap-1 rounded-pill border border-hairline px-2 py-1 font-mono text-[10px] text-text-tertiary">
-                to peer
-                <button
-                  type="button"
-                  className="text-text-secondary hover:text-text-primary"
-                  onClick={() => setActivePeer(null)}
-                  aria-label="Stop sending to the peer network"
-                >
-                  ×
-                </button>
-              </span>
-            ) : null}
-            <label className="sr-only" htmlFor="agent-input">
-              Ask the agent network
-            </label>
-            <textarea
-              id="agent-input"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault();
-                  void send(draft);
-                }
-              }}
-              rows={2}
-              placeholder={
-                activePeer
-                  ? `Ask ${activePeer.split('/').filter(Boolean).pop() ?? 'the peer network'}…`
-                  : 'Ask about this lot — yield, bins, Cpk, the spatial signature, the evidence…'
-              }
-              className="min-h-[44px] flex-1 resize-none rounded-control border border-hairline bg-surface px-3 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-tertiary focus:outline-none focus-visible:shadow-focus-ring"
+          <div className="sticky bottom-0 z-10 bg-bg lg:static">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 -top-6 h-6 bg-linear-to-t from-bg to-transparent"
             />
-            <Button type="submit" variant="primary" size="md" disabled={running || draft.trim() === ''}>
-              Send
-            </Button>
-          </form>
+            {activePeer ? (
+              <div className="mx-auto flex w-full max-w-[720px] items-center gap-2 px-6 pb-1">
+                <span className="inline-flex items-center gap-1.5 rounded-pill bg-fill-1 px-2.5 py-1 type-caption text-text-secondary">
+                  Asking the peer network
+                  <button
+                    type="button"
+                    onClick={() => setActivePeer(null)}
+                    aria-label="Stop sending to the peer network"
+                    className="cursor-pointer rounded-sm text-text-tertiary transition-[color] duration-[120ms] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
+                  >
+                    ×
+                  </button>
+                </span>
+              </div>
+            ) : null}
+            {hasConversation ? renderComposer(true) : null}
+          </div>
         </section>
 
-        <aside className="flex flex-col gap-4">
-          <section className="rounded-panel border border-hairline bg-surface p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[13px] text-text-primary">Evidence stage</h2>
-              {highlight.ids.size > 0 ? (
+        <aside
+          aria-label="Evidence and network"
+          data-testid="agent-rail"
+          className="flex flex-col border-t border-hairline lg:min-h-0 lg:overflow-hidden lg:border-t-0 lg:border-l"
+        >
+          <div className="px-5 pt-5 pb-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="type-headline text-text-primary">Evidence</h2>
+              {citedCount > 0 ? (
                 <button
                   type="button"
                   onClick={() => setHighlight({ ids: new Set<string>() })}
-                  className="text-[11px] text-text-tertiary hover:text-text-primary"
+                  className="cursor-pointer rounded-sm type-caption text-text-tertiary transition-[color] duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
                 >
-                  clear
+                  Clear
                 </button>
               ) : null}
             </div>
-            <WaferStage
-              payload={payload}
-              highlighted={highlight.ids}
-              highlightLabel={highlight.label}
-              waferIndex={waferIndex}
-              onWaferChange={setWaferIndex}
-            />
-          </section>
-
-          <section className="rounded-panel border border-hairline bg-surface p-4">
-            <h2 className="mb-2 text-[13px] text-text-primary">Engine facts</h2>
-            {payload ? (
-              <ul className="flex flex-col gap-1.5">
-                {factsPreview.map((fact) => (
-                  <li key={fact.factId}>
-                    <button
-                      type="button"
-                      onClick={() => setHighlight({ ids: new Set(fact.dieIds), label: fact.summary, factId: fact.factId })}
-                      className={cn(
-                        'flex w-full items-start gap-2 rounded-control px-2 py-1.5 text-left transition-[background-color] duration-[120ms] hover:bg-fill-1',
-                        highlight.factId === fact.factId && 'bg-fill-2',
-                      )}
-                    >
-                      <span className="mt-0.5 font-mono text-[10px] text-text-tertiary">{fact.factId.replace('fact:', '')}</span>
-                      <span className="line-clamp-2 flex-1 text-[12px] leading-snug text-text-secondary">{fact.summary}</span>
-                      <span className="font-mono text-[10px] tabular-nums text-text-tertiary">{fact.dieIndices.length}</span>
-                    </button>
-                  </li>
-                ))}
-                {facts.length > factsPreview.length ? (
-                  <li className="px-2 text-[11px] text-text-tertiary">+{facts.length - factsPreview.length} more in the trace</li>
-                ) : null}
-              </ul>
-            ) : (
-              <p className="text-[12px] text-text-tertiary">Load a lot to see its facts.</p>
-            )}
-          </section>
-
-          <section className="rounded-panel border border-hairline bg-surface p-4">
-            <h2 className="text-[13px] text-text-primary">Other agent sites</h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
-              Loading a peer runs its published network in this tab, on your router and this
-              site’s limits. You approve each origin before anything is fetched.
-            </p>
-            <div className="mt-2 flex gap-2">
-              <input
-                value={peerUrl}
-                onChange={(event) => setPeerUrl(event.target.value)}
-                spellCheck={false}
-                aria-label="Peer agent network URL"
-                className="h-9 min-w-0 flex-1 rounded-control border border-hairline bg-surface px-2 font-mono text-[11px] text-text-primary"
+            <p className="mt-1 flex min-w-0 items-center gap-1.5 type-caption text-text-tertiary">
+              <span
+                aria-hidden="true"
+                className={cn('size-1.5 shrink-0 rounded-full', running ? 'agent-accent-dot agent-live-dot' : 'bg-text-disabled')}
               />
-              <Button variant="secondary" size="sm" onClick={() => void connectPeer()}>
-                Connect
-              </Button>
+              <span className="truncate">
+                {running ? 'Agent working' : `${roster.length} specialists · ${roster.join(' · ')}`}
+              </span>
+            </p>
+            <div className="mt-3">
+              <WaferStage
+                payload={payload}
+                highlighted={highlight.ids}
+                highlightLabel={highlight.label}
+                waferIndex={waferIndex}
+                onWaferChange={setWaferIndex}
+                onLoadSample={() => void send('Load the edge-ring demo lot and diagnose it.')}
+              />
             </div>
-            {peers.length > 0 ? (
-              <ul className="mt-3 flex flex-col gap-1.5">
-                {peers.map((peer) => (
-                  <li key={peer.url} className="flex items-center gap-2 rounded-control border border-hairline px-2 py-1.5">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-mono text-[11px] text-text-secondary">{peer.network}</span>
-                      <span className="block truncate text-[10px] text-text-tertiary">{peer.origin}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setActivePeer(activePeer === peer.url ? null : peer.url)}
-                      className={cn(
-                        'rounded-pill border px-2 py-1 text-[10px]',
-                        activePeer === peer.url
-                          ? 'border-ink text-text-primary'
-                          : 'border-hairline text-text-secondary hover:text-text-primary',
-                      )}
-                    >
-                      {activePeer === peer.url ? 'asking' : 'ask'}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
+          </div>
 
-          <details className="rounded-panel border border-hairline bg-surface p-4">
-            <summary className="cursor-pointer text-[13px] text-text-primary">
-              Execution trace <span className="font-mono text-[10px] text-text-tertiary">{trace.length}</span>
-            </summary>
-            <ul className="mt-2 flex max-h-[320px] flex-col gap-1 overflow-y-auto font-mono text-[10px] text-text-tertiary">
-              {trace.length === 0 ? <li>no events yet</li> : null}
-              {[...trace].reverse().map((event, index) => (
-                <li key={`${event.at}-${index}`} className="flex gap-2">
-                  <span className="shrink-0 tabular-nums">{formatTime(event.at)}</span>
-                  <span className={cn('shrink-0', event.type.includes('error') ? 'text-[var(--bin-ink-3)]' : 'text-text-secondary')}>
-                    {event.type}
-                  </span>
-                  <span className="truncate">{eventSummary(event)}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
+          <div className="flex min-h-0 flex-1 flex-col border-t border-hairline px-5 pt-4 pb-5">
+            <SegmentedControl
+              ariaLabel="Evidence panels"
+              size="sm"
+              value={railTab}
+              onValueChange={setRailTab}
+              options={[
+                { value: 'facts', label: `Facts${facts.length ? ` (${facts.length})` : ''}` },
+                { value: 'peers', label: 'Peers' },
+                { value: 'trace', label: `Trace${trace.length ? ` (${trace.length})` : ''}` },
+              ]}
+            />
+
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+              {railTab === 'facts' ? (
+                payload ? (
+                  <ul className="flex flex-col">
+                    {factsPreview.map((fact) => (
+                      <li key={fact.factId}>
+                        <button
+                          type="button"
+                          onClick={() => highlightFact(fact.factId)}
+                          aria-pressed={highlight.factId === fact.factId}
+                          className={cn(
+                            'flex w-full cursor-pointer items-start gap-2 rounded-control px-2.5 py-2 text-left',
+                            'transition-[background-color] duration-[120ms] ease-[var(--ease-out)] hover:bg-fill-1',
+                            'focus-visible:shadow-focus-ring focus-visible:outline-none',
+                            highlight.factId === fact.factId && 'bg-fill-2',
+                          )}
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block font-mono text-[11px] text-text-tertiary">
+                              {fact.factId.replace('fact:', '')}
+                            </span>
+                            <span className="mt-0.5 line-clamp-2 block type-subhead text-text-secondary">
+                              {fact.summary}
+                            </span>
+                          </span>
+                          <span className="mt-0.5 shrink-0 type-caption tabular-nums text-text-tertiary">
+                            {fact.dieIndices.length}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                    {facts.length > factsPreview.length ? (
+                      <li className="px-2.5 pt-2 type-caption text-text-tertiary">
+                        {facts.length - factsPreview.length} more in the trace
+                      </li>
+                    ) : null}
+                  </ul>
+                ) : (
+                  <p className="px-1 type-subhead text-text-tertiary">
+                    Load a lot and its engine facts appear here. Click one to light its dies.
+                  </p>
+                )
+              ) : null}
+
+              {railTab === 'peers' ? (
+                <div className="flex flex-col gap-3">
+                  <p className="type-subhead text-text-tertiary">
+                    A peer runs its published network in this tab, on your router and this site’s
+                    limits. You approve the origin before anything is fetched.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={peerUrl}
+                      onChange={(event) => setPeerUrl(event.target.value)}
+                      spellCheck={false}
+                      aria-label="Peer agent network URL"
+                      className="h-9 min-w-0 flex-1 rounded-control bg-fill-1 px-2.5 font-mono text-[12px] text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
+                    />
+                    <Button variant="secondary" size="sm" onClick={() => void connectPeer()}>
+                      Connect
+                    </Button>
+                  </div>
+                  {peers.length > 0 ? (
+                    <ul className="flex flex-col gap-1">
+                      {peers.map((peer) => (
+                        <li key={peer.url} className="flex items-center gap-2 rounded-control px-2 py-1.5 hover:bg-fill-1">
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate type-subhead text-text-primary">{peer.network}</span>
+                            <span className="block truncate type-caption text-text-tertiary">{peer.origin}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActivePeer(activePeer === peer.url ? null : peer.url)}
+                            aria-pressed={activePeer === peer.url}
+                            className="cursor-pointer rounded-pill bg-fill-2 px-2.5 py-1 type-caption text-text-secondary aria-pressed:bg-ink aria-pressed:text-on-ink focus-visible:shadow-focus-ring focus-visible:outline-none"
+                          >
+                            {activePeer === peer.url ? 'asking' : 'ask'}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="type-caption text-text-tertiary">No peer loaded yet.</p>
+                  )}
+                </div>
+              ) : null}
+
+              {railTab === 'trace' ? (
+                trace.length === 0 ? (
+                  <p className="px-1 type-subhead text-text-tertiary">No events yet.</p>
+                ) : (
+                  <ul className="flex flex-col gap-1 font-mono text-[11px] leading-relaxed text-text-tertiary">
+                    {[...trace].reverse().map((event, index) => (
+                      <li key={`${event.at}-${index}`} className="flex gap-2">
+                        <span className="shrink-0 tabular-nums">{formatTime(event.at)}</span>
+                        <span
+                          className={cn(
+                            'shrink-0',
+                            event.type.includes('error') ? 'text-[var(--bin-ink-3)]' : 'text-text-secondary',
+                          )}
+                        >
+                          {event.type}
+                        </span>
+                        <span className="truncate">{eventSummary(event)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )
+              ) : null}
+            </div>
+          </div>
         </aside>
       </div>
 
-      {showSettings ? (
-        <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-[var(--scrim)] p-4 pt-16">
-          <div className="w-full max-w-[560px] rounded-panel border border-hairline bg-surface p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-[16px] text-text-primary">Model &amp; key</h2>
-              <button type="button" onClick={() => setShowSettings(false)} className="text-text-tertiary hover:text-text-primary" aria-label="Close">
-                ×
-              </button>
-            </div>
-            <ModelSettingsPanel
-              settings={settings}
-              stored={stored}
-              onUpdate={update}
-              onClear={clear}
-              onClose={() => setShowSettings(false)}
-            />
+      <ModalSheet
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        titleId="agent-model-title"
+        closeLabel="Close"
+        size="wide"
+        data-testid="agent-model-sheet"
+      >
+        <div className="flex flex-col gap-5">
+          <div>
+            <h2 id="agent-model-title" className="type-title-2 text-text-primary">
+              Model &amp; key
+            </h2>
+            <p className="mt-1 type-subhead text-text-tertiary">
+              This site pays for no inference. Pick the deterministic demo router, or bring your own
+              OpenAI-compatible router.
+            </p>
           </div>
+          <ModelSettingsPanel
+            settings={settings}
+            stored={stored}
+            onUpdate={update}
+            onClear={clear}
+            onClose={() => setShowSettings(false)}
+          />
         </div>
-      ) : null}
+      </ModalSheet>
 
-      {showManifest ? (
-        <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-[var(--scrim)] p-4 pt-16">
-          <div className="flex w-full max-w-[720px] flex-col gap-4 rounded-panel border border-hairline bg-surface p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-[16px] text-text-primary">Published network</h2>
-              <button type="button" onClick={() => setShowManifest(false)} className="text-text-tertiary hover:text-text-primary" aria-label="Close">
-                ×
-              </button>
-            </div>
-            {networkSummary ? (
-              <ul className="flex flex-col gap-2">
-                {networkSummary.agents.map((agent) => (
-                  <li key={agent.name} className="rounded-control border border-hairline p-2.5">
-                    <p className="font-mono text-[12px] text-text-primary">
-                      {agent.name}
-                      {agent.name === networkSummary.frontMan ? ' · front agent' : ''}
-                      <span className="ml-2 text-[10px] text-text-tertiary">{agent.tools} tools</span>
-                    </p>
-                    <p className="mt-1 text-[12px] leading-relaxed text-text-tertiary">{agent.description}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="flex flex-wrap gap-3 text-[12px]">
-              <a href="/agent-manifest.json" target="_blank" rel="noreferrer" className="text-text-secondary underline">
-                /agent-manifest.json
-              </a>
-              <a href="/agents/chip_autopsy_lab.network.json" target="_blank" rel="noreferrer" className="text-text-secondary underline">
-                /agents/chip_autopsy_lab.network.json
-              </a>
-              <a href="/agents/chip_autopsy_lab.network.hocon" target="_blank" rel="noreferrer" className="text-text-secondary underline">
-                authored HOCON
-              </a>
-              <a href="/links.json" target="_blank" rel="noreferrer" className="text-text-secondary underline">
-                /links.json
-              </a>
-            </div>
-            <pre className="max-h-[320px] overflow-auto rounded-control border border-hairline bg-bg p-3 font-mono text-[11px] leading-relaxed text-text-secondary">
-              {manifestJson || 'loading…'}
-            </pre>
+      <ModalSheet
+        open={showNetwork}
+        onClose={() => setShowNetwork(false)}
+        titleId="agent-network-title"
+        closeLabel="Close"
+        size="wide"
+        data-testid="agent-network-sheet"
+      >
+        <div className="flex flex-col gap-5">
+          <div>
+            <h2 id="agent-network-title" className="type-title-2 text-text-primary">
+              Published network
+            </h2>
+            <p className="mt-1 type-subhead text-text-tertiary">
+              {networkSummary
+                ? `${networkSummary.name} · front agent ${networkSummary.frontMan}`
+                : 'Reading the manifest…'}
+            </p>
+            <p className="mt-1 type-caption text-text-tertiary">Cognizant Agentic Web · MVP Profile 0.3</p>
           </div>
+
+          {networkSummary ? (
+            <ul className="flex flex-col">
+              {networkSummary.agents.map((agent) => (
+                <li key={agent.name} className="border-t border-hairline py-3 first:border-t-0 first:pt-0">
+                  <p className="flex items-baseline gap-2">
+                    <span className="font-mono text-[13px] text-text-primary">{agent.name}</span>
+                    {agent.name === networkSummary.frontMan ? (
+                      <span className="rounded-pill bg-fill-2 px-2 py-0.5 type-caption text-text-secondary">
+                        front agent
+                      </span>
+                    ) : null}
+                    <span className="ml-auto type-caption tabular-nums text-text-tertiary">
+                      {agent.tools} tools
+                    </span>
+                  </p>
+                  <p className="mt-1 type-subhead text-text-secondary">{agent.description}</p>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {[
+              { href: '/agent-manifest.json', label: 'agent-manifest.json' },
+              { href: '/agents/chip_autopsy_lab.network.json', label: 'network.json' },
+              { href: '/agents/chip_autopsy_lab.network.hocon', label: 'authored HOCON' },
+              { href: '/links.json', label: 'links.json' },
+            ].map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-sm type-subhead text-text-secondary underline decoration-hairline-strong underline-offset-4 transition-[color] duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+
+          <details>
+            <summary className="cursor-pointer type-caption text-text-tertiary">Raw manifest</summary>
+            <pre className="mt-2 max-h-[320px] overflow-auto rounded-control bg-fill-1 p-3 font-mono text-[11px] leading-relaxed text-text-secondary">
+              {manifestJson || 'Loading…'}
+            </pre>
+          </details>
         </div>
-      ) : null}
+      </ModalSheet>
     </div>
   );
 }

@@ -637,7 +637,7 @@ function LandingHero({
     <div
       data-testid="landing-hero"
       // Before hydration the frame has the 1440 size; clip it so narrow screens never scroll sideways
-      className={`mt-14 flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-14${hydrated ? '' : ' overflow-x-clip'}`}
+      className={`mt-10 flex flex-col items-start gap-8 sm:mt-12 lg:mt-14 lg:flex-row lg:items-center lg:justify-center lg:gap-14${hydrated ? '' : ' overflow-x-clip'}`}
     >
       <div
         data-testid="landing-hero-frame"
@@ -729,7 +729,7 @@ function LandingHero({
       {/* §11.1 result card: `surface`, `r-2xl`, `shadow-card`, padding 24, width 280 */}
       <div
         data-testid="landing-example-card"
-        className="w-[280px] shrink-0 rounded-2xl bg-surface p-6 text-left shadow-card"
+        className="w-full max-w-[340px] shrink-0 rounded-2xl bg-surface p-6 text-left shadow-card sm:w-[280px] sm:max-w-none"
       >
         {/* §12.4 eyebrow: 6 px ember dot, then a mono 12/16 uppercase note */}
         <p

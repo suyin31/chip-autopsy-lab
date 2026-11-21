@@ -11,7 +11,7 @@
 
 import * as React from 'react';
 import { createOpenAICompatibleRouter, type Router } from '../../../public/agent-runtime/agent-runtime.mjs';
-import { Button, cn } from '@/ui/primitives';
+import { Button, cn, SegmentedControl } from '@/ui/primitives';
 
 export interface RouterPreset {
   readonly id: string;
@@ -186,66 +186,36 @@ export function ModelSettingsPanel({
     }));
   };
 
+  const fieldClass =
+    'h-11 w-full rounded-control bg-fill-1 px-3 text-[16px] text-text-primary sm:h-10 sm:text-[13px] focus-visible:shadow-focus-ring focus-visible:outline-none';
+
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-panel border border-hairline bg-fill-1 p-3">
-        <p className="text-[13px] leading-relaxed text-text-secondary">
-          This site does not pay for model calls. Choose how the agent network should run:
-          with the deterministic demo router (no model, no key), or with your own
-          OpenAI-compatible router. Your key stays in this browser and is sent only to the
-          router you pick.
+      <div className="flex flex-col gap-2.5">
+        <SegmentedControl
+          ariaLabel="Inference"
+          value={draft.mode}
+          onValueChange={(mode) => setDraft((current) => ({ ...current, mode }))}
+          options={[
+            { value: 'demo', label: 'Demo router' },
+            { value: 'byok', label: 'Your own model' },
+          ]}
+        />
+        <p className="type-subhead text-text-tertiary">
+          {draft.mode === 'demo'
+            ? 'No model and no key. Answers are assembled from the site tools’ own summaries, and every such answer is labelled.'
+            : 'The network runs on your model through an OpenAI-compatible router, with streaming and tool calls.'}
         </p>
       </div>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-[12px] uppercase tracking-wide text-text-tertiary">Inference</legend>
-        {(
-          [
-            {
-              mode: 'demo' as const,
-              title: 'Demo router — no model, no key',
-              body: 'Runs the published network deterministically. Answers are assembled from the site tools’ own summaries; the interface labels every such answer.',
-            },
-            {
-              mode: 'byok' as const,
-              title: 'Your own model (BYOK)',
-              body: 'The network runs on your model through an OpenAI-compatible router, with streaming and tool calls.',
-            },
-          ] satisfies { mode: ModelSettings['mode']; title: string; body: string }[]
-        ).map((option) => (
-          <label
-            key={option.mode}
-            className={cn(
-              'flex cursor-pointer gap-3 rounded-panel border p-3 transition-[background-color,color] duration-[120ms]',
-              draft.mode === option.mode
-                ? 'border-ink bg-fill-2'
-                : 'border-hairline hover:bg-fill-1',
-            )}
-          >
-            <input
-              type="radio"
-              name="agent-model-mode"
-              value={option.mode}
-              checked={draft.mode === option.mode}
-              onChange={() => setDraft((current) => ({ ...current, mode: option.mode }))}
-              className="mt-1 accent-[var(--ink)]"
-            />
-            <span className="flex flex-col gap-1">
-              <span className="text-[13px] text-text-primary">{option.title}</span>
-              <span className="text-[12px] leading-relaxed text-text-tertiary">{option.body}</span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
-
       {draft.mode === 'byok' ? (
         <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1.5 text-[12px] text-text-secondary">
-            <span>Provider preset</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="type-subhead text-text-secondary">Provider preset</span>
             <select
               value={draft.presetId}
               onChange={(event) => selectPreset(event.target.value)}
-              className="h-10 rounded-control border border-hairline bg-surface px-3 text-[13px] text-text-primary"
+              className={cn(fieldClass, 'appearance-none bg-fill-1 text-text-primary')}
             >
               {ROUTER_PRESETS.map((entry) => (
                 <option key={entry.id} value={entry.id}>
@@ -254,28 +224,31 @@ export function ModelSettingsPanel({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1.5 text-[12px] text-text-secondary">
-            <span>Router base URL</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="type-subhead text-text-secondary">Router base URL</span>
             <input
               value={draft.baseUrl}
               onChange={(event) => setDraft((current) => ({ ...current, baseUrl: event.target.value }))}
               placeholder="https://api.example.com/v1"
               spellCheck={false}
-              className="h-10 rounded-control border border-hairline bg-surface px-3 font-mono text-[12px] text-text-primary"
+              autoComplete="off"
+              inputMode="url"
+              className={cn(fieldClass, 'font-mono text-[16px] sm:text-[12px]')}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-[12px] text-text-secondary">
-            <span>Model</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="type-subhead text-text-secondary">Model</span>
             <input
               value={draft.model}
               onChange={(event) => setDraft((current) => ({ ...current, model: event.target.value }))}
               placeholder="model-id"
               spellCheck={false}
-              className="h-10 rounded-control border border-hairline bg-surface px-3 font-mono text-[12px] text-text-primary"
+              autoComplete="off"
+              className={cn(fieldClass, 'font-mono text-[16px] sm:text-[12px]')}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-[12px] text-text-secondary">
-            <span>API key</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="type-subhead text-text-secondary">API key</span>
             <input
               type="password"
               value={draft.apiKey}
@@ -283,14 +256,14 @@ export function ModelSettingsPanel({
               placeholder="sk-…"
               autoComplete="off"
               spellCheck={false}
-              className="h-10 rounded-control border border-hairline bg-surface px-3 font-mono text-[12px] text-text-primary"
+              className={cn(fieldClass, 'font-mono text-[16px] sm:text-[12px]')}
             />
-            <span className="text-[11px] leading-relaxed text-text-tertiary">
-              Stored in this browser’s localStorage for this origin only. Never sent to the
-              site, to another agent site, or into the network definition, prompts or traces.
+            <span className="type-caption text-text-tertiary">
+              Stored in this browser’s localStorage for this origin only. Never sent to the site,
+              to another agent site, or into the network definition, prompts or traces.
             </span>
           </label>
-          <p className="text-[11px] leading-relaxed text-text-tertiary">{preset.note}</p>
+          <p className="type-caption text-text-tertiary">{preset.note}</p>
         </div>
       ) : null}
 
@@ -309,7 +282,7 @@ export function ModelSettingsPanel({
           Cancel
         </Button>
         {stored ? (
-          <Button variant="text" size="md" onClick={onClear}>
+          <Button variant="text" size="md" onClick={onClear} className="ml-auto">
             Delete stored settings
           </Button>
         ) : null}

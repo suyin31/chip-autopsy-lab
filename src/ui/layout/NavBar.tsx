@@ -1,6 +1,6 @@
 'use client';
 
-import { FolderOpen } from 'lucide-react';
+import { Bot, FolderOpen } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 import type { DemoPresetId } from '@/core/demo';
@@ -132,9 +132,23 @@ export function NavBar({
             <span className="max-lg:hidden" translate="no">
               {t('nav.wordmark')}
             </span>
-            <span className="lg:hidden" translate="no">
+            <span className="max-sm:hidden lg:hidden" translate="no">
               {t('nav.wordmarkShort')}
             </span>
+            {/* Below 640 the lot pill needs the room; the reticle carries the mark instead. */}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-5 sm:hidden"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.4}
+            >
+              <circle cx="12" cy="12" r="8.5" />
+              <circle cx="12" cy="12" r="4" strokeOpacity={0.5} />
+              <path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" />
+            </svg>
+            <span className="sr-only sm:hidden">{t('nav.wordmark')}</span>
           </Link>
         </div>
 
@@ -163,12 +177,14 @@ export function NavBar({
             href="/agents"
             data-testid="nav-agent-console"
             className={cn(
-              'mr-2 inline-flex h-9 items-center rounded-pill px-3 text-[12px] leading-none text-text-secondary no-underline',
-              'transition-[background-color,color] duration-[120ms] hover:bg-fill-1 hover:text-text-primary',
+              'mr-2 inline-flex h-9 items-center rounded-pill px-3 type-control text-text-secondary no-underline',
+              'max-sm:size-11 max-sm:justify-center max-sm:px-0',
+              'transition-[background-color,color] duration-[120ms] ease-[var(--ease-out)] hover:bg-fill-1 hover:text-text-primary',
               'focus-visible:shadow-focus-ring focus-visible:outline-none',
             )}
           >
-            {t('nav.agent')}
+            <Bot className="size-4 sm:hidden" strokeWidth={1.6} aria-hidden="true" />
+            <span className="max-sm:sr-only">{t('nav.agent')}</span>
           </Link>
 
           <LanguageSwitcher includeAppearance={isMobileViewport} />
