@@ -1157,6 +1157,9 @@ async function readJsonRpcBody(response) {
 export function createAgentRuntime(options = {}) {
   const doFetch = options.fetchImpl ?? globalThis.fetch;
   if (typeof doFetch !== 'function') fail(ERROR_CODES.routerMissing, 'No fetch implementation is available.');
+  const baseHref =
+    options.baseHref ??
+    (typeof globalThis.location?.href === 'string' ? globalThis.location.href : 'http://localhost/');
 
   const limits = {
     maxStepsPerAgent: 8,
@@ -1188,7 +1191,9 @@ export function createAgentRuntime(options = {}) {
   let siteManifest = null;
   /** @type {Record<string, Record<string, string>>} publisher-owned peer link map (links.json) */
   let siteLinks = {};
-  let siteBaseUrl = options.siteBaseUrl ? String(options.siteBaseUrl).replace(/\/+$/, '') : '';
+  let siteBaseUrl = options.siteBaseUrl
+    ? absolutize(String(options.siteBaseUrl).replace(/\/+$/, ''), baseHref)
+    : '';
   let router = options.router ?? createDemoRouter();
   let disposed = false;
   const events = [];
@@ -1324,8 +1329,10 @@ export function createAgentRuntime(options = {}) {
   };
 
   const loadManifest = async () => {
-    const manifestUrl = options.manifestUrl;
-    if (!manifestUrl) fail(ERROR_CODES.manifestInvalid, 'A manifest URL is required.');
+    if (!options.manifestUrl) fail(ERROR_CODES.manifestInvalid, 'A manifest URL is required.');
+    // A site may configure the manifest with a site-relative path; resolve it
+    // against the page so every later fetch has an absolute base.
+    const manifestUrl = absolutize(options.manifestUrl, baseHref);
     emit('manifest.load', { url: manifestUrl });
     const { text } = await fetchJson(manifestUrl, 'agent-manifest.json');
     let manifest;
@@ -2108,6 +2115,15 @@ function slugify(value) {
     .slice(0, 60) || 'tool';
 }
 
+/** @param {string} href @param {string} base */
+function absolutize(href, base) {
+  try {
+    return new URL(href, base).toString();
+  } catch {
+    return href;
+  }
+}
+
 /** @param {string} url */
 function deriveBaseUrl(url) {
   const parsed = new URL(url);
@@ -2117,8 +2133,9 @@ function deriveBaseUrl(url) {
 
 /** @param {string} base @param {string} path */
 function resolveAgainst(base, path) {
+  const normalized = `${String(base ?? '').replace(/\/+$/, '')}/`;
   try {
-    return new URL(path, `${base.replace(/\/+$/, '')}/`).toString();
+    return new URL(path, normalized).toString();
   } catch {
     return path;
   }

@@ -649,6 +649,22 @@ describe('pluggable inference', () => {
   });
 });
 
+describe('site-relative configuration', () => {
+  it('resolves a site-relative manifest path against the page URL', async () => {
+    const runtime = createAgentRuntime({
+      manifestUrl: '/agent-manifest.json',
+      baseHref: `${ORIGIN}/agents`,
+      fetchImpl: createSiteFetch(),
+      actions: createActions(),
+      consent: () => true,
+      router: createDemoRouter(),
+    });
+    await runtime.ready();
+    const result = await runtime.run({ input: 'why did yield drop' });
+    expect(result.text).toContain('Final yield 71.2%');
+  });
+});
+
 describe('runtime metadata', () => {
   it('reports the profile it implements', () => {
     expect(AGENT_RUNTIME_PROFILE).toBe('mvp-0.3');

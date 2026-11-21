@@ -206,6 +206,8 @@ export interface RuntimeLimits {
 export interface RuntimeOptions {
   readonly manifestUrl?: string;
   readonly siteBaseUrl?: string;
+  /** Page URL used to resolve a site-relative manifest path. Defaults to location.href. */
+  readonly baseHref?: string;
   readonly fetchImpl?: typeof fetch;
   readonly router?: Router;
   readonly actions?: ReadonlyArray<SiteActionSpec>;
