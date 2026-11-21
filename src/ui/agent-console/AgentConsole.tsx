@@ -290,6 +290,7 @@ export function AgentConsole() {
           text: result.text,
           routerLabel: router.label,
         });
+        revealCitedFact(result.text);
       }
     } catch (error) {
       if (error instanceof AgentRuntimeError) {
@@ -305,6 +306,30 @@ export function AgentConsole() {
     } finally {
       setRunning(false);
       setStreamText('');
+    }
+  };
+
+  /**
+   * The console's own reading of an answer: when the reply cites engine fact ids
+   * and nothing is highlighted yet, put the dies behind the first cited fact on
+   * the stage, so a claim can be checked against the wafer in one look. An
+   * explicit `highlight_dies` call from an agent wins over this.
+   */
+  const revealCitedFact = (text: string) => {
+    const loaded = payloadRef.current;
+    if (!loaded || highlight.ids.size > 0) return;
+    const cited = text.match(/fact:[a-z0-9:.-]+/gi);
+    if (!cited || cited.length === 0) return;
+    for (const id of cited) {
+      const fact = loaded.facts.find((entry) => entry.factId === id);
+      if (!fact) continue;
+      setHighlight({
+        ids: new Set(fact.dieIds),
+        label: `Cited by the answer: ${fact.factId} — ${fact.summary}`,
+        factId: fact.factId,
+      });
+      setWaferIndex(0);
+      return;
     }
   };
 

@@ -213,10 +213,9 @@ export function createLabSiteActions(bridge: LabBridge): SiteActionSpec[] {
           .map((claim) => `- ${claim.text} [${claim.citedFactIds.join(', ')}]`)
           .join('\n');
         const summary = [
-          `Cause of death: ${verdict.verdict} (confidence ${verdict.confidence.toFixed(2)}, tier ${verdict.tier}).`,
           verdict.headlineText,
+          `Verdict tier ${verdict.tier} · confidence ${verdict.confidence.toFixed(2)} · final yield ${formatPct(verdict.finalYield)} on ${formatInt(verdict.testedDies)} dies, ${formatInt(verdict.totalFailDies)} failed.`,
           `Findings:\n${claims}`,
-          `Final yield ${formatPct(verdict.finalYield)} on ${formatInt(verdict.testedDies)} dies; ${formatInt(verdict.totalFailDies)} failed.`,
         ].join('\n');
         return {
           summary,
