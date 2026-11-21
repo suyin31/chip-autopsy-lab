@@ -286,7 +286,7 @@
         "evidence_auditor",
         "list_demo_lots",
         "load_demo_lot",
-        "agent_atlas"
+        "https://agent-atlas-phi.vercel.app/agent_atlas"
       ]
     },
     {
@@ -373,104 +373,209 @@
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Lists the three synthetic demo lots this site can load, with the failure each one carries."
-      }
+        "description": "Lists the three synthetic demo lots this site can load, with the failure each one carries.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "load_demo_lot",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Loads one synthetic demo lot into the page, replacing the open lot. The visitor confirms first."
-      }
+        "description": "Loads one synthetic demo lot into the page, replacing the open lot. The visitor confirms first.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "presetId": {
+              "type": "string",
+              "enum": [
+                "edge-ring-etch",
+                "handling-scratch",
+                "site2-probe-contact"
+              ],
+              "description": "Demo preset id from list_demo_lots."
+            }
+          },
+          "required": [
+            "presetId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "get_lot_summary",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Lot identity, wafer and die counts, first-pass and final yield, retest count and the dominant failing bin."
-      }
+        "description": "Lot identity, wafer and die counts, first-pass and final yield, retest count and the dominant failing bin.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "diagnose_lot",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Runs the deterministic verdict engine and returns the cause of death, its confidence, findings and engine fact ids."
-      }
+        "description": "Runs the deterministic verdict engine and returns the cause of death, its confidence, findings and engine fact ids.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "get_spatial_pattern",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Classifies the lot and wafer failure shapes against the nine WM-811K classes, with confidence and the dies carrying the signature."
-      }
+        "description": "Classifies the lot and wafer failure shapes against the nine WM-811K classes, with confidence and the dies carrying the signature.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "get_parametric_report",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Parametric tests with the weakest capability (lowest Cpk), with units, limits, mean, sigma and fail counts."
-      }
+        "description": "Parametric tests with the weakest capability (lowest Cpk), with units, limits, mean, sigma and fail counts.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 12
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "compare_test_sites",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "First-pass and final yield per test site, plus any site-concentration anomaly with its z-score and confidence."
-      }
+        "description": "First-pass and final yield per test site, plus any site-concentration anomaly with its z-score and confidence.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "query_dies",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Counts and locates dies with the workbench Filter DSL, for example \"only bin 7\" or \"tests with Cpk < 1.33\"."
-      }
+        "description": "Counts and locates dies with the workbench Filter DSL, for example only bin 7 or tests with Cpk under 1.33.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "expression": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 160
+            }
+          },
+          "required": [
+            "expression"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "list_evidence",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Every engine fact behind the autopsy with its stable id, kind, summary and die count."
-      }
+        "description": "Every engine fact behind the autopsy with its stable id, kind, summary and die count.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "get_evidence",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Resolves one engine fact id to its summary, metrics and the canonical die ids behind it."
-      }
+        "description": "Resolves one engine fact id to its summary, metrics and the canonical die ids behind it.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "factId": {
+              "type": "string",
+              "minLength": 3
+            }
+          },
+          "required": [
+            "factId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "highlight_dies",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Lights the dies behind an engine fact up on the page. Changes the page, so the visitor confirms first."
-      }
+        "description": "Lights the dies behind an engine fact up on the page. Changes the page, so the visitor confirms first.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "factId": {
+              "type": "string",
+              "description": "Engine fact id from get_spatial_pattern or list_evidence."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     },
     {
       "name": "export_report",
       "tool_type": "site_action",
       "toolbox": "site_actions",
       "function": {
-        "description": "Returns the deterministic autopsy report as Markdown, as the workbench renders it."
-      }
-    },
-    {
-      "name": "agent_atlas",
-      "tool_type": "peer_network",
-      "url": "https://agent-atlas-phi.vercel.app/agent_atlas",
-      "function": {
-        "description": "A public conformance checker for agentic websites. Ask it to check this site's manifest and network against the profile."
-      }
+        "description": "Returns the deterministic autopsy report as Markdown, as the workbench renders it.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "tools": []
     }
   ]
 }

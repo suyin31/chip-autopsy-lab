@@ -139,7 +139,7 @@ describe('published site bundle', () => {
     const { runtime, actions } = await createConsoleRuntime();
     const network = runtime.getNetwork('chip_autopsy_lab');
     expect(network).not.toBeNull();
-    expect(network!.capabilities.size).toBe(13);
+    expect(network!.capabilities.size).toBe(12);
     const manifest = JSON.parse(await fs.readFile(path.join(PUBLIC, 'agent-manifest.json'), 'utf8')) as {
       actions: { agentTools: string[] };
     };
@@ -148,6 +148,8 @@ describe('published site bundle', () => {
         expect(manifest.actions.agentTools, name).toContain(name);
         expect(actions.some((action) => action.name === name), name).toBe(true);
         expect(capability.description.length, name).toBeGreaterThan(20);
+        const action = actions.find((entry) => entry.name === name);
+        expect(capability.parameters, `${name} published schema`).toEqual(action?.inputSchema);
       } else {
         expect(capability.url, name).toMatch(/^https:\/\//);
       }

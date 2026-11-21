@@ -560,6 +560,9 @@ export function resolveNetwork(raw, options = {}) {
         description: capabilityDescription,
         toolType: entry.tool_type,
         ...(typeof entry.url === 'string' ? { url: entry.url } : {}),
+        ...(isPlainObject(entry.function) && isPlainObject(entry.function.parameters)
+          ? { parameters: entry.function.parameters }
+          : {}),
       });
       continue;
     }
@@ -1605,9 +1608,11 @@ export function createAgentRuntime(options = {}) {
             function: {
               name: capabilityAction.name,
               description: `${capabilityAction.purpose}${capabilityAction.effect && capabilityAction.effect !== 'read' ? ` (effect: ${capabilityAction.effect}; the visitor confirms first)` : ''}`,
-              parameters: isPlainObject(capabilityAction.inputSchema)
-                ? capabilityAction.inputSchema
-                : { type: 'object' },
+              // The published schema is the contract callers read; the page's
+              // own schema must agree with it (enforced by the site's tests).
+              parameters:
+                capability.parameters ??
+                (isPlainObject(capabilityAction.inputSchema) ? capabilityAction.inputSchema : { type: 'object' }),
             },
           });
           byName.set(capabilityAction.name, { kind: 'action', action: capabilityAction });

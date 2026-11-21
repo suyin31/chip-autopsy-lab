@@ -49,7 +49,13 @@ export interface Network {
   readonly agents: ReadonlyMap<string, AgentSpec>;
   readonly capabilities: ReadonlyMap<
     string,
-    { readonly name: string; readonly description: string; readonly toolType: string; readonly url?: string }
+    {
+      readonly name: string;
+      readonly description: string;
+      readonly toolType: string;
+      readonly url?: string;
+      readonly parameters?: Record<string, unknown>;
+    }
   >;
   readonly metadata: Record<string, unknown>;
   readonly raw: Record<string, unknown>;
