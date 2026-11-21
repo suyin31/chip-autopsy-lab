@@ -763,6 +763,13 @@ export function createDemoRouter() {
         };
       }
 
+      // A failed tool ends the plan: answering from a failure is honest, and
+      // continuing to the next action would act on data that does not exist.
+      const failed = results.find((result) => result && result.ok === false);
+      if (failed) {
+        return { content: String(failed.summary ?? 'The tool failed.'), toolCalls: [] };
+      }
+
       const route = matchedRoute ?? plan.default ?? { actions: [] };
       const actions = Array.isArray(route.actions) ? route.actions : [];
       if (step < actions.length) {
