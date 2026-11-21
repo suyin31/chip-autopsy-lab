@@ -38,8 +38,11 @@ export interface LabBridge {
   clearHighlight(): void;
 }
 
-const NO_LOT_MESSAGE =
-  'No lot is loaded in this tab. Call list_demo_lots and let the visitor pick one; loading a demo lot needs their confirmation.';
+const DEMO_LOT_NAMES = listDemoPresets()
+  .map((preset) => `${preset.id} (${preset.expectedVerdictKind})`)
+  .join(', ');
+
+const NO_LOT_MESSAGE = `No lot is loaded in this tab. Call list_demo_lots and let the visitor pick one — the demo lots are ${DEMO_LOT_NAMES}. Loading a demo lot needs the visitor's confirmation.`;
 
 function formatPct(ratio: number | null | undefined): string {
   if (ratio === null || ratio === undefined || Number.isNaN(ratio)) return 'n/a';
@@ -209,7 +212,9 @@ export function createLabSiteActions(bridge: LabBridge): SiteActionSpec[] {
       handler: async () => {
         const payload = requirePayload(bridge);
         const { verdict, report } = payload;
-        const claims = [report.causeOfDeathHeadline, ...report.bodyClaims]
+        // The headline is already the first line of the answer; findings are the
+        // supporting claims only.
+        const claims = report.bodyClaims
           .map((claim) => `- ${claim.text} [${claim.citedFactIds.join(', ')}]`)
           .join('\n');
         const summary = [
@@ -229,7 +234,7 @@ export function createLabSiteActions(bridge: LabBridge): SiteActionSpec[] {
               spatialPattern: verdict.spatialPattern ?? null,
               citedFactIds: verdict.citedFactIds,
             },
-            findings: [report.causeOfDeathHeadline, ...report.bodyClaims].map((claim) => ({
+            findings: report.bodyClaims.map((claim) => ({
               text: claim.text,
               factIds: claim.citedFactIds,
               dieCount: claim.resolvedDieIds.length,
