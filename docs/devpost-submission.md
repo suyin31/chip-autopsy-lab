@@ -12,7 +12,14 @@ Drop an STDF. Get the cause of death.
 
 ## Category
 
-Frankenstein. The app stitches a 1990s binary test format (STDF V4), the WM-811K defect taxonomy, an optional LLM narrator, and a modern browser UI into one working body.
+Frankenstein. Chip Autopsy Lab stitches four parts that were never meant to share a body:
+
+- The bones: STDF V4, a 1990s binary log format from ATE testers, parsed byte by byte inside a browser Web Worker.
+- The eyes: WM-811K, a public research dataset of 811,457 real fab wafer maps, turned into a 9-class spatial classifier.
+- The voice: an optional LLM narrator on a short leash. It sees aggregate facts only, and the client rejects any sentence that cites a fact the engine didn't produce.
+- The skin: a modern Next.js and Canvas2D interface in 5 languages.
+
+Test-floor data, academic research, generative AI, and the web rarely meet. Stitched together, they turn a raw tester log into a cause of death you can click through to the dies that prove it, with no install.
 
 ## Inspiration
 
