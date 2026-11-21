@@ -167,6 +167,16 @@ export function AgentConsole() {
         status: 'running',
       });
     }
+    if (event.type === 'action.call') {
+      append({
+        id: nextId('action'),
+        kind: 'tool',
+        callId: String(event.requestId ?? event.tool ?? nextId('action')),
+        name: String(event.tool ?? 'action'),
+        toolKind: String(event.effect ?? 'read'),
+        status: 'running',
+      });
+    }
     if (event.type === 'tool.result') {
       const callId = String(event.requestId ?? event.tool ?? '');
       setTranscript((current) =>

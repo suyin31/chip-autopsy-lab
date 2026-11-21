@@ -780,7 +780,13 @@ export function createDemoRouter() {
           toolCalls: [{ id: `demo-${step}-${actionName}`, name: actionName, arguments: args }],
         };
       }
-      const text = results
+      // A route may name the results its answer should be built from, so the
+      // answer is not a transcript of every tool the specialist happened to run.
+      const answerNames = Array.isArray(route.answer) ? route.answer.map(String) : null;
+      const answerResults = answerNames
+        ? results.filter((result) => answerNames.includes(String(result?.name ?? '')))
+        : results;
+      const text = answerResults
         .map((result) => result?.summary ?? result?.text ?? '')
         .filter((line) => typeof line === 'string' && line.trim() !== '')
         .join('\n\n');

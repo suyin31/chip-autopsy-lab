@@ -45,6 +45,7 @@ verdict-first cause of death where every claim points at engine fact ids.
 
       lot_analyst {
         default {
+          answer = [diagnose_lot]
           actions = [
             get_lot_summary,
             diagnose_lot
@@ -53,6 +54,7 @@ verdict-first cause of death where every claim points at engine fact ids.
         routes = [
           {
             match = [cpk, parametric, sigma, limit, distribution, histogram]
+            answer = [get_parametric_report]
             actions = [
               get_lot_summary,
               get_parametric_report
@@ -60,6 +62,7 @@ verdict-first cause of death where every claim points at engine fact ids.
           },
           {
             match = [site, head, probe card, contact, retest]
+            answer = [compare_test_sites]
             actions = [
               get_lot_summary,
               compare_test_sites
@@ -67,6 +70,7 @@ verdict-first cause of death where every claim points at engine fact ids.
           },
           {
             match = [edge-ring, edge ring, etch]
+            answer = [load_demo_lot, diagnose_lot]
             actions = [
               list_demo_lots,
               {
@@ -81,6 +85,7 @@ verdict-first cause of death where every claim points at engine fact ids.
           },
           {
             match = [scratch, handling, transfer blade]
+            answer = [load_demo_lot, diagnose_lot]
             actions = [
               list_demo_lots,
               {
@@ -95,6 +100,7 @@ verdict-first cause of death where every claim points at engine fact ids.
           },
           {
             match = [site 2, probe contact, oxidized, contact]
+            answer = [load_demo_lot, diagnose_lot]
             actions = [
               list_demo_lots,
               {
@@ -126,6 +132,7 @@ verdict-first cause of death where every claim points at engine fact ids.
         routes = [
           {
             match = [highlight, show, light up, mark, where]
+            answer = [get_spatial_pattern, highlight_dies]
             actions = [
               get_spatial_pattern,
               highlight_dies
@@ -133,6 +140,7 @@ verdict-first cause of death where every claim points at engine fact ids.
           },
           {
             match = [compare, each wafer, per wafer, wafer by wafer]
+            answer = [get_spatial_pattern]
             actions = [
               get_spatial_pattern
             ]
@@ -149,6 +157,7 @@ verdict-first cause of death where every claim points at engine fact ids.
         routes = [
           {
             match = [report, export, download, markdown, summary document]
+            answer = [export_report]
             actions = [
               export_report
             ]

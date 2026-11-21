@@ -69,6 +69,9 @@
       },
       "lot_analyst": {
         "default": {
+          "answer": [
+            "diagnose_lot"
+          ],
           "actions": [
             "get_lot_summary",
             "diagnose_lot"
@@ -84,6 +87,9 @@
               "distribution",
               "histogram"
             ],
+            "answer": [
+              "get_parametric_report"
+            ],
             "actions": [
               "get_lot_summary",
               "get_parametric_report"
@@ -97,6 +103,9 @@
               "contact",
               "retest"
             ],
+            "answer": [
+              "compare_test_sites"
+            ],
             "actions": [
               "get_lot_summary",
               "compare_test_sites"
@@ -107,6 +116,10 @@
               "edge-ring",
               "edge ring",
               "etch"
+            ],
+            "answer": [
+              "load_demo_lot",
+              "diagnose_lot"
             ],
             "actions": [
               "list_demo_lots",
@@ -126,6 +139,10 @@
               "handling",
               "transfer blade"
             ],
+            "answer": [
+              "load_demo_lot",
+              "diagnose_lot"
+            ],
             "actions": [
               "list_demo_lots",
               {
@@ -144,6 +161,10 @@
               "probe contact",
               "oxidized",
               "contact"
+            ],
+            "answer": [
+              "load_demo_lot",
+              "diagnose_lot"
             ],
             "actions": [
               "list_demo_lots",
@@ -185,6 +206,10 @@
               "mark",
               "where"
             ],
+            "answer": [
+              "get_spatial_pattern",
+              "highlight_dies"
+            ],
             "actions": [
               "get_spatial_pattern",
               "highlight_dies"
@@ -196,6 +221,9 @@
               "each wafer",
               "per wafer",
               "wafer by wafer"
+            ],
+            "answer": [
+              "get_spatial_pattern"
             ],
             "actions": [
               "get_spatial_pattern"
@@ -217,6 +245,9 @@
               "download",
               "markdown",
               "summary document"
+            ],
+            "answer": [
+              "export_report"
             ],
             "actions": [
               "export_report"
