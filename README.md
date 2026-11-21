@@ -22,7 +22,7 @@ Test, product, and yield engineers at small fabless teams and OSATs routinely tr
 
 ## Try it
 
-Live demo: `https://REPLACE-WITH-DEPLOY-URL`
+Live demo: `https://chip-autopsy-lab.netlify.app`
 
 ### Demo lots
 
