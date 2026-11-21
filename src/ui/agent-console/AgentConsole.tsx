@@ -398,7 +398,7 @@ export function AgentConsole() {
       </header>
 
       <div className="mx-auto grid max-w-[1360px] gap-6 px-5 py-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="flex min-h-[70vh] flex-col rounded-panel border border-hairline bg-panel">
+        <section className="flex min-h-[70vh] flex-col rounded-panel border border-hairline bg-surface">
           <div className="flex-1 space-y-4 overflow-y-auto p-5">
             {transcript.length === 0 && !running ? (
               <div className="flex flex-col gap-4">
@@ -445,7 +445,7 @@ export function AgentConsole() {
                     <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-text-tertiary">
                       {item.peerOrigin ? `peer · ${item.peerOrigin}` : 'agent'} · {item.routerLabel}
                     </p>
-                    <div className="whitespace-pre-wrap rounded-panel border border-hairline bg-surface px-4 py-3 text-[14px] leading-relaxed text-text-primary">
+                    <div className="whitespace-pre-wrap rounded-panel border border-hairline bg-surface-sunken px-4 py-3 text-[14px] leading-relaxed text-text-primary">
                       {item.text}
                     </div>
                   </div>
@@ -519,7 +519,7 @@ export function AgentConsole() {
                       : `Contact ${consentRequest.origin} to ${consentRequest.purpose ?? 'load another agent site'}?`}
                 </p>
                 {consentRequest.args && Object.keys(consentRequest.args).length > 0 ? (
-                  <pre className="mt-2 overflow-x-auto rounded-control bg-surface p-2 font-mono text-[11px] text-text-secondary">
+                  <pre className="mt-2 overflow-x-auto rounded-control bg-fill-1 p-2 font-mono text-[11px] text-text-secondary">
                     {JSON.stringify(consentRequest.args, null, 2)}
                   </pre>
                 ) : null}
@@ -593,7 +593,7 @@ export function AgentConsole() {
         </section>
 
         <aside className="flex flex-col gap-4">
-          <section className="rounded-panel border border-hairline bg-panel p-4">
+          <section className="rounded-panel border border-hairline bg-surface p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-[13px] text-text-primary">Evidence stage</h2>
               {highlight.ids.size > 0 ? (
@@ -615,7 +615,7 @@ export function AgentConsole() {
             />
           </section>
 
-          <section className="rounded-panel border border-hairline bg-panel p-4">
+          <section className="rounded-panel border border-hairline bg-surface p-4">
             <h2 className="mb-2 text-[13px] text-text-primary">Engine facts</h2>
             {payload ? (
               <ul className="flex flex-col gap-1.5">
@@ -644,7 +644,7 @@ export function AgentConsole() {
             )}
           </section>
 
-          <section className="rounded-panel border border-hairline bg-panel p-4">
+          <section className="rounded-panel border border-hairline bg-surface p-4">
             <h2 className="text-[13px] text-text-primary">Other agent sites</h2>
             <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
               Loading a peer runs its published network in this tab, on your router and this
@@ -688,7 +688,7 @@ export function AgentConsole() {
             ) : null}
           </section>
 
-          <details className="rounded-panel border border-hairline bg-panel p-4">
+          <details className="rounded-panel border border-hairline bg-surface p-4">
             <summary className="cursor-pointer text-[13px] text-text-primary">
               Execution trace <span className="font-mono text-[10px] text-text-tertiary">{trace.length}</span>
             </summary>

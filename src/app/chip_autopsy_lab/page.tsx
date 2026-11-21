@@ -86,7 +86,7 @@ export default async function NetworkPage() {
           </h2>
           <ul className="flex flex-col gap-2">
             {agents.map((agent) => (
-              <li key={agent.name} className="rounded-panel border border-hairline bg-panel p-4">
+              <li key={agent.name} className="rounded-panel border border-hairline bg-surface p-4">
                 <p className="font-mono text-[13px] text-text-primary">
                   {agent.name}
                   {agent.name === frontMan ? (
@@ -106,7 +106,7 @@ export default async function NetworkPage() {
           </ul>
         </section>
 
-        <section className="rounded-panel border border-hairline bg-panel p-4 text-[12px] leading-relaxed text-text-secondary">
+        <section className="rounded-panel border border-hairline bg-surface p-4 text-[12px] leading-relaxed text-text-secondary">
           <p>
             Calling this network from another agentic site: point a tool at this page’s URL. The
             caller’s runtime fetches <code className="font-mono">/agent-manifest.json</code>, matches
