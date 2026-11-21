@@ -159,6 +159,18 @@ export function NavBar({
 
         {/* Right: language, 4 px, theme, 12 px, Open file (hidden on landing, which has its own) */}
         <div className="flex items-center justify-self-end">
+          <Link
+            href="/agents"
+            data-testid="nav-agent-console"
+            className={cn(
+              'mr-2 inline-flex h-9 items-center rounded-pill px-3 text-[12px] leading-none text-text-secondary no-underline',
+              'transition-[background-color,color] duration-[120ms] hover:bg-fill-1 hover:text-text-primary',
+              'focus-visible:shadow-focus-ring focus-visible:outline-none',
+            )}
+          >
+            {t('nav.agent')}
+          </Link>
+
           <LanguageSwitcher includeAppearance={isMobileViewport} />
 
           <ThemeToggle className="ml-1 max-lg:hidden" />

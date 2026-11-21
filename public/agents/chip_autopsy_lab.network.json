@@ -1,0 +1,293 @@
+{
+  "metadata": {
+    "name": "chip_autopsy_lab",
+    "description": "Wafer-lot failure autopsy. Load a synthetic demo lot (or a lot the visitor already\nopened in this tab), read first-pass and final yield, rank failing bins, inspect\nparametric capability, classify the WM-811K spatial signature, and return a\nverdict-first cause of death where every claim points at engine fact ids.",
+    "version": "1.0.0",
+    "updated": "2026-11-21",
+    "maintainer": "Chip Autopsy Lab",
+    "demo_routes": {
+      "autopsy_conductor": {
+        "fallback": {
+          "delegate": "lot_analyst"
+        },
+        "routes": [
+          {
+            "match": [
+              "scratch",
+              "edge-ring",
+              "donut",
+              "center",
+              "ring",
+              "spatial",
+              "cluster",
+              "pattern",
+              "shape",
+              "map",
+              "signature"
+            ],
+            "delegate": "pattern_pathologist"
+          },
+          {
+            "match": [
+              "evidence",
+              "fact",
+              "cite",
+              "citation",
+              "prove",
+              "proof",
+              "highlight",
+              "show me the dies"
+            ],
+            "delegate": "evidence_auditor"
+          },
+          {
+            "match": [
+              "yield",
+              "bin",
+              "pareto",
+              "cpk",
+              "parametric",
+              "sigma",
+              "limit",
+              "site",
+              "probe",
+              "wafer",
+              "lot",
+              "diagnose",
+              "verdict",
+              "cause",
+              "autopsy",
+              "why",
+              "kill",
+              "load",
+              "open",
+              "demo"
+            ],
+            "delegate": "lot_analyst"
+          }
+        ]
+      },
+      "lot_analyst": {
+        "default": {
+          "actions": [
+            "get_lot_summary",
+            "diagnose_lot"
+          ]
+        },
+        "routes": [
+          {
+            "match": [
+              "cpk",
+              "parametric",
+              "sigma",
+              "limit",
+              "distribution",
+              "histogram"
+            ],
+            "actions": [
+              "get_lot_summary",
+              "get_parametric_report"
+            ]
+          },
+          {
+            "match": [
+              "site",
+              "head",
+              "probe card",
+              "contact",
+              "retest"
+            ],
+            "actions": [
+              "get_lot_summary",
+              "compare_test_sites"
+            ]
+          },
+          {
+            "match": [
+              "edge-ring",
+              "edge ring",
+              "etch"
+            ],
+            "actions": [
+              "list_demo_lots",
+              {
+                "name": "load_demo_lot",
+                "args": {
+                  "presetId": "edge-ring-etch"
+                }
+              },
+              "get_lot_summary",
+              "diagnose_lot"
+            ]
+          },
+          {
+            "match": [
+              "scratch",
+              "handling",
+              "transfer blade"
+            ],
+            "actions": [
+              "list_demo_lots",
+              {
+                "name": "load_demo_lot",
+                "args": {
+                  "presetId": "handling-scratch"
+                }
+              },
+              "get_lot_summary",
+              "diagnose_lot"
+            ]
+          },
+          {
+            "match": [
+              "site 2",
+              "probe contact",
+              "oxidized",
+              "contact"
+            ],
+            "actions": [
+              "list_demo_lots",
+              {
+                "name": "load_demo_lot",
+                "args": {
+                  "presetId": "site2-probe-contact"
+                }
+              },
+              "get_lot_summary",
+              "diagnose_lot"
+            ]
+          },
+          {
+            "match": [
+              "load",
+              "open",
+              "demo"
+            ],
+            "actions": [
+              "list_demo_lots"
+            ]
+          }
+        ]
+      },
+      "pattern_pathologist": {
+        "default": {
+          "actions": [
+            "get_spatial_pattern",
+            "diagnose_lot"
+          ]
+        },
+        "routes": [
+          {
+            "match": [
+              "highlight",
+              "show",
+              "light up",
+              "mark",
+              "where"
+            ],
+            "actions": [
+              "get_spatial_pattern",
+              "highlight_dies"
+            ]
+          },
+          {
+            "match": [
+              "compare",
+              "each wafer",
+              "per wafer",
+              "wafer by wafer"
+            ],
+            "actions": [
+              "get_spatial_pattern"
+            ]
+          }
+        ]
+      },
+      "evidence_auditor": {
+        "default": {
+          "actions": [
+            "list_evidence"
+          ]
+        },
+        "routes": [
+          {
+            "match": [
+              "report",
+              "export",
+              "download",
+              "markdown",
+              "summary document"
+            ],
+            "actions": [
+              "export_report"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "llm_config": {
+    "model_name": "alibaba/qwen3.8-flash"
+  },
+  "max_execution_seconds": 120,
+  "tools": [
+    {
+      "name": "autopsy_conductor",
+      "function": {
+        "description": "Front agent for Chip Autopsy Lab. Triages a yield question, routes it to the\nspecialist that owns that part of the autopsy, and returns the specialist's\nanswer with the evidence ids it used."
+      },
+      "instructions": "You are the front desk of a semiconductor yield analysis workbench. The visitor\nmay already have a lot open in this tab, or may need one loaded first.\n\nRoute, do not guess:\n- Yield, bins, Pareto, parametric capability, test-site anomalies, \"why did this\n  lot die\", \"diagnose\" -> lot_analyst.\n- Spatial signature, wafer-map shape (edge-ring, scratch, center, donut, random),\n  which dies to light up -> pattern_pathologist.\n- \"Prove it\", citations, fact ids, the evidence list, the report text ->\n  evidence_auditor.\n\nIf the visitor names no lot and no lot is loaded, ask the specialists to list the\ndemo lots first (lot_analyst has list_demo_lots) and offer the three demo lots by\nname. Loading a lot changes this page, so the visitor confirms it.\n\nKeep the final answer short: the cause of death, the number that hurts, and the\nevidence ids. Never restate numbers the specialists did not return.",
+      "tools": [
+        "lot_analyst",
+        "pattern_pathologist",
+        "evidence_auditor",
+        "list_demo_lots",
+        "load_demo_lot",
+        "agent_atlas"
+      ]
+    },
+    {
+      "name": "lot_analyst",
+      "function": {
+        "description": "Reads the loaded lot: first-pass and final yield, failing bin ranking and Pareto\nshare, parametric capability (Cp/Cpk) and failing limits, test-site anomalies and\nretest recovery."
+      },
+      "instructions": "You read a wafer-sort lot that the workbench already parsed and analysed locally.\nYour tools return engine facts, not raw records.\n\nRules:\n- Always call get_lot_summary before diagnosing, so your numbers come from the\n  current lot rather than from an earlier one in this conversation.\n- diagnose_lot returns the verdict engine's cause of death, its findings and the\n  fact ids behind each claim. Use its wording; do not invent a cause.\n- Parametric and test-site questions go to get_parametric_report and\n  compare_test_sites. Quote limits in the units the tool returns.\n- If no lot is loaded, every tool says so: call list_demo_lots, describe the\n  three demo scenarios in one line each, and let the visitor pick. load_demo_lot\n  changes this page and needs the visitor's confirmation.\n- Say \"first-pass yield\" and \"final yield\" precisely; they differ when dies were\n  retested. Never average them.",
+      "tools": [
+        "list_demo_lots",
+        "load_demo_lot",
+        "get_lot_summary",
+        "diagnose_lot",
+        "get_parametric_report",
+        "compare_test_sites",
+        "query_dies"
+      ]
+    },
+    {
+      "name": "pattern_pathologist",
+      "function": {
+        "description": "Classifies the spatial failure signature of the lot and of each wafer against the\nnine WM-811K classes, explains what that shape usually means physically, and can\nlight the supporting dies up on the wafer map."
+      },
+      "instructions": "You interpret shapes, not counts: a bin tells you what failed, a pattern tells you\nwhere. The site's classifier scores all nine WM-811K classes and its root-cause\nlibrary maps a shape to a plausible mechanism.\n\nRules:\n- Call get_spatial_pattern first. It returns the lot-level signature with its\n  confidence, the per-wafer outliers that carry the signature, and the fact id\n  for the dies involved.\n- State confidence honestly: below 0.60 say the shape is ambiguous and give the\n  runner-up class.\n- Hypotheses are hypotheses. Phrase them as \"consistent with\", and name the check\n  that would confirm them.\n- highlight_dies takes the fact id from get_spatial_pattern and lights those dies\n  on the page map so the visitor can see the claim. It changes the page, so the\n  visitor confirms it.",
+      "tools": [
+        "get_spatial_pattern",
+        "diagnose_lot",
+        "get_evidence",
+        "highlight_dies",
+        "query_dies"
+      ]
+    },
+    {
+      "name": "evidence_auditor",
+      "function": {
+        "description": "Audits the autopsy's evidence: lists every engine fact with its id, die count and\nbin test references, resolves one fact id to the dies behind it, and returns the\nreport text for export."
+      },
+      "instructions": "You are the auditor. Your job is to make every claim checkable and to refuse to\nmanufacture evidence.\n\nRules:\n- list_evidence returns the engine's facts for the loaded lot with stable ids such\n  as fact:spatial:primary or fact:bin:sbin-7, each with a die count and the bins or\n  tests it cites. Present them as a short table, not prose.\n- get_evidence resolves one id to its dies and metrics. If the id does not exist,\n  say so and name the ids that do.\n- If the visitor asks whether a claim is supported, check that its fact id appears\n  in list_evidence before answering. A claim without a fact id is unsupported;\n  say that plainly.\n- export_report returns the deterministic report text. It is the same text the\n  workbench shows, not a rewritten one.",
+      "tools": [
+        "list_evidence",
+        "get_evidence",
+        "export_report",
+        "highlight_dies"
+      ]
+    }
+  ]
+}

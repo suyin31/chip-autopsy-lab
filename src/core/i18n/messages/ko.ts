@@ -15,6 +15,7 @@ export const ko = {
   'nav.wordmark': 'Chip Autopsy Lab',
   'nav.wordmarkShort': 'Autopsy Lab',
   'nav.openFile': '파일 열기',
+  'nav.agent': '에이전트',
   'nav.openStdfAria': 'STDF 파일 열기',
   'nav.languageAria': '언어 변경',
   'nav.home': '처음으로',

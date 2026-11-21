@@ -1,0 +1,32 @@
+# CORS for the public agent artifacts (MVP Profile 0.3 §3.3, §3.4).
+# A browser on any origin must be able to GET the manifest, the resolved network
+# definition, the authored HOCON, the peer link map and the runtime module.
+# Build settings are deliberately absent: Netlify keeps detecting them as before.
+
+[[headers]]
+  for = "/agent-manifest.json"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, HEAD, OPTIONS"
+    Vary = "Origin"
+
+[[headers]]
+  for = "/links.json"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, HEAD, OPTIONS"
+    Vary = "Origin"
+
+[[headers]]
+  for = "/agents/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, HEAD, OPTIONS"
+    Vary = "Origin"
+
+[[headers]]
+  for = "/agent-runtime/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, HEAD, OPTIONS"
+    Vary = "Origin"

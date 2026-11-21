@@ -38,6 +38,32 @@ Three seeded, deterministic synthetic STDF V4 demo lots are loadable in one clic
 
 All demo lots are 100% synthetic. No proprietary foundry, OSAT, or product data is included.
 
+## Agent layer (Open Agentic Web)
+
+Chip Autopsy Lab is also a conforming **open agentic website**: it publishes an agent network that a normal browser runs, and another agentic site can call.
+
+| Artifact | URL | What it is |
+|---|---|---|
+| Agent console | `/agents` | The interface: ask the network about the lot you have open, watch the tool calls, approve anything that changes the page, see the dies a claim points at |
+| Site manifest | `/agent-manifest.json` | The network entry (name, front agent, definition path), router metadata, peer policy, action list, link map |
+| Resolved network | `/agents/chip_autopsy_lab.network.json` | Neuro SAN agent-network data model, fully resolved, loaded by the browser runtime |
+| Authored source | `/agents/chip_autopsy_lab.network.hocon` | The same network as editable HOCON; `node tools/build-agent-network.mjs` regenerates and validates the JSON |
+| Peer link map | `/links.json` | Publisher-owned symbolic peer bindings (`agent_atlas`) |
+| Runtime | `/agent-runtime/agent-runtime.mjs` | A dependency-free ES module that implements the profile's browser execution, pluggable inference, site actions, consent and peer loading — any site can use it |
+| Network page | `/chip_autopsy_lab` | The human face of the peer-network URL |
+
+**The network.** Four agents over the deterministic engine: `autopsy_conductor` (front) routes to `lot_analyst` (yield, bins, parametric capability, test-site anomalies), `pattern_pathologist` (WM-811K shape, per-wafer outliers, die highlighting) and `evidence_auditor` (fact ids, die counts, report export). The graph is data, published in full: instructions, tool lists and JSON Schemas.
+
+**What the agents can see.** Twelve registered site actions, all returning aggregate engine facts: `list_demo_lots`, `load_demo_lot`, `get_lot_summary`, `diagnose_lot`, `get_spatial_pattern`, `get_parametric_report`, `compare_test_sites`, `query_dies` (the project's Filter DSL), `list_evidence`, `get_evidence`, `highlight_dies`, `export_report`. Raw STDF bytes stay in the Web Worker, so the architectural rule survives intact: an agent cannot quote, dump or leak a byte of the uploaded file. Two actions change the page — loading a lot and highlighting dies — and the runtime stops for the visitor's confirmation with the exact arguments.
+
+**Inference is the visitor's.** The site funds nothing. Add an OpenAI-compatible router, model and key in model settings (Otari, OpenAI, OpenRouter, a local Ollama endpoint, or anything else that speaks `/chat/completions`); the key lives in this origin's localStorage, travels only to that router, and never appears in the network, prompts, action arguments or the execution trace. With no key, the console runs the same published network on a **deterministic demo router**: no model, no invention — it walks the network's own routing table, delegates to the specialist, runs real site actions and assembles the answer from the tools' own summaries. The interface labels every such answer.
+
+**Why this is not a chatbot wrapper.** Every number an agent says comes from an engine fact that the app itself renders, with a stable id and a set of dies behind it (`fact:spatial:primary`, `fact:bin:sbin-7`). `diagnose_lot` returns the verdict engine's own cause of death and citations, not a paraphrase. The Evidence stage lights up exactly the dies the agent cited, so a visitor can check the claim against the wafer map in one click.
+
+**Interop, as implemented.** Manifest and definition are CORS-public. A peer is identified as `<site-base>/<network-name>`; the runtime fetches its manifest, matches the name exactly or fails closed, fetches the definition, and runs it in this tab on the visitor's router and this site's limits, after the visitor approves the origin. Private context never crosses an origin. The network may call [Agent Atlas](https://agent-atlas-phi.vercel.app/agent_atlas), a public conformance checker, through `links.json`; the contact needs approval and is recorded in the trace.
+
+`docs/agentic-web-gap-analysis.md` records the profile requirements against what the project had before this layer existed.
+
 ## Run locally
 
 Prerequisites: Node.js 22+ and `pnpm`.
@@ -85,6 +111,7 @@ Chip Autopsy Lab is local-first by design:
 
 - Gzip decompression, STDF V4 binary parsing, columnar modeling, statistical analytics, WM-811K classification, and Filter DSL evaluation execute entirely in the browser.
 - Raw STDF bytes, per-die coordinates, and die IDs never leave the device.
+- The agent layer cannot bypass that boundary: its twelve site actions read aggregate engine facts and derived results only, so no agent (local or peer) can receive raw file content. Model credentials are never sent to this site or to a peer agent site.
 - When `LLM_API_KEY` is configured on the server, only sanitized aggregate `EngineFact` summaries are sent to `/api/autopsy/narrate`. When unconfigured, the client makes zero narration requests.
 - Privacy and secret hygiene are enforced by automated gates:
   - **Offline gate** (`e2e/gates-t20.spec.ts`): blocks all non-app-origin network requests and asserts zero third-party requests and zero console errors across landing, demo analysis, and palette filtering.
