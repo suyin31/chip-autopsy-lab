@@ -1,7 +1,16 @@
 # CORS for the public agent artifacts (MVP Profile 0.3 §3.3, §3.4).
 # A browser on any origin must be able to GET the manifest, the resolved network
 # definition, the authored HOCON, the peer link map and the runtime module.
-# Build settings are deliberately absent: Netlify keeps detecting them as before.
+
+# Build from a clean `.next`. Netlify restores the previous deploy's Next build
+# cache, and a code change on top of that cache can leave one deploy with
+# prerendered HTML from the new build and shared client chunks from the old one;
+# the two then disagree during hydration (React error #418 on every page) even
+# though the markup reads as the new UI. Dropping `.next` keeps each deploy one
+# consistent build.
+[build]
+  command = "rm -rf .next && npm run build"
+
 
 [[headers]]
   for = "/agent-manifest.json"
