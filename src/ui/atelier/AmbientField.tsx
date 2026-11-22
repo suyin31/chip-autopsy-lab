@@ -60,7 +60,7 @@ const PALETTES: Readonly<Record<ThemeMode, ThemePalette>> = {
       [140, 96, 255],
       [255, 92, 124],
     ],
-    peakAlpha: 0.34,
+    peakAlpha: 0.27,
     grainAlpha: 0.04,
     topBandColor: [255, 255, 255],
     topBandAlpha: 0.06,

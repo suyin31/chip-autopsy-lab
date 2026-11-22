@@ -14,7 +14,7 @@ const server = spawn('npx', ['next', 'start', '-p', String(PORT)], {
     ...process.env,
     PATH: `/workspace/toolchain/node-v22.20.0-linux-x64/bin:${process.env.PATH}`,
     NODE_OPTIONS: '--require /workspace/work/localhost-shim.cjs',
-    NEXT_DIST_DIR: process.env.NEXT_DIST_DIR ?? '.next-p7',
+    NEXT_DIST_DIR: process.env.NEXT_DIST_DIR ?? '.next-r1',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
