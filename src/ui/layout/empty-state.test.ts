@@ -84,7 +84,7 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     // A20: exactly one filled ink primary on the landing
     expect(html.match(/data-testid="landing-open-sample-button"/g)).toHaveLength(1);
     expect(html.match(/\bbg-ink\b/g)).toHaveLength(1);
-    expect(html).toContain('bg-fill-2');
+    expect(html).toContain('bg-fill-1');
 
     // Sample cards with the premium §6.1 copy, meta, and aria labels
     expect(html).toContain('>Sample lots<');
@@ -118,19 +118,19 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
         expect(coord).toMatch(/^\d+(?:\.\d{1,3})?$/);
       }
     }
-    for (const label of ['0°', '90°', '180°', '270°']) {
-      expect(html).toContain(`>${label}</span>`);
-    }
+    // Atelier: the degree labels are gone; the reticle is ticks only, so the stage reads as a
+    // specimen rather than a coordinate stage.
+    expect(html).not.toContain('>0°</span>');
     expect(html).toContain('data-testid="landing-hero-disc-ambient"');
     expect(html).toContain('data-testid="landing-hero-disc-halo"');
-    expect(html).toContain('width:320px;height:320px');
-    expect(html).toContain('rounded-2xl bg-surface p-6 text-left shadow-card');
+    expect(html).toContain('width:440px;height:440px');
+    expect(html).toContain('at-plate cal-tactile relative z-[3]');
     expect(html).toContain('Example result');
     expect(html).toContain('<bdi translate="no">Edge-Ring</bdi> failure.');
     // Premium §11.5: the percent is its own count-up from 0, sized by its final string
     expect(html.replace(/<[^>]+>/g, '')).toContain('0.0% of fails sit in the outer 3 rings.');
     expect(html).toMatch(/data-testid="landing-example-percent" data-final="93.8%" class="count-up"/);
-    expect(html).toContain('See how it was found<span aria-hidden="true">→</span>');
+    expect(html).toContain('>See how it was found<');
 
     // 152 px server-rendered disc with contact shadow and masked sheen; no R-series vignette or top light
     expect(html).toContain('width:152px;height:152px');
@@ -158,9 +158,9 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     // Restraint: no weights >= 700; the only ember chrome is the §12.4 eyebrow dots and the §11.1
     // example title (the §12.2 accent word takes ember-ink from `.type-accent`)
     expect(html).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
-    expect(html.match(/[\w-]*ember[\w-]*/g)).toEqual(['bg-ember', 'text-ember-ink', 'bg-ember']);
+    expect(html.match(/[\w-]*ember[\w-]*/g)).toEqual(['bg-ember']);
     expect(html).toContain('data-testid="landing-eyebrow-dot" class="size-1.5 shrink-0 rounded-full bg-ember"');
-    expect(html).toMatch(/data-testid="landing-sample-heading" class="[^"]*type-mono-note type-eyebrow/);
+    expect(html).toMatch(/data-testid="landing-sample-heading" class="[^"]*text-\[13px\]/);
   });
 
   it('maps all 7 §3.7 error codes cleanly and renders icon-free parse-failed hero above demo cards', () => {

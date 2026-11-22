@@ -3,6 +3,7 @@
  * class names they mention or assert as absent must not emit CSS (premium §8.9).
  */
 @import "tailwindcss" source("..");
+@import "./atelier.css";
 @source not "../**/*.test.{ts,tsx}";
 
 /* Dark utilities follow the data-theme attribute, not the OS media query (premium.md §3.1) */
@@ -15,34 +16,34 @@
  */
 :root,
 :root[data-theme="dark"] {
-  --bg: #000000;
-  --surface: #111113;
-  --surface-sunken: #1c1c1f;
+  --bg: #080b12;
+  --surface: #0e131d;
+  --surface-sunken: #131a26;
   --fill-1: rgba(255, 255, 255, 0.05);
   --fill-2: rgba(255, 255, 255, 0.08);
   --fill-3: rgba(255, 255, 255, 0.12);
-  --material: rgba(22, 22, 24, 0.72);
-  --material-filter: blur(24px) saturate(180%);
-  --material-thick: rgba(28, 28, 30, 0.88);
-  --material-thick-filter: blur(24px) saturate(180%);
-  --scrim: rgba(0, 0, 0, 0.55);
+  --material: rgba(10, 15, 24, 0.64);
+  --material-filter: blur(28px) saturate(170%);
+  --material-thick: rgba(16, 22, 34, 0.86);
+  --material-thick-filter: blur(30px) saturate(170%);
+  --scrim: rgba(4, 7, 12, 0.62);
   --scrim-filter: blur(32px);
   --hairline: rgba(255, 255, 255, 0.08);
   --hairline-strong: rgba(255, 255, 255, 0.16);
-  --text-primary: rgba(255, 255, 255, 0.92);
-  --text-secondary: rgba(255, 255, 255, 0.64);
-  --text-tertiary: rgba(255, 255, 255, 0.56);
-  --text-disabled: rgba(255, 255, 255, 0.28);
-  --ink: #f5f5f7;
-  --on-ink: #000000;
-  --ember: #ff6b2c;
-  --ember-mark: #ff6b2c;
-  --ember-ink: #ff8a57;
-  --ember-soft: rgba(255, 107, 44, 0.16);
-  --focus-ring: 0 0 0 2px #000000, 0 0 0 4px rgba(255, 255, 255, 0.92);
+  --text-primary: rgba(233, 240, 250, 0.94);
+  --text-secondary: rgba(196, 210, 228, 0.68);
+  --text-tertiary: rgba(178, 194, 214, 0.66);
+  --text-disabled: rgba(255, 255, 255, 0.26);
+  --ink: #edf3fb;
+  --on-ink: #070a10;
+  --ember: #ff5c7c;
+  --ember-mark: #ff5c7c;
+  --ember-ink: #ff87a0;
+  --ember-soft: rgba(255, 92, 124, 0.14);
+  --focus-ring: 0 0 0 2px #080b12, 0 0 0 4px rgba(233, 240, 250, 0.92);
   --selection: rgba(255, 255, 255, 0.22);
-  --bar-neutral: rgba(255, 255, 255, 0.22);
-  --bin-ink-0: #ff6b2c;
+  --bar-neutral: rgba(255, 255, 255, 0.20);
+  --bin-ink-0: #ff5c7c;
   --bin-ink-1: #00acea;
   --bin-ink-2: #ae90f3;
   --bin-ink-3: #fd7584;
@@ -50,42 +51,42 @@
   --bin-ink-5: #00b0c8;
   --bin-ink-6: #e87ac7;
   --bin-ink-7: #61a1ff;
-  --elevation-card: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  --elevation-card-hover: inset 0 0 0 1px rgba(255, 255, 255, 0.13);
-  --elevation-popover: inset 0 0 0 1px rgba(255, 255, 255, 0.10), 0 24px 48px rgba(0, 0, 0, 0.60);
+  --elevation-card: inset 0 0 0 1px rgba(255, 255, 255, 0.075);
+  --elevation-card-hover: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  --elevation-popover: inset 0 0 0 1px rgba(255, 255, 255, 0.10), 0 28px 56px rgba(0, 0, 0, 0.62);
   --elevation-thumb: none;
   --elevation-chevron: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 :root[data-theme="light"] {
-  --bg: #f6f3ee;
+  --bg: #f2f5f8;
   --surface: #ffffff;
-  --surface-sunken: #ebebef;
-  --fill-1: #efebe4;
-  --fill-2: #e6e1d8;
+  --surface-sunken: #e3eaf0;
+  --fill-1: #e9eff4;
+  --fill-2: #dfe8ef;
   --fill-3: rgba(0, 0, 0, 0.08);
-  --material: rgba(246, 243, 238, 0.80);
-  --material-filter: blur(20px) saturate(180%);
-  --material-thick: rgba(255, 255, 255, 0.92);
-  --material-thick-filter: blur(24px) saturate(180%);
-  --scrim: rgba(245, 245, 247, 0.60);
-  --scrim-filter: blur(24px);
-  --hairline: rgba(32, 30, 31, 0.10);
-  --hairline-strong: rgba(32, 30, 31, 0.18);
-  --text-primary: #201e1f;
-  --text-secondary: #534f49;
-  --text-tertiary: #6d6963;
-  --text-disabled: rgba(29, 29, 31, 0.32);
-  --ink: #201e1f;
+  --material: rgba(244, 247, 250, 0.66);
+  --material-filter: blur(28px) saturate(150%);
+  --material-thick: rgba(255, 255, 255, 0.86);
+  --material-thick-filter: blur(30px) saturate(150%);
+  --scrim: rgba(240, 244, 248, 0.60);
+  --scrim-filter: blur(30px);
+  --hairline: rgba(10, 21, 30, 0.10);
+  --hairline-strong: rgba(10, 21, 30, 0.20);
+  --text-primary: #0a151e;
+  --text-secondary: #3c4e5a;
+  --text-tertiary: #556771;
+  --text-disabled: rgba(10, 21, 30, 0.32);
+  --ink: #0a151e;
   --on-ink: #ffffff;
-  --ember: #ff6b2c;
-  --ember-mark: #e8591e;
-  --ember-ink: #d94e14;
-  --ember-soft: rgba(232, 89, 30, 0.12);
-  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px #201e1f;
-  --selection: rgba(29, 29, 31, 0.14);
-  --bar-neutral: rgba(0, 0, 0, 0.16);
-  --bin-ink-0: #e8591e;
+  --ember: #c0203a;
+  --ember-mark: #c0203a;
+  --ember-ink: #a81530;
+  --ember-soft: rgba(192, 32, 58, 0.10);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px #0a151e;
+  --selection: rgba(10, 21, 30, 0.14);
+  --bar-neutral: rgba(10, 21, 30, 0.14);
+  --bin-ink-0: #c0203a;
   --bin-ink-1: #0a6fb0;
   --bin-ink-2: #7353c9;
   --bin-ink-3: #c23a55;
@@ -93,11 +94,11 @@
   --bin-ink-5: #007a8c;
   --bin-ink-6: #a63e8c;
   --bin-ink-7: #2d63cc;
-  --elevation-card: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.05);
-  --elevation-card-hover: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.05), 0 16px 40px rgba(0, 0, 0, 0.08);
-  --elevation-popover: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.08), 0 24px 48px rgba(0, 0, 0, 0.12);
-  --elevation-thumb: 0 0 0 0.5px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.10), 0 3px 8px rgba(0, 0, 0, 0.05);
-  --elevation-chevron: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.10);
+  --elevation-card: 0 0 0 1px rgba(10, 21, 30, 0.05), 0 1px 2px rgba(10, 21, 30, 0.04), 0 14px 34px -18px rgba(10, 21, 30, 0.28);
+  --elevation-card-hover: 0 0 0 1px rgba(10, 21, 30, 0.07), 0 2px 5px rgba(10, 21, 30, 0.05), 0 24px 52px -20px rgba(10, 21, 30, 0.34);
+  --elevation-popover: 0 0 0 1px rgba(10, 21, 30, 0.07), 0 10px 24px -10px rgba(10, 21, 30, 0.20), 0 32px 64px -24px rgba(10, 21, 30, 0.30);
+  --elevation-thumb: 0 0 0 0.5px rgba(10, 21, 30, 0.06), 0 1px 3px rgba(10, 21, 30, 0.10);
+  --elevation-chevron: 0 0 0 1px rgba(10, 21, 30, 0.06), 0 2px 6px rgba(10, 21, 30, 0.10);
 }
 
 /*
@@ -208,16 +209,16 @@
 
 @theme {
   /* Wafer tokens, theme-independent (premium.md §3.3; canvas reads WAFER_TOKENS) */
-  --color-disc-hi: #2b2d33;
-  --color-disc-mid: #1c1d21;
-  --color-disc-lo: #121316;
+  --color-disc-hi: #2a3146;
+  --color-disc-mid: #1a2033;
+  --color-disc-lo: #10141f;
   --color-pass-tile: rgba(255, 255, 255, 0.06);
   --color-pass-tile-hc: rgba(255, 255, 255, 0.34);
-  --color-fail-die: #ff6b2c;
-  --color-dim-veil: rgba(18, 19, 22, 0.78);
+  --color-fail-die: #ff5c7c;
+  --color-dim-veil: rgba(16, 20, 31, 0.78);
 
   /* Bin colours on the disc, ranks 0..7 (premium.md §3.5, bin-n) */
-  --color-bin-0: #ff6b2c;
+  --color-bin-0: #ff5c7c;
   --color-bin-1: #00acea;
   --color-bin-2: #ae90f3;
   --color-bin-3: #fd7584;
@@ -227,42 +228,43 @@
   --color-bin-7: #61a1ff;
 
   /* Legacy R-series surfaces (redesign.md §2.1) still used by unmigrated components */
-  --color-surface-1: #0f0f10;
-  --color-surface-2: #1a1a1c;
-  --color-surface-3: #242426;
+  --color-surface-1: #0e131d;
+  --color-surface-2: #131a26;
+  --color-surface-3: #1b2331;
   --color-separator: rgba(255, 255, 255, 0.08);
 
   /* Semantic, wafer data, and primary button tokens (redesign.md §2.1) */
   --color-accent: #d6e6ff;
   --color-accent-soft: rgba(214, 230, 255, 0.12);
-  --color-failure: #ff6b2c;
-  --color-failure-text: #ff8a57;
-  --color-pass-die: #63666c;
+  --color-failure: #ff5c7c;
+  --color-failure-text: #ff87a0;
+  --color-pass-die: #5d6678;
   --color-die-street: #000000;
   --color-dim-scrim: rgba(0, 0, 0, 0.62);
-  --color-button-primary: #f5f5f7;
-  --color-button-primary-text: #000000;
-  --color-wafer-disc: #0b0b0c;
+  --color-button-primary: #edf3fb;
+  --color-button-primary-text: #070a10;
+  --color-wafer-disc: #0b0e16;
 
   /* Compatibility aliases while downstream R3–R7 components migrate */
-  --color-panel: #0f0f10;
-  --color-raised: #1a1a1c;
-  --color-overlay: rgba(22, 22, 24, 0.72);
-  --color-accent-foreground: #000000;
+  --color-panel: #0e131d;
+  --color-raised: #131a26;
+  --color-overlay: rgba(10, 15, 24, 0.64);
+  --color-accent-foreground: #070a10;
 
   /* Self-hosted typography stacks with per-locale CJK fallback (redesign.md §2.2, §6.7) */
   --font-sans:
-    var(--font-inter), "Inter", var(--font-cjk, sans-serif), -apple-system,
-    BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    var(--font-instrument-sans), "Instrument Sans", var(--font-cjk, sans-serif),
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-display:
-    var(--font-inter), "Inter", var(--font-cjk, sans-serif), -apple-system,
+    var(--font-archivo), "Archivo", var(--font-cjk, sans-serif), -apple-system,
     BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   /* Instrument notes and error details (premium.md §12.4 overrides §3: JetBrains Mono 400) */
   --font-mono:
     var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
-  /* One italic serif accent word per screen (premium.md §12.2) */
+  /* Optical accent phrase: Instrument Sans italic, never a serif */
   --font-accent:
-    var(--font-instrument-serif), "Instrument Serif", ui-serif, Georgia, serif;
+    var(--font-instrument-sans), "Instrument Sans", var(--font-cjk, sans-serif),
+    ui-serif, Georgia, serif;
 
   /* Concentric border radii (premium.md §3.9): inner = outer - padding when padding <= 24 px */
   --radius-xs: 4px;
@@ -369,10 +371,10 @@
   /* Type scale (premium.md §4.2): desktop >= 1440, then the 1280 / 1024 steps, mobile < 640 */
   --size-display-xl: 80px;
   --leading-display-xl: 1.04;
-  --tracking-display-xl: -0.035em;
+  --tracking-display-xl: -0.032em;
   --size-display-l: 48px;
   --leading-display-l: 1.08;
-  --tracking-display-l: -0.024em;
+  --tracking-display-l: -0.03em;
   --size-title-1: 34px;
   --leading-title-1: 1.12;
   --tracking-title-1: -0.02em;
@@ -562,14 +564,14 @@
   body {
     background-color: var(--bg);
     color: var(--text-primary);
-    font-family: var(--font-inter), "Inter", var(--font-cjk, sans-serif), system-ui, sans-serif;
+    font-family: var(--font-instrument-sans), "Instrument Sans", var(--font-cjk, sans-serif), system-ui, sans-serif;
     font-size: var(--size-body);
     font-weight: 400;
     line-height: var(--leading-body);
     letter-spacing: var(--tracking-body);
   }
 
-  /* Headings use Inter optical sizing, balance wrapping, weights <= 600 (never >= 700) */
+  /* Headings use Archivo display sizing, balance wrapping, weights <= 600 (never >= 700) */
   h1,
   h2,
   h3,
@@ -651,18 +653,20 @@
 @layer components {
   /* Type styles (premium.md §4.2), in @layer components so @layer utilities (truncate, whitespace-nowrap) compose cleanly. Display roles set opsz 32; numerals are tabular except on display-xl / display-l. */
   .type-display-xl {
+    font-family: var(--font-display);
     font-size: var(--size-display-xl);
     line-height: var(--leading-display-xl);
-    font-weight: 600;
+    font-weight: 540;
     letter-spacing: var(--tracking-display-xl);
     font-variation-settings: "opsz" 32;
     text-wrap: balance;
   }
 
   .type-display-l {
+    font-family: var(--font-display);
     font-size: var(--size-display-l);
     line-height: var(--leading-display-l);
-    font-weight: 600;
+    font-weight: 520;
     letter-spacing: var(--tracking-display-l);
     font-variation-settings: "opsz" 32;
     text-wrap: balance;
@@ -834,17 +838,17 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Editorial accent word (premium.md §12.2): Instrument Serif italic 400 in ember-ink, about
-     6 % larger than the display line it sits in, on the shared baseline. Latin locales only. */
+  /* The cause phrase: same display face as the verdict, in the signal hue — a measured
+     emphasis, not a second typeface. */
   .type-accent {
     font-family: var(--font-accent);
-    font-style: italic;
-    font-weight: 400;
-    font-size: 1.06em;
+    font-style: normal;
+    font-weight: 520;
+    font-size: 1em;
     /* The larger italic must not grow the display line box (the verdict counts its lines) */
     line-height: 1;
     font-variation-settings: normal;
-    color: var(--ember-ink);
+    color: var(--chroma);
   }
 
   /* CJK accent: a Song/Ming serif in the accent colour, upright (no synthetic oblique on Han
@@ -1147,7 +1151,7 @@
 :root:not(:is([lang="zh-CN"], [lang="zh-TW"], [lang="ja"], [lang="ko"])) .landing-headline.landing-headline {
   --size-display-xl: clamp(56px, 6.4vw, 104px);
   --leading-display-xl: 0.98;
-  --tracking-display-xl: -0.035em;
+  --tracking-display-xl: -0.032em;
 }
 
 /* Landing subline (premium.md §12.3): title-3 at 20/28, max 560 px, from 640 */

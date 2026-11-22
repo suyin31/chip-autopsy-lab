@@ -9,34 +9,35 @@ import {
 } from '@/ui/theme';
 import './globals.css';
 
-const inter = localFont({
+const instrumentSans = localFont({
   src: [
     {
-      path: './fonts/InterVariable.woff2',
-      weight: '100 600',
+      path: './fonts/InstrumentSansVariable.woff2',
+      weight: '400 700',
       style: 'normal',
     },
     {
-      path: './fonts/InterVariable-Italic.woff2',
-      weight: '100 600',
+      path: './fonts/InstrumentSansVariable-Italic.woff2',
+      weight: '400 700',
       style: 'italic',
     },
   ],
-  variable: '--font-inter',
+  variable: '--font-instrument-sans',
   display: 'swap',
   preload: true,
 });
 
-// Editorial accent word (premium.md §12.2): Instrument Serif italic 400, latin, OFL
-const instrumentSerif = localFont({
+// Display face for the diagnosis line, KPI numbers, and the wordmark: Archivo, a neo-grotesk
+// with a high x-height and a low-contrast skeleton that reads as an instrument, not a poster.
+const archivo = localFont({
   src: [
     {
-      path: '../../node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2',
-      weight: '400',
-      style: 'italic',
+      path: './fonts/ArchivoVariable.woff2',
+      weight: '100 900',
+      style: 'normal',
     },
   ],
-  variable: '--font-instrument-serif',
+  variable: '--font-archivo',
   display: 'swap',
   preload: true,
 });
@@ -74,7 +75,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
+      className={`${instrumentSans.variable} ${archivo.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />

@@ -98,6 +98,7 @@ export const en = {
   'demo.scratch.chip': 'Scratch',
   'demo.site2.chip': 'Probe site',
   'report.footer': 'Runs entirely in your browser. Raw STDF bytes never leave this device.',
+  'report.evidenceShelf': 'Evidence',
   'demo.edgeRing.description': 'Etch damage kills dies around the wafer edge.',
   'demo.scratch.description': 'A robot arm scratched a line across 18 wafers.',
   'demo.site2.description': 'One worn tester needle fails good dies.',

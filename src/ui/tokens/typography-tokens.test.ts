@@ -65,13 +65,13 @@ describe("type styles (premium.md §4.2)", () => {
     expect(TYPOGRAPHY_TOKENS.displayL.desktop).toMatchObject({
       sizePx: 48,
       lineHeight: 1.08,
-      weight: 600,
-      trackingEm: -0.024,
+      weight: 520,
+      trackingEm: -0.03,
     });
     expect(TYPOGRAPHY_TOKENS.displayL.mobile).toMatchObject({
       sizePx: 32,
       lineHeight: 1.12,
-      weight: 600,
+      weight: 520,
       trackingEm: -0.02,
     });
     expect(TYPOGRAPHY_TOKENS.stat.desktop).toMatchObject({

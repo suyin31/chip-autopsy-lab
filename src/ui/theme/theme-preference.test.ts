@@ -124,8 +124,8 @@ describe('theme preference (premium.md §3.1)', () => {
     expect(resolveTheme('dark', false)).toBe('dark');
   });
 
-  it('theme-color meta values are #F6F3EE light and #000000 dark', () => {
-    expect(THEME_COLOR_META).toEqual({ light: '#F6F3EE', dark: '#000000' });
+  it('theme-color meta values are #F2F5F8 light and #080B12 dark', () => {
+    expect(THEME_COLOR_META).toEqual({ light: '#F2F5F8', dark: '#080B12' });
   });
 
   it('reads and writes storage, tolerating storage errors', () => {
@@ -158,16 +158,16 @@ describe('theme preference (premium.md §3.1)', () => {
     expect(fake.attrs.get('data-theme')).toBe('dark');
     expect(fake.doc.documentElement.style.colorScheme).toBe('dark');
     expect(fake.headChildren).toHaveLength(1);
-    expect(fake.headChildren[0]?.attrs.get('content')).toBe('#000000');
+    expect(fake.headChildren[0]?.attrs.get('content')).toBe('#080B12');
     applyResolvedTheme('light', doc);
     expect(fake.attrs.get('data-theme')).toBe('light');
     expect(fake.headChildren).toHaveLength(1);
-    expect(fake.headChildren[0]?.attrs.get('content')).toBe('#F6F3EE');
+    expect(fake.headChildren[0]?.attrs.get('content')).toBe('#F2F5F8');
 
     const existing = createFakeDocument(true);
     applyResolvedTheme('light', existing.doc as unknown as ThemeDocumentLike);
     expect(existing.headChildren).toHaveLength(1);
-    expect(existing.headChildren[0]?.attrs.get('content')).toBe('#F6F3EE');
+    expect(existing.headChildren[0]?.attrs.get('content')).toBe('#F2F5F8');
     expect(() => applyResolvedTheme('light', null)).not.toThrow();
   });
 });
@@ -177,13 +177,13 @@ describe('THEME_INIT_SCRIPT (pre-hydration)', () => {
     expect(runScript({ prefersDark: true })).toEqual({
       theme: 'dark',
       colorScheme: 'dark',
-      themeColor: '#000000',
+      themeColor: '#080B12',
       metaCount: 1,
     });
     expect(runScript({ prefersDark: false })).toEqual({
       theme: 'light',
       colorScheme: 'light',
-      themeColor: '#F6F3EE',
+      themeColor: '#F2F5F8',
       metaCount: 1,
     });
     expect(runScript({ stored: 'system', prefersDark: true }).theme).toBe(

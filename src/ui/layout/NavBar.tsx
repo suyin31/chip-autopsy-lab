@@ -139,11 +139,23 @@ export function NavBar({
               onNavigateHome();
             }}
             className={cn(
-              'relative inline-flex h-11 cursor-pointer items-center rounded-pill px-1 text-[15px] leading-[1.33] font-[590] tracking-[-0.01em] whitespace-nowrap text-text-primary no-underline select-none lg:h-10',
+              'relative inline-flex h-11 cursor-pointer items-center gap-2 rounded-pill px-1 text-[15px] leading-[1.33] font-[560] tracking-[-0.03em] whitespace-nowrap text-text-primary no-underline select-none [font-family:var(--font-display)] lg:h-10',
               'transition-opacity duration-[120ms] ease-[var(--ease-out)] hover:opacity-72',
               'focus-visible:shadow-focus-ring focus-visible:outline-none',
             )}
           >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 16 16"
+              className="size-[15px] shrink-0 text-ember"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.3}
+            >
+              <circle cx="8" cy="8" r="6.4" />
+              <circle cx="8" cy="8" r="2.2" strokeOpacity={0.55} />
+              <path d="M8 0.6v2.2M8 13.2v2.2M0.6 8h2.2M13.2 8h2.2" strokeOpacity={0.7} />
+            </svg>
             <span className="max-lg:hidden" translate="no">
               {t('nav.wordmark')}
             </span>
@@ -151,18 +163,6 @@ export function NavBar({
               {t('nav.wordmarkShort')}
             </span>
             {/* Below 640 the lot pill needs the room; the reticle carries the mark instead. */}
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="size-5 sm:hidden"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.4}
-            >
-              <circle cx="12" cy="12" r="8.5" />
-              <circle cx="12" cy="12" r="4" strokeOpacity={0.5} />
-              <path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" />
-            </svg>
             <span className="sr-only sm:hidden">{t('nav.wordmark')}</span>
           </Link>
         </div>

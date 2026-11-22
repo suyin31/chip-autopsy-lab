@@ -1,0 +1,431 @@
+/* ==========================================================================
+ * Atelier layer — the fused visual system for `/` and `/agents`.
+ *
+ * Light: a pearl cleanroom bench. Cold porcelain planes, frosted glass plates,
+ * a dark silicon specimen under light. Dark: a deep-field observation deck —
+ * blue-violet graphite planes receding in depth with the wafer as the only
+ * light source. One signal hue (infrared rose) carries failure and emphasis;
+ * one channel hue (spectral iris) carries structure, leaders, and ambient light.
+ *
+ * Everything here is decoration for the product's own content: no rules in this
+ * block own layout logic, and every animated rule has a reduced-motion guard.
+ * ========================================================================== */
+
+:root,
+:root[data-theme='dark'] {
+  --chroma: #7c8cff;
+  --chroma-soft: rgba(124, 140, 255, 0.16);
+  --chroma-line: rgba(146, 162, 255, 0.26);
+  --field-a: rgba(96, 118, 255, 0.22);
+  --field-b: rgba(52, 196, 214, 0.14);
+  --field-c: rgba(150, 108, 255, 0.18);
+  --at-glass: rgba(14, 19, 29, 0.52);
+  --at-glass-edge: rgba(255, 255, 255, 0.1);
+  --at-glass-core: rgba(255, 255, 255, 0.04);
+  --at-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.9), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --at-stage-glow: radial-gradient(
+    closest-side,
+    rgba(255, 92, 124, 0.3) 0%,
+    rgba(124, 140, 255, 0.2) 42%,
+    rgba(124, 140, 255, 0.05) 72%,
+    transparent 100%
+  );
+  --at-dock-shadow: 0 -1px 0 rgba(255, 255, 255, 0.06), 0 30px 70px -30px rgba(0, 0, 0, 0.95);
+  --at-scrim-top: linear-gradient(
+    180deg,
+    rgba(8, 11, 18, 0.86) 0%,
+    rgba(8, 11, 18, 0.4) 62%,
+    rgba(8, 11, 18, 0) 100%
+  );
+  --at-hairline-ink: rgba(255, 255, 255, 0.12);
+  --at-grain-opacity: 0.05;
+}
+
+:root[data-theme='light'] {
+  --chroma: #3a4fd0;
+  --chroma-soft: rgba(58, 79, 208, 0.1);
+  --chroma-line: rgba(58, 79, 208, 0.2);
+  --field-a: rgba(92, 120, 255, 0.12);
+  --field-b: rgba(60, 190, 205, 0.1);
+  --field-c: rgba(150, 120, 255, 0.1);
+  --at-glass: rgba(255, 255, 255, 0.58);
+  --at-glass-edge: rgba(255, 255, 255, 0.9);
+  --at-glass-core: rgba(255, 255, 255, 0.5);
+  --at-shadow: 0 22px 54px -30px rgba(10, 21, 30, 0.45), 0 1px 2px rgba(10, 21, 30, 0.06);
+  --at-stage-glow: radial-gradient(
+    closest-side,
+    rgba(192, 32, 58, 0.16) 0%,
+    rgba(58, 79, 208, 0.12) 42%,
+    rgba(58, 79, 208, 0.03) 72%,
+    transparent 100%
+  );
+  --at-dock-shadow: 0 -1px 0 rgba(255, 255, 255, 0.8), 0 24px 56px -30px rgba(10, 21, 30, 0.4);
+  --at-scrim-top: linear-gradient(
+    180deg,
+    rgba(242, 245, 248, 0.9) 0%,
+    rgba(242, 245, 248, 0.45) 62%,
+    rgba(242, 245, 248, 0) 100%
+  );
+  --at-hairline-ink: rgba(10, 21, 30, 0.14);
+  --at-grain-opacity: 0.035;
+}
+
+@theme inline {
+  --color-chroma: var(--chroma);
+  --color-chroma-soft: var(--chroma-soft);
+}
+
+@layer components {
+  /* The page frame every atelier surface sits in. */
+  .at-page {
+    position: relative;
+    isolation: isolate;
+    background-color: var(--bg);
+  }
+
+  /* Film grain: one tiled SVG turbulence at very low opacity, over the whole page.
+     It is what stops the fluid field from reading as a CSS gradient. */
+  .at-grain {
+    position: absolute;
+    inset: -(2px);
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--at-grain-opacity);
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.86' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 140px 140px;
+  }
+
+  /* A frosted plate. Two light events only: a 1px inner rim at the top edge and a
+     broad, cold ambient shadow. No drop-shadow glow, no gradient wash. */
+  .at-glass {
+    background: var(--at-glass);
+    -webkit-backdrop-filter: var(--material-filter);
+    backdrop-filter: var(--material-filter);
+    box-shadow:
+      inset 0 1px 0 var(--at-glass-edge),
+      inset 0 0 0 1px var(--hairline),
+      var(--at-shadow);
+  }
+
+  .at-plate {
+    position: relative;
+    border-radius: 18px;
+    background: var(--at-glass);
+    -webkit-backdrop-filter: var(--material-filter);
+    backdrop-filter: var(--material-filter);
+    box-shadow:
+      inset 0 1px 0 var(--at-glass-edge),
+      inset 0 0 0 1px var(--hairline),
+      0 18px 44px -26px rgba(8, 14, 24, 0.55);
+  }
+
+  /* Specular sweep across a plate's top edge — one moving highlight, 9 s loop. */
+  .at-sheen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(
+      104deg,
+      transparent 32%,
+      rgba(255, 255, 255, 0.14) 46%,
+      rgba(255, 255, 255, 0.02) 56%,
+      transparent 70%
+    );
+    background-size: 260% 100%;
+    opacity: 0.7;
+    animation: at-sheen-slide 11s var(--ease-in-out) infinite;
+  }
+
+  .at-beam {
+    position: relative;
+    isolation: isolate;
+  }
+  .at-beam::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(
+      from var(--beam-angle, 0deg),
+      transparent 0deg,
+      transparent 268deg,
+      var(--chroma) 300deg,
+      var(--ember) 330deg,
+      transparent 356deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    animation: at-beam-spin 3.6s linear infinite;
+    opacity: 0.9;
+  }
+
+  .at-beam[data-level='quiet']::before {
+    opacity: 0.4;
+    animation-duration: 6.4s;
+  }
+
+  /* Thin leader line from a floating plate to the specimen. */
+  .at-leader {
+    stroke: var(--chroma-line);
+    stroke-width: 1;
+    fill: none;
+    vector-effect: non-scaling-stroke;
+  }
+  .at-leader-dot {
+    fill: var(--chroma);
+  }
+
+  /* Orbital graticule behind the disc: one ring of 5° ticks and one slow rotation. */
+  .at-orbit {
+    position: absolute;
+    inset: 1px;
+    border-radius: 50%;
+    border: 1px solid var(--chroma-line);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .at-orbit-ticks {
+    position: absolute;
+    inset: -14px;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0.35;
+    background: repeating-conic-gradient(
+      from 0deg,
+      var(--chroma-line) 0deg 0.4deg,
+      transparent 0.4deg 5deg
+    );
+    -webkit-mask: radial-gradient(closest-side, transparent 93%, #000 93.5%, #000 100%);
+    mask: radial-gradient(closest-side, transparent 93%, #000 93.5%, #000 100%);
+    animation: at-orbit-turn 220s linear infinite;
+  }
+
+  .at-display {
+    font-family: var(--font-display);
+    font-weight: 520;
+    letter-spacing: -0.028em;
+    line-height: 1.02;
+    font-variant-numeric: tabular-nums;
+    text-wrap: balance;
+  }
+
+  .at-diagnosis {
+    font-family: var(--font-display);
+    font-weight: 480;
+    font-size: clamp(30px, 3.1vw, 46px);
+    line-height: 1.1;
+    letter-spacing: -0.026em;
+    text-wrap: balance;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.02);
+  }
+
+  .at-kpi-number {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .at-label {
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+
+  /* The bottom command dock. A single horizontal instrument tray, glass over the field. */
+  .at-dock {
+    position: relative;
+    border-radius: 20px;
+    background: var(--material-thick);
+    -webkit-backdrop-filter: var(--material-thick-filter);
+    backdrop-filter: var(--material-thick-filter);
+    box-shadow:
+      inset 0 1px 0 var(--at-glass-edge),
+      inset 0 0 0 1px var(--hairline),
+      var(--at-dock-shadow);
+  }
+
+  /* A quiet, non-interactive readout strip: no card, just a hairline and type. */
+  .at-readout {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding-block: 9px;
+    border-top: 1px solid var(--hairline);
+  }
+
+  /* Progressive edge fade for long scroll regions (linear-style). */
+  .at-fade-edges {
+    -webkit-mask-image: linear-gradient(
+      180deg,
+      transparent 0,
+      #000 28px,
+      #000 calc(100% - 28px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0,
+      #000 28px,
+      #000 calc(100% - 28px),
+      transparent 100%
+    );
+  }
+
+  /* Word-level reveal for the diagnosis sentence. Each word is wrapped in a span with
+     an increasing --i; the whole line arrives once, not per section. */
+  .at-word {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(0.18em);
+    animation: at-word-in 620ms var(--ease-out) forwards;
+    animation-delay: calc(var(--i, 0) * 26ms);
+  }
+
+  .at-rise {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: at-rise-in 520ms var(--ease-out) forwards;
+    animation-delay: var(--delay, 0ms);
+  }
+
+  /* Drawer that holds the dense accounting: opens under its own trigger. A max-height reveal
+     (not a grid-row trick) is used deliberately: the collapsed panel must contribute zero
+     height to the page even though its charts keep their measured layout. */
+  .at-drawer {
+    overflow: hidden;
+    /* Chromium still counts clipped overflow in the document scroll extent unless the clipping
+       box establishes paint containment; without this the closed shelf added ~1,900 px of
+       empty scroll below the workbench. */
+    contain: paint;
+    max-height: 0;
+    opacity: 0;
+    transition:
+      max-height 320ms var(--ease-out),
+      opacity 240ms var(--ease-out);
+  }
+  .at-drawer[data-open='true'] {
+    max-height: 4000px;
+    opacity: 1;
+  }
+}
+
+@keyframes at-word-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes at-rise-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes at-sheen-slide {
+  0%,
+  55% {
+    background-position: 180% 0;
+  }
+  100% {
+    background-position: -80% 0;
+  }
+}
+
+@keyframes at-beam-spin {
+  to {
+    --beam-angle: 360deg;
+  }
+}
+
+@keyframes at-orbit-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@property --beam-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .at-sheen::after,
+  .at-orbit-ticks,
+  .at-beam::before {
+    animation: none !important;
+  }
+  .at-word,
+  .at-rise {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  .at-drawer {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .at-glass,
+  .at-plate,
+  .at-dock {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Route transitions (`/` <-> `/agents`, React `<ViewTransition>`): one directional pass, no
+   flash of white between two differently-lit rooms. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: at-vt-out;
+}
+
+::view-transition-new(root) {
+  animation-name: at-vt-in;
+}
+
+@keyframes at-vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.995);
+  }
+}
+
+@keyframes at-vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}

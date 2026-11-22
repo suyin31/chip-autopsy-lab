@@ -29,15 +29,15 @@ export function resolveLandingWaferSize(viewportWidth: number): number {
  * 240 px at `sm` (640–1023), and 220 px at `xs` (< 640).
  */
 export const LANDING_HERO_WAFER_SIZE_STEPS = [
-  { minWidth: 1280, size: 320 },
-  { minWidth: 1024, size: 280 },
-  { minWidth: 640, size: 240 },
+  { minWidth: 1280, size: 440 },
+  { minWidth: 1024, size: 360 },
+  { minWidth: 640, size: 280 },
 ] as const;
 
-export const LANDING_HERO_WAFER_SIZE_COMPACT = 220 as const;
+export const LANDING_HERO_WAFER_SIZE_COMPACT = 240 as const;
 
 /** Server snapshot and first paint: the designed 1440 desktop size. */
-export const LANDING_HERO_WAFER_SIZE_DEFAULT = 320 as const;
+export const LANDING_HERO_WAFER_SIZE_DEFAULT = 440 as const;
 
 export function resolveLandingHeroWaferSize(viewportWidth: number): number {
   for (const step of LANDING_HERO_WAFER_SIZE_STEPS) {

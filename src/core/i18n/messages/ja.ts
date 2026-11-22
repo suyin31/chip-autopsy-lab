@@ -101,6 +101,7 @@ export const ja = {
   'demo.scratch.chip': 'スクラッチ',
   'demo.site2.chip': 'プローブサイト',
   'report.footer': '処理はすべてブラウザ内で完結。STDF の生データが端末の外に出ることはありません。',
+  'report.evidenceShelf': '根拠',
   'demo.edgeRing.description': 'エッチングダメージで、ウェハ外周のダイが軒並み不良に。',
   'demo.scratch.description': '搬送ロボットのアームが 18 枚のウェハに線傷を付けた。',
   'demo.site2.description': '摩耗したプローブ針 1 本が、良品を不良と判定する。',

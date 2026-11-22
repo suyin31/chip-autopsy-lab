@@ -1,3 +1,4 @@
+import { ViewTransition } from 'react';
 import { AppShell } from '@/ui/layout';
 import { resolveServerNarrationEnabled } from './narration-config';
 
@@ -15,5 +16,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     process.env,
     resolvedParams,
   );
-  return <AppShell narrationEnabled={narrationEnabled} />;
+  return (
+    <ViewTransition>
+      <AppShell narrationEnabled={narrationEnabled} />
+    </ViewTransition>
+  );
 }

@@ -16,9 +16,9 @@ import {
 import {
   readPrefersReducedMotionSync,
   resolveViewMorphTransition,
-  ScrollReveal,
   WAFER_MORPH_LAYOUT_ID,
 } from '@/ui/motion';
+import { EvidenceShelf } from '@/ui/atelier/EvidenceShelf';
 import { Button } from '@/ui/primitives/button';
 import { AutopsyReportCard } from '@/ui/report';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
@@ -337,7 +337,7 @@ export function LoadedLotOverview({
       ) : null}
       <div
         data-testid="verdict-wafer-hero-grid"
-        className="flex w-full flex-col sm:max-lg:mx-auto sm:max-lg:max-w-[640px] lg:grid lg:grid-cols-[540px_minmax(0,1fr)] lg:items-start lg:gap-x-5 xl:grid-cols-12 xl:gap-x-6"
+        className="flex w-full flex-col sm:max-lg:mx-auto sm:max-lg:max-w-[640px] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(380px,440px)] lg:items-start lg:gap-x-8 xl:grid-cols-[minmax(0,1fr)_480px] xl:gap-x-12"
       >
       <AutopsyReportCard
         lot={lot}
@@ -350,47 +350,39 @@ export function LoadedLotOverview({
         store={store}
         splitForMobileStage
         belowFindings={
-          <>
-            <ScrollReveal replayKey={lot.lotId}>
-              <BinParetoChart lot={lot} store={store} />
-            </ScrollReveal>
-            <ScrollReveal replayKey={lot.lotId}>
+          <EvidenceShelf label={t('report.evidenceShelf')} count={facts.length}>
+            <BinParetoChart lot={lot} store={store} />
               <YieldSummaryPanel
                 lot={lot}
                 yieldSummary={yieldSummary}
                 facts={facts}
                 store={store}
-                className="mt-10 lg:mt-16"
+                className="mt-10 lg:mt-12"
               />
-            </ScrollReveal>
             {lot.wafers.length >= 2 ? (
-              <ScrollReveal replayKey={lot.lotId}>
                 <StackedWaferPanel
                   lot={lot}
                   byWaferYield={yieldSummary.byWafer}
                   store={store}
-                  className="mt-10 lg:mt-16"
+                  className="mt-10 lg:mt-12"
                 />
-              </ScrollReveal>
             ) : null}
             {lot.tests.size > 0 ? (
-              <ScrollReveal replayKey={lot.lotId}>
                 <ParametricPanel
                   lot={lot}
                   store={store}
-                  className="mt-10 lg:mt-16"
+                  className="mt-10 lg:mt-12"
                 />
-              </ScrollReveal>
             ) : null}
             <p
               data-testid="verdict-footer"
-              className="mt-10 type-subhead text-text-tertiary lg:mt-16"
+              className="mt-10 type-subhead text-text-tertiary lg:mt-12"
             >
               {t('report.footer')}
             </p>
-          </>
+          </EvidenceShelf>
         }
-        className="lg:col-start-2 lg:row-start-1 xl:col-span-5 xl:col-start-8"
+        className="relative z-[2] lg:col-start-2 lg:row-start-1"
         binsOnlyNotice={
           lot.parseMode === 'bins-only' ? (
             <BinsOnlyNotice
@@ -405,9 +397,18 @@ export function LoadedLotOverview({
       <div
         ref={stageColumnRef}
         data-testid="stage-column"
-        className="order-2 -mx-4 mt-5 w-[calc(100%+2rem)] sm:mx-0 sm:w-full lg:sticky lg:top-[52px] lg:order-none lg:col-start-1 lg:row-start-1 lg:mt-0 lg:h-[calc(100dvh-52px)] lg:min-h-[640px] lg:pt-5 lg:pb-4 xl:col-span-7"
+        className="order-2 -mx-4 mt-5 w-[calc(100%+2rem)] sm:mx-0 sm:w-full lg:sticky lg:top-[52px] lg:order-none lg:col-start-1 lg:row-start-1 lg:mt-0 lg:h-[calc(100dvh-52px)] lg:min-h-[640px] lg:pt-4 lg:pb-4"
       >
         <div className="relative h-full w-full">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-0 grid place-items-center"
+          >
+            <div
+              className="aspect-square w-[min(112%,100%)] rounded-full"
+              style={{ background: 'var(--at-stage-glow)', filter: 'blur(10px)' }}
+            />
+          </div>
           <motion.div
             key={lot.lotId}
             aria-hidden="true"

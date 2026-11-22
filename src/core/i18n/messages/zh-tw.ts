@@ -100,6 +100,7 @@ export const zhTW = {
   'demo.scratch.chip': '刮傷',
   'demo.site2.chip': '探針站點',
   'report.footer': '全程在瀏覽器裡完成。STDF 原始資料不會離開這台裝置。',
+  'report.evidenceShelf': '證據',
   'demo.edgeRing.description': '蝕刻損傷讓晶圓邊緣一整圈的晶粒全數失效。',
   'demo.scratch.description': '機械手臂在 18 片晶圓上刮出一道痕。',
   'demo.site2.description': '一根磨損的探針，把良品誤判成 Fail。',

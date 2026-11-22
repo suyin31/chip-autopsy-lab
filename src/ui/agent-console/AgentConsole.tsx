@@ -69,6 +69,7 @@ import {
   routerForSettings,
   useModelSettings,
 } from './model-settings';
+import { AmbientField } from '@/ui/atelier/AmbientField';
 import { WaferStage } from './WaferStage';
 
 import { LotSwitcher } from './LotSwitcher';
@@ -1078,7 +1079,10 @@ export function AgentConsole() {
           event.preventDefault();
           void send(draft);
         }}
-        className="rounded-2xl bg-surface p-2 shadow-card has-[:focus-visible]:shadow-focus-ring"
+        className={cn(
+          'at-dock relative rounded-[22px] p-2 has-[:focus-visible]:shadow-[var(--focus-ring)]',
+          running && 'at-beam',
+        )}
       >
         <label className="sr-only" htmlFor="agent-input">
           {t('agents.composerLabel')}
@@ -1143,10 +1147,12 @@ export function AgentConsole() {
   );
 
   return (
-    <div ref={consoleRef} className="flex min-h-dvh flex-col bg-bg text-text-primary">
+    <div ref={consoleRef} className="at-page relative flex min-h-dvh flex-col overflow-x-clip text-text-primary">
+      <AmbientField className="pointer-events-none absolute inset-0" intensity="calm" />
+      <span aria-hidden="true" className="at-grain" />
       <header
         data-testid="agent-console-header"
-        className="sticky top-0 z-[var(--z-nav)] w-full bg-material max-lg:bg-bg [backdrop-filter:var(--material-filter)] [-webkit-backdrop-filter:var(--material-filter)]"
+        className="sticky top-0 z-[var(--z-nav)] w-full bg-material [backdrop-filter:var(--material-filter)] [-webkit-backdrop-filter:var(--material-filter)]"
       >
         <div className="mx-auto grid h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 lg:h-[52px] lg:grid-cols-[1fr_auto_1fr] lg:px-8 xl:px-10">
           <div className="flex min-w-0 items-center">
@@ -1198,7 +1204,7 @@ export function AgentConsole() {
         <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-hairline" />
       </header>
 
-      <div className="mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 lg:h-[calc(100dvh-52px)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_396px] lg:overflow-hidden">
+      <div className="relative z-[1] mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 lg:h-[calc(100dvh-52px)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_396px] lg:overflow-hidden">
         <section
           aria-label={t('agents.conversation')}
           data-testid="agent-conversation"
@@ -1554,7 +1560,7 @@ export function AgentConsole() {
         <aside
           aria-label={t('agents.rail.aria')}
           data-testid="agent-rail"
-          className="flex flex-col border-t border-hairline lg:min-h-0 lg:overflow-hidden lg:border-t-0 lg:border-l"
+          className="relative z-[1] flex flex-col border-t border-hairline bg-[color-mix(in_oklab,var(--surface)_66%,transparent)] [backdrop-filter:var(--material-filter)] lg:min-h-0 lg:overflow-hidden lg:border-t-0 lg:border-l"
         >
           <div className="px-5 pt-5 pb-4">
             <div className="mb-2 lg:hidden"><LotSwitcher variant="header" {...switcherProps} /></div>
@@ -1589,7 +1595,19 @@ export function AgentConsole() {
               </span>
             </p>
             <LotKpiStrip payload={payload} loading={loading} />
-            <div className="mt-3">
+            <div className="relative mt-4">
+              <div
+                aria-hidden="true"
+                className={cn(
+                  'pointer-events-none absolute inset-0 z-0 grid place-items-center',
+                  running && 'at-beam rounded-[24px]',
+                )}
+              >
+                <div
+                  className="aspect-square w-[78%] rounded-full"
+                  style={{ background: 'var(--at-stage-glow)', filter: 'blur(12px)' }}
+                />
+              </div>
               <WaferStage
                 payload={payload}
                 highlighted={highlight.ids}

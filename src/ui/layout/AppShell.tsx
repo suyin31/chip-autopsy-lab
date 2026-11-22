@@ -9,6 +9,7 @@ import {
   listDemoPresets,
 } from '@/core/demo';
 import type { ParseFatalError, ParseMode } from '@/core/stdf';
+import { AmbientField } from '@/ui/atelier/AmbientField';
 import { CommandPalette } from '@/ui/command-palette';
 import { useT } from '@/ui/i18n';
 import { WORKSPACE_LAYOUT_GROUP_ID } from '@/ui/motion';
@@ -661,6 +662,9 @@ export function AppShell({
       disabled={isLoading}
       onFileDrop={(file) => handleLoadFile(file)}
     >
+      <div className="at-page relative min-h-dvh overflow-x-clip">
+      <AmbientField className="pointer-events-none absolute inset-0" intensity="vivid" />
+      <span aria-hidden="true" className="at-grain" />
       <ClinicalToaster dismissLabel={t('toast.dismiss')} />
       <div
         data-testid="app-live-region"
@@ -694,7 +698,7 @@ export function AppShell({
 
       <main
         className={cn(
-          'mx-auto flex w-full max-w-[1440px] flex-col',
+          'relative z-[1] mx-auto flex w-full max-w-[1440px] flex-col',
           // Premium §6.2 loaded view (and §6.3 loading, same layout): margins 16 xs, 32 sm and md, 40 from 1280
           isLandingOrError ? 'px-4 md:px-10' : 'px-4 sm:px-8 xl:px-10',
           isLandingOrError ? 'pt-0' : 'pt-5 pb-12 lg:py-0',
@@ -801,6 +805,7 @@ export function AppShell({
         onOpenFilePicker={handleOpenFilePicker}
         onDownloadDemoLot={handleDownloadDemoLot}
       />
+      </div>
     </FullWindowDropZone>
   );
 }

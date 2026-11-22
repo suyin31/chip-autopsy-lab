@@ -45,6 +45,7 @@ export default tseslint.config(
       '.agent/**',
       '.kiro/**',
       '.next/**',
+      '.next-*/**',
       'out/**',
       'dist/**',
       'build/**',

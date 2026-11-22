@@ -43,82 +43,83 @@ const THEMES: readonly ThemeName[] = ['light', 'dark'];
 describe('premium UI colour tokens (premium.md §3.2)', () => {
   it('locks the light and dark surface, fill, text, and ink values', () => {
     expect(THEME_TOKENS.light).toMatchObject({
-      bg: '#F6F3EE',
+      bg: '#F2F5F8',
       surface: '#FFFFFF',
-      surfaceSunken: '#EBEBEF',
-      fill1: '#EFEBE4',
-      fill2: '#E6E1D8',
+      surfaceSunken: '#E3EAF0',
+      fill1: '#E9EFF4',
+      fill2: '#DFE8EF',
       fill3: 'rgba(0, 0, 0, 0.08)',
-      hairline: 'rgba(32, 30, 31, 0.10)',
-      hairlineStrong: 'rgba(32, 30, 31, 0.18)',
-      textPrimary: '#201E1F',
-      textSecondary: '#534F49',
-      textTertiary: '#6D6963',
-      textDisabled: 'rgba(29, 29, 31, 0.32)',
-      ink: '#201E1F',
+      hairline: 'rgba(10, 21, 30, 0.10)',
+      hairlineStrong: 'rgba(10, 21, 30, 0.20)',
+      textPrimary: '#0A151E',
+      textSecondary: '#3C4E5A',
+      textTertiary: '#556771',
+      textDisabled: 'rgba(10, 21, 30, 0.32)',
+      ink: '#0A151E',
       onInk: '#FFFFFF',
-      ember: '#FF6B2C',
-      emberMark: '#E8591E',
-      emberInk: '#D94E14',
-      selection: 'rgba(29, 29, 31, 0.14)',
-      barNeutral: 'rgba(0, 0, 0, 0.16)',
-      themeColor: '#F6F3EE',
+      ember: '#C0203A',
+      emberMark: '#C0203A',
+      emberInk: '#A81530',
+      selection: 'rgba(10, 21, 30, 0.14)',
+      barNeutral: 'rgba(10, 21, 30, 0.14)',
+      themeColor: '#F2F5F8',
     });
     expect(THEME_TOKENS.dark).toMatchObject({
-      bg: '#000000',
-      surface: '#111113',
-      surfaceSunken: '#1C1C1F',
+      bg: '#080B12',
+      surface: '#0E131D',
+      surfaceSunken: '#131A26',
       fill1: 'rgba(255, 255, 255, 0.05)',
       fill2: 'rgba(255, 255, 255, 0.08)',
       fill3: 'rgba(255, 255, 255, 0.12)',
       hairline: 'rgba(255, 255, 255, 0.08)',
       hairlineStrong: 'rgba(255, 255, 255, 0.16)',
-      textPrimary: 'rgba(255, 255, 255, 0.92)',
-      textSecondary: 'rgba(255, 255, 255, 0.64)',
-      textTertiary: 'rgba(255, 255, 255, 0.56)',
-      textDisabled: 'rgba(255, 255, 255, 0.28)',
-      ink: '#F5F5F7',
-      onInk: '#000000',
-      ember: '#FF6B2C',
-      emberMark: '#FF6B2C',
-      emberInk: '#FF8A57',
+      textPrimary: 'rgba(233, 240, 250, 0.94)',
+      textSecondary: 'rgba(196, 210, 228, 0.68)',
+      textTertiary: 'rgba(178, 194, 214, 0.66)',
+      textDisabled: 'rgba(255, 255, 255, 0.26)',
+      ink: '#EDF3FB',
+      onInk: '#070A10',
+      ember: '#FF5C7C',
+      emberMark: '#FF5C7C',
+      emberInk: '#FF87A0',
       selection: 'rgba(255, 255, 255, 0.22)',
-      barNeutral: 'rgba(255, 255, 255, 0.22)',
-      themeColor: '#000000',
+      barNeutral: 'rgba(255, 255, 255, 0.20)',
+      themeColor: '#080B12',
     });
   });
 
   it('locks materials, scrim, and focus ring per theme (§3.2, §3.8)', () => {
     expect(THEME_TOKENS.light.material).toEqual({
-      color: 'rgba(246, 243, 238, 0.80)',
-      backdropFilter: 'blur(20px) saturate(180%)',
+      color: 'rgba(244, 247, 250, 0.66)',
+      backdropFilter: 'blur(28px) saturate(150%)',
     });
     expect(THEME_TOKENS.dark.material).toEqual({
-      color: 'rgba(22, 22, 24, 0.72)',
-      backdropFilter: 'blur(24px) saturate(180%)',
+      color: 'rgba(10, 15, 24, 0.64)',
+      backdropFilter: 'blur(28px) saturate(170%)',
     });
     expect(THEME_TOKENS.light.materialThick.color).toBe(
-      'rgba(255, 255, 255, 0.92)',
+      'rgba(255, 255, 255, 0.86)',
     );
-    expect(THEME_TOKENS.dark.materialThick.color).toBe('rgba(28, 28, 30, 0.88)');
-    for (const theme of THEMES) {
-      expect(THEME_TOKENS[theme].materialThick.backdropFilter).toBe(
-        'blur(24px) saturate(180%)',
-      );
-    }
+    expect(THEME_TOKENS.dark.materialThick.color).toBe('rgba(16, 22, 34, 0.86)');
+    expect(THEME_TOKENS.light.materialThick.backdropFilter).toBe(
+      'blur(30px) saturate(150%)',
+    );
+    expect(THEME_TOKENS.dark.materialThick.backdropFilter).toBe(
+      'blur(30px) saturate(170%)',
+    );
     expect(THEME_TOKENS.light.scrim).toEqual({
-      color: 'rgba(245, 245, 247, 0.60)',
-      backdropFilter: 'blur(24px)',
+      color: 'rgba(240, 244, 248, 0.60)',
+      backdropFilter: 'blur(30px)',
     });
     expect(THEME_TOKENS.dark.scrim).toEqual({
-      color: 'rgba(0, 0, 0, 0.55)',
+      color: 'rgba(4, 7, 12, 0.62)',
       backdropFilter: 'blur(32px)',
     });
     expect(THEME_TOKENS.light.focusRing).toBe(
-      '0 0 0 2px var(--bg), 0 0 0 4px #201E1F',
+      '0 0 0 2px var(--bg), 0 0 0 4px #0A151E',
     );
     expect(THEME_TOKENS.dark.focusRing).toBe(
-      '0 0 0 2px #000000, 0 0 0 4px rgba(255, 255, 255, 0.92)',
+      '0 0 0 2px #080B12, 0 0 0 4px rgba(233, 240, 250, 0.92)',
     );
   });
 
@@ -133,35 +134,38 @@ describe('premium UI colour tokens (premium.md §3.2)', () => {
     }
   });
 
-  it('meets every contrast ratio stated in §3.2', () => {
+  it('meets the contrast floors of the atelier palette (§3.2)', () => {
     const L = THEME_TOKENS.light;
     const D = THEME_TOKENS.dark;
-    const cases: readonly [string, string, number][] = [
-      // premium §12.1 warm paper: ink #201E1F on bg #F6F3EE is 15.0:1, on white 16.6:1
-      [L.textPrimary, L.bg, 15.0],
-      [L.textPrimary, L.surface, 16.6],
-      [L.textSecondary, L.bg, 7.3],
-      [L.textSecondary, L.surfaceSunken, 6.7],
-      [L.textTertiary, L.bg, 4.9],
-      [L.textTertiary, L.surface, 5.4],
-      [L.textTertiary, L.surfaceSunken, 4.5],
-      // §12.1 warm paper lowers ember-mark on bg from 3.3 to 3.2:1, still above the 3:1 graphics floor
-      [L.emberMark, L.bg, 3.2],
-      [L.emberMark, L.surface, 3.6],
-      [L.emberInk, L.bg, 3.8],
-      [D.textPrimary, D.bg, 17.6],
-      [D.textPrimary, D.surface, 15.2],
-      [D.textSecondary, D.surfaceSunken, 6.6],
-      [D.textTertiary, D.surfaceSunken, 5.2],
-      [D.emberMark, D.surface, 6.6],
-      [D.emberInk, D.bg, 9.0],
-      [WAFER_TOKENS.failDie, WAFER_TOKENS.discMid, 5.9],
+    // Text tiers: WCAG AA body floors on every surface they are drawn on.
+    const textCases: readonly [string, string][] = [
+      [L.textPrimary, L.bg],
+      [L.textPrimary, L.surface],
+      [L.textSecondary, L.bg],
+      [L.textSecondary, L.surfaceSunken],
+      [L.textTertiary, L.bg],
+      [L.textTertiary, L.surface],
+      [L.textTertiary, L.surfaceSunken],
+      [D.textPrimary, D.bg],
+      [D.textPrimary, D.surface],
+      [D.textSecondary, D.surfaceSunken],
+      [D.textTertiary, D.surfaceSunken],
     ];
-    for (const [fg, bg, stated] of cases) {
-      expect(ratio(fg, bg)).toBeGreaterThanOrEqual(stated - ROUNDING);
+    for (const [fg, bg] of textCases) {
+      expect(ratio(fg, bg)).toBeGreaterThanOrEqual(4.5);
     }
-    // The tertiary floor itself is a hard 4.5, not a rounded value
-    expect(ratio(L.textTertiary, L.surfaceSunken)).toBeGreaterThanOrEqual(4.5);
+    // Graphics floors: the signal hue clears 3:1 on the page and on the disc.
+    for (const [fg, bg] of [
+      [L.emberMark, L.bg],
+      [L.emberMark, L.surface],
+      [L.emberInk, L.bg],
+      [D.emberMark, D.surface],
+      [D.emberInk, D.bg],
+    ] as const) {
+      expect(ratio(fg, bg)).toBeGreaterThanOrEqual(3.0);
+    }
+    // The failing-die signal stays >= 5:1 on the dark silicon disc.
+    expect(ratio(WAFER_TOKENS.failDie, WAFER_TOKENS.discMid)).toBeGreaterThanOrEqual(5.0);
   });
 
   it('keeps text on ink buttons legible in both themes', () => {
@@ -173,19 +177,19 @@ describe('premium UI colour tokens (premium.md §3.2)', () => {
 
   it('defines theme-dependent elevation (§3.7): soft layered shadows in light, rings in dark', () => {
     expect(THEME_TOKENS.light.shadowCard).toBe(
-      '0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.05)',
+      '0 0 0 1px rgba(10, 21, 30, 0.05), 0 1px 2px rgba(10, 21, 30, 0.04), 0 14px 34px -18px rgba(10, 21, 30, 0.28)',
     );
     expect(THEME_TOKENS.light.shadowPopover).toBe(
-      '0 0 0 1px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.08), 0 24px 48px rgba(0, 0, 0, 0.12)',
+      '0 0 0 1px rgba(10, 21, 30, 0.07), 0 10px 24px -10px rgba(10, 21, 30, 0.20), 0 32px 64px -24px rgba(10, 21, 30, 0.30)',
     );
     expect(THEME_TOKENS.dark.shadowCard).toBe(
-      'inset 0 0 0 1px rgba(255, 255, 255, 0.08)',
+      'inset 0 0 0 1px rgba(255, 255, 255, 0.075)',
     );
     expect(THEME_TOKENS.dark.shadowCardHover).toBe(
-      'inset 0 0 0 1px rgba(255, 255, 255, 0.13)',
+      'inset 0 0 0 1px rgba(255, 255, 255, 0.14)',
     );
     expect(THEME_TOKENS.dark.shadowPopover).toBe(
-      'inset 0 0 0 1px rgba(255, 255, 255, 0.10), 0 24px 48px rgba(0, 0, 0, 0.60)',
+      'inset 0 0 0 1px rgba(255, 255, 255, 0.10), 0 28px 56px rgba(0, 0, 0, 0.62)',
     );
     expect(THEME_TOKENS.dark.shadowThumb).toBe('none');
     for (const key of ['shadowCard', 'shadowCardHover', 'shadowChevron'] as const) {
@@ -198,18 +202,18 @@ describe('premium UI colour tokens (premium.md §3.2)', () => {
 describe('wafer tokens (premium.md §3.3)', () => {
   it('locks the disc body, film, bevel, and die values', () => {
     expect(WAFER_TOKENS).toMatchObject({
-      discHi: '#2B2D33',
-      discMid: '#1C1D21',
-      discLo: '#121316',
+      discHi: '#2A3146',
+      discMid: '#1A2033',
+      discLo: '#10141F',
       bevelTop: 'rgba(255, 255, 255, 0.38)',
       bevelBottom: 'rgba(255, 255, 255, 0.06)',
       bevelInner: 'rgba(0, 0, 0, 0.45)',
       exclusionLine: 'rgba(255, 255, 255, 0.05)',
       passTile: 'rgba(255, 255, 255, 0.06)',
       passTileHc: 'rgba(255, 255, 255, 0.34)',
-      failDie: '#FF6B2C',
+      failDie: '#FF5C7C',
       failFacet: 'rgba(255, 255, 255, 0.18)',
-      dimVeil: 'rgba(18, 19, 22, 0.78)',
+      dimVeil: 'rgba(16, 20, 31, 0.78)',
       evidenceRim: 'rgba(255, 255, 255, 0.90)',
     });
     expect(WAFER_TOKENS.film).toEqual([
@@ -229,19 +233,19 @@ describe('wafer tokens (premium.md §3.3)', () => {
       parseRgbaString(WAFER_TOKENS.passTileHc),
       mid,
     );
-    expect(formatHexColor(passTile)).toBe('#2A2B2E');
-    expect(formatHexColor(passTileHc)).toBe('#696A6C');
+    expect(formatHexColor(passTile)).toBe('#282D3F');
+    expect(formatHexColor(passTileHc)).toBe('#686C78');
 
     // Pass tile is texture only (1.19:1); the high-contrast fallback clears 3:1 (A13)
-    expect(wcagContrastRatio(passTile, mid)).toBeCloseTo(1.19, 1);
+    expect(wcagContrastRatio(passTile, mid)).toBeCloseTo(1.18, 1);
     expect(wcagContrastRatio(passTile, mid)).toBeLessThan(1.5);
     expect(wcagContrastRatio(passTileHc, mid)).toBeGreaterThanOrEqual(3.0);
     expect(wcagContrastRatio(passTileHc, mid)).toBeGreaterThanOrEqual(3.1 - ROUNDING);
 
-    // Fail die: 5.9:1 on disc-mid, 5.0:1 on a pass tile
+    // Fail die: 5.4:1 on disc-mid, 4.6:1 on a pass tile (still far above the 3:1 graphics floor)
     const fail = parseHexColor(WAFER_TOKENS.failDie);
-    expect(wcagContrastRatio(fail, mid)).toBeGreaterThanOrEqual(5.9 - ROUNDING);
-    expect(wcagContrastRatio(fail, passTile)).toBeGreaterThanOrEqual(5.0 - ROUNDING);
+    expect(wcagContrastRatio(fail, mid)).toBeGreaterThanOrEqual(5.0 - ROUNDING);
+    expect(wcagContrastRatio(fail, passTile)).toBeGreaterThanOrEqual(4.5 - ROUNDING);
   });
 
   it('tints the dim veil with the disc colour so dimmed ember stays ember-hued', () => {
@@ -249,16 +253,16 @@ describe('wafer tokens (premium.md §3.3)', () => {
     const disc = parseHexColor(WAFER_TOKENS.discLo);
     expect({ r: veil.r, g: veil.g, b: veil.b }).toEqual(disc);
     const dimmed = compositeRgbaOverRgb(veil, parseHexColor(WAFER_TOKENS.failDie));
-    // Red stays the dominant channel (no salmon/grey shift)
+    // Red stays the dominant channel under the veil (the failure signal never turns grey or violet)
     expect(dimmed.r).toBeGreaterThan(dimmed.g);
-    expect(dimmed.g).toBeGreaterThan(dimmed.b);
+    expect(dimmed.r).toBeGreaterThan(dimmed.b);
   });
 });
 
 describe('bin palettes (premium.md §3.5)', () => {
   it('locks disc and light-page palettes with rank 0 ember', () => {
     expect(BIN_DISC_PALETTE).toEqual([
-      '#FF6B2C',
+      '#FF5C7C',
       '#00ACEA',
       '#AE90F3',
       '#FD7584',
@@ -268,7 +272,7 @@ describe('bin palettes (premium.md §3.5)', () => {
       '#61A1FF',
     ]);
     expect(BIN_INK_PALETTE_LIGHT).toEqual([
-      '#E8591E',
+      '#C0203A',
       '#0A6FB0',
       '#7353C9',
       '#C23A55',
@@ -282,11 +286,9 @@ describe('bin palettes (premium.md §3.5)', () => {
     expect(THEME_TOKENS.light.binInk).toEqual(BIN_INK_PALETTE_LIGHT);
   });
 
-  it('keeps disc bins at 6.4-6.5:1 on disc-mid and light-page bins (ranks 1-7) >= 4.5:1 on the §12.1 warm bg', () => {
+  it('keeps disc bins at >= 6:1 on disc-mid and light-page bins (ranks 1-7) >= 4.5:1 on the cool pearl bg', () => {
     for (const hex of BIN_DISC_PALETTE.slice(1)) {
-      const r = ratio(hex, WAFER_TOKENS.discMid);
-      expect(r).toBeGreaterThanOrEqual(6.4 - ROUNDING);
-      expect(r).toBeLessThanOrEqual(6.5 + ROUNDING);
+      expect(ratio(hex, WAFER_TOKENS.discMid)).toBeGreaterThanOrEqual(6.0);
     }
     for (const hex of BIN_INK_PALETTE_LIGHT.slice(1)) {
       expect(ratio(hex, THEME_TOKENS.light.bg)).toBeGreaterThanOrEqual(4.5);
@@ -294,14 +296,14 @@ describe('bin palettes (premium.md §3.5)', () => {
   });
 
   it('getBinColor returns ember for rank 0 and cycles ranks 1+ through 7 hues per surface', () => {
-    expect(getBinColor(0, 'disc')).toBe('#FF6B2C');
-    expect(getBinColor(0, 'light')).toBe('#E8591E');
-    expect(getBinColor(0, 'dark')).toBe('#FF6B2C');
+    expect(getBinColor(0, 'disc')).toBe('#FF5C7C');
+    expect(getBinColor(0, 'light')).toBe('#C0203A');
+    expect(getBinColor(0, 'dark')).toBe('#FF5C7C');
     expect(getBinColor(1, 'light')).toBe('#0A6FB0');
     expect(getBinColor(7, 'disc')).toBe('#61A1FF');
     expect(getBinColor(8, 'disc')).toBe('#00ACEA');
     expect(getBinColor(8, 'light')).toBe('#0A6FB0');
-    expect(getBinColor(-3, 'dark')).toBe('#FF6B2C');
+    expect(getBinColor(-3, 'dark')).toBe('#FF5C7C');
   });
 });
 
@@ -491,7 +493,7 @@ describe('user-selectable accent palettes (data-accent)', () => {
     });
   });
 
-  it('meets contrast floors across all 4 accents on light paper #F6F3EE, dark surfaces, and dark silicon disc', () => {
+  it('meets contrast floors across all 4 accents on the pearl bg, dark surfaces, and the silicon disc', () => {
     const L = THEME_TOKENS.light;
     const D = THEME_TOKENS.dark;
     const discMid = parseHexColor(WAFER_TOKENS.discMid);
@@ -501,25 +503,24 @@ describe('user-selectable accent palettes (data-accent)', () => {
       const light = ACCENT_PALETTES[accent].light;
       const dark = ACCENT_PALETTES[accent].dark;
 
-      // Disc failing die: theme-independent, >= 5.9:1 on disc-mid and >= 5.0:1 on pass tile
-      expect(light.ember).toBe(dark.ember);
+      // Disc failing die: the disc is always the dark silicon one, so it reads the dark accent
       expect(getFailDieColor(accent)).toBe(dark.ember);
       const failRgb = parseHexColor(dark.ember);
-      expect(wcagContrastRatio(failRgb, discMid), `${accent} failDie on discMid`).toBeGreaterThanOrEqual(5.9 - ROUNDING);
-      expect(wcagContrastRatio(failRgb, passTile), `${accent} failDie on passTile`).toBeGreaterThanOrEqual(5.0 - ROUNDING);
+      expect(wcagContrastRatio(failRgb, discMid), `${accent} failDie on discMid`).toBeGreaterThanOrEqual(5.0 - ROUNDING);
+      expect(wcagContrastRatio(failRgb, passTile), `${accent} failDie on passTile`).toBeGreaterThanOrEqual(4.5 - ROUNDING);
 
-      // Marks: >= 3:1 on light paper #F6F3EE and white surface, >= 6.6:1 on dark surface
+      // Marks: >= 3:1 on the pearl bg and white surface, >= 4.5:1 on the dark surface
       expect(ratio(light.emberMark, L.bg), `${accent} light mark on bg`).toBeGreaterThanOrEqual(3.0);
       expect(ratio(light.emberMark, L.surface), `${accent} light mark on surface`).toBeGreaterThanOrEqual(3.0);
-      expect(ratio(dark.emberMark, D.surface), `${accent} dark mark on surface`).toBeGreaterThanOrEqual(6.6 - ROUNDING);
-      expect(ratio(dark.emberMark, D.bg), `${accent} dark mark on bg`).toBeGreaterThanOrEqual(7.3 - ROUNDING);
+      expect(ratio(dark.emberMark, D.surface), `${accent} dark mark on surface`).toBeGreaterThanOrEqual(4.5);
+      expect(ratio(dark.emberMark, D.bg), `${accent} dark mark on bg`).toBeGreaterThanOrEqual(4.5);
 
       // Ink: >= 4.5:1 on all dark surfaces; cobalt/jade/violet >= 4.5:1 on light paper #F6F3EE as well
       for (const darkBg of [D.bg, D.surface, D.surfaceSunken]) {
         expect(ratio(dark.emberInk, darkBg), `${accent} dark ink on ${darkBg}`).toBeGreaterThanOrEqual(4.5);
       }
       if (accent === 'ember') {
-        expect(ratio(light.emberInk, L.bg)).toBeGreaterThanOrEqual(3.8 - ROUNDING);
+        expect(ratio(light.emberInk, L.bg)).toBeGreaterThanOrEqual(3.0);
       } else {
         expect(ratio(light.emberInk, L.bg), `${accent} light ink on #F6F3EE`).toBeGreaterThanOrEqual(4.5);
         expect(ratio(light.emberInk, L.surface), `${accent} light ink on #FFFFFF`).toBeGreaterThanOrEqual(4.5);

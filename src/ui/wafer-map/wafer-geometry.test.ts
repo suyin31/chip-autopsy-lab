@@ -421,7 +421,7 @@ describe('Wafer Stage geometry, §2.1 pass/fail non-color geometry cue, and thre
     const lot = buildWaferTestLot();
     expect(resolvePassFailDieColor(1)).toBe(WAFER_TOKENS.passTile);
     expect(resolvePassFailDieColor(1, true)).toBe(WAFER_TOKENS.passTileHc);
-    expect(resolvePassFailDieColor(0)).toBe('#FF6B2C');
+    expect(resolvePassFailDieColor(0)).toBe('#FF5C7C');
 
     const sbinRanks = buildFailBinRankMap(lot.dies, 'SBIN');
     expect(sbinRanks.get(5)).toBe(0);
@@ -877,7 +877,7 @@ describe('Premium P6 — die tiles and thumbnails (premium §5.3)', () => {
     expect(passRatio).toBeGreaterThanOrEqual(1.1);
     expect(passRatio).toBeLessThanOrEqual(1.3);
     expect(wcagContrastRatio(fail, disc)).toBeGreaterThanOrEqual(5);
-    expect(wcagContrastRatio(fail, passTile)).toBeGreaterThanOrEqual(5);
+    expect(wcagContrastRatio(fail, passTile)).toBeGreaterThanOrEqual(4.5);
     expect(wcagContrastRatio(passTileHc, disc)).toBeGreaterThanOrEqual(3);
   });
 

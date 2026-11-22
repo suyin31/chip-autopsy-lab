@@ -27,15 +27,15 @@ describe('landing card wafer sizes (premium §6.1)', () => {
 });
 
 describe('landing hero wafer and reticle (premium §11.1)', () => {
-  it('uses 320 / 280 / 240 / 220 px at 1440-1280 / 1024 / sm / xs', () => {
-    expect(resolveLandingHeroWaferSize(1440)).toBe(320);
-    expect(resolveLandingHeroWaferSize(1280)).toBe(320);
-    expect(resolveLandingHeroWaferSize(1279)).toBe(280);
-    expect(resolveLandingHeroWaferSize(1024)).toBe(280);
-    expect(resolveLandingHeroWaferSize(1023)).toBe(240);
-    expect(resolveLandingHeroWaferSize(640)).toBe(240);
-    expect(resolveLandingHeroWaferSize(639)).toBe(220);
-    expect(resolveLandingHeroWaferSize(390)).toBe(220);
+  it('uses 440 / 360 / 280 / 240 px at 1440-1280 / 1024 / sm / xs', () => {
+    expect(resolveLandingHeroWaferSize(1440)).toBe(440);
+    expect(resolveLandingHeroWaferSize(1280)).toBe(440);
+    expect(resolveLandingHeroWaferSize(1279)).toBe(360);
+    expect(resolveLandingHeroWaferSize(1024)).toBe(360);
+    expect(resolveLandingHeroWaferSize(1023)).toBe(280);
+    expect(resolveLandingHeroWaferSize(640)).toBe(280);
+    expect(resolveLandingHeroWaferSize(639)).toBe(240);
+    expect(resolveLandingHeroWaferSize(390)).toBe(240);
   });
 
   it('builds 72 ticks, 8 px at 0 / 90 / 180 / 270 degrees and 4 px elsewhere', () => {

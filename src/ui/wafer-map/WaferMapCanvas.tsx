@@ -2348,7 +2348,7 @@ function WaferMapCanvasImpl({
         data-testid="stage-header"
         className="col-span-2 flex flex-wrap items-baseline gap-x-3 gap-y-1.5 px-4 pb-2 sm:min-h-10 sm:items-end sm:px-0"
       >
-        <h2 className="type-headline text-text-primary">
+        <h2 className="text-[19px] leading-[1.2] font-[540] tracking-[-0.022em] text-text-primary [font-family:var(--font-display)]">
           {titleParts[0]}
           <Untranslated className="font-mono-id">{waferId}</Untranslated>
           {titleParts.slice(1).join('')}
@@ -2583,7 +2583,7 @@ function WaferMapCanvasImpl({
       {/* Control row (premium §5.6, §7.7): segmented control, legend, Reset view, Select an area */}
       <div
         data-testid="stage-control-row"
-        className="contents sm:flex sm:flex-wrap sm:items-center"
+        className="at-dock relative z-[3] contents sm:flex sm:flex-wrap sm:items-center sm:gap-1 sm:rounded-2xl sm:px-2.5 sm:py-1.5"
       >
         <div className="mt-2 flex h-9 items-center pl-4 sm:mt-0 sm:h-10 sm:pl-0">
           <SegmentedControl

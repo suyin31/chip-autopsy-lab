@@ -16,6 +16,9 @@ const CORS_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Local preview runs build into a separate dir so a killed `next start` never blocks the next
+  // build through a locked route-cache file in the sandbox filesystem.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   reactStrictMode: true,
   poweredByHeader: false,
   devIndicators: false,

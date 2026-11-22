@@ -100,6 +100,7 @@ export const zhCN = {
   'demo.scratch.chip': '划伤',
   'demo.site2.chip': '探针工位',
   'report.footer': '全程在浏览器中运行。STDF 原始数据不会离开此设备。',
+  'report.evidenceShelf': '证据',
   'demo.edgeRing.description': '刻蚀损伤使晶圆边缘一圈的晶粒失效。',
   'demo.scratch.description': '机械臂在 18 片晶圆上划出一道划痕。',
   'demo.site2.description': '一根磨损的探针把良品误判成失效。',

@@ -39,14 +39,11 @@ function renderLanding(
 }
 
 describe('Task B landing hero ambient, sample-card stagger, and hero press', () => {
-  it('mounts landing-hero-ambient only on first-run with aria-hidden, pointer-events-none, and three layers', () => {
+  it('moves the landing ambient to the page-level atelier field (no third ambient layer)', () => {
     const firstRunHtml = renderLanding('first-run');
-    expect(firstRunHtml).toContain(
-      'aria-hidden="true" data-testid="landing-hero-ambient" class="landing-ambient pointer-events-none"',
-    );
-    expect(firstRunHtml).toContain('class="landing-ambient-wash"');
-    expect(firstRunHtml).toContain('class="landing-ambient-grid"');
-    expect(firstRunHtml).toContain('class="landing-ambient-grain"');
+    // The atelier field is mounted once per page in AppShell, not per cause; the landing keeps its
+    // own card stagger and press behaviour but never adds a second ambient canvas.
+    expect(firstRunHtml).not.toContain('landing-hero-ambient');
 
     const parseFailedHtml = renderLanding('parse-failed');
     expect(parseFailedHtml).not.toContain('landing-hero-ambient');

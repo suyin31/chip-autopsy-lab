@@ -9,11 +9,11 @@ import { worstCpk } from './brief-markdown';
 
 function Cell({ id, label, enabled, children }: { id: string; label: string; enabled: boolean; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  useTactileTilt(ref, { enabled, maxDeg: 2, liftPx: 3 });
+  useTactileTilt(ref, { enabled, maxDeg: 12, liftPx: 6 });
   return <div ref={ref} data-tactile="" data-spotlight="true" data-testid={`agent-kpi-${id}`}
-    className="cal-tactile relative h-14 min-w-0 rounded-control bg-fill-1 px-3 py-1.5">
-    <dt className="truncate type-caption text-text-tertiary">{label}</dt>
-    <dd className="truncate type-control tabular-nums">{children}</dd>
+    className="cal-tactile at-plate relative h-[68px] min-w-0 rounded-[16px] px-3.5 py-2">
+    <dt className="truncate text-[11.5px] leading-[1.3] tracking-[-0.004em] text-text-tertiary">{label}</dt>
+    <dd className="at-kpi-number truncate text-[22px]">{children}</dd>
   </div>;
 }
 

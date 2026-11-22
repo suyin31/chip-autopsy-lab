@@ -43,6 +43,24 @@ export interface StatRowProps {
 }
 
 /**
+ * One readout plate: a glass plate that tilts under the pointer with its own specular, so the
+ * KPI row moves like three physical instruments rather than one flat band.
+ */
+const StatPlate = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentPropsWithoutRef<'div'>
+>(function StatPlate({ className, children, ...rest }, forwardedRef) {
+  const plateRef = React.useRef<HTMLDivElement | null>(null);
+  useTactileTilt(plateRef, { maxDeg: 12, liftPx: 6 });
+  React.useImperativeHandle(forwardedRef, () => plateRef.current as HTMLDivElement);
+  return (
+    <div ref={plateRef} className={className} {...rest}>
+      {children}
+    </div>
+  );
+});
+
+/**
  * Three-column big-number Stat Row (`src/ui/report/StatRow.tsx`, premium §7.5, `redesign.md` §5.3):
  * - `<dl>` grid `repeat(3, 1fr)`, gap 24 (12 below 768); each stat `<div>` holds a `<button>`
  *   (inside `<dd>`, padding 12 / margin -12, `r-lg`) that lights the stat's evidence dies.
@@ -96,7 +114,7 @@ export function StatRow({
   const pressedIdxRef = React.useRef<number | null>(null);
   const idPrefix = React.useId();
 
-  useTactileTilt(rowRef, { maxDeg: 2, liftPx: 3 });
+  useTactileTilt(rowRef, { maxDeg: 1.5, liftPx: 2 });
 
   // Premium §7.5 / §3.12: cards and rows press to 0.985 (80 ms in, spring-snappy out); none under reduced motion
   const handlePressStart = (
@@ -291,21 +309,22 @@ export function StatRow({
       ref={rowRef}
       data-testid="verdict-stat-row"
       data-spotlight="true"
-      className={cn('cal-tactile relative grid grid-cols-3 gap-3 md:gap-6', className)}
+      className={cn('relative grid grid-cols-3 gap-2.5 md:gap-3.5', className)}
     >
       {stats.map((stat, idx) => {
         const isSelected = activeClaimId === stat.evidence.claimId;
         const captionId = `${idPrefix}-caption-${idx}`;
         const valueId = `${idPrefix}-value-${idx}`;
         return (
-          <div
+          <StatPlate
             key={idx}
-            ref={(el) => {
+            ref={(el: HTMLDivElement | null) => {
               itemRefs.current[idx] = el;
             }}
             data-testid="verdict-stat-item"
             data-selected={isSelected ? 'true' : undefined}
-            className="group/stat relative flex min-w-0 origin-center flex-col-reverse justify-end gap-1.5"
+            className="group/stat at-plate cal-tactile relative flex min-w-0 origin-center flex-col-reverse justify-end gap-2 rounded-[18px] px-4 pt-4 pb-4"
+            data-spotlight="true"
           >
             {/* Text sits above the button fill and lets pointer input through to the button */}
             <dt
@@ -314,7 +333,7 @@ export function StatRow({
             >
               <span
                 data-testid="verdict-stat-caption"
-                className="line-clamp-2 block text-text-secondary transition-[color] duration-120 ease-out group-hover/stat:text-text-primary max-xl:line-clamp-3"
+                className="line-clamp-2 block text-[12.5px] leading-[1.35] text-text-secondary transition-[color] duration-120 ease-out group-hover/stat:text-text-primary max-xl:line-clamp-3"
               >
                 <GlossaryText
                   text={stat.captionText}
@@ -336,7 +355,7 @@ export function StatRow({
                 </span>
               ) : null}
             </dt>
-            <dd className="type-stat text-text-primary tabular-nums">
+            <dd className="at-kpi-number text-[38px] text-text-primary tabular-nums md:text-[42px]">
               <span
                 ref={(el) => {
                   valueRefs.current[idx] = el;
@@ -373,7 +392,7 @@ export function StatRow({
                 )}
               />
             </dd>
-          </div>
+          </StatPlate>
         );
       })}
     </dl>

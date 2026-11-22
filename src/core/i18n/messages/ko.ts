@@ -101,6 +101,7 @@ export const ko = {
   'demo.scratch.chip': '스크래치',
   'demo.site2.chip': '프로브 사이트',
   'report.footer': '모든 처리는 브라우저 안에서 끝납니다. STDF 원본 데이터는 이 기기 밖으로 나가지 않습니다.',
+  'report.evidenceShelf': '증거',
   'demo.edgeRing.description': '식각 손상으로 웨이퍼 가장자리 다이가 줄줄이 불량.',
   'demo.scratch.description': '이송 로봇 암이 웨이퍼 18장에 선 모양 긁힘을 남겼습니다.',
   'demo.site2.description': '닳은 프로브 니들 하나가 양품을 불량으로 판정합니다.',

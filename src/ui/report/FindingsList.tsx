@@ -378,7 +378,7 @@ export function FindingsList({
 
           <ul
             data-testid="verdict-findings-list"
-            className="mt-3 flex flex-col rounded-xl bg-surface p-1 shadow-card"
+            className="at-plate mt-4 flex flex-col rounded-[18px] p-1"
           >
             {shownFindings.map((row, idx) => {
               const isSelected = activeClaimId === row.claimId;

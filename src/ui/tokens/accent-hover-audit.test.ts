@@ -45,6 +45,7 @@ const ALLOWED_TRANSITION_PROPS = new Set([
 /** Files that own an allowed ember use (premium §3.4, §11.1, §11.4, §12.2, §12.4). */
 const EMBER_OWNERS = new Set([
   'app/globals.css', // token definitions, cause phrase, accent word, eyebrow dot
+  'app/atelier.css', // atelier layer: the signal hue inside beams and rings
   'ui/report/VerdictHero.tsx', // verdict cause phrase (budgeted)
   'ui/primitives/accent-word.tsx', // the one italic accent word (§12.2)
   'ui/charts/BinParetoChart.tsx', // dominant bar (budgeted)
@@ -52,6 +53,7 @@ const EMBER_OWNERS = new Set([
   'ui/wafer-map/HoverMagnifier.tsx', // magnifier swatch (data key)
   'ui/layout/EmptyStateCard.tsx', // landing example result and eyebrow dots (§11.1, §12.4)
   'ui/layout/CoachMarks.tsx', // hint target pulse ring (§11.4)
+  'ui/layout/NavBar.tsx', // reticle mark in the wordmark (atelier)
 ]);
 
 describe('premium P33 accent and hover audit (source)', () => {

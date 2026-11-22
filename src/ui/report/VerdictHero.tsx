@@ -156,7 +156,7 @@ export function VerdictHero({
       data-typeon-progress={typeOn.progress.toFixed(2)}
       data-typeon-count={String(typeOn.visibleCount)}
       data-typeon-text={typeOn.visibleText}
-      className="type-display-l max-w-[520px] text-text-primary"
+      className="at-diagnosis max-w-[620px] text-text-primary"
     >
       {verdict.isHealthy ? (
         <span>
@@ -204,7 +204,7 @@ export function VerdictHero({
     verdict.subline.length > 0 ? (
       <p
         data-testid="verdict-subline"
-        className="verdict-takeaway mt-3 line-clamp-5 max-w-[520px] type-body text-pretty text-text-secondary sm:line-clamp-3 md:mt-4"
+        className="verdict-takeaway mt-4 line-clamp-5 max-w-[560px] text-[16.5px] leading-[1.5] tracking-[-0.011em] text-pretty text-text-secondary sm:line-clamp-3 md:mt-5"
       >
         {/* Premium §7.3: the takeaway may hold one Term ("yield") */}
         <GlossaryText

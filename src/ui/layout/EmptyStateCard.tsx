@@ -72,7 +72,6 @@ import {
   resolveCanvasPixelSize,
 } from '@/ui/wafer-map/wafer-geometry';
 import { ErrorDetailsSheet } from './ErrorDetailsSheet';
-import { LandingHeroAmbient } from './LandingHeroAmbient';
 import {
   computeLandingReticleTickLines,
   LANDING_EXAMPLE_EDGE_SHARE,
@@ -768,17 +767,9 @@ function DemoLotCardButton({
   );
 }
 
-const RETICLE_LABELS = [
-  { angleDeg: 0, text: '0°' },
-  { angleDeg: 90, text: '90°' },
-  { angleDeg: 180, text: '180°' },
-  { angleDeg: 270, text: '270°' },
-] as const;
-
 /** Label slots outside the reticle circle: 8 px gap + one 16 px mono line above / below, 40 px at the sides. */
-const RETICLE_LABEL_SLOT_Y = 24;
-const RETICLE_LABEL_SLOT_X = 40;
-const RETICLE_LABEL_GAP = 8;
+const RETICLE_LABEL_SLOT_Y = 12;
+const RETICLE_LABEL_SLOT_X = 16;
 
 interface HeroScrollDepthConnectorProps {
   readonly targetRef: React.RefObject<HTMLDivElement | null>;
@@ -934,7 +925,7 @@ function LandingHero({
     <div
       data-testid="landing-hero"
       // Before hydration the frame has the 1440 size; clip it so narrow screens never scroll sideways
-      className={`mt-10 flex flex-col items-start gap-8 sm:mt-12 lg:mt-14 lg:flex-row lg:items-center lg:justify-center lg:gap-14${hydrated ? '' : ' overflow-x-clip'}`}
+      className={`relative mt-8 flex flex-col items-center gap-6 lg:mt-0 lg:items-center lg:justify-center lg:gap-0${hydrated ? '' : ' overflow-x-clip'}`}
     >
       {scrollDepthEnabled ? (
         <HeroScrollDepthConnector
@@ -942,6 +933,11 @@ function LandingHero({
           progress={scrollProgress}
         />
       ) : null}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{ background: 'var(--at-stage-glow)', filter: 'blur(6px)' }}
+      />
       <div
         data-testid="landing-hero-frame"
         style={{
@@ -982,29 +978,6 @@ function LandingHero({
             />
           ))}
         </svg>
-
-        {RETICLE_LABELS.map((label) => {
-          const offset = reticleR + RETICLE_LABEL_GAP;
-          const style: React.CSSProperties =
-            label.angleDeg === 0
-              ? { left: `${cx}px`, bottom: `${cy + offset}px`, transform: 'translateX(-50%)' }
-              : label.angleDeg === 180
-                ? { left: `${cx}px`, top: `${cy + offset}px`, transform: 'translateX(-50%)' }
-                : label.angleDeg === 90
-                  ? { left: `${cx + offset}px`, top: `${cy}px`, transform: 'translateY(-50%)' }
-                  : { right: `${cx + offset}px`, top: `${cy}px`, transform: 'translateY(-50%)' };
-          return (
-            <span
-              key={label.angleDeg}
-              aria-hidden="true"
-              data-testid={`landing-reticle-label-${label.angleDeg}`}
-              style={style}
-              className="pointer-events-none absolute type-mono-note whitespace-nowrap text-text-tertiary"
-            >
-              {label.text}
-            </span>
-          );
-        })}
 
         <motion.button
           ref={heroWaferRef}
@@ -1049,22 +1022,17 @@ function LandingHero({
         data-testid="landing-example-card"
         data-spotlight="true"
         style={scrollDepthEnabled ? { translate: cardTranslate } : undefined}
-        className="cal-tactile relative w-full max-w-[340px] shrink-0 rounded-2xl bg-surface p-6 text-left shadow-card sm:w-[280px] sm:max-w-none"
+        className="at-plate cal-tactile relative z-[3] w-full max-w-[340px] shrink-0 p-5 text-left sm:w-[296px] sm:max-w-none lg:absolute lg:bottom-10 lg:left-0 xl:-left-6"
       >
-        {/* §12.4 eyebrow: 6 px ember dot, then a mono 12/16 uppercase note */}
         <p
           data-testid="landing-example-eyebrow"
-          className="flex items-center gap-2 type-mono-note type-eyebrow text-text-tertiary"
+          className="text-[12.5px] leading-[1.3] tracking-[-0.005em] text-text-tertiary"
         >
-          <span
-            aria-hidden="true"
-            className="size-1.5 shrink-0 rounded-full bg-ember"
-          />
           {t('landing.example.eyebrow')}
         </p>
         <p
           data-testid="landing-example-title"
-          className="mt-3 type-title-2 text-ember-ink"
+          className="mt-2 text-[26px] leading-[1.15] font-[520] tracking-[-0.024em] text-text-primary [font-family:var(--font-display)]"
         >
           {titleBefore}
           <Untranslated>{patternName}</Untranslated>
@@ -1091,7 +1059,6 @@ function LandingHero({
           className="mt-4"
         >
           {t('landing.example.action')}
-          <span aria-hidden="true">→</span>
         </Button>
       </motion.div>
     </div>
@@ -1281,13 +1248,13 @@ export function EmptyStateCard({
           />
         </div>
       ) : (
-        /* premium §6.1 hero: headline top y = 140 (1440), 116 (1280), 104 (1024), 88 (390); centred from 1024, left-aligned below */
+        /* Atelier hero: the statement on the left of the bench, the specimen on the right. */
         <div ref={heroSectionRef} className="relative isolate flex flex-col">
-          {cause === 'first-run' ? <LandingHeroAmbient /> : null}
-          <div className="pt-10 text-left lg:mx-auto lg:max-w-[880px] lg:pt-[52px] lg:text-center xl:pt-16 min-[90rem]:pt-[88px]">
+          <div className="grid grid-cols-1 items-center gap-10 pt-8 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:gap-4 lg:pt-10 xl:gap-8 xl:pt-12">
+          <div className="text-left">
             <h1
               data-testid="landing-headline"
-              className="landing-headline type-display-xl text-text-primary"
+              className="landing-headline at-display text-[clamp(46px,5.2vw,76px)] text-text-primary"
             >
               {renderAccentPhrase(
                 t('landing.headline'),
@@ -1298,12 +1265,12 @@ export function EmptyStateCard({
 
             <p
               data-testid="landing-subline"
-              className="landing-subline mt-4 line-clamp-3 type-title-3 text-text-secondary lg:mx-auto min-[90rem]:mt-5"
+              className="landing-subline mt-5 line-clamp-3 max-w-[46ch] text-[17px] leading-[1.55] tracking-[-0.011em] text-text-secondary min-[90rem]:mt-6"
             >
               {t('landing.subline')}
             </p>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-center min-[90rem]:mt-8">
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center min-[90rem]:mt-8">
               <Button
                 variant="primary"
                 size="lg"
@@ -1330,14 +1297,14 @@ export function EmptyStateCard({
 
             <p
               data-testid="landing-hint"
-              className="mt-3 type-subhead text-text-tertiary"
+              className="mt-4 type-subhead text-text-tertiary"
             >
               <span className="sm:hidden">{t('landing.hintShort')}</span>
               <span className="max-sm:hidden">{t('landing.hint')}</span>
             </p>
           </div>
 
-          {/* premium §11.1: hint line, 56 px, hero row, 72 px, "Sample lots" */}
+          {/* The specimen: the sample lot's disc, lit, with its finding pinned to it. */}
           {cause === 'first-run' ? (
             <LandingHero
               disabled={disabled}
@@ -1345,6 +1312,7 @@ export function EmptyStateCard({
               onOpenSample={() => onLoadDemoLot('edge-ring-etch')}
             />
           ) : null}
+          </div>
         </div>
       )}
 
@@ -1355,14 +1323,14 @@ export function EmptyStateCard({
             aria-labelledby={sampleHeadingId}
             className={cn(
               // premium §12.5: landing sections >= 72 px apart
-              'mt-[72px]',
+              'mt-14 lg:mt-16',
             )}
           >
             {/* premium §12.4 eyebrow: 6 px ember dot, then a mono 12/16 uppercase note */}
             <h2
               id={sampleHeadingId}
               data-testid="landing-sample-heading"
-              className="flex items-center gap-2 type-mono-note type-eyebrow text-text-primary"
+              className="flex items-center gap-2 text-[13px] font-[500] tracking-[-0.005em] text-text-secondary"
             >
               <span
                 aria-hidden="true"

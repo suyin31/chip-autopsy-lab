@@ -107,14 +107,18 @@ function resolveVariantSurfaceClass(variant: ButtonVariant): string {
     // `ink` fill, hover #333336 / #FFFFFF, pressed #000000 / #E8E8ED, disabled 0.32 (premium §7.11)
     return cn(
       'bg-ink text-on-ink',
-      'enabled:hover:bg-[#333336] dark:enabled:hover:bg-white',
-      'enabled:active:bg-black dark:enabled:active:bg-[#e8e8ed]',
+      'enabled:hover:bg-[color-mix(in_oklab,var(--ink)_88%,var(--surface))]',
+      'enabled:active:bg-[color-mix(in_oklab,var(--ink)_96%,var(--surface))]',
       'disabled:opacity-32 aria-disabled:opacity-32',
     );
   }
 
   if (variant === 'secondary') {
-    return 'bg-fill-2 text-text-primary enabled:hover:bg-fill-3 disabled:opacity-32 aria-disabled:opacity-32';
+    return cn(
+      'bg-fill-1 text-text-primary shadow-[inset_0_0_0_1px_var(--hairline),inset_0_1px_0_var(--at-glass-edge)] [backdrop-filter:var(--material-filter)]',
+      'enabled:hover:bg-fill-2 enabled:active:bg-fill-3',
+      'disabled:opacity-32 aria-disabled:opacity-32',
+    );
   }
 
   if (variant === 'ghost') {

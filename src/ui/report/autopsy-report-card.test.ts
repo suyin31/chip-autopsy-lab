@@ -208,13 +208,14 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       expect(heroGridIdx).toBeGreaterThanOrEqual(0);
       expect(reportIdx).toBeGreaterThan(heroGridIdx);
       expect(waferIdx).toBeGreaterThan(reportIdx);
-      // P13: 540 px stage + 20 gutter from 1024, single 640 px column at sm
-      expect(html).toContain('xl:grid-cols-12');
-      expect(html).toContain('lg:grid-cols-[540px_minmax(0,1fr)] lg:items-start lg:gap-x-5');
+      // Atelier: the stage owns the wide fluid column and the report column is a fixed
+      // instrument strip; sm keeps the single 640 px column.
+      expect(html).toContain('lg:grid-cols-[minmax(0,1fr)_minmax(380px,440px)]');
+      expect(html).toContain('xl:grid-cols-[minmax(0,1fr)_480px]');
       expect(html).toContain('sm:max-lg:max-w-[640px]');
       expect(html).toContain('lg:sticky lg:top-[52px]');
-      expect(html).toContain('lg:h-[calc(100dvh-52px)] lg:min-h-[640px] lg:pt-5 lg:pb-4 xl:col-span-7');
-      expect(html).toContain('lg:col-start-2 lg:row-start-1 xl:col-span-5 xl:col-start-8');
+      expect(html).toContain('lg:h-[calc(100dvh-52px)] lg:min-h-[640px]');
+      expect(html).toContain('relative z-[2] lg:col-start-2 lg:row-start-1');
       // Below 1024 the stats follow the stage (order 3) and findings come after (order 4)
       expect(html).toContain('order-3 mt-8 lg:order-none lg:mt-10');
       expect(html).toContain('order-4 lg:order-none');
@@ -347,7 +348,7 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
       // The focus-ring token (premium §3.2) and the findings card's shadow-card (§7.6.1) are the only box-shadows here
       expect(cardHtml).not.toMatch(/\bshadow-(?!none\b|focus-ring\b|card\b)[a-z0-9]+\b/);
       expect(cardHtml).toMatch(
-        /data-testid="verdict-findings-list" class="[^"]*rounded-xl bg-surface p-1 shadow-card/,
+        /data-testid="verdict-findings-list" class="[^"]*at-plate[^"]*rounded-\[18px\]/,
       );
       expect(cardHtml).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
 

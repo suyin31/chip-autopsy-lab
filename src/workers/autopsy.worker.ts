@@ -833,7 +833,7 @@ export function createAutopsyWorkerApi(options?: {
 
       const facets = !dense && p >= 10;
       const failR = Math.min(failRadius, failSize * 0.45);
-      ctx.fillStyle = failColor ?? '#FF6B2C';
+      ctx.fillStyle = failColor ?? '#FF5C7C';
       ctx.beginPath();
       for (let i = wafer.dieStartIndex; i < wafer.dieEndIndex; i += 1) {
         if (dies.hasValidCoords[i] === 0 || dies.finalPass[i] !== 0) continue;

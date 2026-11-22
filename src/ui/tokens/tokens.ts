@@ -7,7 +7,7 @@
 export interface TypeRoleSpec {
   readonly sizePx: number;
   readonly lineHeight: number;
-  readonly weight: 300 | 400 | 500 | 590 | 600;
+  readonly weight: (typeof ALLOWED_FONT_WEIGHTS)[number];
   readonly trackingEm: number;
   readonly opsz?: 32;
   readonly mono?: true;
@@ -20,7 +20,7 @@ export interface ResponsiveTypeToken {
 }
 
 /** Allowed font weights across the entire UI (redesign.md §2.2: never >= 700). */
-export const ALLOWED_FONT_WEIGHTS = [300, 400, 500, 590, 600] as const;
+export const ALLOWED_FONT_WEIGHTS = [300, 400, 500, 520, 540, 590, 600] as const;
 
 export const HEADING_WEIGHT_BOUNDS = {
   statLight: 300,
@@ -37,14 +37,14 @@ export const TYPOGRAPHY_TOKENS = {
     desktop: {
       sizePx: 80,
       lineHeight: 1.04,
-      weight: 600,
-      trackingEm: -0.035,
+      weight: 540,
+      trackingEm: -0.032,
       opsz: 32,
     },
     mobile: {
       sizePx: 48,
       lineHeight: 1.06,
-      weight: 600,
+      weight: 540,
       trackingEm: -0.03,
       opsz: 32,
     },
@@ -54,14 +54,14 @@ export const TYPOGRAPHY_TOKENS = {
     desktop: {
       sizePx: 48,
       lineHeight: 1.08,
-      weight: 600,
-      trackingEm: -0.024,
+      weight: 520,
+      trackingEm: -0.03,
       opsz: 32,
     },
     mobile: {
       sizePx: 32,
       lineHeight: 1.12,
-      weight: 600,
+      weight: 520,
       trackingEm: -0.02,
       opsz: 32,
     },

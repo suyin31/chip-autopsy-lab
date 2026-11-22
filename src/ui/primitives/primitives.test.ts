@@ -60,10 +60,8 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
     expect(primaryLg).toContain('text-[15px]');
     expect(primaryLg).toContain('font-[590]');
     expect(primaryLg).toContain('tracking-[-0.01em]');
-    expect(primaryLg).toContain('enabled:hover:bg-[#333336]');
-    expect(primaryLg).toContain('dark:enabled:hover:bg-white');
-    expect(primaryLg).toContain('enabled:active:bg-black');
-    expect(primaryLg).toContain('dark:enabled:active:bg-[#e8e8ed]');
+    expect(primaryLg).toContain('enabled:hover:bg-[color-mix(in_oklab,var(--ink)_88%,var(--surface))]');
+    expect(primaryLg).toContain('enabled:active:bg-[color-mix(in_oklab,var(--ink)_96%,var(--surface))]');
     expect(primaryLg).toContain('disabled:opacity-32');
     expect(primaryLg).toContain('focus-visible:shadow-focus-ring');
     expect(primaryLg).toContain('focus-visible:outline-none');
@@ -78,7 +76,7 @@ describe('Button, SegmentedControl, and DropdownMenu primitives (Task R3)', () =
     expect(secondaryLg).toContain('px-5');
     expect(secondaryLg).toContain('bg-fill-2');
     expect(secondaryLg).toContain('text-text-primary');
-    expect(secondaryLg).toContain('enabled:hover:bg-fill-3');
+    expect(secondaryLg).toContain('enabled:hover:bg-fill-2');
     expect(secondaryLg).toContain('disabled:opacity-32');
     expect(render({ variant: 'secondary', size: 'md' })).toContain('h-11');
     const secondaryNav = render({ variant: 'secondary', size: 'sm' });

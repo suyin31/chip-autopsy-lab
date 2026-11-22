@@ -25,11 +25,11 @@ import {
 
 describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
   it('locks exact colour, surface, material, and ring values from redesign §2.1', () => {
-    expect(COLOR_TOKENS.bg).toBe('#000000');
-    expect(COLOR_TOKENS.surface1).toBe('#0F0F10');
-    expect(COLOR_TOKENS.surface2).toBe('#1A1A1C');
-    expect(COLOR_TOKENS.surface3).toBe('#242426');
-    expect(COLOR_TOKENS.material).toBe('rgba(22, 22, 24, 0.72)');
+    expect(COLOR_TOKENS.bg).toBe('#080B12');
+    expect(COLOR_TOKENS.surface1).toBe('#0E131D');
+    expect(COLOR_TOKENS.surface2).toBe('#131A26');
+    expect(COLOR_TOKENS.surface3).toBe('#1B2331');
+    expect(COLOR_TOKENS.material).toBe('rgba(10, 15, 24, 0.64)');
     expect(COLOR_TOKENS.ring).toBe(
       'inset 0 0 0 1px rgba(255, 255, 255, 0.10)',
     );
@@ -43,9 +43,9 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
     expect(COLOR_TOKENS.textDisabled).toBe('rgba(255, 255, 255, 0.28)');
     expect(COLOR_TOKENS.accent).toBe('#D6E6FF');
     expect(COLOR_TOKENS.accentSoft).toBe('rgba(214, 230, 255, 0.12)');
-    expect(COLOR_TOKENS.failure).toBe('#FF6B2C');
-    expect(COLOR_TOKENS.failureText).toBe('#FF8A57');
-    expect(COLOR_TOKENS.passDie).toBe('#63666C');
+    expect(COLOR_TOKENS.failure).toBe('#FF5C7C');
+    expect(COLOR_TOKENS.failureText).toBe('#FF87A0');
+    expect(COLOR_TOKENS.passDie).toBe('#5D6678');
     expect(COLOR_TOKENS.dieStreet).toBe('#000000');
     expect(COLOR_TOKENS.dimScrim).toBe('rgba(0, 0, 0, 0.62)');
     expect(COLOR_TOKENS.buttonPrimary).toBe('#F5F5F7');
@@ -109,8 +109,8 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
     }
   });
 
-  it('assigns rank 0 fail bin to #FF6B2C and keeps secondary fail-bin colours >= 3:1 across dark surfaces', () => {
-    expect(getFailBinColor(0)).toBe('#FF6B2C');
+  it('assigns rank 0 fail bin to the infrared signal and keeps secondary fail-bin colours >= 3:1 across dark surfaces', () => {
+    expect(getFailBinColor(0)).toBe('#FF5C7C');
     expect(SECONDARY_FAIL_BIN_PALETTE).toEqual([
       '#00ACEA',
       '#AE90F3',
@@ -146,21 +146,21 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
     expect(MAGMA_LUT_256[255]).toBe('#FCFDBF');
 
     // §2.2 Typography roles & weights (never >= 700)
-    expect(ALLOWED_FONT_WEIGHTS).toEqual([300, 400, 500, 590, 600]);
+    expect(ALLOWED_FONT_WEIGHTS).toEqual([300, 400, 500, 520, 540, 590, 600]);
     for (const weight of ALLOWED_FONT_WEIGHTS) {
       expect(weight).toBeLessThan(700);
     }
     expect(TYPOGRAPHY_TOKENS.displayXl.desktop).toEqual({
       sizePx: 80,
       lineHeight: 1.04,
-      weight: 600,
-      trackingEm: -0.035,
+      weight: 540,
+      trackingEm: -0.032,
       opsz: 32,
     });
     expect(TYPOGRAPHY_TOKENS.displayL.mobile).toEqual({
       sizePx: 32,
       lineHeight: 1.12,
-      weight: 600,
+      weight: 520,
       trackingEm: -0.02,
       opsz: 32,
     });
@@ -288,17 +288,17 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
       'utf8',
     );
     expect(globalsCss).toContain('@theme');
-    expect(globalsCss).toContain('--color-surface-1: #0f0f10;');
-    expect(globalsCss).toContain('--color-surface-2: #1a1a1c;');
-    expect(globalsCss).toContain('--color-surface-3: #242426;');
+    expect(globalsCss).toContain('--color-surface-1: #0e131d;');
+    expect(globalsCss).toContain('--color-surface-2: #131a26;');
+    expect(globalsCss).toContain('--color-surface-3: #1b2331;');
     expect(globalsCss).toContain('--color-separator: rgba(255, 255, 255, 0.08);');
     // P3 always sets data-theme, so the legacy no-attribute text tiers are gone
     expect(globalsCss).not.toContain(':root:not([data-theme])');
     expect(globalsCss).toContain('--color-accent: #d6e6ff;');
     expect(globalsCss).toContain('--color-accent-soft: rgba(214, 230, 255, 0.12);');
-    expect(globalsCss).toContain('--color-failure: #ff6b2c;');
-    expect(globalsCss).toContain('--color-failure-text: #ff8a57;');
-    expect(globalsCss).toContain('--color-pass-die: #63666c;');
+    expect(globalsCss).toContain('--color-failure: #ff5c7c;');
+    expect(globalsCss).toContain('--color-failure-text: #ff87a0;');
+    expect(globalsCss).toContain('--color-pass-die: #5d6678;');
 
     // §6.7 CJK font stacks and :lang() typography overrides
     expect(globalsCss).toContain(':root[lang="zh-CN"]');
@@ -314,9 +314,9 @@ describe('Chip Autopsy Lab R1 redesign tokens (§2, §6.7)', () => {
       'utf8',
     );
     expect(layoutTsx).toContain("from 'next/font/local'");
-    expect(layoutTsx).toContain('--font-inter');
+    expect(layoutTsx).toContain('--font-instrument-sans');
+    expect(layoutTsx).toContain('--font-archivo');
     expect(layoutTsx).toContain('--font-jetbrains-mono');
-    expect(layoutTsx).toContain('--font-instrument-serif');
     expect(layoutTsx).not.toContain('fonts.googleapis.com');
     expect(layoutTsx).not.toContain('fonts.gstatic.com');
   });

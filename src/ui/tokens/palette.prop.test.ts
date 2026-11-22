@@ -52,7 +52,7 @@ describe('Design token & colour scale properties (fast-check)', () => {
           wcagHexContrastRatio(first, COLOR_TOKENS.surface2),
         ).toBeGreaterThanOrEqual(3.0);
         if (rank <= 0) {
-          expect(first).toBe('#FF6B2C');
+          expect(first).toBe('#FF5C7C');
         }
       }),
       { numRuns: NUM_RUNS },
