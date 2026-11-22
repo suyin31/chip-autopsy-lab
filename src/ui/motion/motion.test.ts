@@ -57,6 +57,7 @@ import {
   WAFER_MORPH_LAYOUT_ID,
   WORKSPACE_LAYOUT_GROUP_ID,
 } from './index';
+import { PANEL_ENTER_MS, PANEL_ENTER_SCALE } from './tokens';
 
 function createMemorySessionStorage(
   initial: Record<string, string> = {},
@@ -109,7 +110,9 @@ describe('Task 18 Motion Core (`src/ui/motion/`)', () => {
       expect(GLOW_EXIT_DURATION_MS).toBe(160);
       expect(SCRIM_ENTER_DURATION_MS).toBe(200);
 
-      expect(PANEL_ENTER_OFFSET_Y_PX).toBe(8);
+      expect(PANEL_ENTER_OFFSET_Y_PX).toBe(16);
+      expect(PANEL_ENTER_SCALE).toBe(0.985);
+      expect(PANEL_ENTER_MS).toBe(420);
       expect(CARD_HOVER_LIFT_PX).toBe(-2);
       expect(THUMB_HOVER_SCALE).toBe(1.06);
       expect(THUMB_DIM_OPACITY).toBe(0.32);
@@ -175,10 +178,11 @@ describe('Task 18 Motion Core (`src/ui/motion/`)', () => {
 
       const panelNormal = resolvePanelEnterMotion(false, 2, 60);
       expect(panelNormal).toEqual({
-        initial: { opacity: 0, y: 8 },
-        animate: { opacity: 1, y: 0 },
+        initial: { opacity: 0, y: 16, scale: 0.985 },
+        animate: { opacity: 1, y: 0, scale: 1 },
         transition: {
-          ...SPRING_TOKENS.ui,
+          duration: 0.42,
+          ease: MOTION_TOKENS.easeOutTuple,
           delay: 0.12,
         },
       });
@@ -186,7 +190,7 @@ describe('Task 18 Motion Core (`src/ui/motion/`)', () => {
       const panelReduced = resolvePanelEnterMotion(true, 2, 60);
       expect(panelReduced).toEqual({
         initial: false,
-        animate: { opacity: 1, y: 0 },
+        animate: { opacity: 1, y: 0, scale: 1 },
         transition: { duration: 0 },
       });
 

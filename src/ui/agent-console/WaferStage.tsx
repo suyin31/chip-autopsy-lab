@@ -12,6 +12,7 @@
 import { useT } from '@/ui/i18n';
 import * as React from 'react';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
+import { TILT_TOKENS, useTactileTilt } from '@/ui/motion';
 import { cn } from '@/ui/primitives';
 
 export interface WaferStageProps {
@@ -59,6 +60,41 @@ function buildCells(
 const PULSE_MS = 460;
 
 /**
+ * Tactile card frame around the disc. Tilts gently without spotlight (the disc
+ * owns its own sheen) and disables tilt while a pointer is down so hit areas
+ * stay exact.
+ */
+const WaferDiscFrame = React.forwardRef<
+  HTMLDivElement,
+  { readonly className?: string; readonly children: React.ReactNode }
+>(function WaferDiscFrame({ className, children }, forwardedRef) {
+  const frameRef = React.useRef<HTMLDivElement | null>(null);
+  const [pointerDown, setPointerDown] = React.useState(false);
+
+  React.useImperativeHandle(forwardedRef, () => frameRef.current as HTMLDivElement, []);
+  useTactileTilt(frameRef, {
+    maxDeg: TILT_TOKENS.maxDegWafer,
+    liftPx: 0,
+    disabled: pointerDown,
+  });
+
+  const releasePointer = React.useCallback(() => setPointerDown(false), []);
+
+  return (
+    <div
+      ref={frameRef}
+      className={cn('cal-tactile', className)}
+      onPointerDown={() => setPointerDown(true)}
+      onPointerUp={releasePointer}
+      onPointerCancel={releasePointer}
+      onPointerLeave={releasePointer}
+    >
+      {children}
+    </div>
+  );
+});
+
+/**
  * The disc is drawn at the element's own width (up to 360 CSS px) and at device
  * pixel density, so it stays crisp in the rail and at 2x. A new citation grows
  * its dies into place over 460 ms instead of snapping, so the eye follows the
@@ -86,6 +122,7 @@ export function WaferStage({
     [highlighted],
   );
 
+  const hasPayload = payload !== null;
   React.useEffect(() => {
     const holder = holderRef.current;
     if (!holder || typeof ResizeObserver === 'undefined') return;
@@ -95,7 +132,7 @@ export function WaferStage({
     });
     observer.observe(holder);
     return () => observer.disconnect();
-  }, []);
+  }, [hasPayload]);
 
   const paint = React.useCallback(
     (reveal: number) => {
@@ -188,7 +225,8 @@ export function WaferStage({
 
   if (!payload) {
     return (
-      <div
+      <WaferDiscFrame
+        key="empty"
         className={cn(
           'flex w-full flex-col items-center gap-4 rounded-2xl bg-fill-1 px-5 py-7 text-center',
           className,
@@ -201,13 +239,13 @@ export function WaferStage({
             <button
               type="button"
               onClick={onLoadSample}
-              className="cursor-pointer rounded-sm type-caption text-text-secondary underline decoration-hairline-strong underline-offset-4 transition-[color] duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
+              className="cursor-pointer rounded-sm type-caption text-text-secondary underline decoration-hairline-strong underline-offset-4 transition-[color] duration-[120ms] ease-[var(--ease-out)] [@media(hover:hover)]:hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
             >
               {t('agents.wafer.load')}
             </button>
           ) : null}
         </div>
-      </div>
+      </WaferDiscFrame>
     );
   }
 
@@ -217,7 +255,7 @@ export function WaferStage({
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
-      <div ref={holderRef} className="overflow-hidden rounded-2xl bg-fill-1 p-3">
+      <WaferDiscFrame key="loaded" ref={holderRef} className="overflow-hidden rounded-2xl bg-fill-1 p-3">
         <div className="mx-auto" style={{ width: size, maxWidth: '100%' }}>
           <canvas
             ref={canvasRef}
@@ -227,7 +265,7 @@ export function WaferStage({
             style={{ aspectRatio: '1 / 1' }}
           />
         </div>
-      </div>
+      </WaferDiscFrame>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 type-caption text-text-tertiary">
         <span className="inline-flex items-center gap-1.5">

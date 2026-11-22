@@ -41,8 +41,14 @@ export const EVIDENCE_STAGGER_WINDOW_MS = 420 as const;
 /** Per-die evidence rim & bloom fade duration (`180 ms` `ease-out`). */
 export const EVIDENCE_DIE_FADE_MS = 180 as const;
 
-/** Vertical entry offset for panel rise-in blocks (`translateY(8px -> 0)`). */
-export const PANEL_ENTER_OFFSET_Y_PX = 8 as const;
+/** Vertical entry offset for panel rise-in blocks (`translateY(16px -> 0)`). */
+export const PANEL_ENTER_OFFSET_Y_PX = 16 as const;
+
+/** Initial scale for panel unfold enter motion (`scale(0.985 -> 1)`). */
+export const PANEL_ENTER_SCALE = 0.985 as const;
+
+/** Panel unfold enter transition duration (`420 ms`, ease-out). */
+export const PANEL_ENTER_MS = 420 as const;
 
 /** Sample-lot card hover lift (`translateY(-2px)` over `240 ms` `ease-out`). */
 export const CARD_HOVER_LIFT_PX = -2 as const;
@@ -100,22 +106,25 @@ export function resolveViewMorphTransition(
 }
 
 /**
- * Resolves compositor-only panel enter motion (`opacity` + `translateY`).
- * Under `prefers-reduced-motion: reduce`, disables mount translation (`initial: false`, `duration: 0`).
+ * Resolves compositor-only panel enter motion (`opacity`, `translateY`, `scale`).
+ * Uses a `420 ms` ease-out unfold so four staggered panels settle without spring overshoot.
+ * Under `prefers-reduced-motion: reduce`, disables mount translation and scale (`initial: false`, `duration: 0`).
  */
 export function resolvePanelEnterMotion(
   reducedMotion: boolean,
   index = 0,
   staggerMs = 60,
 ): {
-  readonly initial: false | { readonly opacity: number; readonly y: number };
-  readonly animate: { readonly opacity: 1; readonly y: 0 };
+  readonly initial:
+    | false
+    | { readonly opacity: number; readonly y: number; readonly scale: number };
+  readonly animate: { readonly opacity: 1; readonly y: 0; readonly scale: 1 };
   readonly transition: Record<string, unknown>;
 } {
   if (reducedMotion) {
     return {
       initial: false,
-      animate: { opacity: 1, y: 0 },
+      animate: { opacity: 1, y: 0, scale: 1 },
       transition: INSTANT_TRANSITION,
     };
   }
@@ -123,10 +132,15 @@ export function resolvePanelEnterMotion(
   const safeStagger = Number.isFinite(staggerMs) ? Math.max(0, staggerMs) : 0;
   const delay = (safeIndex * safeStagger) / 1000;
   return {
-    initial: { opacity: 0, y: PANEL_ENTER_OFFSET_Y_PX },
-    animate: { opacity: 1, y: 0 },
+    initial: {
+      opacity: 0,
+      y: PANEL_ENTER_OFFSET_Y_PX,
+      scale: PANEL_ENTER_SCALE,
+    },
+    animate: { opacity: 1, y: 0, scale: 1 },
     transition: {
-      ...SPRING_TOKENS.ui,
+      duration: PANEL_ENTER_MS / 1000,
+      ease: MOTION_TOKENS.easeOutTuple,
       delay,
     },
   };

@@ -40,14 +40,16 @@ import {
   type TraceEvent,
 } from '../../../public/agent-runtime/agent-runtime.mjs';
 import type { DemoPresetId } from '@/core/demo';
-import type { AutopsyWorkerLoadedPayload } from '@/workers';
+import type { AutopsyWorkerLoadedPayload, WorkerParseProgress } from '@/workers';
 import { createAutopsyWorkerClient, type AutopsyWorkerClient } from '@/workers';
 import {
   computeStaggerDelayMs,
   MOTION_TOKENS,
   PANEL_ENTER_OFFSET_Y_PX,
   SPRING_TOKENS,
+  TILT_TOKENS,
   useReducedMotionPreference,
+  useTactileTilt,
 } from '@/ui/motion';
 import {
   AnimatedCheckmark,
@@ -68,6 +70,11 @@ import {
   useModelSettings,
 } from './model-settings';
 import { WaferStage } from './WaferStage';
+
+import { LotSwitcher } from './LotSwitcher';
+import { StdfDropZone } from './StdfDropZone';
+import { LotKpiStrip } from './LotKpiStrip';
+import { ExportBriefButton } from './ExportBriefButton';
 
 type TranscriptItem =
   | { readonly id: string; readonly kind: 'user'; readonly text: string }
@@ -522,12 +529,122 @@ function NetworkTopologyIcon({ strokeWidth = 1.5, ...props }: NetworkTopologyIco
   );
 }
 
+function StarterCard({
+  starter,
+  index,
+  onSelect,
+}: {
+  readonly starter: (typeof STARTERS)[number];
+  readonly index: number;
+  readonly onSelect: (prompt: string, label: string) => void;
+}): React.JSX.Element {
+  const { t } = useT();
+  const cardRef = React.useRef<HTMLButtonElement | null>(null);
+  useTactileTilt(cardRef, { maxDeg: TILT_TOKENS.maxDegCard });
+  const Icon = starter.icon;
+  const label = t(starter.labelKey);
+
+  return (
+    // `.agent-rise` fills `transform: translateY(0)` forwards, which outranks inline tilt
+    // transforms in the CSS cascade; keeping entrance on the wrapper lets tilt own the button.
+    <div className="agent-rise" style={{ animationDelay: `${120 + index * 60}ms` }}>
+      <button
+        ref={cardRef}
+        type="button"
+        data-tactile=""
+        data-spotlight="true"
+        onClick={() => onSelect(starter.prompt, label)}
+        className={cn(
+          'cal-tactile group relative flex w-full cursor-pointer touch-manipulation items-center gap-3 rounded-2xl border border-hairline bg-surface p-3.5 text-left shadow-card sm:p-4',
+          'transition-[transform,scale,background-color] duration-[200ms] ease-[var(--ease-out)]',
+          'active:scale-[0.985] motion-reduce:active:scale-100',
+          'focus-visible:shadow-focus-ring focus-visible:outline-none',
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-hairline-strong opacity-0 transition-opacity duration-[160ms] ease-[var(--ease-out)] [@media(hover:hover)]:group-hover:opacity-100 group-focus-visible:opacity-100"
+        />
+        <span className="agent-accent-soft flex size-9 shrink-0 items-center justify-center rounded-xl">
+          <Icon className="size-4" strokeWidth={1.7} aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block type-callout text-text-primary">{label}</span>
+          <span className="mt-0.5 block type-caption text-text-tertiary">{t(starter.hintKey)}</span>
+        </span>
+        <ArrowRight
+          aria-hidden="true"
+          className="size-4 shrink-0 text-text-tertiary opacity-45 transition-[transform,translate,opacity] duration-[200ms] ease-[var(--ease-out)] [@media(hover:hover)]:motion-safe:group-hover:translate-x-0.5 [@media(hover:hover)]:group-hover:opacity-100"
+          strokeWidth={1.7}
+        />
+      </button>
+    </div>
+  );
+}
+
+function FactRowButton({
+  factId,
+  summary,
+  dieCount,
+  active,
+  onSelect,
+}: {
+  readonly factId: string;
+  readonly summary: string;
+  readonly dieCount: string;
+  readonly active: boolean;
+  readonly onSelect: () => void;
+}): React.JSX.Element {
+  const rowRef = React.useRef<HTMLButtonElement | null>(null);
+  useTactileTilt(rowRef, { maxDeg: 2, liftPx: 3 });
+
+  return (
+    <button
+      ref={rowRef}
+      type="button"
+      data-tactile=""
+      data-spotlight="true"
+      onClick={onSelect}
+      aria-pressed={active}
+      className={cn(
+        'cal-tactile relative flex w-full cursor-pointer touch-manipulation items-start gap-2 rounded-control px-2.5 py-2 text-left',
+        'transition-[background-color,scale,transform] duration-[120ms] ease-[var(--ease-out)]',
+        '[@media(hover:hover)]:hover:bg-fill-1',
+        'active:scale-[0.985] motion-reduce:active:scale-100',
+        'focus-visible:shadow-focus-ring focus-visible:outline-none',
+        active && 'bg-fill-2',
+      )}
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block font-mono text-[11px] text-text-tertiary">
+          {factId.replace('fact:', '')}
+        </span>
+        <span className="mt-0.5 line-clamp-2 block type-subhead text-text-secondary">
+          {summary}
+        </span>
+      </span>
+      <span className="mt-0.5 shrink-0 type-caption tabular-nums text-text-tertiary">
+        {dieCount}
+      </span>
+    </button>
+  );
+}
+
 export function AgentConsole() {
-  const { locale, t, formatInteger } = useT();
+  const { locale, t, formatInteger, formatDuration } = useT();
   const reducedMotion = useReducedMotionPreference();
   const [payload, setPayload] = React.useState<AutopsyWorkerLoadedPayload | null>(null);
   const payloadRef = React.useRef<AutopsyWorkerLoadedPayload | null>(null);
   const workerRef = React.useRef<AutopsyWorkerClient | null>(null);
+
+  const consoleRef = React.useRef<HTMLDivElement>(null);
+  const loadLock = React.useRef(false);
+  const [loadingPresetId, setLoadingPresetId] = React.useState<DemoPresetId | null>(null);
+  const [lotError, setLotError] = React.useState<{ presetId: DemoPresetId; message: string } | null>(null);
+  const [fileLoading, setFileLoading] = React.useState(false);
+  const [progress, setProgress] = React.useState<WorkerParseProgress | null>(null);
+  const [fileError, setFileError] = React.useState<string | null>(null);
+  const loading = fileLoading || loadingPresetId !== null;
 
   const [transcript, setTranscript] = React.useState<TranscriptItem[]>([]);
   const [draft, setDraft] = React.useState('');
@@ -574,37 +691,99 @@ export function AgentConsole() {
   const translator = React.useRef(t);
   React.useEffect(() => { translator.current = t; }, [t]);
 
+  const getClient = React.useCallback(() => {
+    workerRef.current ??= createAutopsyWorkerClient();
+    return workerRef.current;
+  }, []);
+
+  const installLot = React.useCallback((loaded: AutopsyWorkerLoadedPayload) => {
+    payloadRef.current = loaded;
+    setPayload(loaded);
+    setHighlight({ ids: new Set<string>() });
+    setWaferIndex(0);
+    setLotError(null);
+    setFileError(null);
+  }, []);
+
+  const loadDemoLot = React.useCallback(async (presetId: DemoPresetId) => {
+    const response = await getClient().loadDemoLot(presetId);
+    if (response.kind !== 'ok') {
+      throw new Error(response.kind === 'error'
+        ? translator.current('agents.wafer.parserError', { message: response.error.message, code: response.error.code })
+        : translator.current('agents.wafer.loadError'));
+    }
+    installLot(response);
+    return response;
+  }, [getClient, installLot]);
+
   const bridge = React.useMemo<LabBridge>(
     () => ({
       getPayload: () => payloadRef.current,
-      loadDemoLot: async (presetId: DemoPresetId) => {
-        const client = workerRef.current ?? createAutopsyWorkerClient();
-        workerRef.current = client;
-        const response = await client.loadDemoLot(presetId);
-        if (response.kind !== 'ok') {
-          throw new Error(
-            response.kind === 'error'
-              ? translator.current('agents.wafer.parserError', { message: response.error.message, code: response.error.code })
-              : translator.current('agents.wafer.loadError'),
-          );
-        }
-        payloadRef.current = response;
-        setPayload(response);
-        setHighlight({ ids: new Set<string>() });
-        setWaferIndex(0);
-      },
+      loadDemoLot: async presetId => { await loadDemoLot(presetId); },
       highlight: (dieIds, label, factId) => {
         setHighlight({ ids: new Set(dieIds), label, factId });
         setWaferIndex(0);
       },
       clearHighlight: () => setHighlight({ ids: new Set<string>() }),
     }),
-    [],
+    [loadDemoLot],
   );
 
   const append = React.useCallback((item: TranscriptItem) => {
     setTranscript((current) => [...current, item]);
   }, []);
+
+  const announceLot = React.useCallback((loaded: AutopsyWorkerLoadedPayload) => {
+    setTranscript([{ id: nextId('n'), kind: 'notice', text: t('toast.loaded', {
+      wafers: formatInteger(loaded.lot.wafers.length), duration: formatDuration(loaded.elapsedMs / 1000),
+    }) }]);
+    setExpandedTools(new Set());
+    setExpandedTrails(new Set());
+  }, [t, formatInteger, formatDuration]);
+
+  async function loadPreset(presetId: DemoPresetId) {
+    if (running || loadLock.current) return;
+    loadLock.current = true;
+    setLoadingPresetId(presetId);
+    setLotError(null);
+    try {
+      announceLot(await loadDemoLot(presetId));
+    } catch (error) {
+      setLotError({ presetId, message: t('agents.lot.loadError', {
+        message: error instanceof Error ? error.message : String(error),
+      }) });
+    } finally {
+      loadLock.current = false;
+      setLoadingPresetId(null);
+    }
+  }
+
+  const loadUserFile = React.useCallback(async (file: File) => {
+    if (running || loadLock.current) return;
+    loadLock.current = true;
+    setFileError(null);
+    setProgress(null);
+    setFileLoading(true);
+    try {
+      if (!/\.(?:stdf|std|gz)$/i.test(file.name)) throw new Error(t('agents.upload.invalidType'));
+      const client = getClient();
+      const response = await client.loadFile(file, { onProgress: setProgress });
+      if (response.kind === 'large-file-prompt') {
+        await client.cancelLargeFile();
+        throw new Error(t('agents.upload.largePrompt', { name: file.name }));
+      }
+      if (response.kind === 'error') throw new Error(response.error.message);
+      installLot(response);
+      announceLot(response);
+    } catch (error) {
+      const message = t('agents.upload.error', { message: error instanceof Error ? error.message : String(error) });
+      setFileError(message);
+      append({ id: nextId('err'), kind: 'error', code: 'file_load_failed', message });
+    } finally {
+      loadLock.current = false;
+      setFileLoading(false);
+    }
+  }, [running, t, getClient, installLot, announceLot, append]);
 
   const pushEvent = React.useCallback((event: TraceEvent) => {
     setTrace((current) => [...current.slice(-199), { id: nextId('trace'), event }]);
@@ -737,7 +916,7 @@ export function AgentConsole() {
   const send = async (text: string, displayedText?: string) => {
     const trimmed = text.trim();
     const runtime = runtimeRef.current;
-    if (!trimmed || running || !runtime) return;
+    if (!trimmed || running || loadLock.current || !runtime) return;
     setDraft('');
     append({ id: nextId('user'), kind: 'user', text: displayedText ?? trimmed });
     setRunning(true);
@@ -861,6 +1040,16 @@ export function AgentConsole() {
   }, [railTab, activeLotId]);
 
   const hasConversation = transcript.length > 0 || running || consentRequest !== null;
+  const switcherProps = {
+    activePresetId: payload?.source.kind === 'demo' ? payload.source.preset.id : null,
+    activeLotLabel: activeLotId, loadingPresetId, error: lotError, disabled: running || loading,
+    onSelectPreset: loadPreset,
+  };
+  const uploadProps = {
+    consoleRef, loading: fileLoading, progress, error: fileError, disabled: running || loading,
+    onSelectFile: loadUserFile, onClearError: () => setFileError(null),
+  };
+  const latestAssistant = transcript.slice().reverse().find(item => item.kind === 'assistant');
   const citedIds = React.useMemo(
     () => new Set<string>(highlight.factId ? [highlight.factId] : []),
     [highlight.factId],
@@ -921,9 +1110,9 @@ export function AgentConsole() {
           />
           <button
             type="submit"
-            disabled={running || draft.trim() === ''}
+            disabled={running || loading || draft.trim() === ''}
             aria-label={t('agents.composerSend')}
-            data-ready={!running && draft.trim() !== '' ? 'true' : undefined}
+            data-ready={!running && !loading && draft.trim() !== '' ? 'true' : undefined}
             className={cn(
               'mb-0.5 inline-flex size-9 shrink-0 touch-manipulation items-center justify-center rounded-full pointer-coarse:size-11',
               'transition-[background-color,color,opacity,scale,transform] duration-[160ms] ease-[var(--ease-out)]',
@@ -954,7 +1143,7 @@ export function AgentConsole() {
   );
 
   return (
-    <div className="flex min-h-dvh flex-col bg-bg text-text-primary">
+    <div ref={consoleRef} className="flex min-h-dvh flex-col bg-bg text-text-primary">
       <header
         data-testid="agent-console-header"
         className="sticky top-0 z-[var(--z-nav)] w-full bg-material max-lg:bg-bg [backdrop-filter:var(--material-filter)] [-webkit-backdrop-filter:var(--material-filter)]"
@@ -974,17 +1163,11 @@ export function AgentConsole() {
             <h1 className="truncate type-control text-text-primary">{t('agents.title')}</h1>
           </div>
 
-          <div className="hidden min-w-0 items-center justify-self-center lg:flex">
-            {payload ? (
-              <span className="inline-flex h-8 max-w-[min(420px,40vw)] items-center gap-2 rounded-pill bg-fill-2 px-3.5 type-control text-text-primary">
-                <span className="font-mono-id truncate">{payload.lot.lotId}</span>
-                <span className="truncate type-caption text-text-secondary">
-                  {t('agents.wafers', { count: formatInteger(payload.lot.wafers.length) })}
-                </span>
-              </span>
-            ) : (
-              <span className="type-subhead text-text-tertiary">{t('agents.noLot')}</span>
-            )}
+          <div className="hidden min-w-0 items-center justify-self-center gap-2 lg:flex">
+            <LotSwitcher variant="header" {...switcherProps} />
+            {payload && <span className="type-caption text-text-secondary">
+              {t('agents.wafers', { count: formatInteger(payload.lot.wafers.length) })}
+            </span>}
           </div>
 
           <div className="flex shrink-0 flex-nowrap items-center justify-self-end">
@@ -1050,41 +1233,20 @@ export function AgentConsole() {
                     {t('agents.empty.subline')}
                   </p>
 
+                  <div className="mt-5 grid gap-2">
+                    <LotSwitcher variant="empty" {...switcherProps} />
+                    {!hasConversation && <StdfDropZone variant="inline" {...uploadProps} />}
+                  </div>
+
                   <div className="mt-7 grid grid-cols-1 gap-2.5 sm:gap-3">
-                    {STARTERS.map((starter, index) => {
-                      const Icon = starter.icon;
-                      return (
-                        <button
-                          key={starter.prompt}
-                          type="button"
-                          onClick={() => void send(starter.prompt, t(starter.labelKey))}
-                          style={{ animationDelay: `${120 + index * 60}ms` }}
-                          className={cn(
-                            'agent-rise group relative flex w-full cursor-pointer touch-manipulation items-center gap-3 rounded-2xl border border-hairline bg-surface p-3.5 text-left shadow-card sm:p-4',
-                            'transition-[transform,translate,scale,background-color] duration-[200ms] ease-[var(--ease-out)]',
-                            '[@media(hover:hover)]:motion-safe:hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100',
-                            'focus-visible:shadow-focus-ring focus-visible:outline-none',
-                          )}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-hairline-strong opacity-0 transition-opacity duration-[160ms] ease-[var(--ease-out)] [@media(hover:hover)]:group-hover:opacity-100 group-focus-visible:opacity-100"
-                          />
-                          <span className="agent-accent-soft flex size-9 shrink-0 items-center justify-center rounded-xl">
-                            <Icon className="size-4" strokeWidth={1.7} aria-hidden="true" />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block type-callout text-text-primary">{t(starter.labelKey)}</span>
-                            <span className="mt-0.5 block type-caption text-text-tertiary">{t(starter.hintKey)}</span>
-                          </span>
-                          <ArrowRight
-                            aria-hidden="true"
-                            className="size-4 shrink-0 text-text-tertiary opacity-45 transition-[transform,translate,opacity] duration-[200ms] ease-[var(--ease-out)] [@media(hover:hover)]:motion-safe:group-hover:translate-x-0.5 [@media(hover:hover)]:group-hover:opacity-100"
-                            strokeWidth={1.7}
-                          />
-                        </button>
-                      );
-                    })}
+                    {STARTERS.map((starter, index) => (
+                      <StarterCard
+                        key={starter.prompt}
+                        starter={starter}
+                        index={index}
+                        onSelect={(prompt, label) => void send(prompt, label)}
+                      />
+                    ))}
                   </div>
 
                   <p
@@ -1395,8 +1557,12 @@ export function AgentConsole() {
           className="flex flex-col border-t border-hairline lg:min-h-0 lg:overflow-hidden lg:border-t-0 lg:border-l"
         >
           <div className="px-5 pt-5 pb-4">
-            <div className="flex items-baseline justify-between gap-3">
+            <div className="mb-2 lg:hidden"><LotSwitcher variant="header" {...switcherProps} /></div>
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="type-headline text-text-primary">{t('agents.rail.evidence')}</h2>
+              <ExportBriefButton payload={payload} latestAssistantText={latestAssistant?.text ?? null}
+                highlightedFactId={highlight.factId} disabled={loading} />
+              {hasConversation && <StdfDropZone variant="compact" {...uploadProps} />}
               {citedCount > 0 ? (
                 <button
                   type="button"
@@ -1422,6 +1588,7 @@ export function AgentConsole() {
                 {running ? t('agents.agentWorking') : t('agents.rail.specialists', { count: formatInteger(roster.length), roles: roster.join(', ') })}
               </span>
             </p>
+            <LotKpiStrip payload={payload} loading={loading} />
             <div className="mt-3">
               <WaferStage
                 payload={payload}
@@ -1471,31 +1638,13 @@ export function AgentConsole() {
                               : { duration: 0 }
                           }
                         >
-                          <button
-                            type="button"
-                            onClick={() => highlightFact(fact.factId)}
-                            aria-pressed={highlight.factId === fact.factId}
-                            className={cn(
-                              'flex w-full cursor-pointer touch-manipulation items-start gap-2 rounded-control px-2.5 py-2 text-left',
-                              'transition-[background-color,scale,transform] duration-[120ms] ease-[var(--ease-out)]',
-                              '[@media(hover:hover)]:hover:bg-fill-1',
-                              'active:scale-[0.985] motion-reduce:active:scale-100',
-                              'focus-visible:shadow-focus-ring focus-visible:outline-none',
-                              highlight.factId === fact.factId && 'bg-fill-2',
-                            )}
-                          >
-                            <span className="min-w-0 flex-1">
-                              <span className="block font-mono text-[11px] text-text-tertiary">
-                                {fact.factId.replace('fact:', '')}
-                              </span>
-                              <span className="mt-0.5 line-clamp-2 block type-subhead text-text-secondary">
-                                {fact.summary}
-                              </span>
-                            </span>
-                            <span className="mt-0.5 shrink-0 type-caption tabular-nums text-text-tertiary">
-                              {formatInteger(fact.dieIndices.length)}
-                            </span>
-                          </button>
+                          <FactRowButton
+                            factId={fact.factId}
+                            summary={fact.summary}
+                            dieCount={formatInteger(fact.dieIndices.length)}
+                            active={highlight.factId === fact.factId}
+                            onSelect={() => highlightFact(fact.factId)}
+                          />
                         </motion.li>
                       );
                     })}

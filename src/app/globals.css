@@ -1412,3 +1412,50 @@
     animation: none;
   }
 }
+
+/* Tactile material. These colours describe specular light on the existing surface. */
+:root,
+:root[data-theme="dark"] {
+  --tactile-specular-core: rgb(255 246 236 / 0.09);
+  --tactile-specular-mid: rgb(255 246 236 / 0.03);
+  --tactile-spotlight-size: 160px;
+  --tactile-rim: rgb(255 255 255 / 0.06);
+}
+
+:root[data-theme="light"] {
+  --tactile-specular-core: rgb(255 250 240 / 0.95);
+  --tactile-specular-mid: rgb(255 248 236 / 0.42);
+  --tactile-spotlight-size: 220px;
+}
+
+.cal-tactile {
+  transform-style: preserve-3d;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cal-tactile { will-change: transform; }
+}
+
+.cal-tactile[data-tactile][data-tilt="active"]:active { scale: var(--press-scale-card); }
+
+.cal-tactile[data-spotlight="true"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(var(--tactile-spotlight-size) circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%), var(--tactile-specular-core) 0%, var(--tactile-specular-mid) 45%, transparent 72%);
+  mix-blend-mode: soft-light;
+  box-shadow: inset 0 1px 0 var(--tactile-rim);
+  opacity: 0;
+  transition: opacity var(--dur-3) var(--ease-out);
+}
+
+.cal-tactile[data-spotlight="true"][data-tilt="active"]::after { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
+  .cal-tactile { transition: none; will-change: auto; }
+  .cal-tactile[data-tilt="active"] { transform: none !important; }
+  .cal-tactile[data-tactile][data-tilt="active"]:active { scale: none; }
+  .cal-tactile[data-spotlight="true"]::after { content: none; transition: none; }
+}

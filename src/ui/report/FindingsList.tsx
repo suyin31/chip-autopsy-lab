@@ -18,6 +18,7 @@ import type {
 } from '@/core/report';
 import type { GlossaryTermId } from '@/core/i18n';
 import { GlossaryText, useT } from '@/ui/i18n';
+import { useTactileTilt } from '@/ui/motion';
 import { cn } from '@/ui/primitives/cn';
 import {
   DISCLOSURE_SCOPE_ATTR,
@@ -189,6 +190,30 @@ function CausesPanel({
     >
       {children}
     </motion.div>
+  );
+}
+
+interface FindingRowButtonProps extends React.ComponentPropsWithoutRef<'button'> {
+  readonly 'data-testid'?: string;
+  readonly 'data-claim-id'?: string;
+  readonly disabled?: boolean;
+}
+
+/** Clickable finding row with compact tactile tilt and specular highlight. */
+function FindingRowButton({
+  className,
+  disabled,
+  ...props
+}: FindingRowButtonProps): React.JSX.Element {
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  useTactileTilt(buttonRef, { maxDeg: 2, liftPx: 3, disabled });
+  return (
+    <button
+      {...props}
+      ref={buttonRef}
+      data-spotlight="true"
+      className={cn('cal-tactile relative', className)}
+    />
   );
 }
 
@@ -421,10 +446,11 @@ export function FindingsList({
                           : 'bg-transparent duration-120 hover:bg-fill-1',
                     )}
                   >
-                    <button
+                    <FindingRowButton
                       type="button"
                       data-testid="autopsy-body-claim-button"
                       data-claim-id={row.claimId}
+                      disabled={isSelected}
                       aria-expanded={isSelected}
                       aria-pressed={isSelected}
                       aria-controls={isSelected ? detailId : undefined}
@@ -501,7 +527,7 @@ export function FindingsList({
                           )}
                         />
                       </span>
-                    </button>
+                    </FindingRowButton>
 
                     <AnimatePresence
                       initial={false}

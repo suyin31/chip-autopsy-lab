@@ -72,3 +72,5 @@ export {
 } from './hooks';
 
 export { ScrollReveal, useScrollReveal, type ScrollRevealOptions, type ScrollRevealProps } from './scroll-reveal';
+export * from './tilt';
+export { useTactileTilt, type TactileTiltOptions } from './use-tactile-tilt';

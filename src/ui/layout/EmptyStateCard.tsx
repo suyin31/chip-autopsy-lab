@@ -4,7 +4,11 @@ import { Download } from 'lucide-react';
 import {
   animate,
   type AnimationPlaybackControls,
+  type MotionValue,
   motion,
+  useMotionValue,
+  useScroll,
+  useTransform,
 } from 'motion/react';
 import * as React from 'react';
 import {
@@ -24,8 +28,10 @@ import {
   markSessionRevealSeen,
   resolvePressScale,
   resolveViewMorphTransition,
+  TILT_TOKENS,
   useReducedMotionPreference,
   useScrollReveal,
+  useTactileTilt,
   WAFER_MORPH_LAYOUT_ID,
 } from '@/ui/motion';
 import {
@@ -148,6 +154,46 @@ function useViewportSize(
   );
 }
 
+const HERO_SCROLL_DEPTH_MEDIA_QUERY =
+  '(min-width: 1024px) and (hover: hover) and (pointer: fine)';
+
+function subscribeHeroScrollDepthMedia(onChange: () => void): () => void {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return () => {};
+  }
+  const mql = window.matchMedia(HERO_SCROLL_DEPTH_MEDIA_QUERY);
+  mql.addEventListener('change', onChange);
+  return () => mql.removeEventListener('change', onChange);
+}
+
+function getHeroScrollDepthMediaSnapshot(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false;
+  }
+  return window.matchMedia(HERO_SCROLL_DEPTH_MEDIA_QUERY).matches;
+}
+
+/** True only on desktop (>= 1024 px) with a fine hover pointer and motion enabled. */
+function useHeroScrollDepthEnabled(reduced: boolean): boolean {
+  const mediaMatches = React.useSyncExternalStore(
+    subscribeHeroScrollDepthMedia,
+    getHeroScrollDepthMediaSnapshot,
+    () => false,
+  );
+  return !reduced && mediaMatches;
+}
+
+function clampUnitProgress(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(1, Math.max(0, value));
+}
+
+function roundTransformScalar(value: number, factor = 1000): number {
+  return Math.round(value * factor) / factor || 0;
+}
+
 function subscribeNever(): () => void {
   return () => {};
 }
@@ -242,6 +288,8 @@ interface LandingWaferDiscProps {
   readonly hero?: boolean;
   /** Enables the shared-element wafer morph (`WAFER_MORPH_LAYOUT_ID`) on the active demo card. */
   readonly enableSharedMorph?: boolean;
+  /** Disables hero wafer pointer tilt (e.g. while the hero action is disabled). */
+  readonly tiltDisabled?: boolean;
   readonly renderWorkerThumbnail?: (
     presetId: DemoPresetId,
     cssSize: number,
@@ -257,6 +305,7 @@ function LandingWaferDisc({
   testId,
   hero = false,
   enableSharedMorph = false,
+  tiltDisabled = false,
   renderWorkerThumbnail,
 }: LandingWaferDiscProps): React.JSX.Element {
   const reduced = useReducedMotionPreference();
@@ -265,6 +314,12 @@ function LandingWaferDisc({
   const sheenRef = React.useRef<HTMLDivElement | null>(null);
   const sheenEllipseRef = React.useRef<HTMLDivElement | null>(null);
   useLandingSheenFollow(frameRef, sheenRef, sheenEllipseRef);
+  useTactileTilt(frameRef, {
+    maxDeg: TILT_TOKENS.maxDegWafer,
+    liftPx: 0,
+    enabled: hero,
+    disabled: reduced || enableSharedMorph || tiltDisabled,
+  });
   const preview = React.useMemo(
     () => getDemoPresetPreview(presetId),
     [presetId],
@@ -364,7 +419,7 @@ function LandingWaferDisc({
       ref={frameRef}
       data-testid={testId('frame')}
       style={{ width: `${size}px`, height: `${size}px` }}
-      className="relative shrink-0"
+      className={cn('relative shrink-0', hero && 'cal-tactile')}
     >
       {enableSharedMorph ? (
         <motion.div
@@ -485,6 +540,7 @@ function DemoLotCardButton({
   const reduced = useReducedMotionPreference();
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
   const pressedRef = React.useRef(false);
+  const [pressed, setPressed] = React.useState(false);
   const wasArmedHiddenRef = React.useRef(false);
   const revealControlsRef = React.useRef<AnimationPlaybackControls | null>(null);
   const descId = React.useId();
@@ -504,6 +560,11 @@ function DemoLotCardButton({
     offsetY: LANDING_CARD_REVEAL_OFFSET_Y_PX,
     delayMs: staggerDelayMs,
     disabled: reduced || revealDisabled,
+  });
+
+  useTactileTilt(buttonRef, {
+    maxDeg: TILT_TOKENS.maxDegCard,
+    disabled: disabled || !revealed || pressed,
   });
 
   const setButtonRef = React.useCallback(
@@ -601,6 +662,7 @@ function DemoLotCardButton({
       return;
     }
     pressedRef.current = false;
+    setPressed(false);
     const el = buttonRef.current;
     if (el && !reduced) {
       animate(el, { scale: 1 }, SPRING_TOKENS.snappy);
@@ -624,6 +686,7 @@ function DemoLotCardButton({
       clearRevealInlineStyles(el, false);
     }
     pressedRef.current = true;
+    setPressed(true);
     animate(
       el,
       { scale: resolvePressScale('card', reduced) },
@@ -638,6 +701,7 @@ function DemoLotCardButton({
       disabled={disabled}
       aria-disabled={disabled ? 'true' : undefined}
       data-testid={`demo-card-${presetId}`}
+      data-spotlight="true"
       aria-label={t('demo.openAria', { title })}
       aria-describedby={descId}
       onPointerDown={handlePointerDown}
@@ -649,7 +713,7 @@ function DemoLotCardButton({
       className={cn(
         // premium §11.2 sample card: a `fill-1` tile holding only the disc, with the text below
         // it on the page bg; mobile 300 px carousel item, sm full-width stack, 3-up from 1024
-        'group relative flex w-[300px] shrink-0 snap-start cursor-pointer flex-col text-left select-none sm:w-full',
+        'cal-tactile group relative flex w-[300px] shrink-0 snap-start cursor-pointer flex-col text-left select-none sm:w-full',
         // §8.9 hover lift -2 px (the tile cross-fades its `shadow-card`)
         'transition-[translate] duration-[160ms] ease-[var(--ease-out)] [@media(hover:hover)]:enabled:hover:duration-[240ms]',
         '[@media(hover:hover)]:motion-safe:enabled:hover:-translate-y-0.5',
@@ -716,8 +780,41 @@ const RETICLE_LABEL_SLOT_Y = 24;
 const RETICLE_LABEL_SLOT_X = 40;
 const RETICLE_LABEL_GAP = 8;
 
+interface HeroScrollDepthConnectorProps {
+  readonly targetRef: React.RefObject<HTMLDivElement | null>;
+  readonly progress: MotionValue<number>;
+}
+
+/**
+ * Mounted only when hero scroll depth is gated on (desktop >= 1024 px, fine hover pointer,
+ * motion allowed), so `useScroll` attaches zero scroll listeners whenever gated off.
+ */
+function HeroScrollDepthConnector({
+  targetRef,
+  progress,
+}: HeroScrollDepthConnectorProps): null {
+  const { scrollYProgress } = useScroll({
+    target: targetRef,
+    offset: ['start start', 'end start'],
+  });
+
+  React.useLayoutEffect(() => {
+    progress.set(clampUnitProgress(scrollYProgress.get()));
+    const unsubscribe = scrollYProgress.on('change', (latest) => {
+      progress.set(clampUnitProgress(latest));
+    });
+    return () => {
+      unsubscribe();
+      progress.set(0);
+    };
+  }, [scrollYProgress, progress]);
+
+  return null;
+}
+
 interface LandingHeroProps {
   readonly disabled: boolean;
+  readonly heroSectionRef: React.RefObject<HTMLDivElement | null>;
   readonly onOpenSample: () => void;
 }
 
@@ -732,12 +829,49 @@ const FACT_PERCENT_SLOT = '\u0000';
  */
 function LandingHero({
   disabled,
+  heroSectionRef,
   onOpenSample,
 }: LandingHeroProps): React.JSX.Element {
   const { t, formatPercent } = useT();
   const reduced = useReducedMotionPreference();
+  const scrollDepthEnabled = useHeroScrollDepthEnabled(reduced);
   const heroWaferRef = React.useRef<HTMLButtonElement | null>(null);
+  const exampleCardRef = React.useRef<HTMLDivElement | null>(null);
   const heroPressedRef = React.useRef(false);
+  const scrollProgress = useMotionValue(0);
+  const waferPressScale = useMotionValue(1);
+  const waferRotateX = useTransform(scrollProgress, [0, 1], [0, 6], {
+    clamp: true,
+  });
+  const waferTranslateY = useTransform(scrollProgress, [0, 1], [0, 18], {
+    clamp: true,
+  });
+  const waferTranslateZ = useTransform(scrollProgress, [0, 1], [0, -28], {
+    clamp: true,
+  });
+  const waferTransform = useTransform(
+    [waferRotateX, waferTranslateY, waferTranslateZ, waferPressScale],
+    ([rx, ty, tz, sc]: number[]) => {
+      const r = roundTransformScalar(rx ?? 0);
+      const y = roundTransformScalar(ty ?? 0);
+      const z = roundTransformScalar(tz ?? 0);
+      const s = roundTransformScalar(sc ?? 1, 10000);
+      const depth = `rotateX(${r}deg) translateY(${y}px) translateZ(${z}px)`;
+      return s === 1 ? depth : `${depth} scale(${s})`;
+    },
+  );
+  const cardTranslateY = useTransform(scrollProgress, [0, 1], [0, -10], {
+    clamp: true,
+  });
+  const cardTranslate = useTransform(cardTranslateY, (ty) => {
+    const y = roundTransformScalar(ty);
+    return y === 0 ? 'none' : `0px ${y}px`;
+  });
+
+  useTactileTilt(exampleCardRef, {
+    maxDeg: TILT_TOKENS.maxDegCard,
+  });
+
   const size = useViewportSize(
     resolveLandingHeroWaferSize,
     LANDING_HERO_WAFER_SIZE_DEFAULT,
@@ -767,11 +901,18 @@ function LandingHero({
       return;
     }
     heroPressedRef.current = false;
+    if (reduced) {
+      return;
+    }
+    if (scrollDepthEnabled) {
+      animate(waferPressScale, 1, SPRING_TOKENS.snappy);
+      return;
+    }
     const el = heroWaferRef.current;
-    if (el && !reduced) {
+    if (el) {
       animate(el, { scale: 1 }, SPRING_TOKENS.snappy);
     }
-  }, [reduced]);
+  }, [reduced, scrollDepthEnabled, waferPressScale]);
 
   const handleHeroPointerDown = (
     event: React.PointerEvent<HTMLButtonElement>,
@@ -780,11 +921,13 @@ function LandingHero({
       return;
     }
     heroPressedRef.current = true;
-    animate(
-      heroWaferRef.current,
-      { scale: resolvePressScale('card', reduced) },
-      { duration: 0.08, ease: MOTION_TOKENS.easeOutTuple },
-    );
+    const pressScale = resolvePressScale('card', reduced);
+    const transition = { duration: 0.08, ease: MOTION_TOKENS.easeOutTuple };
+    if (scrollDepthEnabled) {
+      animate(waferPressScale, pressScale, transition);
+      return;
+    }
+    animate(heroWaferRef.current, { scale: pressScale }, transition);
   };
 
   return (
@@ -793,9 +936,21 @@ function LandingHero({
       // Before hydration the frame has the 1440 size; clip it so narrow screens never scroll sideways
       className={`mt-10 flex flex-col items-start gap-8 sm:mt-12 lg:mt-14 lg:flex-row lg:items-center lg:justify-center lg:gap-14${hydrated ? '' : ' overflow-x-clip'}`}
     >
+      {scrollDepthEnabled ? (
+        <HeroScrollDepthConnector
+          targetRef={heroSectionRef}
+          progress={scrollProgress}
+        />
+      ) : null}
       <div
         data-testid="landing-hero-frame"
-        style={{ width: `${frameW}px`, height: `${frameH}px` }}
+        style={{
+          width: `${frameW}px`,
+          height: `${frameH}px`,
+          ...(scrollDepthEnabled
+            ? { perspective: `${TILT_TOKENS.perspectivePx}px` }
+            : {}),
+        }}
         className="relative shrink-0"
       >
         <svg
@@ -851,7 +1006,7 @@ function LandingHero({
           );
         })}
 
-        <button
+        <motion.button
           ref={heroWaferRef}
           type="button"
           data-testid="landing-hero-wafer"
@@ -868,6 +1023,7 @@ function LandingHero({
             top: `${cy - reticleR}px`,
             width: `${reticleD}px`,
             height: `${reticleD}px`,
+            ...(scrollDepthEnabled ? { transform: waferTransform } : {}),
           }}
           className={cn(
             'absolute flex origin-center cursor-pointer touch-manipulation items-center justify-center rounded-full bg-transparent',
@@ -879,17 +1035,21 @@ function LandingHero({
             presetId="edge-ring-etch"
             size={size}
             hero
+            tiltDisabled={disabled}
             testId={(part) =>
               part ? `landing-hero-disc-${part}` : 'landing-hero-disc'
             }
           />
-        </button>
+        </motion.button>
       </div>
 
       {/* §11.1 result card: `surface`, `r-2xl`, `shadow-card`, padding 24, width 280 */}
-      <div
+      <motion.div
+        ref={exampleCardRef}
         data-testid="landing-example-card"
-        className="w-full max-w-[340px] shrink-0 rounded-2xl bg-surface p-6 text-left shadow-card sm:w-[280px] sm:max-w-none"
+        data-spotlight="true"
+        style={scrollDepthEnabled ? { translate: cardTranslate } : undefined}
+        className="cal-tactile relative w-full max-w-[340px] shrink-0 rounded-2xl bg-surface p-6 text-left shadow-card sm:w-[280px] sm:max-w-none"
       >
         {/* §12.4 eyebrow: 6 px ember dot, then a mono 12/16 uppercase note */}
         <p
@@ -933,7 +1093,7 @@ function LandingHero({
           {t('landing.example.action')}
           <span aria-hidden="true">→</span>
         </Button>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -964,6 +1124,7 @@ export function EmptyStateCard({
 }: EmptyStateCardProps): React.JSX.Element {
   const { locale, t } = useT();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const heroSectionRef = React.useRef<HTMLDivElement | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [cardsRevealInitiallySeen] = React.useState<boolean>(() =>
     hasSeenSessionReveal(LANDING_CARDS_SESSION_KEY),
@@ -1121,7 +1282,7 @@ export function EmptyStateCard({
         </div>
       ) : (
         /* premium §6.1 hero: headline top y = 140 (1440), 116 (1280), 104 (1024), 88 (390); centred from 1024, left-aligned below */
-        <div className="relative isolate flex flex-col">
+        <div ref={heroSectionRef} className="relative isolate flex flex-col">
           {cause === 'first-run' ? <LandingHeroAmbient /> : null}
           <div className="pt-10 text-left lg:mx-auto lg:max-w-[880px] lg:pt-[52px] lg:text-center xl:pt-16 min-[90rem]:pt-[88px]">
             <h1
@@ -1180,6 +1341,7 @@ export function EmptyStateCard({
           {cause === 'first-run' ? (
             <LandingHero
               disabled={disabled}
+              heroSectionRef={heroSectionRef}
               onOpenSample={() => onLoadDemoLot('edge-ring-etch')}
             />
           ) : null}

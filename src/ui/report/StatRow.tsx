@@ -6,6 +6,7 @@ import type { RenderedStatFact, RenderedStatFactTuple } from '@/core/report';
 import type { GlossaryTermId } from '@/core/i18n';
 import type { StatCaptionKey } from '@/core/report';
 import { GlossaryText, useT } from '@/ui/i18n';
+import { useTactileTilt } from '@/ui/motion';
 import { CountUpCompleteContext } from '@/ui/primitives/count-up';
 import { cn } from '@/ui/primitives/cn';
 import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
@@ -90,9 +91,12 @@ export function StatRow({
   const initialRevealRunningRef = React.useRef(false);
   const revealCompleted = React.useContext(CountUpCompleteContext);
   const rafRef = React.useRef<number | null>(null);
+  const rowRef = React.useRef<HTMLDListElement>(null);
   const itemRefs = React.useRef<Array<HTMLDivElement | null>>([null, null, null]);
   const pressedIdxRef = React.useRef<number | null>(null);
   const idPrefix = React.useId();
+
+  useTactileTilt(rowRef, { maxDeg: 2, liftPx: 3 });
 
   // Premium §7.5 / §3.12: cards and rows press to 0.985 (80 ms in, spring-snappy out); none under reduced motion
   const handlePressStart = (
@@ -284,8 +288,10 @@ export function StatRow({
 
   return (
     <dl
+      ref={rowRef}
       data-testid="verdict-stat-row"
-      className={cn('grid grid-cols-3 gap-3 md:gap-6', className)}
+      data-spotlight="true"
+      className={cn('cal-tactile relative grid grid-cols-3 gap-3 md:gap-6', className)}
     >
       {stats.map((stat, idx) => {
         const isSelected = activeClaimId === stat.evidence.claimId;

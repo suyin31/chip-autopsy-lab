@@ -80,3 +80,4 @@ export {
 } from './term';
 export { AnimatedCheckmark } from './checkmark';
 export { CopyButton } from './copy-button';
+export { TactileCard, type TactileCardProps } from './tactile-card';
