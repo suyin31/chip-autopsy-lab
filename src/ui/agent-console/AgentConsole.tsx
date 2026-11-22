@@ -25,7 +25,6 @@ import {
   ArrowUp,
   ChevronDown,
   Gauge,
-  Globe,
   Layers,
   Loader2,
   SlidersHorizontal,
@@ -490,6 +489,36 @@ function ToolPill({
         </div>
       ) : null}
     </div>
+  );
+}
+
+type NetworkTopologyIconProps = React.SVGProps<SVGSVGElement> & {
+  strokeWidth?: number | string;
+};
+
+/**
+ * Network topology glyph for the header "Network" trigger: one front node over two
+ * member nodes, at the same 16 px size and 1.5 px stroke as the neighbouring
+ * controls. It replaces a second globe that sat directly beside the language one.
+ */
+function NetworkTopologyIcon({ strokeWidth = 1.5, ...props }: NetworkTopologyIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <circle cx={12} cy={5.5} r={2.4} />
+      <circle cx={5.5} cy={18.5} r={2.2} />
+      <circle cx={18.5} cy={18.5} r={2.2} />
+      <path d="M12 7.9v4.1" />
+      <path d="M12 12H5.5v4.3" />
+      <path d="M12 12h6.5v4.3" />
+    </svg>
   );
 }
 
@@ -966,7 +995,7 @@ export function AgentConsole() {
               aria-label={t('agents.networkAria')}
               className="max-sm:w-8 max-sm:px-0"
             >
-              <Globe className="size-4" strokeWidth={1.6} aria-hidden="true" />
+              <NetworkTopologyIcon className="size-4" strokeWidth={1.5} aria-hidden="true" />
               <span className="max-sm:sr-only">{t('agents.network.label')}</span>
             </Button>
             <LanguageSwitcher includeAppearance />
