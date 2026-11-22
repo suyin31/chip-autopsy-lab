@@ -1,7 +1,11 @@
 'use client';
 
 import { Download } from 'lucide-react';
-import { animate, motion, useReducedMotion } from 'motion/react';
+import {
+  animate,
+  type AnimationPlaybackControls,
+  motion,
+} from 'motion/react';
 import * as React from 'react';
 import {
   DEMO_DIES_PER_WAFER,
@@ -15,9 +19,13 @@ import { type MessageKey } from '@/core/i18n';
 import type { ParseFatalError } from '@/core/stdf';
 import { Untranslated, useT } from '@/ui/i18n';
 import {
+  computeStaggerDelayMs,
+  hasSeenSessionReveal,
+  markSessionRevealSeen,
   resolvePressScale,
   resolveViewMorphTransition,
   useReducedMotionPreference,
+  useScrollReveal,
   WAFER_MORPH_LAYOUT_ID,
 } from '@/ui/motion';
 import {
@@ -58,6 +66,7 @@ import {
   resolveCanvasPixelSize,
 } from '@/ui/wafer-map/wafer-geometry';
 import { ErrorDetailsSheet } from './ErrorDetailsSheet';
+import { LandingHeroAmbient } from './LandingHeroAmbient';
 import {
   computeLandingReticleTickLines,
   LANDING_EXAMPLE_EDGE_SHARE,
@@ -434,10 +443,22 @@ function LandingWaferDisc({
   );
 }
 
+/** Session-once key for the landing sample-card stagger reveal. */
+const LANDING_CARDS_SESSION_KEY = 'cal.landing.cards.v1';
+/** Delay between adjacent landing sample cards (0 / 60 / 120 ms; 120 + 350 ms = 470 ms). */
+const LANDING_CARD_STAGGER_STEP_MS = 60;
+/** Hard cap on the stagger window so the full cascade settles within <= 470 ms on `SPRING_TOKENS.ui`. */
+const LANDING_CARD_STAGGER_MAX_WINDOW_MS = 120;
+/** Vertical rise offset for landing sample cards (`translateY(10px) -> 0`). */
+const LANDING_CARD_REVEAL_OFFSET_Y_PX = 10;
+
 interface DemoLotCardButtonProps {
   readonly presetId: DemoPresetId;
   readonly isSelected: boolean;
   readonly disabled: boolean;
+  readonly staggerIndex: number;
+  readonly staggerCount: number;
+  readonly revealDisabled: boolean;
   readonly onSelectPreset: (presetId: DemoPresetId) => void;
   readonly onLoadDemoLot: (presetId: DemoPresetId) => void;
   readonly renderWorkerThumbnail?: (
@@ -453,16 +474,114 @@ function DemoLotCardButton({
   presetId,
   isSelected,
   disabled,
+  staggerIndex,
+  staggerCount,
+  revealDisabled,
   onSelectPreset,
   onLoadDemoLot,
   renderWorkerThumbnail,
 }: DemoLotCardButtonProps): React.JSX.Element {
   const { t, formatInteger } = useT();
-  const shouldReduceMotion = useReducedMotion();
-  const reduced = Boolean(shouldReduceMotion);
+  const reduced = useReducedMotionPreference();
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
   const pressedRef = React.useRef(false);
+  const wasArmedHiddenRef = React.useRef(false);
+  const revealControlsRef = React.useRef<AnimationPlaybackControls | null>(null);
   const descId = React.useId();
+
+  const staggerWindowMs = Math.min(
+    Math.max(0, staggerCount - 1) * LANDING_CARD_STAGGER_STEP_MS,
+    LANDING_CARD_STAGGER_MAX_WINDOW_MS,
+  );
+  const staggerDelayMs = computeStaggerDelayMs(
+    staggerIndex,
+    staggerCount,
+    staggerWindowMs,
+    reduced,
+  );
+  const { ref: revealRef, revealed } = useScrollReveal({
+    replayKey: LANDING_CARDS_SESSION_KEY,
+    offsetY: LANDING_CARD_REVEAL_OFFSET_Y_PX,
+    delayMs: staggerDelayMs,
+    disabled: reduced || revealDisabled,
+  });
+
+  const setButtonRef = React.useCallback(
+    (node: HTMLButtonElement | null): void => {
+      buttonRef.current = node;
+      revealRef(node);
+    },
+    [revealRef],
+  );
+
+  const clearRevealInlineStyles = React.useCallback(
+    (el: HTMLButtonElement | null, preserveTransform: boolean): void => {
+      if (!el) {
+        return;
+      }
+      el.style.removeProperty('opacity');
+      if (!preserveTransform) {
+        el.style.removeProperty('transform');
+      }
+    },
+    [],
+  );
+
+  React.useLayoutEffect(() => {
+    const el = buttonRef.current;
+    if (!el) {
+      return;
+    }
+
+    if (reduced || revealDisabled) {
+      revealControlsRef.current?.stop();
+      revealControlsRef.current = null;
+      wasArmedHiddenRef.current = false;
+      clearRevealInlineStyles(el, pressedRef.current);
+      return;
+    }
+
+    if (!revealed) {
+      revealControlsRef.current?.stop();
+      revealControlsRef.current = null;
+      wasArmedHiddenRef.current = true;
+      el.style.opacity = '0';
+      el.style.transform = `translateY(${LANDING_CARD_REVEAL_OFFSET_Y_PX}px)`;
+      return;
+    }
+
+    if (!wasArmedHiddenRef.current) {
+      // Already visible on mount or skipped: never animate and keep inline styles clean.
+      return;
+    }
+
+    wasArmedHiddenRef.current = false;
+    markSessionRevealSeen(LANDING_CARDS_SESSION_KEY);
+
+    const controls = animate(
+      el,
+      { opacity: [0, 1], y: [LANDING_CARD_REVEAL_OFFSET_Y_PX, 0] },
+      {
+        ...SPRING_TOKENS.ui,
+        delay: staggerDelayMs / 1000,
+        onComplete: () => {
+          if (revealControlsRef.current === controls) {
+            revealControlsRef.current = null;
+          }
+          clearRevealInlineStyles(el, pressedRef.current);
+        },
+      },
+    );
+    revealControlsRef.current = controls;
+
+    return () => {
+      if (revealControlsRef.current === controls) {
+        controls.stop();
+        revealControlsRef.current = null;
+      }
+      clearRevealInlineStyles(el, pressedRef.current);
+    };
+  }, [revealed, reduced, revealDisabled, staggerDelayMs, clearRevealInlineStyles]);
 
   const size = useViewportSize(
     resolveLandingWaferSize,
@@ -495,12 +614,18 @@ function DemoLotCardButton({
       return;
     }
     onSelectPreset(presetId);
-    if (reduced || !buttonRef.current) {
+    const el = buttonRef.current;
+    if (reduced || !el) {
       return;
+    }
+    if (revealControlsRef.current) {
+      revealControlsRef.current.stop();
+      revealControlsRef.current = null;
+      clearRevealInlineStyles(el, false);
     }
     pressedRef.current = true;
     animate(
-      buttonRef.current,
+      el,
       { scale: resolvePressScale('card', reduced) },
       { duration: 0.08, ease: MOTION_TOKENS.easeOutTuple },
     );
@@ -508,7 +633,7 @@ function DemoLotCardButton({
 
   return (
     <button
-      ref={buttonRef}
+      ref={setButtonRef}
       type="button"
       disabled={disabled}
       aria-disabled={disabled ? 'true' : undefined}
@@ -519,6 +644,7 @@ function DemoLotCardButton({
       onPointerUp={releasePress}
       onPointerLeave={releasePress}
       onPointerCancel={releasePress}
+      onBlur={releasePress}
       onClick={() => onLoadDemoLot(presetId)}
       className={cn(
         // premium §11.2 sample card: a `fill-1` tile holding only the disc, with the text below
@@ -609,6 +735,9 @@ function LandingHero({
   onOpenSample,
 }: LandingHeroProps): React.JSX.Element {
   const { t, formatPercent } = useT();
+  const reduced = useReducedMotionPreference();
+  const heroWaferRef = React.useRef<HTMLButtonElement | null>(null);
+  const heroPressedRef = React.useRef(false);
   const size = useViewportSize(
     resolveLandingHeroWaferSize,
     LANDING_HERO_WAFER_SIZE_DEFAULT,
@@ -632,6 +761,31 @@ function LandingHero({
   const [factBefore = '', factAfter = ''] = t('landing.example.fact', {
     percent: FACT_PERCENT_SLOT,
   }).split(FACT_PERCENT_SLOT);
+
+  const releaseHeroPress = React.useCallback((): void => {
+    if (!heroPressedRef.current) {
+      return;
+    }
+    heroPressedRef.current = false;
+    const el = heroWaferRef.current;
+    if (el && !reduced) {
+      animate(el, { scale: 1 }, SPRING_TOKENS.snappy);
+    }
+  }, [reduced]);
+
+  const handleHeroPointerDown = (
+    event: React.PointerEvent<HTMLButtonElement>,
+  ): void => {
+    if (event.button !== 0 || disabled || reduced || !heroWaferRef.current) {
+      return;
+    }
+    heroPressedRef.current = true;
+    animate(
+      heroWaferRef.current,
+      { scale: resolvePressScale('card', reduced) },
+      { duration: 0.08, ease: MOTION_TOKENS.easeOutTuple },
+    );
+  };
 
   return (
     <div
@@ -698,10 +852,16 @@ function LandingHero({
         })}
 
         <button
+          ref={heroWaferRef}
           type="button"
           data-testid="landing-hero-wafer"
           aria-label={sampleLabel}
           disabled={disabled}
+          onPointerDown={handleHeroPointerDown}
+          onPointerUp={releaseHeroPress}
+          onPointerLeave={releaseHeroPress}
+          onPointerCancel={releaseHeroPress}
+          onBlur={releaseHeroPress}
           onClick={onOpenSample}
           style={{
             left: `${cx - reticleR}px`,
@@ -710,7 +870,7 @@ function LandingHero({
             height: `${reticleD}px`,
           }}
           className={cn(
-            'absolute flex cursor-pointer items-center justify-center rounded-full bg-transparent',
+            'absolute flex origin-center cursor-pointer touch-manipulation items-center justify-center rounded-full bg-transparent',
             'focus-visible:shadow-focus-ring focus-visible:outline-none',
             'disabled:cursor-not-allowed',
           )}
@@ -805,6 +965,9 @@ export function EmptyStateCard({
   const { locale, t } = useT();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [cardsRevealInitiallySeen] = React.useState<boolean>(() =>
+    hasSeenSessionReveal(LANDING_CARDS_SESSION_KEY),
+  );
   const sampleHeadingId = React.useId();
 
   const handleFileInputChange = (
@@ -958,67 +1121,70 @@ export function EmptyStateCard({
         </div>
       ) : (
         /* premium §6.1 hero: headline top y = 140 (1440), 116 (1280), 104 (1024), 88 (390); centred from 1024, left-aligned below */
-        <div className="pt-10 text-left lg:mx-auto lg:max-w-[880px] lg:pt-[52px] lg:text-center xl:pt-16 min-[90rem]:pt-[88px]">
-          <h1
-            data-testid="landing-headline"
-            className="landing-headline type-display-xl text-text-primary"
-          >
-            {renderAccentPhrase(
-              t('landing.headline'),
-              t('landing.headlineAccent'),
-              true,
-            )}
-          </h1>
-
-          <p
-            data-testid="landing-subline"
-            className="landing-subline mt-4 line-clamp-3 type-title-3 text-text-secondary lg:mx-auto min-[90rem]:mt-5"
-          >
-            {t('landing.subline')}
-          </p>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-center min-[90rem]:mt-8">
-            <Button
-              variant="primary"
-              size="lg"
-              data-testid="landing-open-sample-button"
-              onClick={() => onLoadDemoLot('edge-ring-etch')}
-              disabled={disabled}
-              className="w-full sm:w-auto"
+        <div className="relative isolate flex flex-col">
+          {cause === 'first-run' ? <LandingHeroAmbient /> : null}
+          <div className="pt-10 text-left lg:mx-auto lg:max-w-[880px] lg:pt-[52px] lg:text-center xl:pt-16 min-[90rem]:pt-[88px]">
+            <h1
+              data-testid="landing-headline"
+              className="landing-headline type-display-xl text-text-primary"
             >
-              {t('landing.primary')}
-            </Button>
+              {renderAccentPhrase(
+                t('landing.headline'),
+                t('landing.headlineAccent'),
+                true,
+              )}
+            </h1>
 
-            <Button
-              variant="secondary"
-              size="lg"
-              data-testid="landing-open-stdf-button"
-              aria-controls="cal-file-picker"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled}
-              className="h-11 w-full sm:h-12 sm:w-auto"
+            <p
+              data-testid="landing-subline"
+              className="landing-subline mt-4 line-clamp-3 type-title-3 text-text-secondary lg:mx-auto min-[90rem]:mt-5"
             >
-              {t('landing.secondary')}
-            </Button>
+              {t('landing.subline')}
+            </p>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-center min-[90rem]:mt-8">
+              <Button
+                variant="primary"
+                size="lg"
+                data-testid="landing-open-sample-button"
+                onClick={() => onLoadDemoLot('edge-ring-etch')}
+                disabled={disabled}
+                className="w-full sm:w-auto"
+              >
+                {t('landing.primary')}
+              </Button>
+
+              <Button
+                variant="secondary"
+                size="lg"
+                data-testid="landing-open-stdf-button"
+                aria-controls="cal-file-picker"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={disabled}
+                className="h-11 w-full sm:h-12 sm:w-auto"
+              >
+                {t('landing.secondary')}
+              </Button>
+            </div>
+
+            <p
+              data-testid="landing-hint"
+              className="mt-3 type-subhead text-text-tertiary"
+            >
+              <span className="sm:hidden">{t('landing.hintShort')}</span>
+              <span className="max-sm:hidden">{t('landing.hint')}</span>
+            </p>
           </div>
 
-          <p
-            data-testid="landing-hint"
-            className="mt-3 type-subhead text-text-tertiary"
-          >
-            <span className="sm:hidden">{t('landing.hintShort')}</span>
-            <span className="max-sm:hidden">{t('landing.hint')}</span>
-          </p>
+          {/* premium §11.1: hint line, 56 px, hero row, 72 px, "Sample lots" */}
+          {cause === 'first-run' ? (
+            <LandingHero
+              disabled={disabled}
+              onOpenSample={() => onLoadDemoLot('edge-ring-etch')}
+            />
+          ) : null}
         </div>
       )}
-
-      {/* premium §11.1: hint line, 56 px, hero row, 72 px, "Sample lots" */}
-      {cause === 'first-run' ? (
-        <LandingHero
-          disabled={disabled}
-          onOpenSample={() => onLoadDemoLot('edge-ring-etch')}
-        />
-      ) : null}
 
       {/* premium §6.1 sample cards: mobile scroll-snap carousel (46 px peek), sm stacked rows, 3-up grid from 1024 */}
       {cause !== 'no-results' ? (
@@ -1052,12 +1218,15 @@ export function EmptyStateCard({
                 'lg:grid lg:grid-cols-3 lg:gap-6',
               )}
             >
-              {presets.map((preset) => (
+              {presets.map((preset, index) => (
                 <DemoLotCardButton
                   key={preset.id}
                   presetId={preset.id}
                   isSelected={preset.id === selectedPresetId}
                   disabled={disabled}
+                  staggerIndex={index}
+                  staggerCount={presets.length}
+                  revealDisabled={cardsRevealInitiallySeen}
                   onSelectPreset={onSelectPreset}
                   onLoadDemoLot={onLoadDemoLot}
                   {...(renderWorkerThumbnail !== undefined

@@ -103,7 +103,7 @@ export function t<K extends MessageKey>(
   ...args: TArgs<K>
 ): string {
   const dict = getDictionary(locale);
-  const template = dict[key];
+  const template = dict[key] ?? en[key];
   const params = args[0] as
     | Readonly<Record<string, string | number>>
     | undefined;

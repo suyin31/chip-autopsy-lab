@@ -78,3 +78,5 @@ export {
   type TermProps,
   type TermRect,
 } from './term';
+export { AnimatedCheckmark } from './checkmark';
+export { CopyButton } from './copy-button';

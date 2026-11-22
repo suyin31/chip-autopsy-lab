@@ -1,10 +1,12 @@
 'use client';
 
 import { Bot, FolderOpen } from 'lucide-react';
+import { motion, useScroll } from 'motion/react';
 import Link from 'next/link';
 import * as React from 'react';
 import type { DemoPresetId } from '@/core/demo';
 import { useT } from '@/ui/i18n';
+import { useReducedMotionPreference } from '@/ui/motion';
 import { Button, cn } from '@/ui/primitives';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { LotPicker, type RecentLotEntry } from './LotPicker';
@@ -29,6 +31,18 @@ export interface NavBarProps {
   readonly className?: string;
 }
 
+function NavScrollProgress(): React.JSX.Element {
+  const { scrollYProgress } = useScroll();
+  return (
+    <motion.div
+      aria-hidden="true"
+      data-testid="nav-scroll-progress"
+      className="pointer-events-none absolute inset-x-0 bottom-0 h-[1.5px] origin-left bg-text-tertiary/35"
+      style={{ scaleX: scrollYProgress }}
+    />
+  );
+}
+
 /**
  * Sticky nav bar (premium §7.1):
  * - 52 px from 1024 (48 below), `material`, z 40; a 1 px `hairline` fades in (`dur-1`) after 4 px of scroll
@@ -49,6 +63,7 @@ export function NavBar({
   className,
 }: NavBarProps): React.JSX.Element {
   const { t } = useT();
+  const prefersReduced = useReducedMotionPreference();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [isMobileViewport, setIsMobileViewport] = React.useState(false);
 
@@ -225,6 +240,7 @@ export function NavBar({
           isScrolled ? 'opacity-100' : 'opacity-0',
         )}
       />
+      {activeLot !== null && !prefersReduced ? <NavScrollProgress /> : null}
     </header>
   );
 }

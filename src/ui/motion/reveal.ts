@@ -235,3 +235,15 @@ export function computeStaggerDelayMs(
   const clampedIndex = Math.min(total - 1, Math.max(0, safeIndex));
   return (clampedIndex / (total - 1)) * maxWindowMs;
 }
+
+/** Only an unseen key whose element starts below the viewport waits for intersection. */
+export function shouldWaitForReveal(options: {
+  top: number;
+  viewportHeight: number;
+  alreadyRevealed: boolean;
+  disabled: boolean;
+  canObserve: boolean;
+}): boolean {
+  return options.canObserve && !options.disabled && !options.alreadyRevealed &&
+    options.top >= options.viewportHeight;
+}

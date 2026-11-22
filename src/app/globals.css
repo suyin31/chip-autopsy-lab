@@ -1238,3 +1238,177 @@
 .agent-live-dot {
   animation: agent-live 1.8s cubic-bezier(0.45, 0, 0.25, 1) infinite;
 }
+
+/* Agent console typing indicator: compositor-only translateY + opacity wave (1.2 s, 150 ms per-dot delay). */
+@keyframes agent-typing-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 0.95;
+  }
+}
+
+.agent-typing-dot {
+  opacity: 0.65;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .agent-typing-dot {
+    animation: agent-typing-dot 1.2s ease-in-out infinite both;
+  }
+
+  .agent-typing-dot:nth-child(2) {
+    animation-delay: 150ms;
+  }
+
+  .agent-typing-dot:nth-child(3) {
+    animation-delay: 300ms;
+  }
+}
+
+@keyframes cal-check-appear {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes cal-check-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cal-check-draw {
+    animation: cal-check-appear 120ms ease-out;
+  }
+  .cal-check-draw path {
+    animation: cal-check-draw 240ms ease-out 60ms backwards;
+  }
+}
+
+/*
+ * Landing hero ambient texture (`src/ui/layout/LandingHeroAmbient.tsx`, warm-paper silicon cleanroom).
+ * Three static/stepped layers (daylight wash, 24 px die lattice, baked 8 fps SVG paper grain).
+ * Compositor-only (`transform`), zero accent tokens, hidden under reduced motion & reduced transparency.
+ */
+.landing-ambient {
+  position: absolute;
+  inset: -24px -16px -48px;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  contain: paint;
+  -webkit-mask-image: radial-gradient(72% 64% at 50% 42%, #000 35%, transparent 100%);
+  mask-image: radial-gradient(72% 64% at 50% 42%, #000 35%, transparent 100%);
+}
+
+/* Layer 1: Overhead cleanroom daylight wash (--surface + --text-primary via color-mix, 18 s drift) */
+.landing-ambient-wash {
+  position: absolute;
+  inset: -10%;
+  background-image:
+    radial-gradient(
+      60% 45% at 50% 18%,
+      color-mix(in srgb, var(--surface) 92%, transparent) 0%,
+      transparent 72%
+    ),
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--text-primary) 28%, transparent) 0%,
+      transparent 54%
+    );
+  opacity: 0.048;
+  animation: hero-daylight-drift 18s var(--ease-in-out) infinite alternate;
+}
+
+:root[data-theme="dark"] .landing-ambient-wash {
+  background-image:
+    radial-gradient(
+      58% 42% at 50% 20%,
+      color-mix(in srgb, var(--text-primary) 65%, transparent) 0%,
+      transparent 72%
+    ),
+    linear-gradient(
+      156deg,
+      color-mix(in srgb, var(--surface) 75%, transparent) 0%,
+      transparent 50%
+    );
+  opacity: 0.032;
+}
+
+/* Layer 2: Static 24 px silicon die dot lattice (--hairline-strong, effective opacity <= 0.08) */
+.landing-ambient-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, var(--hairline-strong) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.42;
+}
+
+:root[data-theme="dark"] .landing-ambient-grid {
+  opacity: 0.34;
+}
+
+/* Layer 3: Baked inline feTurbulence SVG paper grain, stepped at 8 fps (4 steps / 0.5 s) via translate3d */
+.landing-ambient-grain {
+  position: absolute;
+  inset: -16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 160px 160px;
+  opacity: 0.032;
+  mix-blend-mode: multiply;
+  animation: hero-grain-step 0.5s steps(4, end) infinite;
+}
+
+:root[data-theme="dark"] .landing-ambient-grain {
+  opacity: 0.045;
+  mix-blend-mode: soft-light;
+}
+
+.landing-ambient[data-ambient-paused="true"] .landing-ambient-wash,
+.landing-ambient[data-ambient-paused="true"] .landing-ambient-grain {
+  animation-play-state: paused;
+}
+
+@keyframes hero-daylight-drift {
+  from {
+    transform: translate3d(-6px, -4px, 0);
+  }
+  to {
+    transform: translate3d(6px, 4px, 0);
+  }
+}
+
+@keyframes hero-grain-step {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-8px, 6px, 0);
+  }
+  50% {
+    transform: translate3d(6px, -8px, 0);
+  }
+  75% {
+    transform: translate3d(-4px, -6px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
+  .landing-ambient {
+    display: none;
+  }
+
+  .landing-ambient-wash,
+  .landing-ambient-grain {
+    animation: none;
+  }
+}

@@ -23,6 +23,8 @@ export interface CountUpProps {
   readonly playKey?: string | number;
   /** False shows the final text at once (a row that mounts after the reveal, for example). */
   readonly play?: boolean;
+  readonly triggerOnVisible?: boolean;
+  readonly rootMargin?: string;
   readonly delayMs?: number;
   readonly className?: string;
   readonly 'data-testid'?: string;
@@ -43,6 +45,8 @@ export function CountUp({
   playKey = 0,
   play = true,
   delayMs = 0,
+  triggerOnVisible = false,
+  rootMargin = '0px 0px -8% 0px',
   className,
   'data-testid': testId,
 }: CountUpProps): React.JSX.Element {
@@ -73,7 +77,8 @@ export function CountUp({
     }
     const firstRunForKey = playedKeyRef.current !== playKey;
     playedKeyRef.current = playKey;
-    if (completed || prefersReduced || typeof requestAnimationFrame !== 'function') {
+    if (completed || prefersReduced || typeof requestAnimationFrame !== 'function' ||
+        (triggerOnVisible && typeof IntersectionObserver !== 'function')) {
       stop();
       el.textContent = finalText;
       el.dataset.settled = 'true';
@@ -95,30 +100,50 @@ export function CountUp({
 
     el.dataset.settled = 'false';
     el.textContent = format(0);
-    const startMs = performance.now() + Math.max(0, delayMs);
-    const tick = (nowMs: number): void => {
-      const latest = latestRef.current;
-      const elapsedMs = nowMs - startMs;
-      if (elapsedMs >= STAT_INITIAL_COUNTUP_MS) {
-        rafRef.current = null;
-        el.textContent = latest.finalText;
-        el.dataset.settled = 'true';
-        return;
-      }
-      el.textContent = latest.format(
-        sampleStatCountUp({
-          from: 0,
-          to: latest.value,
-          elapsedMs,
-          durationMs: STAT_INITIAL_COUNTUP_MS,
-          prefersReducedMotion: false,
-          easing: 'quart',
-        }),
-      );
+    const start = (): void => {
+      const startMs = performance.now() + Math.max(0, delayMs);
+      const tick = (nowMs: number): void => {
+        const latest = latestRef.current;
+        const elapsedMs = nowMs - startMs;
+        if (elapsedMs >= STAT_INITIAL_COUNTUP_MS) {
+          rafRef.current = null;
+          el.textContent = latest.finalText;
+          el.dataset.settled = 'true';
+          return;
+        }
+        el.textContent = latest.format(
+          sampleStatCountUp({
+            from: 0,
+            to: latest.value,
+            elapsedMs,
+            durationMs: STAT_INITIAL_COUNTUP_MS,
+            prefersReducedMotion: false,
+            easing: 'quart',
+          }),
+        );
+        rafRef.current = requestAnimationFrame(tick);
+      };
       rafRef.current = requestAnimationFrame(tick);
     };
-    rafRef.current = requestAnimationFrame(tick);
-  }, [finalText, format, playKey, play, delayMs, completed, prefersReduced, stop]);
+    if (!triggerOnVisible) {
+      start();
+      return;
+    }
+    let pending = true;
+    const observer = new IntersectionObserver(entries => {
+      if (!pending || !entries.some(entry => entry.isIntersecting)) return;
+      pending = false;
+      observer.unobserve(el);
+      observer.disconnect();
+      start();
+    }, { rootMargin });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      if (pending) playedKeyRef.current = NOT_PLAYED;
+      pending = false;
+    };
+  }, [finalText, format, playKey, play, delayMs, completed, prefersReduced, stop, triggerOnVisible, rootMargin]);
 
   // Unmount stops the count; a strict-mode remount replays it
   React.useEffect(
@@ -137,7 +162,7 @@ export function CountUp({
       data-final={finalText}
       className={cn('count-up', className)}
     >
-      {play ? format(0) : finalText}
+      {play && !triggerOnVisible ? format(0) : finalText}
     </span>
   );
 }

@@ -70,3 +70,5 @@ export {
   type UseTypeOnOptions,
   type UseTypeOnResult,
 } from './hooks';
+
+export { ScrollReveal, useScrollReveal, type ScrollRevealOptions, type ScrollRevealProps } from './scroll-reveal';

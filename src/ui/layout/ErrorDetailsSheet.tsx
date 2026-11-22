@@ -4,6 +4,7 @@ import * as React from 'react';
 import { sanitizeReportProseText } from '@/core/report';
 import { Untranslated, useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
+import { CopyButton } from '@/ui/primitives/copy-button';
 import { ModalSheet } from '@/ui/primitives/sheet';
 
 export interface ErrorDetailsSheetProps {
@@ -38,6 +39,7 @@ export function ErrorDetailsSheet({
   const safeOffset =
     Number.isFinite(byteOffset) && byteOffset >= 0 ? Math.trunc(byteOffset) : 0;
   const hexOffset = `0x${safeOffset.toString(16).toUpperCase().padStart(8, '0')}`;
+  const copyValue = `offset ${hexOffset} (${safeOffset} B) · ${cleanHex}`;
 
   return (
     <ModalSheet
@@ -86,7 +88,14 @@ export function ErrorDetailsSheet({
         </div>
       </dl>
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+        <CopyButton
+          value={copyValue}
+          label={t('error.copyDetails')}
+          copiedLabel={t('error.copied')}
+          data-testid="error-details-copy"
+          className="w-full md:w-auto"
+        />
         <Button
           ref={dismissRef}
           variant="secondary"

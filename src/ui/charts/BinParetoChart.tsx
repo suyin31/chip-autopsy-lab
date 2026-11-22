@@ -268,7 +268,11 @@ export function BinParetoChart({
             className="mt-6 flex items-baseline gap-2"
           >
             <span className="type-stat-s text-text-primary tabular-nums">
-              {formatPercent(lossRatio)}
+              <CountUp
+                value={lossRatio}
+                format={formatPercent}
+                playKey={lot.lotId}
+              />
             </span>
             <span className="type-subhead text-text-tertiary">
               {t('pareto.lossLabel')}

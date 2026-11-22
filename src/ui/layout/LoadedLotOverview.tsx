@@ -16,6 +16,7 @@ import {
 import {
   readPrefersReducedMotionSync,
   resolveViewMorphTransition,
+  ScrollReveal,
   WAFER_MORPH_LAYOUT_ID,
 } from '@/ui/motion';
 import { Button } from '@/ui/primitives/button';
@@ -350,28 +351,36 @@ export function LoadedLotOverview({
         splitForMobileStage
         belowFindings={
           <>
-            <BinParetoChart lot={lot} store={store} />
-            <YieldSummaryPanel
-              lot={lot}
-              yieldSummary={yieldSummary}
-              facts={facts}
-              store={store}
-              className="mt-10 lg:mt-16"
-            />
-            {lot.wafers.length >= 2 ? (
-              <StackedWaferPanel
+            <ScrollReveal replayKey={lot.lotId}>
+              <BinParetoChart lot={lot} store={store} />
+            </ScrollReveal>
+            <ScrollReveal replayKey={lot.lotId}>
+              <YieldSummaryPanel
                 lot={lot}
-                byWaferYield={yieldSummary.byWafer}
+                yieldSummary={yieldSummary}
+                facts={facts}
                 store={store}
                 className="mt-10 lg:mt-16"
               />
+            </ScrollReveal>
+            {lot.wafers.length >= 2 ? (
+              <ScrollReveal replayKey={lot.lotId}>
+                <StackedWaferPanel
+                  lot={lot}
+                  byWaferYield={yieldSummary.byWafer}
+                  store={store}
+                  className="mt-10 lg:mt-16"
+                />
+              </ScrollReveal>
             ) : null}
             {lot.tests.size > 0 ? (
-              <ParametricPanel
-                lot={lot}
-                store={store}
-                className="mt-10 lg:mt-16"
-              />
+              <ScrollReveal replayKey={lot.lotId}>
+                <ParametricPanel
+                  lot={lot}
+                  store={store}
+                  className="mt-10 lg:mt-16"
+                />
+              </ScrollReveal>
             ) : null}
             <p
               data-testid="verdict-footer"

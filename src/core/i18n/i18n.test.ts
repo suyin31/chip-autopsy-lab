@@ -139,7 +139,7 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     expect(DICTIONARIES.ko).toBe(ko);
 
     const enKeys = Object.keys(en).sort() as MessageKey[];
-    expect(enKeys.length).toBe(367);
+    expect(enKeys.length).toBe(514);
 
     for (const locale of SUPPORTED_LOCALES) {
       const dict = getDictionary(locale);
@@ -279,10 +279,10 @@ describe('core i18n locales, matching, dictionaries, and Intl formatters (Task R
     };
     for (const locale of SUPPORTED_LOCALES) {
       const dict = getDictionary(locale);
-      for (const key of Object.keys(dict) as MessageKey[]) {
-        const value = dict[key].replaceAll('Chip Autopsy Lab', '').replaceAll('Autopsy Lab', '');
-        expect(dict[key], `exclamation mark in ${locale}:${key}`).not.toMatch(/[!！]/);
-        if (!themedKeys.has(key)) {
+      for (const [key, translation] of Object.entries(dict)) {
+        const value = translation.replaceAll('Chip Autopsy Lab', '').replaceAll('Autopsy Lab', '');
+        expect(translation, `exclamation mark in ${locale}:${key}`).not.toMatch(/[!！]/);
+        if (!themedKeys.has(key as MessageKey)) {
           expect(value, `themed copy outside §9.4 in ${locale}:${key}`).not.toMatch(themedWords[locale]);
         }
       }

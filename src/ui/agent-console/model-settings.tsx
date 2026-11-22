@@ -9,6 +9,8 @@
  * only to requests sent to the chosen router, and can be deleted here.
  */
 
+import type { MessageKey } from '@/core/i18n';
+import { useT } from '@/ui/i18n';
 import * as React from 'react';
 import { createOpenAICompatibleRouter, type Router } from '../../../public/agent-runtime/agent-runtime.mjs';
 import { Button, cn, SegmentedControl } from '@/ui/primitives';
@@ -19,7 +21,7 @@ export interface RouterPreset {
   readonly provider: string;
   readonly baseUrl: string;
   readonly model: string;
-  readonly note: string;
+  readonly noteKey: Extract<MessageKey, `agents.model.note.${string}`>;
 }
 
 export const ROUTER_PRESETS: readonly RouterPreset[] = [
@@ -29,7 +31,7 @@ export const ROUTER_PRESETS: readonly RouterPreset[] = [
     provider: 'Otari',
     baseUrl: 'https://api.otari.ai/api/v1',
     model: 'alibaba/qwen3.8-flash',
-    note: 'OpenAI-compatible. Otari credits are available to challenge registrants.',
+    noteKey: 'agents.model.note.otari',
   },
   {
     id: 'openai',
@@ -37,7 +39,7 @@ export const ROUTER_PRESETS: readonly RouterPreset[] = [
     provider: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
-    note: 'Uses /chat/completions with streaming and tool calls.',
+    noteKey: 'agents.model.note.openai',
   },
   {
     id: 'openrouter',
@@ -45,7 +47,7 @@ export const ROUTER_PRESETS: readonly RouterPreset[] = [
     provider: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'anthropic/claude-sonnet-4',
-    note: 'Any OpenRouter model id works; browser calls need the account CORS setting.',
+    noteKey: 'agents.model.note.openrouter',
   },
   {
     id: 'ollama',
@@ -53,7 +55,7 @@ export const ROUTER_PRESETS: readonly RouterPreset[] = [
     provider: 'local',
     baseUrl: 'http://127.0.0.1:11434/v1',
     model: 'qwen3:8b',
-    note: 'Runs on your machine. The key can be any non-empty string.',
+    noteKey: 'agents.model.note.ollama',
   },
   {
     id: 'custom',
@@ -61,7 +63,7 @@ export const ROUTER_PRESETS: readonly RouterPreset[] = [
     provider: 'custom',
     baseUrl: '',
     model: '',
-    note: 'Any router that speaks POST {base}/chat/completions.',
+    noteKey: 'agents.model.note.custom',
   },
 ];
 
@@ -173,6 +175,7 @@ export function ModelSettingsPanel({
   onClear,
   onClose,
 }: ModelSettingsPanelProps) {
+  const { t } = useT();
   const [draft, setDraft] = React.useState<ModelSettings>(settings);
   const preset = ROUTER_PRESETS.find((entry) => entry.id === draft.presetId) ?? ROUTER_PRESETS[0];
 
@@ -193,25 +196,25 @@ export function ModelSettingsPanel({
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2.5">
         <SegmentedControl
-          ariaLabel="Inference"
+          ariaLabel={t('agents.model.inference')}
           value={draft.mode}
           onValueChange={(mode) => setDraft((current) => ({ ...current, mode }))}
           options={[
-            { value: 'demo', label: 'Demo router' },
-            { value: 'byok', label: 'Your own model' },
+            { value: 'demo', label: t('agents.model.demo') },
+            { value: 'byok', label: t('agents.model.own') },
           ]}
         />
         <p className="type-subhead text-text-tertiary">
           {draft.mode === 'demo'
-            ? 'No model and no key. Answers are assembled from the site tools’ own summaries, and every such answer is labelled.'
-            : 'The network runs on your model through an OpenAI-compatible router, with streaming and tool calls.'}
+            ? t('agents.model.demoNote')
+            : t('agents.model.ownNote')}
         </p>
       </div>
 
       {draft.mode === 'byok' ? (
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="type-subhead text-text-secondary">Provider preset</span>
+            <span className="type-subhead text-text-secondary">{t('agents.model.provider')}</span>
             <select
               value={draft.presetId}
               onChange={(event) => selectPreset(event.target.value)}
@@ -225,7 +228,7 @@ export function ModelSettingsPanel({
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="type-subhead text-text-secondary">Router base URL</span>
+            <span className="type-subhead text-text-secondary">{t('agents.model.baseUrl')}</span>
             <input
               value={draft.baseUrl}
               onChange={(event) => setDraft((current) => ({ ...current, baseUrl: event.target.value }))}
@@ -237,7 +240,7 @@ export function ModelSettingsPanel({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="type-subhead text-text-secondary">Model</span>
+            <span className="type-subhead text-text-secondary">{t('agents.model.model')}</span>
             <input
               value={draft.model}
               onChange={(event) => setDraft((current) => ({ ...current, model: event.target.value }))}
@@ -248,7 +251,7 @@ export function ModelSettingsPanel({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="type-subhead text-text-secondary">API key</span>
+            <span className="type-subhead text-text-secondary">{t('agents.model.apiKey')}</span>
             <input
               type="password"
               value={draft.apiKey}
@@ -259,11 +262,10 @@ export function ModelSettingsPanel({
               className={cn(fieldClass, 'font-mono text-[16px] sm:text-[12px]')}
             />
             <span className="type-caption text-text-tertiary">
-              Stored in this browser’s localStorage for this origin only. Never sent to the site,
-              to another agent site, or into the network definition, prompts or traces.
+              {t('agents.model.storage')}
             </span>
           </label>
-          <p className="type-caption text-text-tertiary">{preset.note}</p>
+          <p className="type-caption text-text-tertiary">{preset.noteKey === 'agents.model.note.custom' ? t('agents.model.note.custom', { base: '{base}' }) : t(preset.noteKey)}</p>
         </div>
       ) : null}
 
@@ -276,14 +278,14 @@ export function ModelSettingsPanel({
             onClose();
           }}
         >
-          Apply
+          {t('agents.model.apply')}
         </Button>
         <Button variant="secondary" size="md" onClick={onClose}>
-          Cancel
+          {t('agents.model.cancel')}
         </Button>
         {stored ? (
           <Button variant="text" size="md" onClick={onClear} className="ml-auto">
-            Delete stored settings
+            {t('agents.model.delete')}
           </Button>
         ) : null}
       </div>

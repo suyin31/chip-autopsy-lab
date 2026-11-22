@@ -9,6 +9,7 @@
  * that the agent's citations are real dies of this lot.
  */
 
+import { useT } from '@/ui/i18n';
 import * as React from 'react';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
 import { cn } from '@/ui/primitives';
@@ -72,6 +73,7 @@ export function WaferStage({
   onLoadSample,
   className,
 }: WaferStageProps) {
+  const { t } = useT();
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const holderRef = React.useRef<HTMLDivElement | null>(null);
   const [size, setSize] = React.useState(320);
@@ -194,14 +196,14 @@ export function WaferStage({
       >
         <MiniWaferPreview />
         <div className="flex flex-col gap-1">
-          <p className="type-subhead text-text-secondary">No lot loaded</p>
+          <p className="type-subhead text-text-secondary">{t('agents.wafer.empty')}</p>
           {onLoadSample ? (
             <button
               type="button"
               onClick={onLoadSample}
               className="cursor-pointer rounded-sm type-caption text-text-secondary underline decoration-hairline-strong underline-offset-4 transition-[color] duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
             >
-              Load the edge-ring sample
+              {t('agents.wafer.load')}
             </button>
           ) : null}
         </div>
@@ -220,7 +222,7 @@ export function WaferStage({
           <canvas
             ref={canvasRef}
             role="img"
-            aria-label={`Wafer ${wafer?.waferId ?? ''} defect map with ${highlightedHere} cited dies`}
+            aria-label={t('agents.wafer.mapAria', { wafer: wafer?.waferId ?? '', count: highlightedHere })}
             className="agent-wafer-cited block h-auto w-full"
             style={{ aspectRatio: '1 / 1' }}
           />
@@ -230,25 +232,25 @@ export function WaferStage({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 type-caption text-text-tertiary">
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden="true" className="size-1.5 rounded-[2px] bg-text-disabled" />
-          pass
+          {t('agents.wafer.pass')}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden="true" className="size-1.5 rounded-[2px] bg-text-tertiary" />
-          fail
+          {t('agents.wafer.fail')}
         </span>
         <span className="agent-wafer-cited inline-flex items-center gap-1.5">
           <span aria-hidden="true" className="size-1.5 rounded-[2px] bg-current" />
-          cited
+          {t('agents.wafer.cited')}
         </span>
         <span className="ml-auto tabular-nums">
-          {wafer?.waferId} · {failing} failing
-          {highlightedHere > 0 ? ` · ${highlightedHere} cited` : ''}
+          {wafer?.waferId} · {t('agents.wafer.failingCount', { count: failing })}
+          {highlightedHere > 0 ? ` · ${t('agents.wafer.citedCount', { count: highlightedHere })}` : ''}
         </span>
       </div>
 
       {payload.lot.wafers.length > 1 ? (
         <label className="flex items-center gap-2 type-caption text-text-tertiary">
-          <span className="whitespace-nowrap">Wafer</span>
+          <span className="whitespace-nowrap">{t('agents.wafer.label')}</span>
           <input
             type="range"
             min={0}
@@ -256,7 +258,7 @@ export function WaferStage({
             value={waferIndex}
             onChange={(event) => onWaferChange(Number(event.target.value))}
             className="h-1 w-full min-w-0 accent-[var(--ink)]"
-            aria-label="Choose a wafer to display"
+            aria-label={t('agents.wafer.choose')}
           />
           <span className="w-8 shrink-0 text-right tabular-nums">{waferIndex + 1}</span>
         </label>
@@ -266,7 +268,7 @@ export function WaferStage({
         <p className="line-clamp-3 type-subhead text-text-secondary">{highlightLabel}</p>
       ) : (
         <p className="type-subhead text-text-tertiary">
-          No dies cited yet. Ask for the evidence behind a claim.
+          {t('agents.wafer.noCitations')}
         </p>
       )}
     </div>
