@@ -134,7 +134,7 @@ Chip Autopsy Lab is local-first by design:
 
 ### Workflow
 
-Development followed a strict spec -> tasks -> agent implementation -> verification loop logged in `logs/progress.md`. Each task in `.kiro/specs/chip-autopsy-lab/tasks.md` referenced specific EARS requirements and design properties, implemented pure logic in `src/core/` before wiring `src/workers/` and `src/ui/`, and required clean `pnpm typecheck`, `pnpm lint`, Vitest unit/property suites, and Playwright browser checks before completion. The repository currently verifies **474 unit and property tests across 82 test files** (including **16 `fast-check` property suites**) and **54 Playwright E2E spec files** in `e2e/`.
+Development followed a strict spec -> tasks -> agent implementation -> verification loop logged in `logs/progress.md`. Each task in `.kiro/specs/chip-autopsy-lab/tasks.md` referenced specific EARS requirements and design properties, implemented pure logic in `src/core/` before wiring `src/workers/` and `src/ui/`, and required clean `pnpm typecheck`, `pnpm lint`, Vitest unit/property suites, and Playwright browser checks before completion. The repository currently verifies **542 unit and property tests across 90 test files** (including **16 `fast-check` property suites**) and **54 Playwright E2E spec files** in `e2e/`.
 
 ### Hooks
 
@@ -209,7 +209,7 @@ src/
 
 - **Language**: TypeScript 5.9 (`strict` mode)
 - **Framework**: Next.js 16 (App Router) and React 19
-- **Styling and typography**: Tailwind CSS v4 with `@theme` CSS variables and self-hosted Inter Variable, Instrument Serif, and JetBrains Mono fonts
+- **Styling and typography**: Tailwind CSS v4 with `@theme` CSS variables and self-hosted Instrument Sans, Archivo, and JetBrains Mono fonts
 - **Wafer rendering**: Custom layered HTML5 Canvas2D renderer with DPR scaling and CSS-transform camera physics
 - **Charts**: visx (`@visx/scale`, `@visx/shape`)
 - **State and worker**: Zustand and Comlink over a module Web Worker with native `DecompressionStream('gzip')`
