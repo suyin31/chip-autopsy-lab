@@ -26,7 +26,7 @@ Submission form requirements (beyond the profile): public URL of the site, a tex
 
 | Area | State |
 |---|---|
-| App | Next.js 16 / React 19, deployed statically to Netlify (`chip-autopsy-lab.netlify.app`) |
+| App | Next.js 16 / React 19, deployed on Vercel (`chip-autopsy-lab.vercel.app`) |
 | Core | Framework-free TypeScript engine: STDF V4 parser/writer (16 record types), columnar lot model, yield/bin/parametric analytics, WM-811K classifier, deterministic verdict + report engine with stable fact IDs, filter DSL + offline NL grammar |
 | Worker | Comlink Web Worker; parsing and analysis never leave the browser |
 | Narration | Optional server-side `/api/autopsy/narrate` (aggregate facts only, citation validation) — a single-prompt LLM call, not an agent network |

@@ -22,7 +22,7 @@ Test, product, and yield engineers at small fabless teams and OSATs routinely tr
 
 ## Try it
 
-Live demo: `https://chip-autopsy-lab.netlify.app`
+Live demo: `https://chip-autopsy-lab.vercel.app`
 
 Demo video: https://youtu.be/h5vQuVODXHA
 
@@ -64,7 +64,7 @@ Chip Autopsy Lab is also a conforming **open agentic website**: it publishes an 
 
 **Checked by a peer.** [Agent Atlas](https://agent-atlas-phi.vercel.app/agent_atlas), a public conformance checker run by another entrant, reads this site's published files and reports **0 MUST failures / 97–98 of 100** ("conformant with warnings"). The single warning is the honest one: the twelve site actions are registered by this page and need publisher code, which the profile itself places outside the portable minimum.
 
-[![Agent Atlas](https://agent-atlas-phi.vercel.app/api/badge?url=https://chip-autopsy-lab.netlify.app/chip_autopsy_lab)](https://agent-atlas-phi.vercel.app/agent_atlas)
+[![Agent Atlas](https://agent-atlas-phi.vercel.app/api/badge?url=https://chip-autopsy-lab.vercel.app/chip_autopsy_lab)](https://agent-atlas-phi.vercel.app/agent_atlas)
 
 `docs/agentic-web-gap-analysis.md` records the profile requirements against what the project had before this layer existed.
 

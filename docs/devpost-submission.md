@@ -70,11 +70,11 @@ A spec with written correctness properties made the agent's work checkable. When
 
 ## Built with
 
-typescript, next.js, react, tailwindcss, canvas, web-workers, comlink, zustand, visx, cmdk, motion, sonner, vitest, fast-check, playwright, python, mcp, kiro, netlify, stdf
+typescript, next.js, react, tailwindcss, canvas, web-workers, comlink, zustand, visx, cmdk, motion, sonner, vitest, fast-check, playwright, python, mcp, kiro, vercel, stdf
 
 ## Links
 
-- Live demo: https://chip-autopsy-lab.netlify.app
+- Live demo: https://chip-autopsy-lab.vercel.app
 - Repository: https://github.com/suyin31/chip-autopsy-lab
 - Video: https://youtu.be/h5vQuVODXHA
 
