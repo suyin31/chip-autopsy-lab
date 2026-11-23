@@ -291,3 +291,10 @@ Rewrote `README.md` for the Kiroween 2026 submission with verified features, dem
 
 ## Task 15 verified (2026-11-19 23:00 SGT)
 Code from 851721f re-verified on a fresh build: e2e wafer-viewport-t15 3/3 + zoom-pan-p30 3/3; unit suite 474/474.
+
+## Judging polish (2026-11-23, Kiro claude-opus-5.5)
+- Spec `.kiro/specs/judging-polish/` (requirements, design, tasks 1-7 ticked). New `docs/judging-review.md` scores the 5 criteria and each judge remark with evidence and gaps.
+- Hooks: i18n parity now names all 5 locale tables (`en`, `zh-cn`, `zh-tw`, `ja`, `ko`); new `spec-properties-on-design-edit` (fileEdited on `.kiro/specs/**/design.md`) and `kiro-usage-table-refresh` (userTriggered). New conditional steering `.kiro/steering/submission.md` (fileMatch on `docs/**/*.md`, `README.md`).
+- `docs/devpost-submission.md`: Inspiration names the user and pain; "How Kiro was used" rewritten with a process story, the Requirement 1.5 -> task 2.2/2.4 -> Property 1 -> hook trace, current counts, "Where Kiro surprised us" (quotes checked with `grep -F`), and an attribution note (58 `(Kiro ...)` and 51 `(Carbon)` commits). README gains "Built with Kiro" and the corrected hooks table. No product code touched.
+- Verified: `pnpm test` 542/542 (90 files) and `pnpm lint` clean. The first full run timed out once in `core-isolation.test.ts` (an in-process ESLint test, 33 s against a 5 s limit while the machine was busy); it passed alone 5/5 and in the full rerun.
+- Left for the owner: the `TODO(owner):` lines in `docs/judging-review.md` and `docs/devpost-submission.md` (video check, build hours).

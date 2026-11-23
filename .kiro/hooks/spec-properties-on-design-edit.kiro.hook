@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Spec properties on design edit",
+  "description": "When a spec design.md is saved, run every fast-check property suite and check that each correctness property still maps to a passing test.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [".kiro/specs/**/design.md"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A spec design.md was just saved. Run `pnpm exec vitest run $(git ls-files 'src/**/*.prop.test.ts')` to run every fast-check property suite. Then read the '### Property N:' headings in .kiro/specs/chip-autopsy-lab/design.md and confirm each property number is named in at least one *.prop.test.ts file (grep for 'Property N'). If a property's statement changed, compare it with its test: report where the test no longer checks what the property says. Do not edit source or tests in this hook, and never weaken a property to match the code. Reply with one line: the suites run, pass or fail counts, and any property with no matching test or a stale test."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Refresh How Kiro was used table",
+  "description": "On demand, recount the specs, steering, hooks, skills, MCP servers, and tests, and rewrite the Kiro usage table in docs/devpost-submission.md and README.md to match.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Rebuild the 'How Kiro was used' table from what is in the repo now. List .kiro/specs/*/ and the files in each, .kiro/steering/*.md with their inclusion mode, every .kiro/hooks/*.kiro.hook with its when.type and patterns, the folders in .kiro/skills/, and the servers in .kiro/settings/mcp.json. Count property suites with `git ls-files 'src/**/*.prop.test.ts' | wc -l`, e2e specs with `ls e2e/*.spec.ts | wc -l`, and run `pnpm test` to read the exact test and test-file totals from its summary. Update only the table rows and counts in the 'How Kiro was used' section of docs/devpost-submission.md and the Kiro sections of README.md; keep the surrounding prose. Follow .kiro/steering/submission.md: every count from this run, no Netlify links, and a 'TODO(owner):' line for anything you cannot verify. Reply with one line per file: rows changed and the new counts."
+  }
+}

@@ -1,7 +1,7 @@
 {
   "enabled": true,
   "name": "i18n key parity on save",
-  "description": "When a message table or i18n module is saved, verify that en, zh-CN, and zh-TW have the same keys and placeholders.",
+  "description": "When a message table or i18n module is saved, verify that en, zh-CN, zh-TW, ja, and ko have the same keys and placeholders.",
   "version": "1",
   "when": {
     "type": "fileEdited",
@@ -9,6 +9,6 @@
   },
   "then": {
     "type": "askAgent",
-    "prompt": "An i18n file was just saved. Run `pnpm exec vitest run src/core/i18n/i18n.test.ts`, which checks key and placeholder parity across all locales. Also compare src/core/i18n/messages/en.ts with zh-cn.ts and zh-tw.ts directly: list keys missing from or extra in each zh table, and any {placeholder} name mismatch. For a missing key, add a translation that follows the existing tone and keeps bin codes, test names, STDF record names, IDs, units, and WM-811K class names untranslated. Never delete an en key to reach parity. Reply with one line: in parity, or the keys you added or fixed."
+    "prompt": "An i18n file was just saved. Run `pnpm exec vitest run src/core/i18n/i18n.test.ts`, which checks key and placeholder parity across all locales. Also compare src/core/i18n/messages/en.ts directly with every other table in that folder (zh-cn.ts, zh-tw.ts, ja.ts, ko.ts, and any locale file added later): list keys missing from or extra in each table, and any {placeholder} name mismatch. For a missing key, add a translation that follows the existing tone and keeps bin codes, test names, STDF record names, IDs, units, and WM-811K class names untranslated. For ja and ko, follow the CJK rules in .kiro/steering/design-language.md (no italics, no letter-spacing tricks). Never delete an en key to reach parity. Reply with one line: in parity, or the keys you added or fixed per locale."
   }
 }

@@ -1,0 +1,24 @@
+You are Kiro working in this repo (Chip Autopsy Lab, Kiroween 2026 submission, deadline 2026-12-04 14:00 PT). Goal: raise the judging score using the official judging guidance below, WITHOUT touching product UI code. Do not use web search or web fetch.
+
+## Judging guidance (from Devpost email "Meet the Kiroween judges", 2026-11-23)
+- Five equal criteria: Potential Impact (real problem, real audience); Technological Implementation (how well it uses Kiro, a thoughtful AI development strategy); Design (complete, polished product); Innovation/Idea; Presentation (video shows it working end to end with a clear pitch).
+- Judge Geethanjali (AWS): "Show me how you used specs, steering and hooks to get there, not just the final result. Bonus points if Kiro surprised you along the way."
+- Judge Sergio: simple, focused solution to a real problem; clean, intuitive UX.
+- Judge Dustin: focus on technological implementation and presentation; "demonstrating a breadth of knowledge across the Kiro surfaces and capabilities"; demo video must articulate the problem and show a working solution.
+- Devpost judging-tips article: judges check every requirement first; storytelling in text matters; be open about HOW you built it; ambiguity is a red flag; over-indexing on one criterion hurts.
+- Kiroween FAQ: "Please build with Kiro's own agent. Work done through another harness doesn't count as using Kiro." So the write-up must lead with what Kiro itself did, and must not overstate other models.
+
+## HARD CONSTRAINTS
+- Do NOT edit anything under src/app/, src/ui/, public/, or these files: vercel.json, netlify.toml, next.config.ts, package.json, pnpm-lock.yaml, eslint.config.mjs. The latest visual/motion redesign and the /agents console must stay exactly as they are.
+- Do not change deployment. Live demo is https://chip-autopsy-lab.vercel.app (Netlify is retired; do not reintroduce Netlify links anywhere).
+- Do not invent facts, numbers, dates or anecdotes. Every claim must be traceable to a file, git log, or logs/*.log in this repo. If you can't trace something, leave a line starting "TODO(owner):".
+- Do not git push.
+
+## Work (do in order)
+1. Audit. Read .kiro/ (specs, steering, hooks, skills, settings), README.md, docs/devpost-submission.md, logs/progress.md, and `git log --oneline | head -200`. Write docs/judging-review.md: for each of the 5 criteria and each judge quote, a score 1-5, the evidence in the repo, and the concrete gap. Keep it under 120 lines.
+2. Kiro surfaces (Technological Implementation). Using Kiro's own spec workflow, create .kiro/specs/judging-polish/ with requirements.md, design.md, tasks.md for this polish round (small, 5-8 tasks), and tick tasks as you finish them. Fix stale artifacts: the i18n parity hook must cover all locales actually present in src/core/i18n/messages/ (currently en, zh-cn, zh-tw, ja, ko). Add at most two genuinely useful new hooks (for example: a manual/userTriggered hook that regenerates the "How Kiro was used" table from .kiro/ contents, or a hook that runs the spec-property tests when design.md changes). Hooks must use the same JSON format as the existing .kiro/hooks/*.kiro.hook files. Add a steering file .kiro/steering/submission.md with rules for submission copy (truthful, traceable, Vercel URL, judges' criteria).
+3. Write-up (Presentation + Tech). Rewrite the "How Kiro was used" section of docs/devpost-submission.md as: (a) a short process story "spec -> steering -> hooks -> agent tasks -> verification" with one concrete, traceable example (a real requirement id, the task that implemented it, the property test that guards it, and the hook that runs it); (b) the existing table, updated and accurate (counts of tests/properties must match the repo; current main has 542 tests in 90 files per the owner, verify with `pnpm test` output if fast); (c) a section "Where Kiro surprised us" with 2-3 items drawn ONLY from logs/ or git history (quote the file); (d) an honest one-line note that some UI exploration used other agents, while specs, steering, hooks and verification ran in Kiro. Also tighten the Impact paragraph: who exactly the user is (ATE/test/yield engineers), the pain (opening STDF binaries needs licensed desktop tools), and the result in one sentence. Keep the whole submission doc in plain English, no hype words.
+4. README.md: add or update a short "Built with Kiro" section linking to .kiro/ and docs/devpost-submission.md. Don't touch other README sections except to fix any Netlify link.
+5. Run `pnpm test` (and `pnpm lint` if quick). Everything must stay green. Append 3-6 lines to logs/progress.md describing this round.
+6. Finish by printing a 10-line English summary: files changed, new hooks, and the exact new text of the "Where Kiro surprised us" section.
+Stay within 17 minutes; if not finished, leave the tree clean and note what remains in logs/progress.md.

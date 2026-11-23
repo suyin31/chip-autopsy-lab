@@ -1,0 +1,219 @@
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=9
+[tool] Survey repo Kiro artifacts and history
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Inspect specs, steering, hooks, locales
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] Read the submission doc
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=70
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] status: Completed
+[tool] Start test suite and count test files
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] Read progress log tail and README Kiro mentions
+[tool] status: Completed
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=79
+[tool] Find design properties and task linkage
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=80
+[tool] status: Completed
+[tool] Trace requirement 1.5 through task and property test
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=83
+[tool] status: Completed
+[tool] Read requirement 1 and early progress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Read Kiro-run logs for traceable anecdotes
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=67
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check attribution of agents in logs
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=132
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Count Kiro-tagged commits and view README Kiro section
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=44
+[tool] List property suites and parity test locales
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=79
+[tool] status: Completed
+[tool] Write File
+[tool] status: Pending
+[tool] status: Completed
+[tool] Write File
+[tool] status: Pending
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=958
+[tool] status: Completed
+[tool] Check steering front matter and test progress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+Now the steering file and hooks.
+[tool] Write File
+[tool] status: Pending
+[tool] status: Completed
+[tool] Write File
+[tool] status: Pending
+[tool] status: Completed
+[tool] Write File
+[tool] status: Pending
+[tool] status: Completed
+[tool] Write File
+[tool] status: Pending
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=888
+[tool] status: Completed
+[tool] Validate hook JSON and property glob
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Replace in File
+[tool] status: Pending
+[tool] status: Completed
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=123
+[tool] Write File
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=822
+[tool] status: Pending
+[tool] status: Completed
+[tool] Verify quotes exist verbatim and check test status
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=157
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Check gitignore for .kiro and test run state
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[tool] status: Completed
+[tool] Replace in File
+[tool] status: Pending
+[tool] status: Completed
+[tool] Write File
+[tool] status: Pending
+[tool] status: Completed
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=312
+[tool] Count e2e specs, skills, tasks, requirements
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=140
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Rewrite Inspiration and cut old Kiro section
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=175
+[tool] status: Completed
+[tool] Append new Kiro section with count placeholders
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=966
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Failed: Append new Kiro section with count placeholders
+[tool] Check who drafted requirements and design
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=75
+[tool] status: Completed
+[tool] Count commits by agent attribution
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=86
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Correct attribution in the Kiro section
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=411
+[tool] status: Completed
+[tool] Find the failing test
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Rerun the timed-out isolation test alone
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[tool] status: Completed
+[tool] Fill verified counts and rerun suite
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=138
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Simplify test totals row and check date
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=84
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Add Built with Kiro section and fix hooks table
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=294
+[tool] status: Completed
+[tool] Check who wrote steering in phase 1
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=60
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Make README attribution traceable
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=111
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Wait for full test rerun
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=58
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[tool] Run ESLint across the repo
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[tool] status: Completed
+Lint clean. Now the progress log.
+[tool] Append progress log and check tree
+[tool] status: InProgress
+[tool] status: InProgress
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=223
+[tool] status: Completed
+[tool] Clean temp logs and check copy rules
+[tool] status: InProgress
+[tool] status: InProgress
+[tool] status: Completed
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=69
+I finished all six steps without touching product code. `pnpm test` passed 542/542 in 90 files and `pnpm lint` is clean. The first full test run timed out once in `src/core/core-isolation.test.ts` (33 s against a 5 s limit while the machine was busy). It passed when run alone and in the full rerun.
+
+1. **Changed:** `README.md` (new "Built with Kiro" section; the hooks table now lists all 5 locales and the 2 new hooks; there were no Netlify links to fix), `docs/devpost-submission.md`, `logs/progress.md` and `.kiro/hooks/i18n-key-parity-on-save.kiro.hook` (now covers `en`, `zh-cn`, `zh-tw`, `ja`, `ko`).
+2. **Added:** `docs/judging-review.md` (37 lines), `.kiro/specs/judging-polish/` with requirements, design and tasks (7 tasks, all ticked), and `.kiro/steering/submission.md`. The steering file loads only when `docs/**/*.md` or `README.md` is edited, so the repo now shows a second steering mode.
+3. **New hooks:** `spec-properties-on-design-edit.kiro.hook` runs all 16 property test files whenever a spec's `design.md` is saved. `kiro-usage-table-refresh.kiro.hook` is a manual hook that recounts `.kiro/` and the tests and rewrites the Kiro tables.
+4. **Traced example:** Requirement 1.5 leads to task 2.2 and sub-task 2.4, then to Property 1 in `src/core/stdf/stdf-roundtrip.prop.test.ts`, which `core-unit-tests-on-save` and the new design hook both run.
+5. **Attribution goes further than you asked:** a single line saying "some UI exploration used other agents" would understate them. In git log, 51 commits are tagged `(Carbon)`: Kiro handed those tasks to Gemini through the Carbon MCP tool. That includes the first drafts of the requirements and design, plus tasks 1–2. Tasks 12 and 13 were done in Antigravity CLI, and commit `a96ab93` is an Opus 4.6 design review. The submission now says this plainly, next to the 58 `(Kiro …)` commits.
+6. **Left for you:** `TODO(owner):` lines for the video check and build hours. The untracked files `.render_v*.tmp.mjs`, `.rl.mjs`, and `logs/devpost-draft.log`, `logs/judging-polish.log`, `logs/prompt-judging-polish.txt` and `logs/test-runs/` were there before this round, so I left them alone. Nothing is committed or pushed.
+
+This is the exact new "Where Kiro surprised us" text. I checked every quote against its log with `grep -F`.
+
+```
+### Where Kiro surprised us
+
+- **It found that our spec broke its own rules.** Reviewing `requirements.md`, Kiro reported: "the spec said it must be a single sentence, but its own example is two sentences." In the same pass it caught a privacy leak in the design: "the URL stored the Wafer ID, a string from the STDF file, which the privacy rule forbids. It now stores a wafer index." (`logs/kiro-review-req.log`)
+- **It explained why our fixes seemed to change nothing.** During redesign task R8, Kiro found: "Playwright serves the existing production build from `.next` and rebuilds only if that build is missing. Until you run `pnpm build`, `pnpm e2e` tests old code." It then traced the remaining slow frame to the wafer-strip ArrowRight handler: "It spends 31 ms in script and 8 ms forcing a layout". (`logs/redesign-R8-kiro.log`)
+- **It told us what it had not checked.** After writing the first three hooks, Kiro said: "I haven't watched them fire in Kiro, and I wrote the hook format from memory without checking it against the Kiro docs." It also noted that the parity test covered `ja` and `ko` while the hook named only the two Chinese tables. This round fixed that hook. (`logs/t22-hooks.log`)
+```[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=234
+
