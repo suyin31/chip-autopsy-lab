@@ -500,36 +500,6 @@ function ToolPill({
   );
 }
 
-type NetworkTopologyIconProps = React.SVGProps<SVGSVGElement> & {
-  strokeWidth?: number | string;
-};
-
-/**
- * Network topology glyph for the header "Network" trigger: one front node over two
- * member nodes, at the same 16 px size and 1.5 px stroke as the neighbouring
- * controls. It replaces a second globe that sat directly beside the language one.
- */
-function NetworkTopologyIcon({ strokeWidth = 1.5, ...props }: NetworkTopologyIconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <circle cx={12} cy={5.5} r={2.4} />
-      <circle cx={5.5} cy={18.5} r={2.2} />
-      <circle cx={18.5} cy={18.5} r={2.2} />
-      <path d="M12 7.9v4.1" />
-      <path d="M12 12H5.5v4.3" />
-      <path d="M12 12h6.5v4.3" />
-    </svg>
-  );
-}
-
 function StarterCard({
   starter,
   index,
@@ -661,11 +631,9 @@ export function AgentConsole() {
   }>({ ids: new Set<string>() });
   const [waferIndex, setWaferIndex] = React.useState(0);
   const [showSettings, setShowSettings] = React.useState(false);
-  const [showNetwork, setShowNetwork] = React.useState(false);
   const [peerUrl, setPeerUrl] = React.useState('https://agent-atlas-phi.vercel.app/agent_atlas');
   const [peers, setPeers] = React.useState<{ url: string; network: string; origin: string }[]>([]);
   const [activePeer, setActivePeer] = React.useState<string | null>(null);
-  const [manifestJson, setManifestJson] = React.useState<string>('');
   const [railTab, setRailTab] = React.useState<'facts' | 'peers' | 'trace'>('facts');
   const [expandedTools, setExpandedTools] = React.useState<ReadonlySet<string>>(new Set());
   const [expandedTrails, setExpandedTrails] = React.useState<ReadonlySet<string>>(new Set());
@@ -850,7 +818,6 @@ export function AgentConsole() {
       .ready()
       .then((site) => {
         const network = runtime.getNetwork(site.networks[0] ?? '');
-        setManifestJson(JSON.stringify(site.manifest, null, 2));
         if (network) {
           setNetworkSummary({
             name: network.name,
@@ -1177,16 +1144,6 @@ export function AgentConsole() {
           </div>
 
           <div className="flex shrink-0 flex-nowrap items-center justify-self-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowNetwork(true)}
-              aria-label={t('agents.networkAria')}
-              className="max-sm:w-8 max-sm:px-0"
-            >
-              <NetworkTopologyIcon className="size-4" strokeWidth={1.5} aria-hidden="true" />
-              <span className="max-sm:sr-only">{t('agents.network.label')}</span>
-            </Button>
             <LanguageSwitcher includeAppearance />
             <ThemeToggle className="ml-1" />
             <Button
@@ -1799,93 +1756,6 @@ export function AgentConsole() {
             onClear={clear}
             onClose={() => setShowSettings(false)}
           />
-        </div>
-      </ModalSheet>
-
-      <ModalSheet
-        open={showNetwork}
-        onClose={() => setShowNetwork(false)}
-        titleId="agent-network-title"
-        closeLabel={t('sheet.close')}
-        size="wide"
-        data-testid="agent-network-sheet"
-      >
-        <div className="flex flex-col gap-5">
-          <div>
-            <h2 id="agent-network-title" className="type-title-2 text-text-primary">
-              {t('agents.network.title')}
-            </h2>
-            <p className="mt-1 type-subhead text-text-tertiary">
-              {networkSummary
-                ? t('agents.network.summary', { name: networkSummary.name, agent: networkSummary.frontMan })
-                : t('agents.network.reading')}
-            </p>
-            <p className="mt-1 type-caption text-text-tertiary">{t('agents.network.profile')}</p>
-          </div>
-
-          {networkSummary ? (
-            <ul className="flex flex-col">
-              {networkSummary.agents.map((agent) => (
-                <li key={agent.name} className="border-t border-hairline py-3 first:border-t-0 first:pt-0">
-                  <p className="flex items-baseline gap-2">
-                    <span className="font-mono text-[13px] text-text-primary">{agent.name}</span>
-                    {agent.name === networkSummary.frontMan ? (
-                      <span className="rounded-pill bg-fill-2 px-2 py-0.5 type-caption text-text-secondary">
-                        {t('agents.network.front')}
-                      </span>
-                    ) : null}
-                    <span className="ml-auto type-caption tabular-nums text-text-tertiary">
-                      {t('agents.network.tools', { count: formatInteger(agent.tools) })}
-                    </span>
-                  </p>
-                  <p className="mt-1 type-subhead text-text-secondary">{agent.description}</p>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-            {[
-              { href: '/agent-manifest.json', label: 'agent-manifest.json' },
-              { href: '/agents/chip_autopsy_lab.network.json', label: 'network.json' },
-              { href: '/agents/chip_autopsy_lab.network.hocon', label: t('agents.network.hocon') },
-              { href: '/links.json', label: 'links.json' },
-            ].map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-sm type-subhead text-text-secondary underline decoration-hairline-strong underline-offset-4 transition-[color] duration-[120ms] ease-[var(--ease-out)] hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
-
-          <details className="group/raw">
-            <summary className="cursor-pointer type-caption text-text-tertiary">{t('agents.network.raw')}</summary>
-            <div className="mt-2 flex flex-col gap-1.5">
-              {manifestJson ? (
-                <div className="flex justify-end">
-                  <CopyButton
-                    value={manifestJson}
-                    label={t('error.copyDetails')}
-                    copiedLabel={t('error.copied')}
-                    data-testid="agent-manifest-copy"
-                    className={cn(
-                      'type-caption text-text-tertiary',
-                      '[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/raw:opacity-100',
-                      '[@media(hover:hover)]:group-focus-within/raw:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100',
-                    )}
-                  />
-                </div>
-              ) : null}
-              <pre className="max-h-[320px] overflow-auto rounded-control bg-fill-1 p-3 font-mono text-[11px] leading-relaxed text-text-secondary">
-                {manifestJson || t('agents.network.loading')}
-              </pre>
-            </div>
-          </details>
         </div>
       </ModalSheet>
     </div>
