@@ -61,7 +61,7 @@ function CommandSearchPill({
       disabled={disabled}
       onClick={(event) => onOpen(event.currentTarget)}
       className={cn(
-        'at-well relative mr-2 inline-flex h-8 cursor-pointer items-center gap-2 rounded-pill pr-1 pl-3 type-control text-text-tertiary select-none max-sm:hidden',
+        'at-well-crisp relative mr-2 inline-flex h-8 max-w-[260px] min-w-0 shrink cursor-pointer items-center gap-2 overflow-hidden rounded-pill pr-1 pl-3 type-control whitespace-nowrap text-text-tertiary select-none max-sm:hidden',
         "after:absolute after:inset-x-0 after:-inset-y-1 after:content-['']",
         'transition-[color,scale] duration-[120ms] ease-[var(--ease-out)] [@media(hover:hover)]:enabled:hover:text-text-primary',
         'motion-safe:enabled:active:scale-[0.97]',
@@ -70,10 +70,13 @@ function CommandSearchPill({
       )}
     >
       <Search className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-      <span className="max-xl:hidden">{t('palette.placeholder')}</span>
+      {/* One line, always: the label truncates before it can wrap inside the 32 px pill */}
+      <span className="block min-w-0 max-w-[164px] truncate whitespace-nowrap max-xl:hidden 2xl:max-w-[216px]">
+        {t('palette.placeholder')}
+      </span>
       <kbd
         aria-hidden="true"
-        className="inline-flex h-6 min-w-6 items-center justify-center rounded-pill bg-surface px-1.5 text-[12px] leading-none font-[500] text-text-secondary shadow-[var(--elev-keycap)] dark:bg-fill-2"
+        className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-pill bg-surface px-1.5 text-[12px] leading-none font-[500] whitespace-nowrap text-text-secondary shadow-[var(--elev-keycap)] dark:bg-fill-2"
       >
         {modKey}K
       </kbd>
@@ -160,6 +163,7 @@ export function NavBar({
   return (
     <header
       data-testid="nav-bar"
+      style={{ viewTransitionName: 'cal-topbar' }}
       className={cn(
         'sticky top-0 z-[var(--z-nav)] w-full bg-material [backdrop-filter:var(--material-filter)] [-webkit-backdrop-filter:var(--material-filter)]',
         className,
@@ -210,11 +214,17 @@ export function NavBar({
             <span className="max-lg:hidden" translate="no">
               {t('nav.wordmark')}
             </span>
-            <span className="max-sm:hidden lg:hidden" translate="no">
+            {/* Below 640 the short wordmark stays on the landing; with a lot open the lot pill
+                needs the room and the reticle carries the mark instead. */}
+            <span
+              className={cn('lg:hidden', activeLot !== null && 'max-sm:hidden')}
+              translate="no"
+            >
               {t('nav.wordmarkShort')}
             </span>
-            {/* Below 640 the lot pill needs the room; the reticle carries the mark instead. */}
-            <span className="sr-only sm:hidden">{t('nav.wordmark')}</span>
+            {activeLot !== null ? (
+              <span className="sr-only sm:hidden">{t('nav.wordmark')}</span>
+            ) : null}
           </Link>
         </div>
 

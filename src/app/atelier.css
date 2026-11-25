@@ -117,7 +117,6 @@
     0 36px 80px -16px rgba(15, 23, 42, 0.2);
   --at-cta-sheen: rgba(255, 255, 255, 0.2);
   --at-zenith: rgba(255, 255, 255, 0.92);
-  --at-halo-o: 0.045;
 }
 
 :root,
@@ -161,7 +160,6 @@
     0 44px 96px -16px rgba(0, 0, 0, 0.82);
   --at-cta-sheen: rgba(255, 255, 255, 0.7);
   --at-zenith: rgba(214, 226, 255, 0.07);
-  --at-halo-o: 0.07;
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -174,6 +172,123 @@
 @theme inline {
   --color-chroma: var(--chroma);
   --color-chroma-soft: var(--chroma-soft);
+}
+
+/* --------------------------------------------------------------------------
+ * v2 depth system. Three materials meet on every screen: the bench (page), frosted glass
+ * (`.at-bento`), and a neutral dark well (`.at-obsidian-well`) for inset content. Five
+ * elevation steps separate them. The light field behind them (`AmbientField`) is a slow
+ * aurora plus a masked dot texture. The older plate/well tokens now resolve to the v2 steps,
+ * so every existing `.at-optic` / `.at-plate` picks up the deeper material.
+ * -------------------------------------------------------------------------- */
+:root[data-theme='light'] {
+  --elev-obsidian-well:
+    inset 0 2px 8px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.95);
+  --elev-well-crisp:
+    inset 0 2px 5px rgba(10, 21, 30, 0.08),
+    inset 0 0 0 1px rgba(10, 21, 30, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.95);
+  --elev-bento:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.98),
+    0 0 0 1px rgba(15, 23, 42, 0.075),
+    0 4px 10px -2px rgba(15, 23, 42, 0.05),
+    0 18px 38px -12px rgba(15, 23, 42, 0.12);
+  --elev-bento-hover:
+    inset 0 1.5px 0 #ffffff,
+    0 0 0 1px rgba(58, 79, 208, 0.22),
+    0 10px 22px -4px rgba(15, 23, 42, 0.08),
+    0 28px 56px -12px rgba(15, 23, 42, 0.18);
+  --elev-float-card:
+    inset 0 1.5px 0 #ffffff,
+    0 0 0 1px rgba(15, 23, 42, 0.08),
+    0 14px 30px -8px rgba(15, 23, 42, 0.14),
+    0 34px 72px -16px rgba(15, 23, 42, 0.22);
+  --elev-cta-luminous:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.42),
+    0 2px 6px rgba(10, 21, 30, 0.22),
+    0 14px 30px -6px rgba(58, 79, 208, 0.32),
+    0 8px 22px -6px color-mix(in oklab, var(--ember) 20%, transparent);
+
+  --at-bento-fill: linear-gradient(165deg, rgba(255, 255, 255, 0.92) 0%, rgba(246, 249, 253, 0.76) 100%);
+  --at-bento-filter: blur(24px) saturate(165%);
+  --at-spot-wash: rgba(58, 79, 208, 0.075);
+  --at-spot-size: 360px;
+  --at-cta-face: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 48%, rgba(58, 79, 208, 0.22) 100%);
+  --at-search-ring: 0 0 0 1px rgba(58, 79, 208, 0.36), 0 0 0 4px rgba(58, 79, 208, 0.12);
+
+  --at-aurora-a: radial-gradient(60% 50% at 62% 28%, rgba(58, 79, 208, 0.17) 0%, rgba(92, 148, 255, 0.08) 48%, transparent 100%);
+  --at-aurora-b: radial-gradient(48% 44% at 74% 46%, color-mix(in oklab, var(--ember) 15%, transparent) 0%, transparent 72%);
+  --at-aurora-c: radial-gradient(52% 42% at 18% 16%, rgba(150, 120, 255, 0.12) 0%, transparent 70%);
+  --at-aurora-d: radial-gradient(56% 46% at 12% 82%, rgba(52, 176, 214, 0.11) 0%, transparent 72%);
+  --at-dot-color: rgba(10, 21, 30, 0.2);
+  --at-lattice-o: 0.45;
+
+  --elev-plate: var(--elev-bento);
+  --elev-plate-hover: var(--elev-bento-hover);
+  --surface-plate: var(--at-bento-fill);
+}
+
+:root,
+:root[data-theme='dark'] {
+  --elev-obsidian-well:
+    inset 0 3px 10px rgba(0, 0, 0, 0.78),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.07);
+  --elev-well-crisp:
+    inset 0 2px 6px rgba(0, 0, 0, 0.68),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 1px 0 rgba(255, 255, 255, 0.06);
+  --elev-bento:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(124, 140, 255, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.09),
+    0 8px 20px -4px rgba(0, 0, 0, 0.55),
+    0 24px 48px -12px rgba(0, 0, 0, 0.78);
+  --elev-bento-hover:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.28),
+    0 0 0 1px rgba(124, 140, 255, 0.34),
+    0 14px 30px -6px rgba(0, 0, 0, 0.65),
+    0 32px 68px -12px rgba(0, 0, 0, 0.88);
+  --elev-float-card:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.24),
+    0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 20px 44px -8px rgba(0, 0, 0, 0.72),
+    0 42px 88px -16px rgba(0, 0, 0, 0.92);
+  --elev-cta-luminous:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+    0 4px 10px rgba(0, 0, 0, 0.5),
+    0 14px 34px -6px rgba(124, 140, 255, 0.36),
+    0 8px 24px -6px color-mix(in oklab, var(--ember) 24%, transparent);
+
+  --at-bento-fill: linear-gradient(165deg, rgba(28, 35, 52, 0.86) 0%, rgba(15, 20, 32, 0.92) 100%);
+  --at-bento-filter: blur(28px) saturate(175%);
+  --at-spot-wash: rgba(255, 255, 255, 0.085);
+  --at-spot-size: 360px;
+  --at-cta-face: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 52%, rgba(124, 140, 255, 0.3) 100%);
+  --at-search-ring: 0 0 0 1px rgba(146, 162, 255, 0.5), 0 0 0 4px rgba(124, 140, 255, 0.16);
+
+  --at-aurora-a: radial-gradient(62% 52% at 62% 26%, rgba(96, 118, 255, 0.28) 0%, rgba(52, 196, 214, 0.12) 52%, transparent 100%);
+  --at-aurora-b: radial-gradient(50% 46% at 72% 48%, color-mix(in oklab, var(--ember) 24%, transparent) 0%, transparent 74%);
+  --at-aurora-c: radial-gradient(55% 40% at 24% 18%, rgba(150, 108, 255, 0.16) 0%, transparent 70%);
+  --at-aurora-d: radial-gradient(56% 46% at 10% 84%, rgba(52, 196, 214, 0.1) 0%, transparent 72%);
+  --at-dot-color: rgba(255, 255, 255, 0.16);
+  --at-lattice-o: 0.36;
+
+  --elev-plate: var(--elev-bento);
+  --elev-plate-hover: var(--elev-bento-hover);
+  --surface-plate: var(--at-bento-fill);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-theme] {
+    --at-bento-fill: var(--surface);
+    --at-bento-filter: none;
+    --surface-plate: var(--surface);
+  }
 }
 
 @layer components {
@@ -212,36 +327,18 @@
   .at-plate {
     position: relative;
     border-radius: 18px;
-    background: var(--at-glass);
-    -webkit-backdrop-filter: var(--material-filter);
-    backdrop-filter: var(--material-filter);
-    box-shadow:
-      inset 0 1px 0 var(--at-glass-edge),
-      inset 0 0 0 1px var(--hairline),
-      0 18px 44px -26px rgba(8, 14, 24, 0.55);
+    background: var(--at-bento-fill);
+    -webkit-backdrop-filter: var(--at-bento-filter);
+    backdrop-filter: var(--at-bento-filter);
+    box-shadow: var(--elev-bento);
   }
 
-  /* ---- Room light (AmbientField): static, one zenith light and one faint signal halo ---- */
-  .at-field-zenith,
-  .at-field-halo {
-    position: absolute;
-    pointer-events: none;
-  }
+  /* ---- Room light (AmbientField): the zenith light; the aurora bands are further down ---- */
   .at-field-zenith {
+    position: absolute;
     inset: 0;
+    pointer-events: none;
     background: radial-gradient(120% 64% at 50% -14%, var(--at-zenith) 0%, transparent 64%);
-  }
-  .at-field-halo {
-    left: 58%;
-    top: 6%;
-    width: min(1180px, 130vw);
-    aspect-ratio: 1.5;
-    translate: -50% 0;
-    background: radial-gradient(closest-side, var(--ember) 0%, transparent 100%);
-    opacity: var(--at-halo-o);
-  }
-  [data-intensity='vivid'] > .at-field-halo {
-    opacity: calc(var(--at-halo-o) * 1.25);
   }
 
   /* ---- Optical material classes ------------------------------------------------------ */
@@ -598,6 +695,418 @@
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root),
   ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+ * v2 components: aurora light field, glass bento, neutral dark well, search well,
+ * luminous CTA, gradient accent word, named route-transition groups.
+ * ========================================================================== */
+@layer components {
+  /* ---- Light field (AmbientField v2) ---------------------------------------------------
+     The field spans the page; its stage is sticky, so the light stays behind the viewport
+     while long pages scroll. Ribbons drift on transform only (compositor), 22-30 s cycles. */
+  .at-aurora-stage {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: 100lvh;
+    overflow: hidden;
+    contain: strict;
+    animation: at-aurora-in 900ms var(--ease-out) both;
+  }
+  .at-aurora-ribbon {
+    position: absolute;
+    inset: -18%;
+    pointer-events: none;
+    will-change: transform;
+    animation: at-aurora-drift-a 22s ease-in-out infinite alternate;
+  }
+  .at-aurora-ribbon[data-band='a'] {
+    background: var(--at-aurora-a);
+  }
+  .at-aurora-ribbon[data-band='b'] {
+    background: var(--at-aurora-b);
+    animation-name: at-aurora-drift-b;
+    animation-duration: 26s;
+    animation-delay: -7s;
+  }
+  .at-aurora-ribbon[data-band='c'] {
+    background: var(--at-aurora-c);
+    animation-name: at-aurora-drift-c;
+    animation-duration: 30s;
+    animation-delay: -13s;
+  }
+  .at-aurora-ribbon[data-band='d'] {
+    background: var(--at-aurora-d);
+    animation-name: at-aurora-drift-b;
+    animation-duration: 34s;
+    animation-delay: -19s;
+  }
+  [data-intensity='calm'] .at-aurora-ribbon {
+    opacity: 0.78;
+  }
+  /* A plain dot texture, faded out toward the edges so it only reads where the light falls. */
+  .at-aurora-lattice {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--at-lattice-o);
+    background-image: radial-gradient(circle, var(--at-dot-color) 1px, transparent 1.4px);
+    background-size: 24px 24px;
+    background-position: 12px 12px;
+    -webkit-mask-image: radial-gradient(ellipse 78% 64% at 56% 36%, #000 15%, transparent 82%);
+    mask-image: radial-gradient(ellipse 78% 64% at 56% 36%, #000 15%, transparent 82%);
+  }
+
+  /* ---- L1 glass bento ------------------------------------------------------------------
+     `::before` is the surface spotlight (and the hover elevation, so shadows cross-fade by
+     opacity); `::after` is the 1.5 px proximity rim fed by `useProximityRim`. */
+  .at-bento,
+  .at-float-card {
+    position: relative;
+    isolation: isolate;
+    border-radius: 24px;
+    background: var(--at-bento-fill);
+    -webkit-backdrop-filter: var(--at-bento-filter);
+    backdrop-filter: var(--at-bento-filter);
+    box-shadow: var(--elev-bento);
+  }
+  .at-float-card {
+    box-shadow: var(--elev-float-card);
+  }
+  .at-bento::before,
+  .at-float-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      var(--at-spot-size) circle at var(--spot-x, 50%) var(--spot-y, 0%),
+      var(--at-spot-wash),
+      transparent 70%
+    );
+    box-shadow: var(--elev-bento-hover);
+    opacity: 0;
+    transition: opacity 240ms var(--ease-out);
+  }
+  .at-bento[data-spot='on']::before,
+  .at-float-card[data-spot='on']::before {
+    opacity: 1;
+    transition-duration: 160ms;
+  }
+  .at-bento::after,
+  .at-float-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    pointer-events: none;
+    background: radial-gradient(
+      240px circle at var(--prox-x, -999px) var(--prox-y, -999px),
+      var(--at-prox-rim),
+      transparent 72%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: var(--prox-o, 0);
+  }
+
+  /* ---- L-1 neutral dark well ------------------------------------------------------------
+     A dark inset panel in both themes (a Pro display inside a light frame). It re-scopes the
+     text and line tokens, so content inside reads as dark-theme content without extra classes. */
+  .at-obsidian-well {
+    position: relative;
+    isolation: isolate;
+    border-radius: 20px;
+    color-scheme: dark;
+    background: radial-gradient(120% 100% at 50% 0%, #1c2230 0%, #0e121b 68%, #090b11 100%);
+    box-shadow: var(--elev-obsidian-well);
+    color: rgba(233, 240, 250, 0.94);
+    --text-primary: rgba(233, 240, 250, 0.94);
+    --text-secondary: rgba(196, 210, 228, 0.72);
+    --text-tertiary: rgba(178, 194, 214, 0.68);
+    --text-disabled: rgba(255, 255, 255, 0.28);
+    --hairline: rgba(255, 255, 255, 0.08);
+    --hairline-strong: rgba(255, 255, 255, 0.16);
+    --fill-1: rgba(255, 255, 255, 0.05);
+    --fill-2: rgba(255, 255, 255, 0.08);
+    --fill-3: rgba(255, 255, 255, 0.12);
+    --chroma: #8f9cff;
+  }
+  /* A soft top glint: light from above catching the glass over the panel. */
+  .at-obsidian-well::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 38%);
+  }
+  .at-obsidian-well[data-texture='dots']::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1.4px);
+    background-size: 16px 16px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 20%, transparent 85%);
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 20%, transparent 85%);
+  }
+
+  /* ---- Light well: search fields, tracks, secondary slots ------------------------------ */
+  .at-well-crisp {
+    background: var(--surface-well);
+    box-shadow: var(--elev-well-crisp);
+  }
+
+  /* Search well: the field itself carries no focus box; the rounded well lights a soft ring
+     when anything inside it has focus. */
+  .at-search-well {
+    position: relative;
+    border-radius: 14px;
+    background: var(--surface-well);
+    box-shadow: var(--elev-well-crisp);
+  }
+  .at-search-well::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: var(--at-search-ring);
+    opacity: 0;
+    transition: opacity 160ms var(--ease-out);
+  }
+  .at-search-well:focus-within::after {
+    opacity: 1;
+  }
+
+  /* ---- Luminous primary CTA -------------------------------------------------------------
+     Face gradient over the ink fill, coloured under-glow in the shadow stack, and the
+     existing one-pass glint (`.at-cta::before`), now broader and brighter. */
+  .at-cta-luminous {
+    background-image: var(--at-cta-face);
+    box-shadow: var(--elev-cta-luminous);
+  }
+  .at-cta-luminous::before {
+    background: linear-gradient(
+      108deg,
+      transparent 30%,
+      var(--at-cta-sheen) 50%,
+      transparent 70%
+    );
+  }
+
+  /* ---- Semantic micro pills (no accent name in the class: see accent audit) ------------ */
+  .at-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding-inline: 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    font-weight: 500;
+    white-space: nowrap;
+    background: var(--fill-1);
+    color: var(--text-secondary);
+    box-shadow: inset 0 0 0 1px var(--hairline);
+  }
+  .at-pill-iris {
+    background: var(--chroma-soft);
+    color: var(--text-primary);
+    box-shadow: inset 0 0 0 1px var(--chroma-line);
+  }
+  .at-pill-signal {
+    background: color-mix(in oklab, var(--ember) 12%, transparent);
+    color: var(--text-primary);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ember) 30%, transparent);
+  }
+  .at-pill-emerald {
+    background: rgba(34, 170, 120, 0.12);
+    color: var(--text-primary);
+    box-shadow: inset 0 0 0 1px rgba(34, 170, 120, 0.3);
+  }
+
+  /* Gradient accent word: silk-like shift from the signal hue through the channel hue. The
+     extra block padding keeps descenders inside the clipped background. */
+  :root .type-accent {
+    background-image: linear-gradient(128deg, var(--ember-mark) 0%, var(--chroma) 55%, var(--ember-ink) 100%);
+    background-size: 180% 180%;
+    background-position: 0% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    padding-block: 0.04em 0.14em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+}
+
+@keyframes at-aurora-in {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes at-aurora-drift-a {
+  from {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.07);
+  }
+}
+
+@keyframes at-aurora-drift-b {
+  from {
+    transform: translate3d(3%, 1%, 0) scale(1.05);
+  }
+  to {
+    transform: translate3d(-2.5%, -2%, 0) scale(1);
+  }
+}
+
+@keyframes at-aurora-drift-c {
+  from {
+    transform: translate3d(-2%, 2%, 0) scale(1.02);
+  }
+  to {
+    transform: translate3d(2.5%, -1.5%, 0) scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .at-aurora-stage,
+  .at-aurora-ribbon {
+    animation: none;
+  }
+  .at-bento::before,
+  .at-float-card::before,
+  .at-search-well::after {
+    transition-duration: 120ms;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .at-bento,
+  .at-float-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :root .type-accent {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+    color: var(--ember-ink);
+  }
+}
+
+@media (forced-colors: active) {
+  :root .type-accent {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Tactile spotlight vs. machined plate (v1 defect). `.cal-tactile[data-spotlight]` paints its
+ * light on `::after` with `soft-light`, which is invisible on a near-white plate and also
+ * overwrites the `.at-optic` proximity rim on the same element. These rules are unlayered and
+ * more specific than the globals.css tactile rules, so they win without editing that file:
+ * - On every tactile card the spotlight becomes a plain wash (`normal` blend) that shows in
+ *   both themes.
+ * - On an `.at-optic` tactile card the wash moves to `::before` (with the hover elevation) and
+ *   `::after` goes back to being the proximity rim.
+ * -------------------------------------------------------------------------- */
+:root .cal-tactile[data-spotlight='true']::after {
+  mix-blend-mode: normal;
+  background: radial-gradient(
+    var(--at-spot-size, 360px) circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    var(--at-spot-wash),
+    transparent 70%
+  );
+}
+
+:root .at-optic.cal-tactile[data-spotlight='true']::after {
+  padding: 1px;
+  box-shadow: none;
+  background: radial-gradient(
+    var(--at-prox-size, 220px) circle at var(--prox-x, -999px) var(--prox-y, -999px),
+    var(--at-prox-rim),
+    transparent 72%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: var(--prox-o, 0);
+  transition: none;
+}
+
+:root .at-optic.cal-tactile[data-spotlight='true']::before {
+  background: radial-gradient(
+    var(--at-spot-size, 360px) circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    var(--at-spot-wash),
+    transparent 70%
+  );
+}
+
+:root .at-optic.cal-tactile[data-spotlight='true'][data-tilt='active']::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
+  :root .at-optic.cal-tactile[data-spotlight='true']::after {
+    content: '';
+  }
+}
+
+/* Named route-transition groups: the top bar holds still while the room cross-fades; a stage
+   that exists on both routes scales and moves between its two positions. */
+::view-transition-group(cal-topbar) {
+  animation-duration: 0s;
+}
+
+::view-transition-old(cal-topbar),
+::view-transition-new(cal-topbar) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::view-transition-group(cal-wafer-stage) {
+  animation-duration: 360ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(cal-topbar),
+  ::view-transition-old(cal-topbar),
+  ::view-transition-new(cal-topbar),
+  ::view-transition-group(cal-wafer-stage) {
     animation: none;
   }
 }

@@ -23,6 +23,27 @@ export const SPRING_MORPH = { type: 'spring', stiffness: 360, damping: 36, mass:
 export const SPRING_MORPH_RETURN = { type: 'spring', stiffness: 520, damping: 44, mass: 0.85 } as const;
 export const SPRING_SHELF = { type: 'spring', stiffness: 300, damping: 34, mass: 0.9 } as const;
 
+/**
+ * UI v2 springs (plan §2.2.6). Lightly under-damped on purpose: these are the hand-feel
+ * springs (tilt, magnetic pull, folder fan, odometer digits), where a small settle reads as mass.
+ * They never drive layout and never run under reduced motion.
+ * - `SPRING_BENTO_TILT`: card 3D tilt and hover lift (damping ratio ~0.88).
+ * - `SPRING_MAGNETIC`: primary button follows the pointer by a few px (~0.73).
+ * - `SPRING_FOLDER`: evidence folder cards fanning out (~0.69).
+ * - `SPRING_ODOMETER`: sliding-number digit wheels (~0.87).
+ */
+export const SPRING_BENTO_TILT = { type: 'spring', stiffness: 320, damping: 28, mass: 0.8 } as const;
+export const SPRING_MAGNETIC = { type: 'spring', stiffness: 420, damping: 30, mass: 1 } as const;
+export const SPRING_FOLDER = { type: 'spring', stiffness: 360, damping: 26, mass: 1 } as const;
+export const SPRING_ODOMETER = { type: 'spring', stiffness: 380, damping: 34, mass: 1 } as const;
+
+/** Bento card tilt limits (plan §4 row 1): degrees, hover lift in px, perspective in px. */
+export const BENTO_TILT_MAX_DEG = 7 as const;
+export const BENTO_HOVER_LIFT_PX = -4 as const;
+export const BENTO_PERSPECTIVE_PX = 1000 as const;
+/** Primary CTA magnetic pull ceiling in px (plan §2.2.6). */
+export const MAGNETIC_MAX_PX = 4 as const;
+
 /** Shared-element `layoutId` bridging landing demo wafer -> ingest loading disc -> loaded stage. */
 export const WAFER_MORPH_LAYOUT_ID = 'cal-wafer-disc-morph' as const;
 

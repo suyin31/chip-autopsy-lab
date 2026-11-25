@@ -91,3 +91,5 @@ export { AnimatedCheckmark } from './checkmark';
 export { CopyButton } from './copy-button';
 export { StatusSwap, type StatusSwapProps } from './status-swap';
 export { TactileCard, type TactileCardProps } from './tactile-card';
+export { SlidingNumber, type SlidingNumberProps } from './sliding-number';
+export { TextReveal, type TextRevealProps } from './text-reveal';

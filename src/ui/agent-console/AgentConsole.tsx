@@ -1124,6 +1124,7 @@ export function AgentConsole() {
       <span aria-hidden="true" className="at-grain" />
       <header
         data-testid="agent-console-header"
+        style={{ viewTransitionName: 'cal-topbar' }}
         className="sticky top-0 z-[var(--z-nav)] w-full bg-material [backdrop-filter:var(--material-filter)] [-webkit-backdrop-filter:var(--material-filter)]"
       >
         <div className="mx-auto grid h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-4 lg:h-[52px] lg:grid-cols-[1fr_auto_1fr] lg:px-8 xl:px-10">

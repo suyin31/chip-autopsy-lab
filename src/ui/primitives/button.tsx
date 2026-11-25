@@ -2,7 +2,7 @@
 
 import { animate, useReducedMotion } from 'motion/react';
 import * as React from 'react';
-import { SPRING_TACTILE } from '@/ui/motion/tokens';
+import { MAGNETIC_MAX_PX, SPRING_MAGNETIC, SPRING_TACTILE } from '@/ui/motion/tokens';
 import { MOTION_TOKENS } from '@/ui/tokens';
 import { cn } from './cn';
 
@@ -23,6 +23,11 @@ export interface ButtonProps
   readonly iconSide?: ButtonIconSide;
   /** Disables tactile scale-on-press when motion would be distracting. */
   readonly static?: boolean;
+  /**
+   * Light magnetic pull toward the pointer (up to 4 px, `SPRING_MAGNETIC`). Defaults to on for
+   * `primary`; fine pointers only, never under reduced motion or `static`.
+   */
+  readonly magnetic?: boolean;
 }
 
 /**
@@ -107,8 +112,9 @@ function resolveVariantSurfaceClass(variant: ButtonVariant): string {
   if (variant === 'primary') {
     // `ink` fill, hover #333336 / #FFFFFF, pressed #000000 / #E8E8ED, disabled 0.32 (premium §7.11)
     return cn(
-      // Deep-ink keycap: top specular lip, bottom bevel, contact shadow; one glint per hover (`.at-cta`)
-      'at-cta bg-ink text-on-ink shadow-[var(--elev-cta)]',
+      // Luminous ink keycap: face gradient over the ink fill, 1.5 px specular lip, bottom bevel,
+      // coloured under-glow (`--elev-cta-luminous`); one 108deg glint per hover (`.at-cta`)
+      'at-cta at-cta-luminous bg-ink text-on-ink shadow-[var(--elev-cta-luminous)]',
       'enabled:hover:bg-[color-mix(in_oklab,var(--ink)_88%,var(--surface))]',
       'enabled:active:bg-[color-mix(in_oklab,var(--ink)_96%,var(--surface))]',
       'disabled:opacity-32 aria-disabled:opacity-32',
@@ -179,12 +185,14 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       size = 'md',
       iconSide,
       static: isStatic = false,
+      magnetic,
       disabled,
       type = 'button',
       onPointerDown,
       onPointerUp,
       onPointerLeave,
       onPointerCancel,
+      onPointerMove,
       onClick,
       ...props
     },
@@ -220,6 +228,58 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         animate(el, { scale: 1 }, SPRING_TACTILE);
       }
     }, [shouldReduceMotion]);
+
+    const isMagnetic = (magnetic ?? variant === 'primary') && !isStatic && !shouldReduceMotion;
+    const magnetFrameRef = React.useRef<number | null>(null);
+    const magnetPointRef = React.useRef<{ x: number; y: number } | null>(null);
+    const magnetActiveRef = React.useRef(false);
+    const magnetOffsetRef = React.useRef({ x: 0, y: 0 });
+
+    const releaseMagnet = React.useCallback(() => {
+      magnetPointRef.current = null;
+      if (magnetFrameRef.current !== null) {
+        cancelAnimationFrame(magnetFrameRef.current);
+        magnetFrameRef.current = null;
+      }
+      const el = innerRef.current;
+      if (el && magnetActiveRef.current) {
+        magnetActiveRef.current = false;
+        magnetOffsetRef.current = { x: 0, y: 0 };
+        animate(el, { x: 0, y: 0 }, SPRING_MAGNETIC);
+      }
+    }, []);
+
+    React.useEffect(() => releaseMagnet, [releaseMagnet]);
+
+    const handlePointerMove = React.useCallback(
+      (event: React.PointerEvent<HTMLButtonElement>) => {
+        onPointerMove?.(event);
+        if (!isMagnetic || isAriaDisabled || event.pointerType === 'touch') {
+          return;
+        }
+        magnetPointRef.current = { x: event.clientX, y: event.clientY };
+        magnetFrameRef.current ??= requestAnimationFrame(() => {
+          magnetFrameRef.current = null;
+          const el = innerRef.current;
+          const point = magnetPointRef.current;
+          if (!el || !point) return;
+          const rect = el.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return;
+          // The rect includes the pull already applied; subtract it so the pull does not feed back.
+          const applied = magnetOffsetRef.current;
+          const cx = rect.left - applied.x + rect.width / 2;
+          const cy = rect.top - applied.y + rect.height / 2;
+          const nx = Math.max(-1, Math.min(1, (point.x - cx) / (rect.width / 2)));
+          const ny = Math.max(-1, Math.min(1, (point.y - cy) / (rect.height / 2)));
+          const x = Math.round(nx * MAGNETIC_MAX_PX * 10) / 10;
+          const y = Math.round(ny * MAGNETIC_MAX_PX * 0.6 * 10) / 10;
+          magnetOffsetRef.current = { x, y };
+          magnetActiveRef.current = true;
+          animate(el, { x, y }, SPRING_MAGNETIC);
+        });
+      },
+      [isAriaDisabled, isMagnetic, onPointerMove],
+    );
 
     const handlePointerDown = React.useCallback(
       (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -259,16 +319,18 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       (event: React.PointerEvent<HTMLButtonElement>) => {
         onPointerLeave?.(event);
         releasePressScale();
+        releaseMagnet();
       },
-      [onPointerLeave, releasePressScale],
+      [onPointerLeave, releaseMagnet, releasePressScale],
     );
 
     const handlePointerCancel = React.useCallback(
       (event: React.PointerEvent<HTMLButtonElement>) => {
         onPointerCancel?.(event);
         releasePressScale();
+        releaseMagnet();
       },
-      [onPointerCancel, releasePressScale],
+      [onPointerCancel, releaseMagnet, releasePressScale],
     );
 
     const handleClick = React.useCallback(
@@ -293,6 +355,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
         onPointerCancel={handlePointerCancel}
+        onPointerMove={handlePointerMove}
         onClick={handleClick}
         className={cn(
           BUTTON_BASE_CLASS,

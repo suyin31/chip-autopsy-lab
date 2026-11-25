@@ -258,7 +258,7 @@ function matchesSearch(needle: string, haystack: string): boolean {
 }
 
 const KBD_CAP_CLASS =
-  'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-xs bg-fill-2 px-1.5 font-sans type-caption leading-none text-text-secondary shadow-[inset_0_0_0_1px_var(--hairline)]';
+  'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-[6px] bg-surface px-1.5 font-sans type-caption leading-none whitespace-nowrap text-text-secondary shadow-[var(--elev-keycap)] dark:bg-fill-2';
 
 function KeycapGroup({
   keys,
@@ -790,56 +790,60 @@ export function CommandPalette({
         contentClassName="flex flex-col overflow-hidden rounded-2xl"
         className="z-10 w-full max-w-[580px] text-text-primary outline-none"
       >
-        {/* Top search / DSL command input row */}
-        <div className="flex h-14 items-center gap-3 border-b border-hairline px-4">
-          <Search
-            aria-hidden="true"
-            size={16}
-            strokeWidth={1.75}
-            className="shrink-0 text-text-tertiary"
-          />
-          <input
-            ref={inputRef}
-            type="text"
-            role="combobox"
-            aria-label={t('palette.ariaLabel')}
-            aria-expanded="true"
-            aria-controls={listboxId}
-            aria-activedescendant={activeOption?.id}
-            aria-autocomplete="list"
-            data-testid="command-palette-input"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setActiveIndex(0);
-              if (parseError !== null) {
-                setParseError(null);
-              }
-            }}
-            placeholder={t('palette.placeholder')}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            className="min-w-0 flex-1 bg-transparent type-callout text-text-primary placeholder:text-text-tertiary outline-none"
-          />
-          {query.length > 0 ? (
-            <button
-              type="button"
-              tabIndex={-1}
-              aria-label={t('selection.clear')}
-              onPointerDown={stampAck}
-              onClick={() => {
-                setQuery('');
-                setParseError(null);
+        {/* Top search / DSL command input row: a rounded search well that lights a soft ring on
+            focus. The field itself draws no focus box (the global :focus-visible ring is a
+            square-cornered shadow on a borderless input). */}
+        <div className="border-b border-hairline p-2.5">
+          <div className="at-search-well flex h-11 items-center gap-3 px-3.5">
+            <Search
+              aria-hidden="true"
+              size={16}
+              strokeWidth={1.75}
+              className="shrink-0 text-text-tertiary"
+            />
+            <input
+              ref={inputRef}
+              type="text"
+              role="combobox"
+              aria-label={t('palette.ariaLabel')}
+              aria-expanded="true"
+              aria-controls={listboxId}
+              aria-activedescendant={activeOption?.id}
+              aria-autocomplete="list"
+              data-testid="command-palette-input"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
                 setActiveIndex(0);
-                inputRef.current?.focus();
+                if (parseError !== null) {
+                  setParseError(null);
+                }
               }}
-              className="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-pill text-text-tertiary transition-[background-color,color] duration-[var(--dur-1)] ease-[var(--ease-out)] hover:bg-fill-2 hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
-            >
-              <X aria-hidden="true" size={14} strokeWidth={1.75} />
-            </button>
-          ) : null}
-          <kbd className={KBD_CAP_CLASS}>Esc</kbd>
+              placeholder={t('palette.placeholder')}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className="h-full min-w-0 flex-1 bg-transparent type-callout text-text-primary shadow-none outline-none placeholder:text-text-tertiary focus:shadow-none focus:outline-none focus-visible:shadow-none focus-visible:outline-none"
+            />
+            {query.length > 0 ? (
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-label={t('selection.clear')}
+                onPointerDown={stampAck}
+                onClick={() => {
+                  setQuery('');
+                  setParseError(null);
+                  setActiveIndex(0);
+                  inputRef.current?.focus();
+                }}
+                className="inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-pill text-text-tertiary transition-[background-color,color] duration-[var(--dur-1)] ease-[var(--ease-out)] hover:bg-fill-2 hover:text-text-primary focus-visible:shadow-focus-ring focus-visible:outline-none"
+              >
+                <X aria-hidden="true" size={14} strokeWidth={1.75} />
+              </button>
+            ) : null}
+            <kbd className={KBD_CAP_CLASS}>Esc</kbd>
+          </div>
         </div>
 
         {/* Inline invalid-query guidance with clickable examples (Req 12.4, zero ember/orange) */}
@@ -932,7 +936,7 @@ export function CommandPalette({
                         'flex min-h-[40px] cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 select-none',
                         'transition-[background-color,color] duration-[var(--dur-1)] ease-[var(--ease-out)]',
                         isActive
-                          ? 'bg-fill-2 text-text-primary'
+                          ? 'bg-fill-2 text-text-primary shadow-[inset_0_0_0_1px_var(--hairline)]'
                           : 'text-text-primary hover:bg-fill-1',
                       )}
                     >
@@ -951,10 +955,10 @@ export function CommandPalette({
                       {item.preview ? (
                         <span
                           className={cn(
-                            'hidden max-w-[200px] shrink-0 truncate type-caption sm:inline',
+                            'hidden h-6 max-w-[200px] shrink-0 items-center truncate rounded-pill px-2.5 type-caption leading-6 shadow-[inset_0_0_0_1px_var(--hairline)] sm:inline-block',
                             isActive
-                              ? 'text-text-secondary'
-                              : 'text-text-tertiary',
+                              ? 'bg-surface text-text-secondary'
+                              : 'bg-fill-1 text-text-tertiary',
                           )}
                         >
                           {item.preview}
