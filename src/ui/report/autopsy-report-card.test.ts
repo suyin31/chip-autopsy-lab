@@ -345,10 +345,10 @@ describe('Verdict Column (R5: VerdictHero, ConfidencePill, StatRow, FindingsList
         /\b(font-mono|type-mono-data|tabular-mono|uppercase)\b/,
       );
       expect(cardHtml).not.toMatch(/<(code|kbd|pre|samp)\b/);
-      // The focus-ring token (premium §3.2) and the findings card's shadow-card (§7.6.1) are the only box-shadows here
+      // The focus-ring token (premium §3.2) is the only box-shadow here; FindingsList sits frameless between hairlines
       expect(cardHtml).not.toMatch(/\bshadow-(?!none\b|focus-ring\b|card\b)[a-z0-9]+\b/);
       expect(cardHtml).toMatch(
-        /data-testid="verdict-findings-list" class="[^"]*at-plate[^"]*rounded-\[18px\]/,
+        /data-testid="verdict-findings-list" class="[^"]*border-y border-hairline/,
       );
       expect(cardHtml).not.toMatch(/\bfont-(bold|extrabold|black)\b/);
 

@@ -11,6 +11,7 @@ import type { WorkerParseProgress } from '@/workers';
 
 interface Props {
   variant: 'inline' | 'compact';
+  embedded?: boolean;
   consoleRef: RefObject<HTMLDivElement | null>;
   loading: boolean;
   progress: WorkerParseProgress | null;
@@ -23,6 +24,7 @@ interface Props {
 
 export function StdfDropZone({
   variant,
+  embedded = false,
   consoleRef,
   loading,
   progress,
@@ -100,27 +102,46 @@ export function StdfDropZone({
       />
 
       {variant === 'inline' ? (
-        <SpecimenDropTray
-          variant="inline"
-          armed={active || loading}
-          className="rounded-[22px] p-1.5"
-          wellClassName="flex flex-wrap items-center gap-2.5 rounded-[16px] px-3.5 py-2.5"
-        >
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={locked}
-            data-testid="agent-stdf-button"
-            onClick={() => input.current?.click()}
+        embedded ? (
+          <div className="flex flex-wrap items-center gap-2.5 border-t border-hairline px-1 pt-2.5">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={locked}
+              data-testid="agent-stdf-button"
+              onClick={() => input.current?.click()}
+            >
+              <Upload className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
+              {t('agents.upload.button')}
+            </Button>
+            <span className="min-w-0 flex-1 type-caption text-text-secondary">
+              {t('agents.upload.dropHint')}
+            </span>
+            <FormatKeycaps className="max-sm:hidden" />
+          </div>
+        ) : (
+          <SpecimenDropTray
+            variant="inline"
+            armed={active || loading}
+            className="rounded-[22px] p-1.5"
+            wellClassName="flex flex-wrap items-center gap-2.5 rounded-[16px] px-3.5 py-2.5"
           >
-            <Upload className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
-            {t('agents.upload.button')}
-          </Button>
-          <span className="min-w-0 flex-1 type-caption text-text-secondary">
-            {t('agents.upload.dropHint')}
-          </span>
-          <FormatKeycaps className="max-sm:hidden" />
-        </SpecimenDropTray>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={locked}
+              data-testid="agent-stdf-button"
+              onClick={() => input.current?.click()}
+            >
+              <Upload className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
+              {t('agents.upload.button')}
+            </Button>
+            <span className="min-w-0 flex-1 type-caption text-text-secondary">
+              {t('agents.upload.dropHint')}
+            </span>
+            <FormatKeycaps className="max-sm:hidden" />
+          </SpecimenDropTray>
+        )
       ) : (
         <Button
           variant="secondary"

@@ -46,9 +46,9 @@ import {
   computeStaggerDelayMs,
   MOTION_TOKENS,
   PANEL_ENTER_OFFSET_Y_PX,
+  SPRING_TACTILE,
   SPRING_TOKENS,
   useReducedMotionPreference,
-  useTactileTilt,
 } from '@/ui/motion';
 import {
   AnimatedCheckmark,
@@ -69,6 +69,8 @@ import {
 } from './model-settings';
 import { AmbientField } from '@/ui/atelier/AmbientField';
 import { BorderBeam } from '@/ui/atelier/BorderBeam';
+import { PulseBusSvg } from '@/ui/atelier/PulseBusSvg';
+import { DatumTicks } from '@/ui/atelier/SpecimenDropTray';
 import { SpotlightTiltCard } from '@/ui/atelier/SpotlightTiltCard';
 import { Untranslated } from '@/ui/i18n';
 import { MorphingDialog } from '@/ui/primitives/morphing-dialog';
@@ -512,6 +514,7 @@ const SPECIALIST_KEYS = [
 function SpecialistTopologyBar({
   running,
   networkSummary,
+  reducedMotion,
 }: {
   readonly running: boolean;
   readonly networkSummary: {
@@ -519,13 +522,18 @@ function SpecialistTopologyBar({
     readonly frontMan: string;
     readonly agents: { name: string; description: string; tools: number }[];
   } | null;
+  readonly reducedMotion: boolean;
 }): React.JSX.Element {
   const { t, formatInteger } = useT();
   const [focusedKey, setFocusedKey] = React.useState<string>('autopsy_conductor');
   const activeAgent = networkSummary?.agents.find((a) => a.name === focusedKey);
+  const activeIndex = Math.max(
+    0,
+    SPECIALIST_KEYS.indexOf(focusedKey as (typeof SPECIALIST_KEYS)[number]),
+  );
 
   return (
-    <div className="agent-rise at-bento mb-5 rounded-[22px] p-3 sm:px-4 sm:py-3.5">
+    <div className="agent-rise mb-5 border-b border-hairline pb-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="inline-flex items-center gap-2">
           <span
@@ -550,22 +558,14 @@ function SpecialistTopologyBar({
         </span>
       </div>
 
-      <div className="relative mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 400 24"
-          preserveAspectRatio="none"
-          className="pointer-events-none absolute inset-x-0 top-1/2 hidden h-5 -translate-y-1/2 sm:block"
-        >
-          <path
-            d="M96 12h8M196 12h8M296 12h8"
-            fill="none"
-            className="at-stroke-iris opacity-65"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
+      <PulseBusSvg
+        variant="mesh"
+        activeIndex={activeIndex}
+        active={running}
+        className="mt-2.5 hidden sm:block"
+      />
 
+      <div className="mt-2 grid grid-cols-2 gap-1.5 sm:mt-1 sm:grid-cols-4">
         {SPECIALIST_KEYS.map((key, idx) => {
           const isSelected = focusedKey === key;
           const isLead = idx === 0;
@@ -578,21 +578,31 @@ function SpecialistTopologyBar({
               onFocus={() => setFocusedKey(key)}
               onClick={() => setFocusedKey(key)}
               className={cn(
-                'relative z-[1] flex cursor-pointer touch-manipulation items-center gap-2 rounded-[13px] bg-surface px-2.5 py-2 text-left',
-                'transition-[background-color,scale,transform] duration-[140ms] ease-[var(--ease-out)]',
+                'relative z-[1] flex cursor-pointer touch-manipulation items-center gap-2 rounded-pill px-2.5 py-1.5 text-left',
+                'transition-[color,opacity,scale,transform] duration-[140ms] ease-[var(--ease-out)]',
                 'active:scale-[0.98] motion-reduce:active:scale-100',
                 'focus-visible:shadow-focus-ring focus-visible:outline-none',
-                isSelected ? 'at-well-crisp ring-1 ring-[var(--chroma-line)]' : 'at-well-crisp opacity-85 [@media(hover:hover)]:hover:opacity-100',
+                isSelected
+                  ? 'text-text-primary'
+                  : 'text-text-secondary opacity-85 [@media(hover:hover)]:hover:opacity-100 [@media(hover:hover)]:hover:text-text-primary',
               )}
             >
+              {isSelected ? (
+                <motion.span
+                  layoutId="agent-specialist-capsule"
+                  aria-hidden="true"
+                  transition={reducedMotion ? { duration: 0 } : SPRING_TACTILE}
+                  className="pointer-events-none absolute inset-0 rounded-pill bg-fill-1 shadow-[inset_0_0_0_1px_var(--chroma-line)]"
+                />
+              ) : null}
               <span
                 aria-hidden="true"
                 className={cn(
-                  'size-1.5 shrink-0 rounded-full',
+                  'relative z-[1] size-1.5 shrink-0 rounded-full',
                   isLead ? 'at-dot-signal' : isSelected ? 'at-dot-iris' : 'bg-text-disabled',
                 )}
               />
-              <span className="min-w-0 truncate type-caption text-text-primary">
+              <span className="relative z-[1] min-w-0 truncate type-caption">
                 {t(AGENT_ROLES[key])}
               </span>
             </button>
@@ -683,26 +693,26 @@ function FactRowButton({
   readonly active: boolean;
   readonly onSelect: () => void;
 }): React.JSX.Element {
-  const rowRef = React.useRef<HTMLButtonElement | null>(null);
-  useTactileTilt(rowRef, { maxDeg: 2, liftPx: 2 });
-
   return (
     <button
-      ref={rowRef}
       type="button"
-      data-tactile=""
-      data-spotlight="true"
       onClick={onSelect}
       aria-pressed={active}
       className={cn(
-        'cal-tactile relative flex w-full cursor-pointer touch-manipulation items-start gap-2.5 rounded-[14px] px-3 py-2.5 text-left',
+        'relative flex w-full cursor-pointer touch-manipulation items-start gap-2.5 border-b border-hairline px-3 py-2.5 text-left',
         'transition-[background-color,scale,transform] duration-[120ms] ease-[var(--ease-out)]',
         '[@media(hover:hover)]:hover:bg-fill-1',
-        'active:scale-[0.985] motion-reduce:active:scale-100',
+        'active:scale-[0.99] motion-reduce:active:scale-100',
         'focus-visible:shadow-focus-ring focus-visible:outline-none',
-        active && 'at-well-crisp ring-1 ring-[var(--chroma-line)]',
+        active && 'bg-fill-1',
       )}
     >
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute top-2 bottom-2 left-0 w-[2px] rounded-pill bg-[var(--chroma)]"
+        />
+      ) : null}
       <span className="min-w-0 flex-1">
         <span className="block font-mono text-[11px] text-text-tertiary">
           {factId.replace('fact:', '')}
@@ -1315,7 +1325,11 @@ export function AgentConsole() {
                   }}
                   className="mx-auto flex min-h-full w-full max-w-[700px] flex-col justify-center py-6 sm:py-8"
                 >
-                  <SpecialistTopologyBar running={running} networkSummary={networkSummary} />
+                  <SpecialistTopologyBar
+                    running={running}
+                    networkSummary={networkSummary}
+                    reducedMotion={reducedMotion}
+                  />
 
                   <h2 className="agent-rise type-display-l text-text-primary">
                     {renderAccentPhrase(t('agents.empty.headline'), t('agents.empty.headlineAccent'), !isCjkLocale(locale))}
@@ -1327,9 +1341,21 @@ export function AgentConsole() {
                     {t('agents.empty.subline')}
                   </p>
 
-                  <div className="agent-rise at-bento mt-4 grid gap-2.5 rounded-[26px] p-3 sm:p-3.5" style={{ animationDelay: '90ms' }}>
-                    <LotSwitcher variant="empty" {...switcherProps} />
-                    {!hasConversation && <StdfDropZone variant="inline" {...uploadProps} />}
+                  <div
+                    data-texture="dots"
+                    className="agent-rise at-obsidian-well relative mt-4 grid gap-2.5 overflow-hidden rounded-[20px] p-3 sm:p-3.5"
+                    style={{ animationDelay: '90ms' }}
+                  >
+                    <DatumTicks />
+                    <BorderBeam active={loading} dual radius={20} size={110} width={1.5} durationS={3.6} />
+                    <div className="relative z-[1]">
+                      <LotSwitcher variant="empty" {...switcherProps} />
+                    </div>
+                    {!hasConversation && (
+                      <div className="relative z-[1]">
+                        <StdfDropZone variant="inline" embedded {...uploadProps} />
+                      </div>
+                    )}
                   </div>
 
                   <div className="at-scene-3d mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">

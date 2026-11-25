@@ -402,7 +402,7 @@ export function LoadedLotOverview({
       >
         <div
           style={{ viewTransitionName: 'cal-forensic-stage' }}
-          className="relative h-full w-full sm:rounded-[28px] sm:p-4 sm:[box-shadow:var(--elev-bento)] sm:[background:var(--at-bento-fill)] sm:[backdrop-filter:var(--at-bento-filter)]"
+          className="relative h-full w-full sm:p-3"
         >
           <div className="max-sm:hidden">
             <DatumTicks />

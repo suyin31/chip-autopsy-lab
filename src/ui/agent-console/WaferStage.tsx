@@ -10,9 +10,9 @@
 
 import * as React from 'react';
 import { Sparkles } from 'lucide-react';
+import { ProbeTraceCanvas } from '@/ui/atelier/ProbeTraceCanvas';
 import { DatumTicks } from '@/ui/atelier/SpecimenDropTray';
 import { Untranslated, useT } from '@/ui/i18n';
-import { TILT_TOKENS, useTactileTilt } from '@/ui/motion';
 import { cn } from '@/ui/primitives';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
 
@@ -61,37 +61,18 @@ function buildCells(
 const PULSE_MS = 460;
 
 const STANDBY_CHANNELS = [
-  { code: 'CH-01', name: 'SBIN / HBIN PARETO', bars: [78, 52, 34, 22] },
-  { code: 'CH-02', name: 'SPATIAL XY MATRIX', bars: [42, 86, 64, 48] },
-  { code: 'CH-03', name: 'PTR CPK LIMITS', bars: [62, 44, 88, 30] },
-  { code: 'CH-04', name: 'FACT DIE CITATION', bars: [50, 68, 54, 76] },
+  { code: 'CH-01', name: 'SBIN / HBIN PARETO' },
+  { code: 'CH-02', name: 'SPATIAL XY MATRIX' },
+  { code: 'CH-03', name: 'PTR CPK LIMITS' },
+  { code: 'CH-04', name: 'FACT DIE CITATION' },
 ] as const;
 
 const WaferDiscFrame = React.forwardRef<
   HTMLDivElement,
   { readonly className?: string; readonly children: React.ReactNode }
 >(function WaferDiscFrame({ className, children }, forwardedRef) {
-  const frameRef = React.useRef<HTMLDivElement | null>(null);
-  const [pointerDown, setPointerDown] = React.useState(false);
-
-  React.useImperativeHandle(forwardedRef, () => frameRef.current as HTMLDivElement, []);
-  useTactileTilt(frameRef, {
-    maxDeg: TILT_TOKENS.maxDegWafer,
-    liftPx: 0,
-    disabled: pointerDown,
-  });
-
-  const releasePointer = React.useCallback(() => setPointerDown(false), []);
-
   return (
-    <div
-      ref={frameRef}
-      className={cn('cal-tactile', className)}
-      onPointerDown={() => setPointerDown(true)}
-      onPointerUp={releasePointer}
-      onPointerCancel={releasePointer}
-      onPointerLeave={releasePointer}
-    >
+    <div ref={forwardedRef} className={className}>
       {children}
     </div>
   );
@@ -245,25 +226,29 @@ export function WaferStage({
           aria-hidden="true"
           className="relative z-[1] grid grid-cols-2 gap-2"
         >
-          {STANDBY_CHANNELS.map((ch) => (
+          {STANDBY_CHANNELS.map((ch, idx) => (
             <div
               key={ch.code}
-              className="flex flex-col gap-1.5 rounded-[12px] bg-fill-1 px-2.5 py-2 shadow-[inset_0_0_0_1px_var(--hairline)]"
+              className="flex flex-col gap-1 rounded-[12px] bg-fill-1 px-2.5 py-2 shadow-[inset_0_0_0_1px_var(--hairline)]"
             >
               <div className="flex items-center justify-between gap-1">
                 <Untranslated className="font-mono text-[10px] text-text-tertiary">
                   {ch.code}
                 </Untranslated>
-                <span className="inline-flex items-end gap-0.5">
-                  {ch.bars.map((h, i) => (
-                    <span
-                      key={i}
-                      className="w-1 rounded-[1px] bg-fill-3"
-                      style={{ height: `${Math.round(h * 0.12)}px` }}
-                    />
-                  ))}
-                </span>
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'size-1.5 rounded-full',
+                    idx === 1 ? 'at-dot-signal' : 'at-dot-iris',
+                  )}
+                />
               </div>
+              <ProbeTraceCanvas
+                mode="single"
+                channelIndex={idx as 0 | 1 | 2 | 3}
+                height={34}
+                data-testid={`agent-standby-trace-${idx + 1}`}
+              />
               <Untranslated className="truncate font-mono text-[10.5px] text-text-secondary">
                 {ch.name}
               </Untranslated>

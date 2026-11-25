@@ -1,10 +1,12 @@
 import type { CSSProperties, ReactElement } from 'react';
 
 export type AmbientFieldIntensity = 'calm' | 'vivid';
+export type AmbientFieldTone = 'default' | 'excursion' | 'healthy';
 
 export type AmbientFieldProps = {
   readonly className?: string;
   readonly intensity?: AmbientFieldIntensity;
+  readonly tone?: AmbientFieldTone;
   readonly ariaHidden?: boolean;
 };
 
@@ -20,20 +22,17 @@ const ROOT_STYLE: CSSProperties = {
 };
 
 /**
- * The light field behind every atelier page (UI v2 §2.2.1). All CSS, no canvas, no frame loop:
+ * The light field behind every atelier page (UI v2/v3). All CSS, no canvas, no frame loop:
  * - a zenith light from above the bench,
  * - four large soft aurora bands (channel blue, signal hue, violet, teal) drifting on
  *   `transform` over 22-34 s cycles,
- * - a 24 px dot texture masked to the lit centre.
- *
- * The stage is sticky, so the light stays behind the viewport on long pages. It sits at
- * `z-index: -1` inside the page's isolated stacking context, under every surface. Reduced motion
- * stops the drift (the light stays, static). `vivid` is the workbench; `calm` (agent console)
- * dims the bands slightly.
+ * - a 24 px dot texture masked to the lit centre,
+ * - optional `tone` shift (`excursion` warms the signal aurora band; `healthy` cools to emerald).
  */
 export function AmbientField({
   className,
   intensity = 'calm',
+  tone = 'default',
   ariaHidden = true,
 }: AmbientFieldProps): ReactElement {
   return (
@@ -41,6 +40,7 @@ export function AmbientField({
       aria-hidden={ariaHidden}
       data-testid="ambient-field"
       data-intensity={intensity}
+      data-tone={tone !== 'default' ? tone : undefined}
       className={className}
       style={ROOT_STYLE}
     >

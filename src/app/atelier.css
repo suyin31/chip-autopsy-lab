@@ -516,7 +516,7 @@
 
   .at-diagnosis {
     font-family: var(--font-display);
-    font-weight: 480;
+    font-weight: 500;
     font-size: clamp(30px, 3.1vw, 46px);
     line-height: 1.1;
     letter-spacing: -0.026em;
@@ -530,14 +530,6 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.03em;
     line-height: 1;
-  }
-
-  .at-label {
-    font-size: 11.5px;
-    font-weight: 500;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--text-tertiary);
   }
 
   /* The bottom command dock. A single horizontal instrument tray, glass over the field. */
@@ -749,6 +741,12 @@
   }
   [data-intensity='calm'] .at-aurora-ribbon {
     opacity: 0.78;
+  }
+  [data-tone='excursion'] .at-aurora-ribbon[data-band='b'] {
+    opacity: 0.96;
+  }
+  [data-tone='healthy'] .at-aurora-ribbon[data-band='b'] {
+    background: radial-gradient(50% 46% at 72% 48%, rgba(34, 170, 120, 0.16) 0%, transparent 76%);
   }
   /* A plain dot texture, faded out toward the edges so it only reads where the light falls. */
   .at-aurora-lattice {
@@ -1233,81 +1231,148 @@
       inset 0 0 0 1px var(--chroma-line);
   }
 
-  /* Prismatic Verdict Hero Bento chamber (Loaded Report right column top) */
-  .at-verdict-bento {
+  /* Open-bench frameless verdict header (v3: unboxed, anchored by a 56px prismatic datum bar) */
+  .at-verdict-open {
     position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    border-radius: 26px;
-    background: var(--at-bento-fill);
-    -webkit-backdrop-filter: var(--at-bento-filter);
-    backdrop-filter: var(--at-bento-filter);
-    box-shadow: var(--elev-float-card);
+    padding-top: 16px;
   }
-  .at-verdict-bento::before {
+  .at-verdict-open::before {
     content: '';
     position: absolute;
-    inset-inline: 0;
     top: 0;
+    left: 0;
+    width: 56px;
     height: 2.5px;
+    border-radius: 999px;
     pointer-events: none;
+    transform-origin: left center;
     background: linear-gradient(
       90deg,
       var(--ember-mark) 0%,
-      var(--chroma) 54%,
-      rgba(52, 196, 214, 0.45) 84%,
-      transparent 100%
+      var(--chroma) 68%,
+      rgba(52, 196, 214, 0.5) 100%
     );
+    animation: at-datum-draw 560ms var(--ease-out) both;
   }
-  .at-verdict-bento::after {
+  .at-verdict-open[data-healthy='true']::before {
+    background: var(--hairline-strong);
+  }
+
+  /* Single-pass refractive glint over high-confidence cause-of-death phrase (compositor only) */
+  .at-cause-glint {
+    position: relative;
+    overflow: hidden;
+  }
+  .at-cause-glint[data-glint='ready']::after {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: inherit;
-    padding: 1.5px;
     pointer-events: none;
-    background: radial-gradient(
-      260px circle at var(--prox-x, -999px) var(--prox-y, -999px),
-      var(--at-prox-rim),
+    background: linear-gradient(
+      110deg,
+      transparent 28%,
+      rgba(255, 255, 255, 0.42) 50%,
       transparent 72%
     );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    opacity: var(--prox-o, 0);
+    transform: translateX(-120%);
+    opacity: 0;
+    animation: at-cause-sheen 820ms 180ms var(--ease-out) forwards;
   }
 
-  /* 3D Card Folder pocket & stacked preview leaves (EvidenceShelf) */
-  .at-folder-pocket {
+  /* Frameless horizontal digital metric ruler (replaces boxed KPI cards) */
+  .at-ruler {
     position: relative;
-    isolation: isolate;
-    border-radius: 24px;
-    background: var(--surface-well);
-    box-shadow: var(--elev-well-crisp);
-    perspective: 900px;
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--hairline-strong) 0 1px,
+      transparent 1px 24px
+    );
+    background-size: 100% 4px;
+    background-repeat: no-repeat;
+    background-position: top left;
   }
 
-  .at-folder-leaf {
-    border-radius: 16px;
-    background: var(--at-bento-fill);
-    -webkit-backdrop-filter: var(--at-bento-filter);
-    backdrop-filter: var(--at-bento-filter);
-    box-shadow: var(--elev-bento);
-  }
-
-  .at-folder-lip {
+  .at-ruler-cell {
     position: relative;
-    z-index: 4;
-    border-radius: 20px;
-    background: var(--at-bento-fill);
-    -webkit-backdrop-filter: var(--at-bento-filter);
-    backdrop-filter: var(--at-bento-filter);
-    box-shadow: var(--elev-float-card);
+  }
+  .at-ruler-cell::after {
+    content: '';
+    position: absolute;
+    inset-inline: 10px;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 999px;
+    pointer-events: none;
+    background: var(--chroma);
+    transform: scaleX(0);
+    transform-origin: left center;
+    opacity: 0;
+    transition:
+      transform 200ms var(--ease-out),
+      opacity 160ms var(--ease-out);
+  }
+  .at-ruler-cell[data-selected='true']::after {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  /* Acoustic equalizer bars for frameless `/agents` starter rows (compositor scaleY only) */
+  .at-wave-bar {
+    width: 2px;
+    border-radius: 999px;
+    background: var(--chroma);
+    transform-origin: center bottom;
+    transform: scaleY(0.45);
+    opacity: 0.62;
+    transition:
+      transform 180ms var(--ease-out),
+      opacity 160ms var(--ease-out);
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .group:hover .at-wave-bar,
+    .group:focus-visible .at-wave-bar {
+      opacity: 1;
+      animation: at-wave-osc 780ms ease-in-out infinite alternate;
+    }
+    .group:hover .at-wave-bar:nth-child(2),
+    .group:focus-visible .at-wave-bar:nth-child(2) {
+      animation-delay: 110ms;
+    }
+    .group:hover .at-wave-bar:nth-child(3),
+    .group:focus-visible .at-wave-bar:nth-child(3) {
+      animation-delay: 220ms;
+    }
+    .group:hover .at-wave-bar:nth-child(4),
+    .group:focus-visible .at-wave-bar:nth-child(4) {
+      animation-delay: 90ms;
+    }
+    .group:hover .at-wave-bar:nth-child(5),
+    .group:focus-visible .at-wave-bar:nth-child(5) {
+      animation-delay: 190ms;
+    }
+  }
+
+  /* Vertical pulse timeline spine for `/agents` multi-step tool trails */
+  .at-timeline-spine {
+    position: relative;
+  }
+  .at-timeline-spine::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: linear-gradient(180deg, var(--chroma) 0%, var(--hairline-strong) 100%);
+  }
+
+  /* Open-bench chart section divider inside expanded EvidenceShelf */
+  .at-chart-section {
+    position: relative;
+    border-top: 1px solid var(--hairline);
+    padding-top: 24px;
   }
 
   /* Sonar concentric ripple rings inside FullWindowDropZone */
@@ -1418,6 +1483,40 @@
   }
 }
 
+@keyframes at-datum-draw {
+  from {
+    transform: scaleX(0);
+    opacity: 0.25;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes at-cause-sheen {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.75;
+  }
+  100% {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
+@keyframes at-wave-osc {
+  0% {
+    transform: scaleY(0.32);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .at-scene-3d {
     perspective: none !important;
@@ -1429,21 +1528,14 @@
   .at-bento-pop-sm {
     transform: none !important;
   }
+  .at-verdict-open::before,
+  .at-cause-glint[data-glint='ready']::after,
+  .at-wave-bar,
   .at-sonar-ring,
   .at-send-halo,
   .at-scanline,
   .at-pulse-trace,
   .at-live-pulse {
     animation: none !important;
-  }
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .at-verdict-bento,
-  .at-folder-leaf,
-  .at-folder-lip {
-    background: var(--surface);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 }

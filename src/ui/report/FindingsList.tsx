@@ -18,7 +18,6 @@ import type {
 } from '@/core/report';
 import type { GlossaryTermId } from '@/core/i18n';
 import { GlossaryText, useT } from '@/ui/i18n';
-import { useTactileTilt } from '@/ui/motion';
 import { cn } from '@/ui/primitives/cn';
 import {
   DISCLOSURE_SCOPE_ATTR,
@@ -199,20 +198,17 @@ interface FindingRowButtonProps extends React.ComponentPropsWithoutRef<'button'>
   readonly disabled?: boolean;
 }
 
-/** Clickable finding row with compact tactile tilt and specular highlight. */
+/** Clickable finding row (v3: zero 3D card tilt). */
 function FindingRowButton({
   className,
   disabled,
   ...props
 }: FindingRowButtonProps): React.JSX.Element {
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
-  useTactileTilt(buttonRef, { maxDeg: 2, liftPx: 3, disabled });
   return (
     <button
       {...props}
-      ref={buttonRef}
-      data-spotlight="true"
-      className={cn('cal-tactile relative', className)}
+      disabled={disabled}
+      className={cn('relative', className)}
     />
   );
 }
@@ -378,7 +374,7 @@ export function FindingsList({
 
           <ul
             data-testid="verdict-findings-list"
-            className="at-plate mt-4 flex flex-col rounded-[18px] p-1"
+            className="mt-3 flex flex-col border-y border-hairline"
           >
             {shownFindings.map((row, idx) => {
               const isSelected = activeClaimId === row.claimId;
@@ -432,13 +428,13 @@ export function FindingsList({
                   {idx > 0 ? (
                     <div
                       aria-hidden="true"
-                      className="finding-row-separator mx-4 h-px bg-hairline transition-opacity duration-120 ease-out"
+                      className="finding-row-separator h-px bg-hairline transition-opacity duration-120 ease-out"
                     />
                   ) : null}
 
                   <div
                     className={cn(
-                      'group/finding rounded-lg transition-[background-color,scale] ease-out',
+                      'group/finding relative rounded-lg transition-[background-color,scale] ease-out',
                       isPressed
                         ? 'bg-fill-2 duration-0 scale-[0.985] motion-reduce:scale-100'
                         : isSelected
@@ -446,6 +442,12 @@ export function FindingsList({
                           : 'bg-transparent duration-120 hover:bg-fill-1',
                     )}
                   >
+                    {isSelected ? (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute top-3 bottom-3 left-0 w-0.5 rounded-pill bg-[var(--chroma)]"
+                      />
+                    ) : null}
                     <FindingRowButton
                       type="button"
                       data-testid="autopsy-body-claim-button"
@@ -460,7 +462,7 @@ export function FindingsList({
                       onPointerCancel={clearPressedRow}
                       onClick={() => onToggleClaim(row.claim)}
                       className={cn(
-                        'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-x-3 rounded-lg border-0 bg-transparent px-4 py-3 text-left',
+                        'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-x-3 rounded-lg border-0 bg-transparent px-3 py-3 text-left',
                         'focus-visible:shadow-focus-ring focus-visible:outline-none',
                       )}
                     >

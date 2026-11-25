@@ -21,6 +21,7 @@ export interface VerdictHeroProps {
   readonly headlineClaim: ReportClaim;
   readonly causeAria: string;
   readonly isActive: boolean;
+  readonly highConfidence?: boolean;
   readonly onToggleClaim: (claim: ReportClaim) => void;
   readonly renderRiseBlock?: (
     id: VerdictRiseBlockId,
@@ -54,6 +55,7 @@ export function VerdictHero({
   headlineClaim,
   causeAria,
   isActive,
+  highConfidence = false,
   onToggleClaim,
   renderRiseBlock,
   revealed = true,
@@ -181,8 +183,11 @@ export function VerdictHero({
               aria-label={`${verdict.cause} — ${causeAria}`}
               onPointerDown={handlePointerDown}
               onClick={() => onToggleClaim(headlineClaim)}
+              data-glint={
+                highConfidence && typeOn.settled && !effectiveReduced ? 'ready' : undefined
+              }
               className={cn(
-                'verdict-cause -mx-1 inline-block max-w-[calc(100%+8px)] cursor-pointer appearance-none rounded-md border-0 bg-transparent px-1 py-0 text-left font-[inherit] text-[length:inherit] leading-[inherit] tracking-[inherit] text-ember-ink',
+                'verdict-cause at-cause-glint -mx-1 inline-block max-w-[calc(100%+8px)] cursor-pointer appearance-none rounded-md border-0 bg-transparent px-1 py-0 text-left font-[inherit] text-[length:inherit] leading-[inherit] tracking-[inherit] text-ember-ink',
                 'transition-opacity duration-[120ms] ease-[var(--ease-out)] active:opacity-72',
                 'focus-visible:shadow-focus-ring focus-visible:outline-none',
               )}

@@ -663,6 +663,13 @@ export function AppShell({
 
   const isLandingOrError =
     workspace.status === 'empty' || workspace.status === 'parse-failed';
+  const ambientTone =
+    workspace.status === 'ready'
+      ? workspace.payload.verdict.tier === 0 ||
+        workspace.payload.verdict.totalFailDies === 0
+        ? 'healthy'
+        : 'excursion'
+      : 'default';
 
   return (
     <FullWindowDropZone
@@ -670,7 +677,11 @@ export function AppShell({
       onFileDrop={(file) => handleLoadFile(file)}
     >
       <div className="at-page relative min-h-dvh overflow-x-clip">
-      <AmbientField className="pointer-events-none absolute inset-0" intensity="vivid" />
+      <AmbientField
+        className="pointer-events-none absolute inset-0"
+        intensity="vivid"
+        tone={ambientTone}
+      />
       <span aria-hidden="true" className="at-grain" />
       <ClinicalToaster dismissLabel={t('toast.dismiss')} />
       <div

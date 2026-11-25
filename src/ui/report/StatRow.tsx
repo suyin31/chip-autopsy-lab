@@ -5,9 +5,7 @@ import * as React from 'react';
 import type { RenderedStatFact, RenderedStatFactTuple } from '@/core/report';
 import type { GlossaryTermId } from '@/core/i18n';
 import type { StatCaptionKey } from '@/core/report';
-import { useProximityRim } from '@/ui/atelier/ProximityPlate';
 import { GlossaryText, useT } from '@/ui/i18n';
-import { useTactileTilt } from '@/ui/motion';
 import { CountUpCompleteContext } from '@/ui/primitives/count-up';
 import { cn } from '@/ui/primitives/cn';
 import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
@@ -38,28 +36,10 @@ export interface StatRowProps {
 }
 
 /**
- * 3D KPI Bento Plate: restrained 5° spring tilt + proximity rim + surface spotlight.
- */
-const StatPlate = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentPropsWithoutRef<'div'>
->(function StatPlate({ className, children, ...rest }, forwardedRef) {
-  const plateRef = React.useRef<HTMLDivElement | null>(null);
-  useTactileTilt(plateRef, { maxDeg: 5, liftPx: 4 });
-  useProximityRim(plateRef, { reachPx: 190 });
-  React.useImperativeHandle(forwardedRef, () => plateRef.current as HTMLDivElement);
-  return (
-    <div ref={plateRef} className={className} {...rest}>
-      {children}
-    </div>
-  );
-});
-
-/**
- * Mini micro-instrument rendered beside each KPI readout (zero ember class names for R5 audit):
- * - idx 0 (primary share/rate): 12-segment illuminated bar strip
- * - idx 1 (final yield): 36px SVG circular yield arc
- * - idx 2 (failed dies): compact segmented ratio track
+ * Compact frameless micro-gauge rendered above each ruler readout (zero ember class names for R5 audit):
+ * - idx 0 (primary share/rate): 10-segment illuminated graduation strip
+ * - idx 1 (final yield): 22px SVG circular yield arc
+ * - idx 2 (failed dies): compact dual-bar ratio track
  */
 function StatMicroMeter({
   idx,
@@ -73,17 +53,17 @@ function StatMicroMeter({
       stat.format === 'percent'
         ? Math.max(0.08, Math.min(1, stat.numericValue))
         : 0.75;
-    const activeCells = Math.max(1, Math.round(ratio * 12));
+    const activeCells = Math.max(1, Math.round(ratio * 10));
     return (
       <span
         aria-hidden="true"
-        className="pointer-events-none relative z-[1] flex items-center gap-1"
+        className="pointer-events-none relative z-[1] inline-flex shrink-0 items-center gap-0.5"
       >
-        {Array.from({ length: 12 }, (_, cellIdx) => (
+        {Array.from({ length: 10 }, (_, cellIdx) => (
           <span
             key={cellIdx}
             className={cn(
-              'h-5 w-1.5 rounded-pill',
+              'h-3.5 w-1 rounded-pill',
               cellIdx < activeCells ? 'at-bar-iris' : 'bg-fill-2',
             )}
           />
@@ -94,24 +74,24 @@ function StatMicroMeter({
 
   if (idx === 1) {
     const ratio = Math.max(0, Math.min(1, stat.numericValue));
-    const r = 13.5;
+    const r = 8.5;
     const c = 2 * Math.PI * r;
     const offset = c * (1 - ratio);
     return (
       <svg
         aria-hidden="true"
-        width="34"
-        height="34"
-        viewBox="0 0 34 34"
-        className="pointer-events-none relative z-[1] size-[34px] shrink-0 -rotate-90"
+        width="22"
+        height="22"
+        viewBox="0 0 22 22"
+        className="pointer-events-none relative z-[1] size-[22px] shrink-0 -rotate-90"
       >
-        <circle cx="17" cy="17" r={r} fill="none" stroke="var(--fill-2)" strokeWidth="3" />
+        <circle cx="11" cy="11" r={r} fill="none" stroke="var(--fill-2)" strokeWidth="2.2" />
         <circle
-          cx="17"
-          cy="17"
+          cx="11"
+          cy="11"
           r={r}
           fill="none"
-          strokeWidth="3"
+          strokeWidth="2.2"
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={offset}
@@ -124,23 +104,22 @@ function StatMicroMeter({
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none relative z-[1] flex w-12 flex-col gap-1"
+      className="pointer-events-none relative z-[1] flex w-8 shrink-0 flex-col gap-1"
     >
-      <span className="h-1.5 w-full overflow-hidden rounded-pill bg-fill-2">
-        <span className="at-bar-iris block h-full w-[38%] rounded-pill" />
+      <span className="h-1 w-full overflow-hidden rounded-pill bg-fill-2">
+        <span className="at-bar-iris block h-full w-[42%] rounded-pill" />
       </span>
-      <span className="h-1 w-8 rounded-pill bg-fill-2" />
+      <span className="h-0.5 w-5 rounded-pill bg-fill-2" />
     </span>
   );
 }
 
 /**
- * 1 + 2 Asymmetric KPI Bento (`src/ui/report/StatRow.tsx`):
- * - Item 0 spans 2 columns (`col-span-2`) at 48–52px as the primary forensic ratio with a
- *   12-segment micro-meter; Items 1 & 2 sit side-by-side (`34px`) with circular yield arc and
- *   fail-share micro-bars.
+ * Frameless 3-Cell Horizontal Instrument Scale (`src/ui/report/StatRow.tsx`, UI v3):
+ * - Replaces the 3 wobbling 5° `StatPlate` rounded cards with an unboxed horizontal metric ruler
+ *   (`.at-ruler`, top micrometer graduation ticks, `1px` hairline cell dividers, zero tilt).
  * - Preserves all `verdict-stat-*` testids, `.count-up` width locking, `.sr-only` sibling,
- *   and zero-ember R5 invariants.
+ *   weight `300` tabular numerals, and zero-ember R5 invariants.
  */
 export function StatRow({
   stats,
@@ -368,15 +347,17 @@ export function StatRow({
     <dl
       ref={rowRef}
       data-testid="verdict-stat-row"
-      className={cn('relative grid grid-cols-2 gap-3', className)}
+      className={cn(
+        'at-ruler relative grid grid-cols-1 max-sm:divide-y max-sm:divide-hairline sm:grid-cols-3 sm:divide-x sm:divide-hairline',
+        className,
+      )}
     >
       {stats.map((stat, idx) => {
-        const isLead = idx === 0;
         const isSelected = activeClaimId === stat.evidence.claimId;
         const captionId = `${idPrefix}-caption-${idx}`;
         const valueId = `${idPrefix}-value-${idx}`;
         return (
-          <StatPlate
+          <div
             key={idx}
             ref={(el: HTMLDivElement | null) => {
               itemRefs.current[idx] = el;
@@ -384,10 +365,10 @@ export function StatRow({
             data-testid="verdict-stat-item"
             data-selected={isSelected ? 'true' : undefined}
             className={cn(
-              'group/stat at-optic cal-tactile relative flex min-w-0 origin-center flex-col-reverse justify-between gap-2.5 overflow-hidden rounded-[22px] p-4 sm:p-5',
-              isLead && 'col-span-2',
+              'at-ruler-cell group/stat relative flex min-w-0 origin-center flex-col-reverse justify-between gap-2 px-2 py-4 sm:px-3.5 sm:py-4.5',
+              idx === 0 && 'sm:pl-1.5',
+              idx === 2 && 'sm:pr-1.5',
             )}
-            data-spotlight="true"
           >
             <dt
               id={captionId}
@@ -417,12 +398,7 @@ export function StatRow({
                 </span>
               ) : null}
             </dt>
-            <dd
-              className={cn(
-                'at-kpi-number flex items-center justify-between gap-3 text-text-primary tabular-nums',
-                isLead ? 'text-[46px] sm:text-[52px]' : 'text-[32px] sm:text-[36px]',
-              )}
-            >
+            <dd className="flex items-center justify-between gap-2 type-stat text-[30px] text-text-primary sm:text-[28px] xl:text-[34px]">
               <span
                 ref={(el) => {
                   valueRefs.current[idx] = el;
@@ -451,7 +427,7 @@ export function StatRow({
                 onPointerCancel={handlePressEnd}
                 onClick={() => onToggleStat?.(stat)}
                 className={cn(
-                  'absolute inset-0 z-0 cursor-pointer appearance-none rounded-[22px] border-0 bg-transparent p-0',
+                  'absolute inset-1 z-0 cursor-pointer appearance-none rounded-xl border-0 bg-transparent p-0',
                   'transition-[background-color] duration-120 ease-out',
                   'enabled:hover:bg-fill-1 enabled:active:bg-fill-2 aria-pressed:bg-fill-2 enabled:aria-pressed:hover:bg-fill-2',
                   'focus-visible:shadow-focus-ring focus-visible:outline-none',
@@ -459,7 +435,7 @@ export function StatRow({
                 )}
               />
             </dd>
-          </StatPlate>
+          </div>
         );
       })}
     </dl>

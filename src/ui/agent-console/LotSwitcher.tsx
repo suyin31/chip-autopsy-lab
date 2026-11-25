@@ -1,9 +1,10 @@
 'use client';
 
 import { ChevronDown, Loader2, RotateCcw } from 'lucide-react';
+import { motion } from 'motion/react';
 import { listDemoPresets, type DemoPresetId, type DemoPresetMeta } from '@/core/demo';
-import { SpotlightTiltCard } from '@/ui/atelier/SpotlightTiltCard';
 import { Untranslated, useT } from '@/ui/i18n';
+import { SPRING_TACTILE, useReducedMotionPreference } from '@/ui/motion';
 import {
   Button,
   cn,
@@ -48,27 +49,24 @@ function Spinner() {
   );
 }
 
-function PresetCard({
+function PresetChannel({
   preset,
   active,
   busy,
   disabled,
+  reducedMotion,
   onSelectPreset,
 }: Pick<Props, 'disabled' | 'onSelectPreset'> & {
   preset: DemoPresetMeta;
   active: boolean;
   busy: boolean;
+  reducedMotion: boolean;
 }) {
   const { t } = useT();
   const badge = PRESET_BADGES[preset.id];
   return (
-    <SpotlightTiltCard
-      as="button"
+    <button
       type="button"
-      maxDeg={5.5}
-      liftPx={-3}
-      pressable
-      preserve3d
       disabled={disabled}
       aria-busy={busy}
       aria-pressed={active}
@@ -76,12 +74,22 @@ function PresetCard({
       title={preset.title}
       onClick={() => onSelectPreset(preset.id)}
       className={cn(
-        'group flex w-full cursor-pointer touch-manipulation flex-col items-start gap-1.5 rounded-[18px] px-3.5 py-3 text-left',
+        'group relative flex w-full cursor-pointer touch-manipulation flex-col items-start gap-1 rounded-[12px] px-3 py-2.5 text-left',
+        'transition-[background-color,scale,transform] duration-[140ms] ease-[var(--ease-out)]',
+        !active && '[@media(hover:hover)]:hover:bg-fill-1',
+        'active:scale-[0.985] motion-reduce:active:scale-100',
         'focus-visible:shadow-focus-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60',
-        active && 'ring-1 ring-[var(--chroma-line)]',
       )}
     >
-      <span className="at-bento-pop-sm flex w-full items-center justify-between gap-2">
+      {active ? (
+        <motion.span
+          layoutId="agent-lot-pill"
+          aria-hidden="true"
+          transition={reducedMotion ? { duration: 0 } : SPRING_TACTILE}
+          className="pointer-events-none absolute inset-0 rounded-[12px] bg-fill-2 shadow-[inset_0_0_0_1px_var(--chroma-line)]"
+        />
+      ) : null}
+      <span className="relative z-[1] flex w-full items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden="true" className={cn('size-1.5 rounded-full', badge.dotClass)} />
           <Untranslated className="font-mono text-[10.5px] text-text-tertiary">
@@ -90,13 +98,13 @@ function PresetCard({
         </span>
         {busy ? <Spinner /> : null}
       </span>
-      <span className="line-clamp-1 type-control text-text-primary">
+      <span className="relative z-[1] line-clamp-1 type-control text-text-primary">
         {t(labels[preset.id])}
       </span>
-      <span className="line-clamp-1 type-caption text-text-tertiary">
+      <span className="relative z-[1] line-clamp-1 type-caption text-text-tertiary">
         {preset.subtitle}
       </span>
-    </SpotlightTiltCard>
+    </button>
   );
 }
 
@@ -110,6 +118,7 @@ export function LotSwitcher({
   onSelectPreset,
 }: Props) {
   const { t } = useT();
+  const reducedMotion = useReducedMotionPreference();
   const presets = listDemoPresets();
   const locked = disabled || loadingPresetId !== null;
   return (
@@ -120,14 +129,15 @@ export function LotSwitcher({
       data-testid="agent-lot-switcher"
     >
       {variant === 'empty' ? (
-        <div className="grid gap-2.5 sm:grid-cols-3">
+        <div className="grid gap-1.5 sm:grid-cols-3">
           {presets.map((preset) => (
-            <PresetCard
+            <PresetChannel
               key={preset.id}
               preset={preset}
               active={activePresetId === preset.id}
               busy={loadingPresetId === preset.id}
               disabled={locked}
+              reducedMotion={reducedMotion}
               onSelectPreset={onSelectPreset}
             />
           ))}

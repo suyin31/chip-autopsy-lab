@@ -46,7 +46,6 @@ import {
 } from './use-autopsy-narration';
 import { VerdictHero } from './VerdictHero';
 import { VerdictRiseBlock } from './VerdictRiseBlock';
-import { useProximityRim } from '@/ui/atelier/ProximityPlate';
 
 export interface AutopsyReportCardProps {
   readonly lot: LotModel;
@@ -338,8 +337,6 @@ export function AutopsyReportCard({
   >(null);
   const riseCompleted = riseCompletedLotId === lot.lotId;
   // Once the reveal has settled there is nothing to complete, so later input never renders here
-  const verdictBentoRef = React.useRef<HTMLDivElement | null>(null);
-  useProximityRim(verdictBentoRef, { reachPx: 220 });
   const riseStartRef = React.useRef<{ lotId: string; atMs: number } | null>(null);
   React.useEffect(() => {
     if (effectiveRevealed && riseStartRef.current?.lotId !== lot.lotId) {
@@ -641,10 +638,10 @@ export function AutopsyReportCard({
     >
       <CountUpCompleteContext.Provider value={riseCompleted}>
         <div
-          ref={verdictBentoRef}
           data-testid="verdict-top-block"
+          data-healthy={rendered.verdict.isHealthy ? 'true' : undefined}
           className={cn(
-            'at-verdict-bento flex flex-col p-5 sm:p-6',
+            'at-verdict-open flex flex-col',
             splitForMobileStage && 'order-1 lg:order-none',
           )}
         >
@@ -662,6 +659,7 @@ export function AutopsyReportCard({
             headlineClaim={activeReport.causeOfDeathHeadline}
             causeAria={t('verdict.causeAria')}
             isActive={headlineActive && headlineSource !== 'button'}
+            highConfidence={rendered.confidence.level === 'high'}
             onToggleClaim={() => toggleHeadlineFrom('phrase')}
             renderRiseBlock={renderRiseBlock}
             revealed={effectiveRevealed}
