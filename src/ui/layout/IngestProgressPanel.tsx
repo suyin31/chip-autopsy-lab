@@ -211,9 +211,9 @@ export function IngestProgressPanel({
             worker reads. The beam goes dark the moment parsing ends (the panel unmounts). */}
         <div
           data-testid="ingest-readout"
-          className="at-well relative mt-5 w-full rounded-[16px] px-4 pt-4 pb-3 sm:w-[352px]"
+          className="at-bento relative mt-5 w-full rounded-[20px] px-5 pt-4 pb-4 sm:w-[368px]"
         >
-          <BorderBeam active radius={16} size={64} durationS={3.2} data-testid="ingest-beam" />
+          <BorderBeam active dual radius={20} size={96} width={1.5} durationS={3.2} data-testid="ingest-beam" />
           <div
             role="progressbar"
             data-testid="ingest-progress-track"
@@ -224,7 +224,7 @@ export function IngestProgressPanel({
             aria-valuemax={100}
             aria-valuenow={pct !== null ? Math.round(pct) : undefined}
             aria-valuetext={valueText}
-            className="h-0.5 w-full overflow-hidden rounded-pill bg-fill-3 sm:w-80"
+            className="h-1 w-full overflow-hidden rounded-pill bg-fill-3 sm:w-80"
           >
             <div
               style={{

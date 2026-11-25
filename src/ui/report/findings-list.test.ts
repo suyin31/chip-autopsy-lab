@@ -41,7 +41,7 @@ describe('FindingsList (premium §7.6)', () => {
     expect(html).toContain('data-kind="pattern"');
     expect(html).toContain('data-kind="bin"');
     expect(html).toContain('data-kind="test"');
-    expect(html).toMatch(/grid-cols-\[16px_minmax\(0,1fr\)_auto\]/);
+    expect(html).toMatch(/grid-cols-\[32px_minmax\(0,1fr\)_auto\]/);
     expect(html).toContain('title="Failures concentrate in the outer 3 rings"');
     expect(html.match(/data-testid="finding-chevron"/g)).toHaveLength(3);
     expect(html).not.toContain('data-testid="findings-show-more"');

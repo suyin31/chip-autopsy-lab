@@ -2701,7 +2701,7 @@ function WaferMapCanvasImpl({
         dpr={dpr}
         onSelectWafer={handleSelectWafer}
         onPreviewWafer={handlePreviewWafer}
-        className="col-span-2 mt-2 sm:mt-3"
+        className="at-well-crisp col-span-2 mt-2 rounded-2xl sm:mt-2.5"
       />
     </div>
   );

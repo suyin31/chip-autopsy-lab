@@ -5,6 +5,7 @@ import * as React from 'react';
 import type { RenderedStatFact, RenderedStatFactTuple } from '@/core/report';
 import type { GlossaryTermId } from '@/core/i18n';
 import type { StatCaptionKey } from '@/core/report';
+import { useProximityRim } from '@/ui/atelier/ProximityPlate';
 import { GlossaryText, useT } from '@/ui/i18n';
 import { useTactileTilt } from '@/ui/motion';
 import { CountUpCompleteContext } from '@/ui/primitives/count-up';
@@ -17,7 +18,6 @@ import {
   sampleStatCountUp,
 } from '@/ui/wafer-map/probe-sweep';
 
-/** "dies failed, of 15,825 tested" defines "Die" (premium §2.2). */
 export function resolveStatCaptionTerms(
   captionKey: StatCaptionKey,
 ): readonly GlossaryTermId[] {
@@ -26,32 +26,27 @@ export function resolveStatCaptionTerms(
 
 const DIE_TERMS: readonly GlossaryTermId[] = ['die'];
 const NO_TERMS: readonly GlossaryTermId[] = [];
-/** The second line "81.5% on the first test" defines "First test" (premium §2.2). */
 const STAT_SECONDARY_CAPTION_TERMS: readonly GlossaryTermId[] = ['firstTest'];
 
 export interface StatRowProps {
   readonly stats: RenderedStatFactTuple;
-  /** When false (before the §8.1 ignite starts), holds the count-up until the verdict rise-in starts (premium §8.2). */
   readonly revealStarted?: boolean;
-  /** Delay in ms matching the stat block's §8.2 rise-in stagger (`180 ms` normal, `0 ms` reduced). */
   readonly revealDelayMs?: number;
-  /** Active selection-store highlight ID; a stat whose evidence ID matches shows selected. */
   readonly activeClaimId?: string | null;
-  /** Lights (or clears) the stat's evidence dies through the selection store (premium §7.5). */
   readonly onToggleStat?: (stat: RenderedStatFact) => void;
   readonly className?: string;
 }
 
 /**
- * One readout plate: a glass plate that tilts under the pointer with its own specular, so the
- * KPI row moves like three physical instruments rather than one flat band.
+ * 3D KPI Bento Plate: restrained 5° spring tilt + proximity rim + surface spotlight.
  */
 const StatPlate = React.forwardRef<
   HTMLDivElement,
   React.ComponentPropsWithoutRef<'div'>
 >(function StatPlate({ className, children, ...rest }, forwardedRef) {
   const plateRef = React.useRef<HTMLDivElement | null>(null);
-  useTactileTilt(plateRef, { maxDeg: 12, liftPx: 6 });
+  useTactileTilt(plateRef, { maxDeg: 5, liftPx: 4 });
+  useProximityRim(plateRef, { reachPx: 190 });
   React.useImperativeHandle(forwardedRef, () => plateRef.current as HTMLDivElement);
   return (
     <div ref={plateRef} className={className} {...rest}>
@@ -61,22 +56,91 @@ const StatPlate = React.forwardRef<
 });
 
 /**
- * Three-column big-number Stat Row (`src/ui/report/StatRow.tsx`, premium §7.5, `redesign.md` §5.3):
- * - `<dl>` grid `repeat(3, 1fr)`, gap 24 (12 below 768); each stat `<div>` holds a `<button>`
- *   (inside `<dd>`, padding 12 / margin -12, `r-lg`) that lights the stat's evidence dies.
- *   Hover `fill-1` + caption `text-primary`, pressed `fill-2` + scale 0.985, selected
- *   (`aria-pressed`) `fill-2`.
- * - Number `<dd>`: `stat`, `text-primary`, tabular; never orange (A4).
- * - Caption `<dt>` (`subhead` secondary, max 2 lines, optional `subhead` tertiary second line)
- *   precedes `<dd>` in DOM and sits visually below it (6 px gap) via `flex-direction: column-reverse`.
- * - Count-up (premium §8.2, §11.5):
- *   - First reveal: `0 -> target` in `600 ms` `ease-out-quart`, starting with the stat block, via one
- *     rAF loop writing `textContent` to refs (zero React state per frame). `.count-up` sets the
- *     min-width from the final string. Input in the verdict column completes it at once.
- *   - Selection-linked updates: `previous -> target` in `300 ms` `ease-out-expo` (interruptible).
- *   - Accessibility: visible animating `<span>` is `aria-hidden="true"`; sibling `.sr-only` `<span>`
- *     holds the final value.
- *   - Reduced motion: shows final values immediately (`0 ms`, never `0`).
+ * Mini micro-instrument rendered beside each KPI readout (zero ember class names for R5 audit):
+ * - idx 0 (primary share/rate): 12-segment illuminated bar strip
+ * - idx 1 (final yield): 36px SVG circular yield arc
+ * - idx 2 (failed dies): compact segmented ratio track
+ */
+function StatMicroMeter({
+  idx,
+  stat,
+}: {
+  readonly idx: number;
+  readonly stat: RenderedStatFact;
+}): React.JSX.Element {
+  if (idx === 0) {
+    const ratio =
+      stat.format === 'percent'
+        ? Math.max(0.08, Math.min(1, stat.numericValue))
+        : 0.75;
+    const activeCells = Math.max(1, Math.round(ratio * 12));
+    return (
+      <span
+        aria-hidden="true"
+        className="pointer-events-none relative z-[1] flex items-center gap-1"
+      >
+        {Array.from({ length: 12 }, (_, cellIdx) => (
+          <span
+            key={cellIdx}
+            className={cn(
+              'h-5 w-1.5 rounded-pill',
+              cellIdx < activeCells ? 'at-bar-iris' : 'bg-fill-2',
+            )}
+          />
+        ))}
+      </span>
+    );
+  }
+
+  if (idx === 1) {
+    const ratio = Math.max(0, Math.min(1, stat.numericValue));
+    const r = 13.5;
+    const c = 2 * Math.PI * r;
+    const offset = c * (1 - ratio);
+    return (
+      <svg
+        aria-hidden="true"
+        width="34"
+        height="34"
+        viewBox="0 0 34 34"
+        className="pointer-events-none relative z-[1] size-[34px] shrink-0 -rotate-90"
+      >
+        <circle cx="17" cy="17" r={r} fill="none" stroke="var(--fill-2)" strokeWidth="3" />
+        <circle
+          cx="17"
+          cy="17"
+          r={r}
+          fill="none"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          className="at-stroke-iris"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none relative z-[1] flex w-12 flex-col gap-1"
+    >
+      <span className="h-1.5 w-full overflow-hidden rounded-pill bg-fill-2">
+        <span className="at-bar-iris block h-full w-[38%] rounded-pill" />
+      </span>
+      <span className="h-1 w-8 rounded-pill bg-fill-2" />
+    </span>
+  );
+}
+
+/**
+ * 1 + 2 Asymmetric KPI Bento (`src/ui/report/StatRow.tsx`):
+ * - Item 0 spans 2 columns (`col-span-2`) at 48–52px as the primary forensic ratio with a
+ *   12-segment micro-meter; Items 1 & 2 sit side-by-side (`34px`) with circular yield arc and
+ *   fail-share micro-bars.
+ * - Preserves all `verdict-stat-*` testids, `.count-up` width locking, `.sr-only` sibling,
+ *   and zero-ember R5 invariants.
  */
 export function StatRow({
   stats,
@@ -114,9 +178,6 @@ export function StatRow({
   const pressedIdxRef = React.useRef<number | null>(null);
   const idPrefix = React.useId();
 
-  useTactileTilt(rowRef, { maxDeg: 1.5, liftPx: 2 });
-
-  // Premium §7.5 / §3.12: cards and rows press to 0.985 (80 ms in, spring-snappy out); none under reduced motion
   const handlePressStart = (
     idx: number,
     event: React.PointerEvent<HTMLButtonElement>,
@@ -163,7 +224,6 @@ export function StatRow({
       stats[2].numericValue,
     ];
 
-    // Premium §8.2 interrupt: input in the verdict column shows the reveal count's final values
     const finishRevealNow =
       revealCompleted &&
       (!hasCompletedInitialRevealRef.current || initialRevealRunningRef.current);
@@ -308,10 +368,10 @@ export function StatRow({
     <dl
       ref={rowRef}
       data-testid="verdict-stat-row"
-      data-spotlight="true"
-      className={cn('relative grid grid-cols-3 gap-2.5 md:gap-3.5', className)}
+      className={cn('relative grid grid-cols-2 gap-3', className)}
     >
       {stats.map((stat, idx) => {
+        const isLead = idx === 0;
         const isSelected = activeClaimId === stat.evidence.claimId;
         const captionId = `${idPrefix}-caption-${idx}`;
         const valueId = `${idPrefix}-value-${idx}`;
@@ -323,17 +383,19 @@ export function StatRow({
             }}
             data-testid="verdict-stat-item"
             data-selected={isSelected ? 'true' : undefined}
-            className="group/stat at-plate cal-tactile relative flex min-w-0 origin-center flex-col-reverse justify-end gap-2 rounded-[18px] px-4 pt-4 pb-4"
+            className={cn(
+              'group/stat at-optic cal-tactile relative flex min-w-0 origin-center flex-col-reverse justify-between gap-2.5 overflow-hidden rounded-[22px] p-4 sm:p-5',
+              isLead && 'col-span-2',
+            )}
             data-spotlight="true"
           >
-            {/* Text sits above the button fill and lets pointer input through to the button */}
             <dt
               id={captionId}
               className="pointer-events-none relative z-[1] type-subhead"
             >
               <span
                 data-testid="verdict-stat-caption"
-                className="line-clamp-2 block text-[12.5px] leading-[1.35] text-text-secondary transition-[color] duration-120 ease-out group-hover/stat:text-text-primary max-xl:line-clamp-3"
+                className="line-clamp-2 block text-[13px] leading-[1.38] text-text-secondary transition-[color] duration-120 ease-out group-hover/stat:text-text-primary"
               >
                 <GlossaryText
                   text={stat.captionText}
@@ -344,7 +406,7 @@ export function StatRow({
                 <span
                   data-testid="verdict-stat-caption-secondary"
                   className={cn(
-                    'line-clamp-2 block tabular-nums',
+                    'mt-0.5 line-clamp-2 block tabular-nums',
                     isSelected ? 'text-text-secondary' : 'text-text-tertiary',
                   )}
                 >
@@ -355,7 +417,12 @@ export function StatRow({
                 </span>
               ) : null}
             </dt>
-            <dd className="at-kpi-number text-[38px] text-text-primary tabular-nums md:text-[42px]">
+            <dd
+              className={cn(
+                'at-kpi-number flex items-center justify-between gap-3 text-text-primary tabular-nums',
+                isLead ? 'text-[46px] sm:text-[52px]' : 'text-[32px] sm:text-[36px]',
+              )}
+            >
               <span
                 ref={(el) => {
                   valueRefs.current[idx] = el;
@@ -370,7 +437,7 @@ export function StatRow({
               <span id={valueId} data-testid="verdict-stat-sr" className="sr-only">
                 {stat.valueText}
               </span>
-              {/* Premium §7.5: padding 12 / margin -12 keeps the text on the grid; r-lg */}
+              <StatMicroMeter idx={idx} stat={stat} />
               <button
                 type="button"
                 data-testid="verdict-stat-button"
@@ -384,7 +451,7 @@ export function StatRow({
                 onPointerCancel={handlePressEnd}
                 onClick={() => onToggleStat?.(stat)}
                 className={cn(
-                  'absolute -inset-x-1.5 -inset-y-3 z-0 cursor-pointer md:-inset-x-3 appearance-none rounded-lg border-0 bg-transparent p-0',
+                  'absolute inset-0 z-0 cursor-pointer appearance-none rounded-[22px] border-0 bg-transparent p-0',
                   'transition-[background-color] duration-120 ease-out',
                   'enabled:hover:bg-fill-1 enabled:active:bg-fill-2 aria-pressed:bg-fill-2 enabled:aria-pressed:hover:bg-fill-2',
                   'focus-visible:shadow-focus-ring focus-visible:outline-none',

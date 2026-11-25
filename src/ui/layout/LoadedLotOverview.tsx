@@ -19,6 +19,7 @@ import {
   WAFER_MORPH_LAYOUT_ID,
 } from '@/ui/motion';
 import { EvidenceShelf } from '@/ui/atelier/EvidenceShelf';
+import { DatumTicks } from '@/ui/atelier/SpecimenDropTray';
 import { Button } from '@/ui/primitives/button';
 import { AutopsyReportCard } from '@/ui/report';
 import { type SelectionStoreState, useSelectionStore } from '@/ui/state';
@@ -399,14 +400,20 @@ export function LoadedLotOverview({
         data-testid="stage-column"
         className="order-2 -mx-4 mt-5 w-[calc(100%+2rem)] sm:mx-0 sm:w-full lg:sticky lg:top-[52px] lg:order-none lg:col-start-1 lg:row-start-1 lg:mt-0 lg:h-[calc(100dvh-52px)] lg:min-h-[640px] lg:pt-4 lg:pb-4"
       >
-        <div className="relative h-full w-full">
+        <div
+          style={{ viewTransitionName: 'cal-forensic-stage' }}
+          className="relative h-full w-full sm:rounded-[28px] sm:p-4 sm:[box-shadow:var(--elev-bento)] sm:[background:var(--at-bento-fill)] sm:[backdrop-filter:var(--at-bento-filter)]"
+        >
+          <div className="max-sm:hidden">
+            <DatumTicks />
+          </div>
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 z-0 grid place-items-center"
+            className="pointer-events-none absolute inset-0 z-0 grid place-items-center overflow-hidden sm:rounded-[28px]"
           >
             <div
-              className="aspect-square w-[min(112%,100%)] rounded-full"
-              style={{ background: 'var(--at-stage-glow)', filter: 'blur(10px)' }}
+              className="aspect-square w-[min(108%,96%)] rounded-full"
+              style={{ background: 'var(--at-stage-glow)', filter: 'blur(14px)' }}
             />
           </div>
           <motion.div

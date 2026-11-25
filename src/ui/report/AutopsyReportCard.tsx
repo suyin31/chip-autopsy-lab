@@ -46,6 +46,7 @@ import {
 } from './use-autopsy-narration';
 import { VerdictHero } from './VerdictHero';
 import { VerdictRiseBlock } from './VerdictRiseBlock';
+import { useProximityRim } from '@/ui/atelier/ProximityPlate';
 
 export interface AutopsyReportCardProps {
   readonly lot: LotModel;
@@ -337,6 +338,8 @@ export function AutopsyReportCard({
   >(null);
   const riseCompleted = riseCompletedLotId === lot.lotId;
   // Once the reveal has settled there is nothing to complete, so later input never renders here
+  const verdictBentoRef = React.useRef<HTMLDivElement | null>(null);
+  useProximityRim(verdictBentoRef, { reachPx: 220 });
   const riseStartRef = React.useRef<{ lotId: string; atMs: number } | null>(null);
   React.useEffect(() => {
     if (effectiveRevealed && riseStartRef.current?.lotId !== lot.lotId) {
@@ -638,8 +641,12 @@ export function AutopsyReportCard({
     >
       <CountUpCompleteContext.Provider value={riseCompleted}>
         <div
+          ref={verdictBentoRef}
           data-testid="verdict-top-block"
-          className={cn('flex flex-col', splitForMobileStage && 'order-1 lg:order-none')}
+          className={cn(
+            'at-verdict-bento flex flex-col p-5 sm:p-6',
+            splitForMobileStage && 'order-1 lg:order-none',
+          )}
         >
           <div
             data-testid="autopsy-live-region"
@@ -737,7 +744,7 @@ export function AutopsyReportCard({
           <div
             data-testid="verdict-below-findings"
             className={cn(
-              'mt-12 min-w-0 border-t border-hairline pt-8 pb-6 md:mt-14 md:pt-10 lg:mt-16 lg:pb-16',
+              'mt-8 min-w-0 pb-6 md:mt-10 lg:mt-10 lg:pb-16',
               splitForMobileStage && 'order-5 lg:order-none',
             )}
           >

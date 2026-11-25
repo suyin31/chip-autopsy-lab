@@ -1,24 +1,20 @@
 'use client';
 
 import * as React from 'react';
+import { Untranslated } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import { BorderBeam } from './BorderBeam';
 import { useProximityRim } from './ProximityPlate';
 
 /**
- * Specimen drop tray (UI plan §4 A, surprise #1): the place a wafer log goes. A machined plate
- * (`r-3xl` 28, padding 8) holds a well cut into it (`r-xl` 20 = 28 - 8, concentric), marked at
- * the four corners with 1 px datum crosshairs instead of a dashed box. The beam runs the well's
- * edge only while a file is actually over the window.
- *
- * Purely visual: file input and window-level drop handling stay with their owners
- * (`EmptyStateCard`, `FullWindowDropZone`), so their contracts and tests are unchanged.
+ * Specimen drop tray: frosted glass outer plate (`r-[28px]`, `p-2`) framing a deep
+ * recessed `.at-obsidian-well` (`r-[20px]`, concentric) with corner datum crosshairs,
+ * dual optical probe beams when armed, and optional 3D format micro-keycaps.
  */
 export interface SpecimenDropTrayProps {
-  /** `inline`: the compact slot on the landing. `overlay`: the large tray shown while dragging. */
   readonly variant?: 'inline' | 'overlay';
-  /** A file is hovering: lights the probe beam along the well edge. */
   readonly armed?: boolean;
+  readonly showFormatCaps?: boolean;
   readonly className?: string;
   readonly wellClassName?: string;
   readonly children?: React.ReactNode;
@@ -43,7 +39,7 @@ export function DatumTicks(): React.JSX.Element {
           width="9"
           height="9"
           viewBox="0 0 9 9"
-          className={cn('pointer-events-none absolute', position)}
+          className={cn('pointer-events-none absolute z-[2]', position)}
         >
           <path d="M4.5 0.5v8M0.5 4.5h8" className="at-datum" strokeWidth={1} fill="none" />
         </svg>
@@ -53,8 +49,7 @@ export function DatumTicks(): React.JSX.Element {
 }
 
 /**
- * Circular specimen seat: a second, round well with notch marks at 12, 3, 6, and 9 o'clock,
- * the same orthogonal datums an inspection chuck carries.
+ * Circular specimen seat: a round instrument well with orthogonal datum marks at 12, 3, 6, and 9 o'clock.
  */
 export function SpecimenSeat({
   size,
@@ -70,7 +65,10 @@ export function SpecimenSeat({
   return (
     <span
       aria-hidden="true"
-      className={cn('at-well relative inline-flex shrink-0 items-center justify-center rounded-full', className)}
+      className={cn(
+        'at-well relative inline-flex shrink-0 items-center justify-center rounded-full',
+        className,
+      )}
       style={{ width: size, height: size }}
     >
       <svg
@@ -91,28 +89,58 @@ export function SpecimenSeat({
   );
 }
 
+export function FormatKeycaps({ className }: { readonly className?: string }): React.JSX.Element {
+  return (
+    <span aria-hidden="true" className={cn('inline-flex items-center gap-1.5', className)}>
+      {(['.STDF', '.STD', '.GZ'] as const).map((ext) => (
+        <Untranslated key={ext} className="at-keycap-badge">
+          {ext}
+        </Untranslated>
+      ))}
+    </span>
+  );
+}
+
 export function SpecimenDropTray({
   variant = 'inline',
   armed = false,
+  showFormatCaps = false,
   className,
   wellClassName,
   children,
   'data-testid': testId,
 }: SpecimenDropTrayProps): React.JSX.Element {
   const plateRef = React.useRef<HTMLDivElement | null>(null);
-  useProximityRim(plateRef, { disabled: variant !== 'inline' });
+  useProximityRim(plateRef, { disabled: variant !== 'inline', reachPx: 200 });
   return (
     <div
       ref={plateRef}
       data-testid={testId}
       data-variant={variant}
       data-armed={armed ? 'true' : undefined}
-      className={cn('at-optic rounded-[28px] p-2', className)}
+      className={cn(
+        variant === 'overlay' ? 'at-float-card' : 'at-bento',
+        'rounded-[28px] p-2',
+        className,
+      )}
     >
-      <div className={cn('at-well relative rounded-[20px]', wellClassName)}>
+      <div
+        data-texture="dots"
+        className={cn('at-obsidian-well relative overflow-hidden rounded-[20px]', wellClassName)}
+      >
         <DatumTicks />
-        <BorderBeam active={armed} radius={20} size={96} durationS={3.8} />
+        <BorderBeam
+          active={armed}
+          dual
+          radius={20}
+          size={variant === 'overlay' ? 140 : 104}
+          width={1.5}
+          durationS={variant === 'overlay' ? 3.2 : 3.8}
+        />
         {children}
+        {showFormatCaps ? (
+          <FormatKeycaps className="pointer-events-none absolute bottom-3.5 left-1/2 z-[2] -translate-x-1/2" />
+        ) : null}
       </div>
     </div>
   );

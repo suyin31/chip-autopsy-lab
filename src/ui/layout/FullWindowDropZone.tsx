@@ -50,12 +50,6 @@ function classifyDraggedTypes(event: WindowDropEventLike): DragItemKind | null {
   return 'non-file';
 }
 
-/**
- * Attaches window-level drag-and-drop listeners once without re-binding when
- * drag-over state toggles, reading the latest `getOnFileDrop()` via ref.
- * Distinguishes file drags (`'file'`) from non-file drags (`'non-file'`, e.g. text/links)
- * per `redesign.md` §3.2.
- */
 export function bindWindowFileDropListeners(options: {
   readonly target: WindowDropEventTarget;
   readonly getOnFileDrop: () => (file: File) => void;
@@ -158,19 +152,6 @@ const useIsomorphicLayoutEffect =
 
 type DropExitReason = 'drop' | 'leave';
 
-/**
- * Viewport-wide STDF file drag-and-drop wrapper (premium §6.5, UI plan surprise #1):
- * - Full viewport `scrim` at `z-index: 80`, not shown on touch devices
- * - Frame `inset: 16px`, `r-3xl`, `inset 0 0 0 1.5px hairline-strong` for every drag kind
- * - File drags: the workbench behind breathes back (`scale(0.988)`) and the specimen tray rises
- *   into the centre on `SPRING_MORPH`: a plate, a well with datum crosshairs, and a round seat,
- *   with one probe beam running the well's edge. "Drop the body." (`display-xl`) and
- *   "Release to open. STDF, STD, or gzip." sit under it.
- * - Releasing the file seats the tray: it contracts into the seat and fades while the loading
- *   view takes the disc. Dragging away just lets it sink back. Non-file drags show only the
- *   frame and "Only files can be opened here."
- * - Reduced motion: no recession, travel, scale, or beam; opacity only.
- */
 export function FullWindowDropZone({
   disabled = false,
   onFileDrop,
@@ -232,7 +213,6 @@ export function FullWindowDropZone({
   const isFileDrag = dragKind === 'file';
   const receded = showOverlay && isFileDrag && !shouldReduceMotion;
 
-  // Recede around the middle of what the user is looking at, not the middle of the document.
   useIsomorphicLayoutEffect(() => {
     const el = recedeRef.current;
     if (!el || !receded) {
@@ -246,11 +226,14 @@ export function FullWindowDropZone({
 
   const fade = { duration: MOTION_TOKENS.dur1Ms / 1000, ease: MOTION_TOKENS.easeOutTuple };
   const trayVariants = {
-    hidden: shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 12 },
+    hidden: shouldReduceMotion
+      ? { opacity: 0 }
+      : { opacity: 0, scale: 0.94, y: 18, rotateX: 8 },
     shown: {
       opacity: 1,
       scale: 1,
       y: 0,
+      rotateX: 0,
       transition: shouldReduceMotion ? fade : SPRING_MORPH,
     },
     exit: (reason: DropExitReason) =>
@@ -259,14 +242,14 @@ export function FullWindowDropZone({
         : reason === 'drop'
           ? {
               opacity: 0,
-              scale: 0.92,
-              y: 8,
+              scale: 0.88,
+              y: 10,
               transition: { ...SPRING_MORPH_RETURN, opacity: { duration: 0.2, delay: 0.06 } },
             }
-          : { opacity: 0, scale: 0.98, y: 6, transition: fade },
+          : { opacity: 0, scale: 0.97, y: 6, transition: fade },
   };
   const seatVariants = {
-    hidden: shouldReduceMotion ? { opacity: 1 } : { scale: 0.86, opacity: 0.4 },
+    hidden: shouldReduceMotion ? { opacity: 1 } : { scale: 0.84, opacity: 0.4 },
     shown: {
       scale: 1,
       opacity: 1,
@@ -275,7 +258,7 @@ export function FullWindowDropZone({
     exit: (reason: DropExitReason) =>
       shouldReduceMotion || reason !== 'drop'
         ? { transition: { duration: 0 } }
-        : { scale: 0.62, transition: SPRING_MORPH_RETURN },
+        : { scale: 0.6, transition: SPRING_MORPH_RETURN },
   };
 
   return (
@@ -316,13 +299,17 @@ export function FullWindowDropZone({
                 ? { duration: 0 }
                 : { duration: 0.18, ease: MOTION_TOKENS.easeOutTuple, delay: 0.06 },
             }}
+            style={{
+              backdropFilter: 'blur(28px) saturate(165%)',
+              WebkitBackdropFilter: 'blur(28px) saturate(165%)',
+            }}
             className="drag-overlay-surface pointer-events-none fixed inset-0 z-[var(--z-drag-overlay)]"
           >
-            {/* Frame: inset 16 px, r-3xl, 1.5 px inset hairline-strong for file and non-file drags */}
             <div
               data-testid="full-window-drop-frame"
               style={{
                 boxShadow: 'inset 0 0 0 1.5px var(--hairline-strong)',
+                perspective: shouldReduceMotion ? undefined : '1200px',
               }}
               className="absolute inset-4 flex items-center justify-center rounded-3xl"
             >
@@ -338,30 +325,39 @@ export function FullWindowDropZone({
                   <SpecimenDropTray
                     variant="overlay"
                     armed
+                    showFormatCaps
                     data-testid="full-window-drop-tray"
-                    className="w-full max-w-[520px] bg-surface shadow-[var(--elev-dialog)]"
-                    wellClassName="flex h-[232px] items-center justify-center sm:h-[260px]"
+                    className="w-full max-w-[540px]"
+                    wellClassName="flex h-[248px] items-center justify-center pb-5 sm:h-[276px]"
                   >
+                    {/* Three concentric sonar radar ripples */}
+                    {!shouldReduceMotion ? (
+                      <>
+                        <span className="at-sonar-ring size-[140px]" data-ring="1" />
+                        <span className="at-sonar-ring size-[176px]" data-ring="2" />
+                        <span className="at-sonar-ring size-[212px]" data-ring="3" />
+                      </>
+                    ) : null}
                     <motion.span
                       custom={exitReasonRef.current}
                       variants={seatVariants}
-                      className="inline-flex"
+                      className="relative z-[1] inline-flex"
                     >
-                      <SpecimenSeat size={152}>
-                        <SpecimenSeat size={88} className="opacity-80">
+                      <SpecimenSeat size={148}>
+                        <SpecimenSeat size={84} className="opacity-90">
                           <ArrowDown
-                            className="size-5 text-text-secondary"
-                            strokeWidth={1.6}
+                            className="size-5 text-text-primary"
+                            strokeWidth={1.75}
                             aria-hidden="true"
                           />
                         </SpecimenSeat>
                       </SpecimenSeat>
                     </motion.span>
                   </SpecimenDropTray>
-                  <p className="mt-10 type-display-xl text-text-primary">
+                  <p className="mt-8 type-display-xl text-text-primary">
                     {t('drop.headline')}
                   </p>
-                  <p className="mt-3 type-title-3 text-text-secondary">
+                  <p className="mt-2.5 type-title-3 text-text-secondary">
                     {t('drop.subline')}
                   </p>
                 </motion.div>

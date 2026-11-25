@@ -1,15 +1,15 @@
 'use client';
 
-import { ArrowDown, Download } from 'lucide-react';
 import {
-  animate,
-  type AnimationPlaybackControls,
-  type MotionValue,
-  motion,
-  useMotionValue,
-  useScroll,
-  useTransform,
-} from 'motion/react';
+  ArrowDown,
+  ArrowUpRight,
+  Bot,
+  Download,
+  SlidersHorizontal,
+  Sparkles,
+} from 'lucide-react';
+import { animate, motion } from 'motion/react';
+import Link from 'next/link';
 import * as React from 'react';
 import {
   DEMO_DIES_PER_WAFER,
@@ -21,42 +21,34 @@ import {
 } from '@/core/demo';
 import { type MessageKey } from '@/core/i18n';
 import type { ParseFatalError } from '@/core/stdf';
+import { ExplodedAutopsyStage } from '@/ui/atelier/ExplodedAutopsyStage';
+import {
+  FormatKeycaps,
+  SpecimenDropTray,
+  SpecimenSeat,
+} from '@/ui/atelier/SpecimenDropTray';
+import { SpotlightTiltCard } from '@/ui/atelier/SpotlightTiltCard';
 import { Untranslated, useT } from '@/ui/i18n';
 import {
-  computeStaggerDelayMs,
   hasSeenSessionReveal,
   markSessionRevealSeen,
-  resolvePressScale,
   resolveViewMorphTransition,
-  TILT_TOKENS,
   useReducedMotionPreference,
-  useScrollReveal,
-  useTactileTilt,
   WAFER_MORPH_LAYOUT_ID,
 } from '@/ui/motion';
 import {
   Button,
   cn,
-  CountUp,
-  renderAccentPhrase,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  renderAccentPhrase,
+  SlidingNumber,
 } from '@/ui/primitives';
+import { renderWithUntranslatedTokens } from '@/ui/report/render-untranslated';
 import { useAccent } from '@/ui/state';
-import {
-  getFailDieColor,
-  MOTION_TOKENS,
-  SPRING_TOKENS,
-  WAFER_TOKENS,
-} from '@/ui/tokens';
-import {
-  buildWaferDiscMaskImage,
-  computeSheenEllipseRestStyle,
-  computeStageDiscLayerRects,
-  type StageLayerRect,
-} from '@/ui/wafer-map/stage-layers';
+import { getFailDieColor, WAFER_TOKENS } from '@/ui/tokens';
 import {
   canSheenFollow,
   computeSheenTarget,
@@ -65,25 +57,19 @@ import {
   SHEEN_CARD_AMPLITUDE_D,
   SHEEN_REST,
 } from '@/ui/wafer-map/sheen-motion';
+import {
+  buildWaferDiscMaskImage,
+  computeSheenEllipseRestStyle,
+  computeStageDiscLayerRects,
+  type StageLayerRect,
+} from '@/ui/wafer-map/stage-layers';
 import { usePrefersMoreContrast } from '@/ui/wafer-map/use-prefers-more-contrast';
 import {
   computeLandingCardWaferRadiusPx,
   paintLandingCardWafer,
   resolveCanvasPixelSize,
 } from '@/ui/wafer-map/wafer-geometry';
-import { useProximityRim } from '@/ui/atelier/ProximityPlate';
-import { SpecimenDropTray, SpecimenSeat } from '@/ui/atelier/SpecimenDropTray';
 import { ErrorDetailsSheet } from './ErrorDetailsSheet';
-import {
-  computeLandingReticleTickLines,
-  LANDING_EXAMPLE_EDGE_SHARE,
-  LANDING_HERO_WAFER_SIZE_DEFAULT,
-  LANDING_RETICLE_GAP_PX,
-  LANDING_WAFER_SIZE_DEFAULT,
-  resolveLandingHeroWaferSize,
-  resolveLandingWaferSize,
-} from './landing-layout';
-import { renderWithUntranslatedTokens } from '@/ui/report/render-untranslated';
 import { resolveParseErrorViewModel } from './parse-error-copy';
 
 export type EmptyStateCause = 'first-run' | 'parse-failed' | 'no-results';
@@ -138,76 +124,6 @@ const DEMO_CARD_COPY_KEYS = {
   }
 >;
 
-function subscribeViewportWidth(onChange: () => void): () => void {
-  window.addEventListener('resize', onChange);
-  return () => window.removeEventListener('resize', onChange);
-}
-
-/** A viewport-dependent size (premium §6.1, §11.1); `fallback` on the server and first paint. */
-function useViewportSize(
-  resolve: (viewportWidth: number) => number,
-  fallback: number,
-): number {
-  return React.useSyncExternalStore(
-    subscribeViewportWidth,
-    () => resolve(window.innerWidth),
-    () => fallback,
-  );
-}
-
-const HERO_SCROLL_DEPTH_MEDIA_QUERY =
-  '(min-width: 1024px) and (hover: hover) and (pointer: fine)';
-
-function subscribeHeroScrollDepthMedia(onChange: () => void): () => void {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return () => {};
-  }
-  const mql = window.matchMedia(HERO_SCROLL_DEPTH_MEDIA_QUERY);
-  mql.addEventListener('change', onChange);
-  return () => mql.removeEventListener('change', onChange);
-}
-
-function getHeroScrollDepthMediaSnapshot(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false;
-  }
-  return window.matchMedia(HERO_SCROLL_DEPTH_MEDIA_QUERY).matches;
-}
-
-/** True only on desktop (>= 1024 px) with a fine hover pointer and motion enabled. */
-function useHeroScrollDepthEnabled(reduced: boolean): boolean {
-  const mediaMatches = React.useSyncExternalStore(
-    subscribeHeroScrollDepthMedia,
-    getHeroScrollDepthMediaSnapshot,
-    () => false,
-  );
-  return !reduced && mediaMatches;
-}
-
-function clampUnitProgress(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  return Math.min(1, Math.max(0, value));
-}
-
-function roundTransformScalar(value: number, factor = 1000): number {
-  return Math.round(value * factor) / factor || 0;
-}
-
-function subscribeNever(): () => void {
-  return () => {};
-}
-
-/** False on the server and during hydration, true after; the server snapshot sizes for 1440. */
-function useHydrated(): boolean {
-  return React.useSyncExternalStore(
-    subscribeNever,
-    () => true,
-    () => false,
-  );
-}
-
 function layerStyle(rect: StageLayerRect): React.CSSProperties {
   return {
     left: `${rect.left}px`,
@@ -217,11 +133,6 @@ function layerStyle(rect: StageLayerRect): React.CSSProperties {
   };
 }
 
-/**
- * Premium §8.11 landing variant: while the wafer's button (card or hero) is hovered by a mouse
- * or pen, the sheen ellipse follows the pointer at 0.03 D on `spring-sheen`; it returns to rest
- * on leave. Native listeners and one `transform` write per moving frame, no React render.
- */
 function useLandingSheenFollow(
   frameRef: React.RefObject<HTMLDivElement | null>,
   sheenRef: React.RefObject<HTMLDivElement | null>,
@@ -278,19 +189,10 @@ function useLandingSheenFollow(
 interface LandingWaferDiscProps {
   readonly presetId: DemoPresetId;
   readonly size: number;
-  /** Test ID for a layer (`undefined` is the canvas). */
   readonly testId: (
     part?: 'frame' | 'contact' | 'ambient' | 'halo' | 'sheen' | 'sheen-ellipse',
   ) => string;
-  /**
-   * Hero wafer (premium §11.1): full §5 disc material with the thin film and the stage shadows
-   * (light ambient + contact, dark halo). Card wafers keep the §5.3 thumbnail rules.
-   */
-  readonly hero?: boolean;
-  /** Enables the shared-element wafer morph (`WAFER_MORPH_LAYOUT_ID`) on the active demo card. */
   readonly enableSharedMorph?: boolean;
-  /** Disables hero wafer pointer tilt (e.g. while the hero action is disabled). */
-  readonly tiltDisabled?: boolean;
   readonly renderWorkerThumbnail?: (
     presetId: DemoPresetId,
     cssSize: number,
@@ -300,13 +202,15 @@ interface LandingWaferDiscProps {
   ) => Promise<ImageBitmap | null>;
 }
 
+/**
+ * Compact data-scale wafer plot (`84px–116px`) used strictly inside telemetry pods and sample
+ * case cards as a real data visualization (never as a giant decorative centerpiece).
+ */
 function LandingWaferDisc({
   presetId,
   size,
   testId,
-  hero = false,
   enableSharedMorph = false,
-  tiltDisabled = false,
   renderWorkerThumbnail,
 }: LandingWaferDiscProps): React.JSX.Element {
   const reduced = useReducedMotionPreference();
@@ -315,12 +219,7 @@ function LandingWaferDisc({
   const sheenRef = React.useRef<HTMLDivElement | null>(null);
   const sheenEllipseRef = React.useRef<HTMLDivElement | null>(null);
   useLandingSheenFollow(frameRef, sheenRef, sheenEllipseRef);
-  useTactileTilt(frameRef, {
-    maxDeg: TILT_TOKENS.maxDegWafer,
-    liftPx: 0,
-    enabled: hero,
-    disabled: reduced || enableSharedMorph || tiltDisabled,
-  });
+
   const preview = React.useMemo(
     () => getDemoPresetPreview(presetId),
     [presetId],
@@ -352,12 +251,11 @@ function LandingWaferDisc({
       cssSize: size,
       dpr: dims.dpr,
       highContrast,
-      thinFilm: hero,
+      thinFilm: false,
       accent,
     });
 
-    // The worker thumbnail mirrors the card rules (no thin film), so the hero stays on the main-thread paint
-    if (!renderWorkerThumbnail || hero) {
+    if (!renderWorkerThumbnail) {
       return;
     }
     let cancelled = false;
@@ -402,7 +300,7 @@ function LandingWaferDisc({
     return () => {
       cancelled = true;
     };
-  }, [presetId, preview, renderWorkerThumbnail, highContrast, size, hero, accent]);
+  }, [presetId, preview, renderWorkerThumbnail, highContrast, size, accent]);
 
   const center = size / 2;
   const layers = computeStageDiscLayerRects(
@@ -412,15 +310,12 @@ function LandingWaferDisc({
   );
   const discMaskImage = buildWaferDiscMaskImage(preview.wafer.geometry.wfFlat);
 
-  // premium §6.1: 152 / 140 / 120 / 112 px card disc with its contact shadow (light); §11.1: the
-  // 320 / 280 / 240 / 220 px hero disc with the stage shadows (light ambient + contact, dark halo);
-  // both with the §5.2 step 6 sheen at rest, masked to the notch-cut disc
   return (
     <div
       ref={frameRef}
       data-testid={testId('frame')}
       style={{ width: `${size}px`, height: `${size}px` }}
-      className={cn('relative shrink-0', hero && 'cal-tactile')}
+      className="relative shrink-0"
     >
       {enableSharedMorph ? (
         <motion.div
@@ -432,17 +327,6 @@ function LandingWaferDisc({
           className="pointer-events-none absolute inset-0 rounded-full"
         />
       ) : null}
-      {hero ? (
-        <div
-          aria-hidden="true"
-          data-testid={testId('ambient')}
-          style={{
-            ...layerStyle(layers.ambient),
-            backgroundImage: WAFER_TOKENS.ambientShadow,
-          }}
-          className="pointer-events-none absolute dark:hidden"
-        />
-      ) : null}
       <div
         aria-hidden="true"
         data-testid={testId('contact')}
@@ -452,17 +336,6 @@ function LandingWaferDisc({
         }}
         className="pointer-events-none absolute dark:hidden"
       />
-      {hero ? (
-        <div
-          aria-hidden="true"
-          data-testid={testId('halo')}
-          style={{
-            ...layerStyle(layers.halo),
-            backgroundImage: WAFER_TOKENS.halo,
-          }}
-          className="pointer-events-none absolute hidden dark:block"
-        />
-      ) : null}
       <canvas
         ref={canvasRef}
         data-testid={testId()}
@@ -499,24 +372,74 @@ function LandingWaferDisc({
   );
 }
 
-/** Session-once key for the landing sample-card stagger reveal. */
-const LANDING_CARDS_SESSION_KEY = 'cal.landing.cards.v1';
-/** Delay between adjacent landing sample cards (0 / 60 / 120 ms; 120 + 350 ms = 470 ms). */
-const LANDING_CARD_STAGGER_STEP_MS = 60;
-/** Hard cap on the stagger window so the full cascade settles within <= 470 ms on `SPRING_TOKENS.ui`. */
-const LANDING_CARD_STAGGER_MAX_WINDOW_MS = 120;
-/** Vertical rise offset for landing sample cards (`translateY(10px) -> 0`). */
-const LANDING_CARD_REVEAL_OFFSET_Y_PX = 10;
-/** Maximum tilt of a specimen case card (UI plan §4 B: restrained, text stays readable). */
-const SPECIMEN_CASE_TILT_DEG = 2.5;
+/** Signature secondary micro-visuals inside Cards 2 & 3 so every Bento card shows distinct data geometry. */
+function PresetSignatureGraphic({
+  presetId,
+}: {
+  readonly presetId: DemoPresetId;
+}): React.JSX.Element | null {
+  if (presetId === 'handling-scratch') {
+    const heights = [18, 20, 19, 62, 74, 82, 78, 86, 70, 66, 20, 18];
+    return (
+      <div
+        aria-hidden="true"
+        className="flex min-w-0 flex-1 flex-col justify-between rounded-xl bg-fill-1 p-2.5"
+      >
+        <div className="flex items-center justify-between text-[10.5px] text-text-tertiary tabular-nums">
+          <Untranslated className="font-mono text-text-secondary">W05–W22</Untranslated>
+          <Untranslated className="font-mono">18W</Untranslated>
+        </div>
+        <div className="mt-2 flex h-9 items-end gap-1">
+          {heights.map((h, i) => (
+            <span
+              key={i}
+              style={{ height: `${h}%` }}
+              className={cn(
+                'flex-1 rounded-xs',
+                h > 40 ? 'at-bar-signal' : 'bg-fill-3',
+              )}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (presetId === 'site2-probe-contact') {
+    return (
+      <div
+        aria-hidden="true"
+        className="flex min-w-0 flex-1 flex-col justify-between gap-2 rounded-xl bg-fill-1 p-2.5"
+      >
+        <div className="flex flex-col gap-1">
+          <div className="flex justify-between text-[10.5px] tabular-nums">
+            <Untranslated className="font-mono text-text-tertiary">S1</Untranslated>
+            <Untranslated className="font-mono text-text-secondary">2.1%</Untranslated>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-pill bg-fill-2">
+            <div className="at-bar-iris h-full w-[14%] rounded-pill" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <div className="flex justify-between text-[10.5px] tabular-nums">
+            <Untranslated className="font-mono text-text-primary">S2</Untranslated>
+            <Untranslated className="font-mono text-text-primary">32.3%</Untranslated>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-pill bg-fill-2">
+            <div className="at-bar-signal h-full w-[82%] rounded-pill" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
 
 interface DemoLotCardButtonProps {
   readonly presetId: DemoPresetId;
   readonly isSelected: boolean;
   readonly disabled: boolean;
-  readonly staggerIndex: number;
-  readonly staggerCount: number;
-  readonly revealDisabled: boolean;
   readonly onSelectPreset: (presetId: DemoPresetId) => void;
   readonly onLoadDemoLot: (presetId: DemoPresetId) => void;
   readonly renderWorkerThumbnail?: (
@@ -532,128 +455,15 @@ function DemoLotCardButton({
   presetId,
   isSelected,
   disabled,
-  staggerIndex,
-  staggerCount,
-  revealDisabled,
   onSelectPreset,
   onLoadDemoLot,
   renderWorkerThumbnail,
 }: DemoLotCardButtonProps): React.JSX.Element {
   const { t, formatInteger } = useT();
-  const reduced = useReducedMotionPreference();
-  const buttonRef = React.useRef<HTMLButtonElement | null>(null);
-  const pressedRef = React.useRef(false);
-  const [pressed, setPressed] = React.useState(false);
-  const wasArmedHiddenRef = React.useRef(false);
-  const revealControlsRef = React.useRef<AnimationPlaybackControls | null>(null);
   const descId = React.useId();
+  const isFlagship = presetId === 'edge-ring-etch';
+  const discSize = isFlagship ? 112 : 88;
 
-  const staggerWindowMs = Math.min(
-    Math.max(0, staggerCount - 1) * LANDING_CARD_STAGGER_STEP_MS,
-    LANDING_CARD_STAGGER_MAX_WINDOW_MS,
-  );
-  const staggerDelayMs = computeStaggerDelayMs(
-    staggerIndex,
-    staggerCount,
-    staggerWindowMs,
-    reduced,
-  );
-  const { ref: revealRef, revealed } = useScrollReveal({
-    replayKey: LANDING_CARDS_SESSION_KEY,
-    offsetY: LANDING_CARD_REVEAL_OFFSET_Y_PX,
-    delayMs: staggerDelayMs,
-    disabled: reduced || revealDisabled,
-  });
-
-  // Specimen case cards keep only a trace of tilt (2.5°) so the text never sways; the edge light
-  // comes from the shared proximity rim instead.
-  useTactileTilt(buttonRef, {
-    maxDeg: SPECIMEN_CASE_TILT_DEG,
-    disabled: disabled || !revealed || pressed,
-  });
-  useProximityRim(buttonRef, { disabled });
-
-  const setButtonRef = React.useCallback(
-    (node: HTMLButtonElement | null): void => {
-      buttonRef.current = node;
-      revealRef(node);
-    },
-    [revealRef],
-  );
-
-  const clearRevealInlineStyles = React.useCallback(
-    (el: HTMLButtonElement | null, preserveTransform: boolean): void => {
-      if (!el) {
-        return;
-      }
-      el.style.removeProperty('opacity');
-      if (!preserveTransform) {
-        el.style.removeProperty('transform');
-      }
-    },
-    [],
-  );
-
-  React.useLayoutEffect(() => {
-    const el = buttonRef.current;
-    if (!el) {
-      return;
-    }
-
-    if (reduced || revealDisabled) {
-      revealControlsRef.current?.stop();
-      revealControlsRef.current = null;
-      wasArmedHiddenRef.current = false;
-      clearRevealInlineStyles(el, pressedRef.current);
-      return;
-    }
-
-    if (!revealed) {
-      revealControlsRef.current?.stop();
-      revealControlsRef.current = null;
-      wasArmedHiddenRef.current = true;
-      el.style.opacity = '0';
-      el.style.transform = `translateY(${LANDING_CARD_REVEAL_OFFSET_Y_PX}px)`;
-      return;
-    }
-
-    if (!wasArmedHiddenRef.current) {
-      // Already visible on mount or skipped: never animate and keep inline styles clean.
-      return;
-    }
-
-    wasArmedHiddenRef.current = false;
-    markSessionRevealSeen(LANDING_CARDS_SESSION_KEY);
-
-    const controls = animate(
-      el,
-      { opacity: [0, 1], y: [LANDING_CARD_REVEAL_OFFSET_Y_PX, 0] },
-      {
-        ...SPRING_TOKENS.ui,
-        delay: staggerDelayMs / 1000,
-        onComplete: () => {
-          if (revealControlsRef.current === controls) {
-            revealControlsRef.current = null;
-          }
-          clearRevealInlineStyles(el, pressedRef.current);
-        },
-      },
-    );
-    revealControlsRef.current = controls;
-
-    return () => {
-      if (revealControlsRef.current === controls) {
-        controls.stop();
-        revealControlsRef.current = null;
-      }
-      clearRevealInlineStyles(el, pressedRef.current);
-    };
-  }, [revealed, reduced, revealDisabled, staggerDelayMs, clearRevealInlineStyles]);
-
-  const size = useViewportSize(
-    resolveLandingWaferSize,
-    LANDING_WAFER_SIZE_DEFAULT,
-  );
   const keys = DEMO_CARD_COPY_KEYS[presetId];
   const title = t(keys.title);
   const chip = t(keys.chip);
@@ -663,427 +473,412 @@ function DemoLotCardButton({
     dies: formatInteger(DEMO_WAFER_COUNT * DEMO_DIES_PER_WAFER),
   });
 
-  const releasePress = React.useCallback((): void => {
-    if (!pressedRef.current) {
-      return;
-    }
-    pressedRef.current = false;
-    setPressed(false);
-    const el = buttonRef.current;
-    if (el && !reduced) {
-      animate(el, { scale: 1 }, SPRING_TOKENS.snappy);
-    }
-  }, [reduced]);
-
-  const handlePointerDown = (
-    event: React.PointerEvent<HTMLButtonElement>,
-  ): void => {
-    if (event.button !== 0 || disabled) {
-      return;
-    }
-    onSelectPreset(presetId);
-    const el = buttonRef.current;
-    if (reduced || !el) {
-      return;
-    }
-    if (revealControlsRef.current) {
-      revealControlsRef.current.stop();
-      revealControlsRef.current = null;
-      clearRevealInlineStyles(el, false);
-    }
-    pressedRef.current = true;
-    setPressed(true);
-    animate(
-      el,
-      { scale: resolvePressScale('card', reduced) },
-      { duration: 0.08, ease: MOTION_TOKENS.easeOutTuple },
-    );
-  };
-
   return (
-    <button
-      ref={setButtonRef}
+    <SpotlightTiltCard
+      as="button"
       type="button"
       disabled={disabled}
+      pressable
+      maxDeg={7.5}
       aria-disabled={disabled ? 'true' : undefined}
       data-testid={`demo-card-${presetId}`}
-      data-lift=""
       aria-label={t('demo.openAria', { title })}
       aria-describedby={descId}
-      onPointerDown={handlePointerDown}
-      onPointerUp={releasePress}
-      onPointerLeave={releasePress}
-      onPointerCancel={releasePress}
-      onBlur={releasePress}
+      onPointerDown={(e) => {
+        if (e.button === 0 && !disabled) {
+          onSelectPreset(presetId);
+        }
+      }}
       onClick={() => onLoadDemoLot(presetId)}
       className={cn(
-        // Specimen case: a machined plate (r 32, padding 8) holding the `fill-1` well with the
-        // disc (r 24, concentric) and the label plate under it; mobile 300 px carousel item, sm
-        // full-width stack, 3-up from 1024
-        'at-optic cal-tactile group relative flex w-[300px] shrink-0 snap-start cursor-pointer flex-col p-2 text-left select-none sm:w-full',
-        // §8.9 hover lift -2 px (the tile cross-fades its `shadow-card`)
-        'transition-[translate] duration-[160ms] ease-[var(--ease-out)] [@media(hover:hover)]:enabled:hover:duration-[240ms]',
-        '[@media(hover:hover)]:motion-safe:enabled:hover:-translate-y-0.5',
-        'rounded-[32px] focus-visible:shadow-focus-ring focus-visible:outline-none',
+        'group relative flex w-full cursor-pointer p-3 text-left select-none sm:p-3.5',
+        isFlagship
+          ? 'flex-col gap-4 sm:col-span-2 sm:flex-row sm:items-stretch lg:col-span-6'
+          : 'flex-col justify-between gap-3.5 lg:col-span-3',
+        'rounded-[28px] focus-visible:shadow-focus-ring focus-visible:outline-none',
         'disabled:cursor-not-allowed disabled:opacity-40',
       )}
     >
+      {/* Recessed Obsidian Data Pod */}
       <div
         data-testid={`demo-tile-${presetId}`}
+        data-texture="dots"
         className={cn(
-          // `r-2xl` well sunk into the case (`--elev-well`); `shadow-card` on hover through a
-          // pseudo-element's opacity
-          'relative flex w-full items-center justify-center rounded-2xl bg-fill-1 py-10 shadow-[var(--elev-well)]',
-          "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:shadow-card before:content-['']",
-          'before:transition-opacity before:duration-[160ms] before:ease-[var(--ease-out)]',
-          '[@media(hover:hover)]:group-enabled:group-hover:before:opacity-100 [@media(hover:hover)]:group-enabled:group-hover:before:duration-[240ms]',
+          'at-obsidian-well relative flex flex-col justify-between overflow-hidden rounded-[20px] p-3.5',
+          isFlagship ? 'sm:w-[196px] sm:shrink-0' : 'w-full',
         )}
       >
-        <LandingWaferDisc
-          presetId={presetId}
-          size={size}
-          enableSharedMorph={isSelected}
-          testId={(part) =>
-            part ? `landing-demo-wafer-${part}-${presetId}` : `landing-demo-wafer-${presetId}`
-          }
-          {...(renderWorkerThumbnail !== undefined
-            ? { renderWorkerThumbnail }
-            : {})}
-        />
-        {/* §11.2 pattern chip, bottom-left: `caption`, `fill-2`, pill, 24 h */}
-        <span
-          data-testid={`demo-chip-${presetId}`}
-          className="absolute bottom-4 left-4 inline-flex h-6 items-center rounded-pill bg-fill-2 px-2.5 type-caption text-text-secondary"
-        >
-          {chip}
-        </span>
-      </div>
+        <div className="flex items-center justify-between gap-2">
+          <span
+            data-testid={`demo-chip-${presetId}`}
+            className={cn(
+              'at-pill h-5 px-2.5 text-[11px]',
+              isFlagship ? 'at-pill-signal' : 'at-pill-iris',
+            )}
+          >
+            {chip}
+          </span>
+          <Untranslated className="font-mono text-[10.5px] text-text-tertiary tabular-nums">
+            {isFlagship ? 'CAL-ER' : presetId === 'handling-scratch' ? 'CAL-HS' : 'CAL-S2'}
+          </Untranslated>
+        </div>
 
-      <div
-        id={descId}
-        data-testid={`demo-caption-${presetId}`}
-        className="flex w-full min-w-0 flex-col px-3 pt-4 pb-3"
-      >
-        <span className="truncate type-headline text-text-primary">{title}</span>
-        <span className="mt-1 truncate type-callout text-text-secondary lg:max-xl:line-clamp-2 lg:max-xl:whitespace-normal">
-          {description}
-        </span>
-        {/* Label plate: the specimen's count, ruled off like a case label */}
-        <span className="mt-3 truncate border-t border-hairline pt-3 type-subhead text-text-tertiary tabular-nums">
-          {meta}
-        </span>
-      </div>
-    </button>
-  );
-}
-
-/** Label slots outside the reticle circle: 8 px gap + one 16 px mono line above / below, 40 px at the sides. */
-const RETICLE_LABEL_SLOT_Y = 12;
-const RETICLE_LABEL_SLOT_X = 16;
-
-interface HeroScrollDepthConnectorProps {
-  readonly targetRef: React.RefObject<HTMLDivElement | null>;
-  readonly progress: MotionValue<number>;
-}
-
-/**
- * Mounted only when hero scroll depth is gated on (desktop >= 1024 px, fine hover pointer,
- * motion allowed), so `useScroll` attaches zero scroll listeners whenever gated off.
- */
-function HeroScrollDepthConnector({
-  targetRef,
-  progress,
-}: HeroScrollDepthConnectorProps): null {
-  const { scrollYProgress } = useScroll({
-    target: targetRef,
-    offset: ['start start', 'end start'],
-  });
-
-  React.useLayoutEffect(() => {
-    progress.set(clampUnitProgress(scrollYProgress.get()));
-    const unsubscribe = scrollYProgress.on('change', (latest) => {
-      progress.set(clampUnitProgress(latest));
-    });
-    return () => {
-      unsubscribe();
-      progress.set(0);
-    };
-  }, [scrollYProgress, progress]);
-
-  return null;
-}
-
-interface LandingHeroProps {
-  readonly disabled: boolean;
-  readonly heroSectionRef: React.RefObject<HTMLDivElement | null>;
-  readonly onOpenSample: () => void;
-}
-
-/** Placeholder that splits the example fact around its counting percent (premium §11.5). */
-const FACT_PERCENT_SLOT = '\u0000';
-
-/**
- * Landing hero row (premium §11.1): the `edge-ring-etch` W01 wafer inside a probe-station
- * reticle (hairline circle at D + 32, 72 ticks, 0° / 90° / 180° / 270° mono labels), and the
- * "Example result" card to its right from 1024 (below it under 1024). The wafer and the card's
- * text button both open the sample lot.
- */
-function LandingHero({
-  disabled,
-  heroSectionRef,
-  onOpenSample,
-}: LandingHeroProps): React.JSX.Element {
-  const { t, formatPercent } = useT();
-  const reduced = useReducedMotionPreference();
-  const scrollDepthEnabled = useHeroScrollDepthEnabled(reduced);
-  const heroWaferRef = React.useRef<HTMLButtonElement | null>(null);
-  const exampleCardRef = React.useRef<HTMLDivElement | null>(null);
-  const heroPressedRef = React.useRef(false);
-  const scrollProgress = useMotionValue(0);
-  const waferPressScale = useMotionValue(1);
-  const waferRotateX = useTransform(scrollProgress, [0, 1], [0, 6], {
-    clamp: true,
-  });
-  const waferTranslateY = useTransform(scrollProgress, [0, 1], [0, 18], {
-    clamp: true,
-  });
-  const waferTranslateZ = useTransform(scrollProgress, [0, 1], [0, -28], {
-    clamp: true,
-  });
-  const waferTransform = useTransform(
-    [waferRotateX, waferTranslateY, waferTranslateZ, waferPressScale],
-    ([rx, ty, tz, sc]: number[]) => {
-      const r = roundTransformScalar(rx ?? 0);
-      const y = roundTransformScalar(ty ?? 0);
-      const z = roundTransformScalar(tz ?? 0);
-      const s = roundTransformScalar(sc ?? 1, 10000);
-      const depth = `rotateX(${r}deg) translateY(${y}px) translateZ(${z}px)`;
-      return s === 1 ? depth : `${depth} scale(${s})`;
-    },
-  );
-  const cardTranslateY = useTransform(scrollProgress, [0, 1], [0, -10], {
-    clamp: true,
-  });
-  const cardTranslate = useTransform(cardTranslateY, (ty) => {
-    const y = roundTransformScalar(ty);
-    return y === 0 ? 'none' : `0px ${y}px`;
-  });
-
-  useTactileTilt(exampleCardRef, {
-    maxDeg: TILT_TOKENS.maxDegCard,
-  });
-
-  const size = useViewportSize(
-    resolveLandingHeroWaferSize,
-    LANDING_HERO_WAFER_SIZE_DEFAULT,
-  );
-  const hydrated = useHydrated();
-  const reticleD = size + LANDING_RETICLE_GAP_PX * 2;
-  const reticleR = reticleD / 2;
-  const frameW = reticleD + RETICLE_LABEL_SLOT_X * 2;
-  const frameH = reticleD + RETICLE_LABEL_SLOT_Y * 2;
-  const cx = frameW / 2;
-  const cy = frameH / 2;
-  const tickLines = React.useMemo(
-    () => computeLandingReticleTickLines(cx, cy, reticleR),
-    [cx, cy, reticleR],
-  );
-  const sampleLabel = t('landing.primary');
-  const patternName = 'Edge-Ring';
-  const [titleBefore = '', titleAfter = ''] = t('verdict.pattern', {
-    pattern: patternName,
-  }).split(patternName);
-  const [factBefore = '', factAfter = ''] = t('landing.example.fact', {
-    percent: FACT_PERCENT_SLOT,
-  }).split(FACT_PERCENT_SLOT);
-
-  const releaseHeroPress = React.useCallback((): void => {
-    if (!heroPressedRef.current) {
-      return;
-    }
-    heroPressedRef.current = false;
-    if (reduced) {
-      return;
-    }
-    if (scrollDepthEnabled) {
-      animate(waferPressScale, 1, SPRING_TOKENS.snappy);
-      return;
-    }
-    const el = heroWaferRef.current;
-    if (el) {
-      animate(el, { scale: 1 }, SPRING_TOKENS.snappy);
-    }
-  }, [reduced, scrollDepthEnabled, waferPressScale]);
-
-  const handleHeroPointerDown = (
-    event: React.PointerEvent<HTMLButtonElement>,
-  ): void => {
-    if (event.button !== 0 || disabled || reduced || !heroWaferRef.current) {
-      return;
-    }
-    heroPressedRef.current = true;
-    const pressScale = resolvePressScale('card', reduced);
-    const transition = { duration: 0.08, ease: MOTION_TOKENS.easeOutTuple };
-    if (scrollDepthEnabled) {
-      animate(waferPressScale, pressScale, transition);
-      return;
-    }
-    animate(heroWaferRef.current, { scale: pressScale }, transition);
-  };
-
-  return (
-    <div
-      data-testid="landing-hero"
-      // Before hydration the frame has the 1440 size; clip it so narrow screens never scroll sideways
-      className={`relative mt-8 flex flex-col items-center gap-6 lg:mt-0 lg:items-center lg:justify-center lg:gap-0${hydrated ? '' : ' overflow-x-clip'}`}
-    >
-      {scrollDepthEnabled ? (
-        <HeroScrollDepthConnector
-          targetRef={heroSectionRef}
-          progress={scrollProgress}
-        />
-      ) : null}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0"
-        style={{ background: 'var(--at-stage-glow)', filter: 'blur(6px)' }}
-      />
-      <div
-        data-testid="landing-hero-frame"
-        style={{
-          width: `${frameW}px`,
-          height: `${frameH}px`,
-          ...(scrollDepthEnabled
-            ? { perspective: `${TILT_TOKENS.perspectivePx}px` }
-            : {}),
-        }}
-        className="relative shrink-0"
-      >
-        <svg
-          aria-hidden="true"
-          data-testid="landing-reticle"
-          width={frameW}
-          height={frameH}
-          viewBox={`0 0 ${frameW} ${frameH}`}
-          className="pointer-events-none absolute inset-0 overflow-visible"
-        >
-          <circle
-            cx={cx}
-            cy={cy}
-            r={reticleR - 0.5}
-            fill="none"
-            strokeWidth={1}
-            className="stroke-hairline"
-          />
-          {tickLines.map((tick) => (
-            <line
-              key={tick.angleDeg}
-              data-reticle-tick=""
-              x1={tick.x1}
-              y1={tick.y1}
-              x2={tick.x2}
-              y2={tick.y2}
-              strokeWidth={1}
-              className="stroke-hairline-strong"
-            />
-          ))}
-        </svg>
-
-        <motion.button
-          ref={heroWaferRef}
-          type="button"
-          data-testid="landing-hero-wafer"
-          aria-label={sampleLabel}
-          disabled={disabled}
-          onPointerDown={handleHeroPointerDown}
-          onPointerUp={releaseHeroPress}
-          onPointerLeave={releaseHeroPress}
-          onPointerCancel={releaseHeroPress}
-          onBlur={releaseHeroPress}
-          onClick={onOpenSample}
-          style={{
-            left: `${cx - reticleR}px`,
-            top: `${cy - reticleR}px`,
-            width: `${reticleD}px`,
-            height: `${reticleD}px`,
-            ...(scrollDepthEnabled ? { transform: waferTransform } : {}),
-          }}
+        <div
           className={cn(
-            'absolute flex origin-center cursor-pointer touch-manipulation items-center justify-center rounded-full bg-transparent',
-            'focus-visible:shadow-focus-ring focus-visible:outline-none',
-            'disabled:cursor-not-allowed',
+            'mt-3 flex items-center gap-3',
+            isFlagship ? 'justify-center py-2' : 'justify-between',
           )}
         >
           <LandingWaferDisc
-            presetId="edge-ring-etch"
-            size={size}
-            hero
-            tiltDisabled={disabled}
+            presetId={presetId}
+            size={discSize}
+            enableSharedMorph={isSelected}
             testId={(part) =>
-              part ? `landing-hero-disc-${part}` : 'landing-hero-disc'
+              part ? `landing-demo-wafer-${part}-${presetId}` : `landing-demo-wafer-${presetId}`
             }
+            {...(renderWorkerThumbnail !== undefined ? { renderWorkerThumbnail } : {})}
           />
-        </motion.button>
+          <PresetSignatureGraphic presetId={presetId} />
+        </div>
       </div>
 
-      {/* §11.1 result card: `surface`, `r-2xl`, `shadow-card`, padding 24, width 280 */}
-      <motion.div
-        ref={exampleCardRef}
-        data-testid="landing-example-card"
-        data-spotlight="true"
-        style={scrollDepthEnabled ? { translate: cardTranslate } : undefined}
-        className="at-plate cal-tactile relative z-[3] w-full max-w-[340px] shrink-0 p-5 text-left sm:w-[296px] sm:max-w-none lg:absolute lg:bottom-10 lg:left-0 xl:-left-6"
+      {/* 3D Popped Case Body */}
+      <div
+        id={descId}
+        data-testid={`demo-caption-${presetId}`}
+        className="at-bento-pop-sm flex min-w-0 flex-1 flex-col justify-between px-1.5 py-1"
       >
-        <p
-          data-testid="landing-example-eyebrow"
-          className="text-[12.5px] leading-[1.3] tracking-[-0.005em] text-text-tertiary"
-        >
-          {t('landing.example.eyebrow')}
-        </p>
-        <p
-          data-testid="landing-example-title"
-          className="mt-2 text-[26px] leading-[1.15] font-[520] tracking-[-0.024em] text-text-primary [font-family:var(--font-display)]"
-        >
-          {titleBefore}
-          <Untranslated>{patternName}</Untranslated>
-          {titleAfter}
-        </p>
-        <p
-          data-testid="landing-example-fact"
-          className="mt-2 type-body text-text-secondary"
-        >
-          {factBefore}
-          {/* §11.5: the percent counts up; the words around it stay still */}
-          <CountUp
-            value={LANDING_EXAMPLE_EDGE_SHARE}
-            format={formatPercent}
-            data-testid="landing-example-percent"
+        <div>
+          <span className="block truncate type-headline text-text-primary">{title}</span>
+          <span className="mt-1 line-clamp-2 block type-callout text-text-secondary">
+            {description}
+          </span>
+
+          {isFlagship ? (
+            <span className="mt-3.5 grid grid-cols-3 gap-2">
+              <span className="at-well-crisp flex flex-col rounded-xl px-2.5 py-2">
+                <Untranslated className="at-kpi-number text-[16px] text-text-primary">
+                  82.8%
+                </Untranslated>
+                <span className="mt-0.5 truncate text-[11px] text-text-tertiary">
+                  {t('stats.finalYield')}
+                </span>
+              </span>
+              <span className="at-well-crisp flex flex-col rounded-xl px-2.5 py-2">
+                <Untranslated className="at-kpi-number text-[16px] text-text-primary">
+                  SBIN 7
+                </Untranslated>
+                <Untranslated className="mt-0.5 truncate font-mono text-[11px] text-text-tertiary">
+                  91.3%
+                </Untranslated>
+              </span>
+              <span className="at-well-crisp flex flex-col rounded-xl px-2.5 py-2">
+                <Untranslated className="at-kpi-number text-[16px] text-text-primary">
+                  0.14
+                </Untranslated>
+                <Untranslated className="mt-0.5 truncate font-mono text-[11px] text-text-tertiary">
+                  Cpk
+                </Untranslated>
+              </span>
+            </span>
+          ) : null}
+        </div>
+
+        <span className="mt-3.5 flex items-center justify-between gap-2 border-t border-hairline pt-3 type-subhead text-text-tertiary tabular-nums">
+          <span className="truncate">{meta}</span>
+          <span
+            aria-hidden="true"
+            className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-fill-1 text-text-secondary transition-transform duration-200 ease-[var(--ease-out)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-text-primary"
+          >
+            <ArrowUpRight className="size-3.5" strokeWidth={1.75} />
+          </span>
+        </span>
+      </div>
+    </SpotlightTiltCard>
+  );
+}
+
+const PIPELINE_LENSES = [
+  {
+    query: 'only bin 7',
+    dies: '2,483',
+    share: '91.3%',
+    cpk: '0.14',
+    bars: [91, 14, 8] as const,
+  },
+  {
+    query: 'edge 3 rings',
+    dies: '2,552',
+    share: '93.8%',
+    cpk: '0.19',
+    bars: [94, 22, 11] as const,
+  },
+  {
+    query: 'Cpk < 1.33',
+    dies: '2,721',
+    share: '100.0%',
+    cpk: '0.14',
+    bars: [88, 34, 19] as const,
+  },
+] as const;
+
+/**
+ * Bento #4 (7 cols): Interactive Live Filter & Capability Lab Card.
+ * Lets visitors click/hover filter queries right on the landing page and watch
+ * `SlidingNumber` odometer digits + Pareto bars respond with spring physics.
+ */
+function LivePipelineBentoCard({
+  disabled,
+  onOpenSample,
+}: {
+  readonly disabled: boolean;
+  readonly onOpenSample: () => void;
+}): React.JSX.Element {
+  const { t } = useT();
+  const [lensIdx, setLensIdx] = React.useState<0 | 1 | 2>(0);
+  const lens = PIPELINE_LENSES[lensIdx];
+
+  return (
+    <SpotlightTiltCard
+      as="article"
+      maxDeg={6}
+      data-testid="bento-capability-pipeline"
+      className="flex flex-col justify-between gap-4 rounded-[28px] p-4 sm:col-span-2 sm:p-5 lg:col-span-7"
+    >
+      <div className="at-bento-pop-sm flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="at-icon-well at-icon-well-iris size-8 rounded-xl">
+            <SlidersHorizontal className="size-4" strokeWidth={1.7} aria-hidden="true" />
+          </span>
+          <div>
+            <h3 className="type-row-title text-text-primary">
+              {t('pareto.title')} · {t('parametric.title')}
+            </h3>
+            <p className="type-caption text-text-tertiary">
+              {t('pareto.takeaway', { share: lens.share })}
+            </p>
+          </div>
+        </div>
+
+        {/* Interactive filter query pills */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {PIPELINE_LENSES.map((item, idx) => {
+            const active = idx === lensIdx;
+            return (
+              <button
+                key={item.query}
+                type="button"
+                aria-pressed={active}
+                onPointerEnter={() => setLensIdx(idx as 0 | 1 | 2)}
+                onClick={() => setLensIdx(idx as 0 | 1 | 2)}
+                className={cn(
+                  'cursor-pointer rounded-pill px-2.5 py-1 font-mono text-[11px] transition-[background-color,color,scale] duration-150 ease-[var(--ease-out)] active:scale-[0.97]',
+                  'focus-visible:shadow-focus-ring focus-visible:outline-none',
+                  active
+                    ? 'at-pill-iris font-[540]'
+                    : 'bg-fill-1 text-text-tertiary hover:bg-fill-2 hover:text-text-primary',
+                )}
+              >
+                <Untranslated>{item.query}</Untranslated>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Live interactive Obsidian Instrument Readout */}
+      <div
+        data-texture="dots"
+        className="at-obsidian-well grid grid-cols-1 gap-4 rounded-[20px] p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+      >
+        <div className="flex flex-col">
+          <span className="text-[11px] text-text-tertiary">{t('legend.failed')}</span>
+          <SlidingNumber
+            text={lens.dies}
+            className="at-kpi-number mt-1 text-[34px] text-text-primary"
           />
-          {factAfter}
-        </p>
-        <Button
-          variant="text"
-          data-testid="landing-example-action"
-          onClick={onOpenSample}
-          disabled={disabled}
-          className="mt-4"
+          <Untranslated className="mt-1 font-mono text-[11px] text-text-tertiary tabular-nums">
+            Cpk {lens.cpk}
+          </Untranslated>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {(['SBIN 7', 'SBIN 3', 'SBIN 12'] as const).map((code, barIdx) => (
+            <div key={code} className="flex items-center gap-2.5">
+              <Untranslated className="w-14 shrink-0 font-mono text-[11px] text-text-secondary">
+                {code}
+              </Untranslated>
+              <div className="h-2 flex-1 overflow-hidden rounded-pill bg-fill-2">
+                <motion.div
+                  animate={{ width: `${lens.bars[barIdx]}%` }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+                  className={cn(
+                    'h-full rounded-pill',
+                    barIdx === 0 ? 'at-bar-signal' : barIdx === 1 ? 'at-bar-iris' : 'bg-fill-3',
+                  )}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 92 52"
+          className="hidden h-[52px] w-[92px] shrink-0 overflow-visible sm:block"
         >
+          <path
+            d="M58 44 L58 16 Q70 26 82 40 L88 44 Z"
+            className="at-fill-signal-soft"
+          />
+          <path
+            d="M4 44 Q22 43 34 26 Q48 6 60 18 Q74 32 88 44"
+            fill="none"
+            strokeWidth="1.75"
+            className="at-stroke-iris"
+          />
+          <line
+            x1="58"
+            y1="4"
+            x2="58"
+            y2="46"
+            stroke="rgba(255,255,255,0.5)"
+            strokeWidth="1.1"
+            strokeDasharray="2.5 2.5"
+          />
+        </svg>
+      </div>
+
+      <div className="at-bento-pop-sm flex flex-wrap items-center justify-between gap-2">
+        <span className="type-caption text-text-tertiary">{t('landing.privacy')}</span>
+        <Button variant="text" onClick={onOpenSample} disabled={disabled}>
           {t('landing.example.action')}
         </Button>
-      </motion.div>
-    </div>
+      </div>
+    </SpotlightTiltCard>
   );
 }
 
 /**
- * Landing, parse error, and no-results views (`src/ui/layout/EmptyStateCard.tsx`):
- * - `first-run`: premium §6.1 hero ("Drop the body.", subline, primary "Open the sample lot",
- *   secondary "Open file", hint), "Sample lots" cards with 152 / 140 / 120 / 112 px discs, and
- *   the footer line with "Download sample files"
- * - `parse-failed`: premium §6.4 / §9.6 error view (`title-1`, `redesign.md` §3.7 copy) with
- *   primary "Open another file", secondary "Open the sample lot", and "Show details", keeping
- *   the cards below
+ * Bento #5 (5 cols): Interactive 4-Specialist Agent Topology & `⌘K` Card.
  */
+function SpecialistNetworkBentoCard(): React.JSX.Element {
+  const { t } = useT();
+  const [activeNode, setActiveNode] = React.useState(0);
+
+  const specialists = [
+    { key: 'agents.role.autopsy_conductor' as const, code: '01' },
+    { key: 'agents.role.lot_analyst' as const, code: '02' },
+    { key: 'agents.role.pattern_pathologist' as const, code: '03' },
+    { key: 'agents.role.evidence_auditor' as const, code: '04' },
+  ];
+
+  return (
+    <SpotlightTiltCard
+      as="article"
+      maxDeg={6.5}
+      data-testid="bento-capability-agents"
+      className="flex flex-col justify-between gap-4 rounded-[28px] p-4 sm:col-span-2 sm:p-5 lg:col-span-5"
+    >
+      <div className="at-bento-pop-sm flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="at-icon-well at-icon-well-signal size-8 rounded-xl">
+            <Bot className="size-4" strokeWidth={1.7} aria-hidden="true" />
+          </span>
+          <div>
+            <h3 className="type-row-title text-text-primary">{t('nav.agent')}</h3>
+            <p className="type-caption text-text-tertiary">
+              {t('agents.starter2.hint')}
+            </p>
+          </div>
+        </div>
+        <span className="at-pill at-pill-iris">
+          <Sparkles className="size-3" aria-hidden="true" />
+          <Untranslated>4</Untranslated>
+        </span>
+      </div>
+
+      {/* Interactive 4-Specialist Pulse Topology */}
+      <div
+        data-texture="dots"
+        className="at-obsidian-well relative overflow-hidden rounded-[20px] p-3.5"
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 280 86"
+          className="pointer-events-none absolute inset-0 h-full w-full"
+        >
+          <path
+            d="M52 24 C 110 24, 170 24, 228 24 M52 24 C 90 58, 190 58, 228 62 M52 62 L 228 62"
+            fill="none"
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth="1"
+          />
+          <path
+            d="M52 24 C 110 24, 170 62, 228 62"
+            fill="none"
+            strokeWidth="1.4"
+            className="at-stroke-iris at-pulse-trace"
+          />
+        </svg>
+
+        <div className="relative z-[1] grid grid-cols-2 gap-2">
+          {specialists.map((spec, idx) => {
+            const isLit = idx === activeNode;
+            return (
+              <button
+                key={spec.key}
+                type="button"
+                aria-pressed={isLit}
+                onPointerEnter={() => setActiveNode(idx)}
+                onClick={() => setActiveNode(idx)}
+                className={cn(
+                  'flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-[background-color,scale] duration-150 ease-[var(--ease-out)] active:scale-[0.98]',
+                  'focus-visible:shadow-focus-ring focus-visible:outline-none',
+                  isLit ? 'bg-fill-3 shadow-[inset_0_0_0_1px_var(--chroma-line)]' : 'bg-fill-1 hover:bg-fill-2',
+                )}
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'size-1.5 shrink-0 rounded-full',
+                    isLit ? 'at-dot-signal' : 'at-dot-iris',
+                  )}
+                />
+                <span className="truncate text-[12px] font-[500] text-text-primary">
+                  {t(spec.key)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <Link
+        href="/agents"
+        className={cn(
+          'at-bento-pop-sm group/agentlink flex items-center justify-between gap-2 rounded-2xl bg-[var(--surface-well)] px-3.5 py-2.5 no-underline shadow-[var(--elev-well-crisp)]',
+          'transition-[background-color,transform] duration-150 ease-[var(--ease-out)] hover:bg-fill-2',
+          'focus-visible:shadow-focus-ring focus-visible:outline-none',
+        )}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <Untranslated className="at-keycap-badge">⌘K</Untranslated>
+          <span className="truncate type-subhead text-text-secondary group-hover/agentlink:text-text-primary">
+            {t('agents.empty.headline')}
+          </span>
+        </span>
+        <ArrowUpRight
+          aria-hidden="true"
+          className="size-4 shrink-0 text-text-tertiary transition-transform duration-200 ease-[var(--ease-out)] group-hover/agentlink:translate-x-0.5 group-hover/agentlink:-translate-y-0.5 group-hover/agentlink:text-text-primary"
+        />
+      </Link>
+    </SpotlightTiltCard>
+  );
+}
+
+const HERO_HEADLINE_SESSION_KEY = 'cal.hero.headline.v3';
+
 export function EmptyStateCard({
   cause = 'first-run',
   presets,
@@ -1100,13 +895,28 @@ export function EmptyStateCard({
   disabled = false,
 }: EmptyStateCardProps): React.JSX.Element {
   const { locale, t } = useT();
+  const reduced = useReducedMotionPreference();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const heroSectionRef = React.useRef<HTMLDivElement | null>(null);
+  const headlineRef = React.useRef<HTMLHeadingElement | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
-  const [cardsRevealInitiallySeen] = React.useState<boolean>(() =>
-    hasSeenSessionReveal(LANDING_CARDS_SESSION_KEY),
-  );
   const sampleHeadingId = React.useId();
+
+  // Silky blur-rise entrance on client mount without mutating SSR text structure
+  React.useLayoutEffect(() => {
+    const el = headlineRef.current;
+    if (!el || reduced || cause !== 'first-run') return;
+    if (hasSeenSessionReveal(HERO_HEADLINE_SESSION_KEY)) return;
+    markSessionRevealSeen(HERO_HEADLINE_SESSION_KEY);
+    const controls = animate(
+      el,
+      { opacity: [0, 1], y: [14, 0], filter: ['blur(6px)', 'blur(0px)'] },
+      { duration: 0.62, ease: [0.22, 1, 0.36, 1] },
+    );
+    return () => {
+      controls.complete();
+    };
+  }, [cause, reduced]);
 
   const handleFileInputChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -1131,7 +941,7 @@ export function EmptyStateCard({
       data-testid={
         cause === 'parse-failed' ? 'parse-error-view' : 'landing-view'
       }
-      className="flex flex-col pb-12 sm:mx-auto sm:w-full sm:max-w-[640px] lg:max-w-none lg:pb-6"
+      className="flex flex-col pb-12 sm:mx-auto sm:w-full sm:max-w-[720px] lg:max-w-none lg:pb-8"
     >
       <label htmlFor="cal-file-picker" className="sr-only">
         {t('nav.openStdfAria')}
@@ -1187,8 +997,6 @@ export function EmptyStateCard({
           </div>
         </div>
       ) : cause === 'parse-failed' && errorVm ? (
-        /* premium §6.4 parse error: replaces the landing hero, cards stay below; centred at
-           top y = 164 from 1024, left-aligned at y = 96 below; no icon, no red, no orange */
         <div
           role="alert"
           data-error-code={errorVm.uiCode}
@@ -1258,98 +1066,135 @@ export function EmptyStateCard({
           />
         </div>
       ) : (
-        /* Atelier hero: the statement on the left of the bench, the specimen on the right. */
+        /* Spatial Hero: Statement + Obsidian Drop Dock on Left, Exploded 3D Forensic Rig on Right */
         <div ref={heroSectionRef} className="relative isolate flex flex-col">
-          <div className="grid grid-cols-1 items-center gap-10 pt-8 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:gap-4 lg:pt-10 xl:gap-8 xl:pt-12">
-          <div className="text-left">
-            <h1
-              data-testid="landing-headline"
-              className="landing-headline at-display text-[clamp(46px,5.2vw,76px)] text-text-primary"
-            >
-              {renderAccentPhrase(
-                t('landing.headline'),
-                t('landing.headlineAccent'),
-                true,
-              )}
-            </h1>
+          <div className="grid grid-cols-1 items-center gap-8 pt-6 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:gap-8 lg:pt-10 xl:gap-10 xl:pt-12">
+            <div className="text-left">
+              {/* Eyebrow Telemetry Pill */}
+              <div className="mb-4 inline-flex max-w-full items-center gap-2 rounded-pill bg-[var(--surface-well)] px-3 py-1.5 text-[12px] font-[500] text-text-secondary shadow-[var(--elev-well-crisp)]">
+                <span
+                  aria-hidden="true"
+                  className="at-dot-signal at-live-pulse size-1.5 shrink-0 rounded-full"
+                />
+                <span className="truncate">{t('landing.privacy')}</span>
+                <span aria-hidden="true" className="text-text-tertiary">
+                  ·
+                </span>
+                <Untranslated className="shrink-0 font-mono text-[11px] text-text-tertiary">
+                  STDF V4
+                </Untranslated>
+              </div>
 
-            <p
-              data-testid="landing-subline"
-              className="landing-subline mt-5 line-clamp-3 max-w-[46ch] text-[17px] leading-[1.55] tracking-[-0.011em] text-text-secondary min-[90rem]:mt-6"
-            >
-              {t('landing.subline')}
-            </p>
-
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center min-[90rem]:mt-8">
-              <Button
-                variant="primary"
-                size="lg"
-                data-testid="landing-open-sample-button"
-                onClick={() => onLoadDemoLot('edge-ring-etch')}
-                disabled={disabled}
-                className="w-full sm:w-auto"
+              <h1
+                ref={headlineRef}
+                data-testid="landing-headline"
+                className="landing-headline at-display text-[clamp(48px,5.8vw,84px)] leading-[0.98] tracking-[-0.034em] text-text-primary"
               >
-                {t('landing.primary')}
-              </Button>
+                {renderAccentPhrase(
+                  t('landing.headline'),
+                  t('landing.headlineAccent'),
+                  true,
+                )}
+              </h1>
+
+              <p
+                data-testid="landing-subline"
+                className="landing-subline mt-5 line-clamp-3 max-w-[46ch] text-[17px] leading-[1.55] tracking-[-0.011em] text-text-secondary"
+              >
+                {t('landing.subline')}
+              </p>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  data-testid="landing-open-sample-button"
+                  onClick={() => onLoadDemoLot('edge-ring-etch')}
+                  disabled={disabled}
+                  className="w-full sm:w-auto"
+                >
+                  {t('landing.primary')}
+                </Button>
+
+                <Link
+                  href="/agents"
+                  className={cn(
+                    'inline-flex h-12 w-full items-center justify-center gap-2 rounded-pill bg-[var(--surface-well)] px-5 type-control text-text-primary no-underline shadow-[var(--elev-well-crisp)] sm:w-auto',
+                    'transition-[background-color,transform,scale] duration-150 ease-[var(--ease-out)] hover:bg-fill-2 active:scale-[0.97]',
+                    'focus-visible:shadow-focus-ring focus-visible:outline-none',
+                  )}
+                >
+                  <Bot className="size-4 text-text-secondary" strokeWidth={1.7} aria-hidden="true" />
+                  <span>{t('nav.agent')}</span>
+                </Link>
+              </div>
+
+              <SpecimenDropTray
+                variant="inline"
+                data-testid="landing-drop-tray"
+                className="mt-5 w-full max-w-[540px]"
+                wellClassName="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:gap-4 sm:py-3.5 sm:pr-4 sm:pl-5"
+              >
+                <span className="flex min-w-0 flex-1 items-center gap-3">
+                  <SpecimenSeat size={36} className="max-sm:hidden">
+                    <ArrowDown
+                      className="size-3.5 text-text-secondary"
+                      strokeWidth={1.75}
+                      aria-hidden="true"
+                    />
+                  </SpecimenSeat>
+                  <span className="min-w-0 flex-1">
+                    <p
+                      data-testid="landing-hint"
+                      className="min-w-0 type-subhead text-text-secondary"
+                    >
+                      <span className="sm:hidden">{t('landing.hintShort')}</span>
+                      <span className="max-sm:hidden">{t('landing.hint')}</span>
+                    </p>
+                    <FormatKeycaps className="mt-2 max-sm:hidden" />
+                  </span>
+                </span>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  data-testid="landing-open-stdf-button"
+                  aria-controls="cal-file-picker"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={disabled}
+                  className="w-full shrink-0 sm:w-auto"
+                >
+                  {t('landing.secondary')}
+                </Button>
+              </SpecimenDropTray>
             </div>
 
-            {/* Surprise #1, at rest: the specimen slot. A well cut into a plate with datum marks;
-                your own log goes here (or anywhere on the page, see FullWindowDropZone). */}
-            <SpecimenDropTray
-              variant="inline"
-              data-testid="landing-drop-tray"
-              className="mt-5 w-full max-w-[520px]"
-              wellClassName="flex flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:gap-4 sm:py-3 sm:pr-6 sm:pl-7"
-            >
-              <span className="flex min-w-0 flex-1 items-center gap-3">
-                <SpecimenSeat size={36} className="max-sm:hidden">
-                  <ArrowDown className="size-3.5 text-text-tertiary" strokeWidth={1.75} aria-hidden="true" />
-                </SpecimenSeat>
-                <p
-                  data-testid="landing-hint"
-                  className="min-w-0 type-subhead text-text-secondary"
-                >
-                  <span className="sm:hidden">{t('landing.hintShort')}</span>
-                  <span className="max-sm:hidden">{t('landing.hint')}</span>
-                </p>
-              </span>
-              <Button
-                variant="secondary"
-                size="md"
-                data-testid="landing-open-stdf-button"
-                aria-controls="cal-file-picker"
-                onClick={() => fileInputRef.current?.click()}
+            {cause === 'first-run' ? (
+              <ExplodedAutopsyStage
                 disabled={disabled}
-                className="w-full shrink-0 sm:w-auto"
-              >
-                {t('landing.secondary')}
-              </Button>
-            </SpecimenDropTray>
-          </div>
-
-          {/* The specimen: the sample lot's disc, lit, with its finding pinned to it. */}
-          {cause === 'first-run' ? (
-            <LandingHero
-              disabled={disabled}
-              heroSectionRef={heroSectionRef}
-              onOpenSample={() => onLoadDemoLot('edge-ring-etch')}
-            />
-          ) : null}
+                heroSectionRef={heroSectionRef}
+                onOpenSample={() => onLoadDemoLot('edge-ring-etch')}
+                compactDataPlot={
+                  <LandingWaferDisc
+                    presetId="edge-ring-etch"
+                    size={84}
+                    testId={(part) =>
+                      part ? `landing-hero-disc-${part}` : 'landing-hero-disc'
+                    }
+                  />
+                }
+              />
+            ) : null}
           </div>
         </div>
       )}
 
-      {/* premium §6.1 sample cards: mobile scroll-snap carousel (46 px peek), sm stacked rows, 3-up grid from 1024 */}
+      {/* 12-Column Asymmetric MagicBento Matrix: 3 Sample Case Cards + 2 Live Capability Cards */}
       {cause !== 'no-results' ? (
         <>
           <section
             aria-labelledby={sampleHeadingId}
-            className={cn(
-              // premium §12.5: landing sections >= 72 px apart
-              'mt-14 lg:mt-16',
-            )}
+            className="mt-14 lg:mt-16"
           >
-            {/* premium §12.4 eyebrow: 6 px ember dot, then a mono 12/16 uppercase note */}
             <h2
               id={sampleHeadingId}
               data-testid="landing-sample-heading"
@@ -1365,21 +1210,14 @@ export function EmptyStateCard({
 
             <div
               data-testid="landing-demo-cards"
-              className={cn(
-                '-mx-4 mt-1 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-2 pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-                '-mb-6 sm:mx-0 sm:mt-4 sm:mb-0 sm:flex-col sm:gap-4 sm:overflow-visible sm:p-0 sm:snap-none',
-                'lg:grid lg:grid-cols-3 lg:gap-6',
-              )}
+              className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-5"
             >
-              {presets.map((preset, index) => (
+              {presets.map((preset) => (
                 <DemoLotCardButton
                   key={preset.id}
                   presetId={preset.id}
                   isSelected={preset.id === selectedPresetId}
                   disabled={disabled}
-                  staggerIndex={index}
-                  staggerCount={presets.length}
-                  revealDisabled={cardsRevealInitiallySeen}
                   onSelectPreset={onSelectPreset}
                   onLoadDemoLot={onLoadDemoLot}
                   {...(renderWorkerThumbnail !== undefined
@@ -1387,11 +1225,16 @@ export function EmptyStateCard({
                     : {})}
                 />
               ))}
+
+              <LivePipelineBentoCard
+                disabled={disabled}
+                onOpenSample={() => onLoadDemoLot('edge-ring-etch')}
+              />
+              <SpecialistNetworkBentoCard />
             </div>
           </section>
 
-          {/* premium §6.1 footer line: privacy left (subhead tertiary), "Download sample files" text button right */}
-          <footer className="mt-[72px] flex flex-wrap items-center justify-between gap-4">
+          <footer className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-hairline pt-6 lg:mt-16">
             <p
               data-testid="landing-privacy"
               className="type-subhead text-text-tertiary"
@@ -1404,7 +1247,6 @@ export function EmptyStateCard({
                 data-testid="landing-download-demos-trigger"
                 disabled={disabled}
                 className={cn(
-                  // premium §7.11 text button: `text-secondary`, hover `text-primary`, pressed 0.64, ::after +8 px
                   'relative cursor-pointer rounded-pill bg-transparent p-0 type-control text-text-secondary shadow-none select-none',
                   "after:absolute after:-inset-2 after:content-['']",
                   'transition-[color,opacity] duration-[120ms] ease-[var(--ease-out)] [@media(hover:hover)]:enabled:hover:text-text-primary enabled:active:opacity-64',

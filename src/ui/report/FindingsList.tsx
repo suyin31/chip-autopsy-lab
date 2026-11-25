@@ -460,20 +460,28 @@ export function FindingsList({
                       onPointerCancel={clearPressedRow}
                       onClick={() => onToggleClaim(row.claim)}
                       className={cn(
-                        'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[16px_minmax(0,1fr)_auto] items-start gap-x-3 rounded-lg border-0 bg-transparent px-4 py-3 text-left',
+                        'grid min-h-16 w-full cursor-pointer appearance-none grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-x-3 rounded-lg border-0 bg-transparent px-4 py-3 text-left',
                         'focus-visible:shadow-focus-ring focus-visible:outline-none',
                       )}
                     >
-                      <KindIcon
+                      <span
                         aria-hidden="true"
-                        data-testid="finding-kind-icon"
-                        strokeWidth={1.5}
                         className={cn(
-                          'mt-0.5 size-4 transition-[color] duration-120 ease-out',
-                          row.kind === 'scratch' && 'rotate-30',
-                          isSelected ? 'text-text-primary' : 'text-text-tertiary',
+                          'at-icon-well size-8 shrink-0 rounded-xl',
+                          isSelected && 'at-icon-well-iris',
                         )}
-                      />
+                      >
+                        <KindIcon
+                          aria-hidden="true"
+                          data-testid="finding-kind-icon"
+                          strokeWidth={1.6}
+                          className={cn(
+                            'size-4 transition-[color] duration-120 ease-out',
+                            row.kind === 'scratch' && 'rotate-30',
+                            isSelected ? 'text-text-primary' : 'text-text-secondary',
+                          )}
+                        />
+                      </span>
 
                       <span className="min-w-0">
                         <span
@@ -499,18 +507,18 @@ export function FindingsList({
                         ) : null}
                       </span>
 
-                      <span className="flex h-5 items-center gap-2">
+                      <span className="flex h-6 items-center gap-2">
                         {isSelected ? (
                           <span
                             data-testid="finding-clear-label"
-                            className="type-control whitespace-nowrap text-text-primary"
+                            className="inline-flex h-6 items-center rounded-pill bg-fill-1 px-2.5 type-control whitespace-nowrap text-text-primary"
                           >
                             {clearLabel}
                           </span>
                         ) : (
                           <span
                             data-testid="claim-cited-dies-count"
-                            className="type-subhead whitespace-nowrap text-text-tertiary tabular-nums"
+                            className="inline-flex h-6 items-center rounded-pill bg-fill-1 px-2.5 type-subhead whitespace-nowrap text-text-secondary tabular-nums"
                           >
                             {trailingCountLabel}
                           </span>

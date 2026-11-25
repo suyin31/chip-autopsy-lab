@@ -96,35 +96,21 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(html).toContain('One worn tester needle fails good dies.');
     expect(html).toContain('25 wafers, 15,825 dies');
     expect(html).toContain('aria-label="Open sample lot Edge-Ring Plasma Etch"');
-    // premium §11.2: a `fill-1` tile holding the disc and a pattern chip; text below it, outside
-    expect(html).toContain('data-testid="demo-tile-edge-ring-etch" class="relative flex w-full items-center justify-center rounded-2xl bg-fill-1');
-    expect(html).toContain('before:shadow-card');
-    expect(html).not.toContain('before:shadow-card-hover');
+    // Bento sample cards: obsidian data pods with compact data plots + 2 live capability Bento cards
+    expect(html).toContain('data-testid="demo-tile-edge-ring-etch"');
+    expect(html).toContain('at-obsidian-well');
     expect(html).toMatch(/data-testid="demo-chip-edge-ring-etch"[^>]*>Edge ring</);
     expect(html).toMatch(/data-testid="demo-chip-handling-scratch"[^>]*>Scratch</);
     expect(html).toMatch(/data-testid="demo-chip-site2-probe-contact"[^>]*>Probe site</);
+    expect(html).toContain('data-testid="bento-capability-pipeline"');
+    expect(html).toContain('data-testid="bento-capability-agents"');
 
-    // premium §11.1 hero: 320 px edge-ring-etch disc with stage shadows inside a 72-tick reticle,
-    // and the "Example result" card; the wafer button opens the sample lot
-    expect(html).toContain('data-testid="landing-hero-wafer" aria-label="Open the sample lot"');
-    const reticleTicks = Array.from(
-      html.matchAll(
-        /<line data-reticle-tick="" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g,
-      ),
-    );
-    expect(reticleTicks).toHaveLength(72);
-    for (const [, x1, y1, x2, y2] of reticleTicks) {
-      for (const coord of [x1, y1, x2, y2]) {
-        expect(coord).toMatch(/^\d+(?:\.\d{1,3})?$/);
-      }
-    }
-    // Atelier: the degree labels are gone; the reticle is ticks only, so the stage reads as a
-    // specimen rather than a coordinate stage.
-    expect(html).not.toContain('>0°</span>');
-    expect(html).toContain('data-testid="landing-hero-disc-ambient"');
-    expect(html).toContain('data-testid="landing-hero-disc-halo"');
-    expect(html).toContain('width:440px;height:440px');
-    expect(html).toContain('at-plate cal-tactile relative z-[3]');
+    // Hero right: 3D Exploded Forensic Stage (no 440 px decorative hero wafer; compact 84 px data plot only)
+    expect(html).toContain('data-testid="landing-hero-stage-3d"');
+    expect(html).toContain('data-testid="landing-hero-deck"');
+    expect(html).not.toContain('width:440px;height:440px');
+    expect(html).toContain('width:84px;height:84px');
+    expect(html).toContain('data-testid="landing-example-card"');
     expect(html).toContain('Example result');
     expect(html).toContain('<bdi translate="no">Edge-Ring</bdi> failure.');
     // Premium §11.5: the percent is its own count-up from 0, sized by its final string
@@ -132,8 +118,9 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(html).toMatch(/data-testid="landing-example-percent" data-final="93.8%" class="count-up"/);
     expect(html).toContain('>See how it was found<');
 
-    // 152 px server-rendered disc with contact shadow and masked sheen; no R-series vignette or top light
-    expect(html).toContain('width:152px;height:152px');
+    // Compact server-rendered data plots in Bento cards with contact shadow and masked sheen
+    expect(html).toContain('width:112px;height:112px');
+    expect(html).toContain('width:88px;height:88px');
     expect(html).toContain('data-testid="landing-demo-wafer-contact-edge-ring-etch"');
     expect(html).toContain('data-testid="landing-demo-wafer-sheen-edge-ring-etch"');
     expect(html).not.toContain('var(--vignette)');
