@@ -1330,26 +1330,21 @@
       transform 180ms var(--ease-out),
       opacity 160ms var(--ease-out);
   }
-  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-    .group:hover .at-wave-bar,
-    .group:focus-visible .at-wave-bar {
+  @media (prefers-reduced-motion: no-preference) {
+    .at-wave-bar[data-active='true'] {
       opacity: 1;
-      animation: at-wave-osc 780ms ease-in-out infinite alternate;
+      animation: at-wave-osc 720ms ease-in-out infinite alternate;
     }
-    .group:hover .at-wave-bar:nth-child(2),
-    .group:focus-visible .at-wave-bar:nth-child(2) {
+    .at-wave-bar[data-active='true']:nth-child(2) {
       animation-delay: 110ms;
     }
-    .group:hover .at-wave-bar:nth-child(3),
-    .group:focus-visible .at-wave-bar:nth-child(3) {
+    .at-wave-bar[data-active='true']:nth-child(3) {
       animation-delay: 220ms;
     }
-    .group:hover .at-wave-bar:nth-child(4),
-    .group:focus-visible .at-wave-bar:nth-child(4) {
+    .at-wave-bar[data-active='true']:nth-child(4) {
       animation-delay: 90ms;
     }
-    .group:hover .at-wave-bar:nth-child(5),
-    .group:focus-visible .at-wave-bar:nth-child(5) {
+    .at-wave-bar[data-active='true']:nth-child(5) {
       animation-delay: 190ms;
     }
   }

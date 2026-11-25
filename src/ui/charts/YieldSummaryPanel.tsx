@@ -10,7 +10,6 @@ import type { YieldMetrics, YieldSummary } from '@/core/analytics';
 import type { LotModel } from '@/core/model';
 import type { EngineFact } from '@/core/report';
 import type { GlossaryTermId } from '@/core/i18n';
-import { useProximityRim } from '@/ui/atelier/ProximityPlate';
 import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/primitives/cn';
@@ -80,7 +79,6 @@ export function YieldSummaryPanel({
   const headingId = React.useId();
   const wafersListId = React.useId();
   const sectionRef = React.useRef<HTMLElement | null>(null);
-  useProximityRim(sectionRef, { reachPx: 220 });
 
   const {
     storeLot,
@@ -273,7 +271,7 @@ export function YieldSummaryPanel({
       ref={sectionRef}
       aria-labelledby={headingId}
       data-testid="yield-summary"
-      className={cn('at-bento rounded-[24px] p-5 sm:p-6', className)}
+      className={cn('at-chart-section', className)}
     >
       <h2
         id={headingId}

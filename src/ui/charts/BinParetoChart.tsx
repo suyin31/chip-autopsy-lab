@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducedMotion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
@@ -8,7 +8,6 @@ import { useShallow } from 'zustand/react/shallow';
 import { computeBinPareto } from '@/core/analytics';
 import type { BinMode, LotModel } from '@/core/model';
 import type { GlossaryTermId } from '@/core/i18n';
-import { useProximityRim } from '@/ui/atelier/ProximityPlate';
 import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import { Button } from '@/ui/primitives/button';
@@ -70,7 +69,6 @@ export function BinParetoChart({
   const headingId = React.useId();
   const chartLabelId = React.useId();
   const sectionRef = React.useRef<HTMLElement | null>(null);
-  useProximityRim(sectionRef, { reachPx: 220 });
 
   const {
     storeLot,
@@ -226,7 +224,7 @@ export function BinParetoChart({
       data-mode={mode}
       {...{ [DISCLOSURE_SCOPE_ATTR]: '' }}
       className={cn(
-        'at-bento rounded-[24px] p-5 sm:p-6',
+        'rounded-[24px] border border-hairline bg-surface/65 p-5 shadow-card sm:p-6',
         className,
       )}
     >
@@ -369,11 +367,19 @@ export function BinParetoChart({
                       codeText
                     )}
                     <span aria-hidden="true" className="block h-2">
-                      <span
+                      <motion.span
                         data-testid="bin-pareto-bar"
                         data-bar-tone={tone}
+                        initial={reduced ? false : { scaleX: 0 }}
+                        whileInView={reduced ? undefined : { scaleX: 1 }}
+                        viewport={{ once: true, amount: 0.2 }}
+                        transition={
+                          reduced
+                            ? { duration: 0 }
+                            : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }
+                        }
                         className={cn(
-                          'block h-full rounded-xs transition-[background-color] duration-120 ease-out',
+                          'block h-full origin-left rounded-xs transition-[background-color] duration-120 ease-out',
                           BAR_TONE_CLASS[tone],
                         )}
                         style={{

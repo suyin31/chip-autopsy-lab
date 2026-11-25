@@ -18,16 +18,13 @@ import { useT, type BoundTranslateFn } from '@/ui/i18n';
 import * as React from 'react';
 import Link from 'next/link';
 import {
-  Activity,
-  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   ArrowUp,
   ChevronDown,
-  Gauge,
-  Layers,
   Loader2,
   SlidersHorizontal,
+  AlertTriangle,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -71,7 +68,6 @@ import { AmbientField } from '@/ui/atelier/AmbientField';
 import { BorderBeam } from '@/ui/atelier/BorderBeam';
 import { PulseBusSvg } from '@/ui/atelier/PulseBusSvg';
 import { DatumTicks } from '@/ui/atelier/SpecimenDropTray';
-import { SpotlightTiltCard } from '@/ui/atelier/SpotlightTiltCard';
 import { Untranslated } from '@/ui/i18n';
 import { MorphingDialog } from '@/ui/primitives/morphing-dialog';
 import { WaferStage } from './WaferStage';
@@ -110,19 +106,19 @@ const STARTERS = [
     prompt: 'Load the edge-ring demo lot and diagnose it.',
     labelKey: 'agents.starter1.label',
     hintKey: 'agents.starter1.hint',
-    icon: Layers,
+    waveHeights: [10, 18, 13, 16, 11],
   },
   {
     prompt: 'Why did this lot lose yield? Give me the cause of death and the evidence.',
     labelKey: 'agents.starter2.label',
     hintKey: 'agents.starter2.hint',
-    icon: Activity,
+    waveHeights: [8, 14, 18, 12, 15],
   },
   {
     prompt: 'Which parametric test has the worst Cpk?',
     labelKey: 'agents.starter3.label',
     hintKey: 'agents.starter3.hint',
-    icon: Gauge,
+    waveHeights: [12, 10, 16, 18, 9],
   },
 ] as const;
 
@@ -281,7 +277,7 @@ function ToolTrail({
               duration: reducedMotion ? 0 : MOTION_TOKENS.dur1Ms / 1000,
               ease: MOTION_TOKENS.easeOutTuple,
             }}
-            className="mt-1.5 flex flex-col items-start gap-1.5 border-l border-hairline pl-2.5"
+            className="at-timeline-spine mt-2 flex flex-col items-start gap-2 pl-5"
           >
             {items.map((item, idx) => (
               <motion.div
@@ -299,7 +295,19 @@ function ToolTrail({
                           1000,
                       }
                 }
+                className="relative flex items-center"
               >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'pointer-events-none absolute -left-[17px] size-2 rounded-full ring-2 ring-bg',
+                    item.status === 'running'
+                      ? 'agent-accent-dot agent-live-dot'
+                      : item.status === 'error'
+                        ? 'bg-[var(--bin-ink-3)]'
+                        : 'at-dot-iris',
+                  )}
+                />
                 <ToolPill
                   item={item}
                   expanded={expandedTools.has(item.id)}
@@ -613,50 +621,56 @@ function SpecialistTopologyBar({
   );
 }
 
-function StarterCard({
+function StarterWaveRow({
   starter,
   index,
+  reducedMotion,
   onSelect,
 }: {
   readonly starter: (typeof STARTERS)[number];
   readonly index: number;
+  readonly reducedMotion: boolean;
   readonly onSelect: (prompt: string, label: string) => void;
 }): React.JSX.Element {
   const { t } = useT();
-  const Icon = starter.icon;
+  const [active, setActive] = React.useState(false);
   const label = t(starter.labelKey);
   const isFlagship = index === 0;
+  const waveActive = active && !reducedMotion ? 'true' : undefined;
 
   return (
     <div
-      className={cn('agent-rise', isFlagship && 'sm:col-span-2')}
-      style={{ animationDelay: `${120 + index * 60}ms` }}
+      className="agent-rise border-b border-hairline"
+      style={{ animationDelay: `${120 + index * 55}ms` }}
     >
-      <SpotlightTiltCard
-        as="button"
+      <button
         type="button"
-        maxDeg={6.5}
-        liftPx={-4}
-        pressable
-        preserve3d
         onClick={() => onSelect(starter.prompt, label)}
+        onPointerEnter={() => setActive(true)}
+        onPointerLeave={() => setActive(false)}
+        onFocus={() => setActive(true)}
+        onBlur={() => setActive(false)}
         className={cn(
-          'group relative flex h-full w-full cursor-pointer touch-manipulation items-start gap-3.5 rounded-[22px] p-4 text-left sm:items-center sm:p-4.5',
+          'group relative flex w-full cursor-pointer touch-manipulation items-center gap-3.5 rounded-lg px-2 py-3.5 text-left sm:px-3',
+          'transition-[background-color,scale,transform] duration-[150ms] ease-[var(--ease-out)]',
+          '[@media(hover:hover)]:hover:bg-fill-1 active:scale-[0.99] motion-reduce:active:scale-100',
           'focus-visible:shadow-focus-ring focus-visible:outline-none',
         )}
       >
         <span
-          className={cn(
-            'at-bento-pop-sm size-10 shrink-0 rounded-[14px]',
-            isFlagship
-              ? 'at-icon-well-signal'
-              : index === 1
-                ? 'at-icon-well-iris'
-                : 'at-icon-well',
-          )}
+          aria-hidden="true"
+          className="inline-flex h-5 w-6 shrink-0 items-end justify-center gap-[3px]"
         >
-          <Icon className="size-4.5" strokeWidth={1.75} aria-hidden="true" />
+          {starter.waveHeights.map((h, barIdx) => (
+            <span
+              key={barIdx}
+              data-active={waveActive}
+              style={{ height: `${h}px` }}
+              className={cn('at-wave-bar', isFlagship && 'at-bar-signal')}
+            />
+          ))}
         </span>
+
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="type-callout text-text-primary">{label}</span>
@@ -666,16 +680,17 @@ function StarterCard({
               </Untranslated>
             ) : null}
           </span>
-          <span className="mt-1 block type-caption text-text-tertiary">
+          <span className="mt-0.5 block type-caption text-text-tertiary">
             {t(starter.hintKey)}
           </span>
         </span>
+
         <ArrowRight
           aria-hidden="true"
-          className="at-bento-pop-sm mt-1 size-4 shrink-0 text-text-tertiary opacity-55 transition-[transform,translate,opacity] duration-[200ms] ease-[var(--ease-out)] sm:mt-0 [@media(hover:hover)]:motion-safe:group-hover:translate-x-0.5 [@media(hover:hover)]:group-hover:opacity-100"
+          className="size-4 shrink-0 text-text-tertiary opacity-55 transition-[transform,translate,opacity] duration-[200ms] ease-[var(--ease-out)] [@media(hover:hover)]:motion-safe:group-hover:translate-x-1 [@media(hover:hover)]:group-hover:opacity-100"
           strokeWidth={1.75}
         />
-      </SpotlightTiltCard>
+      </button>
     </div>
   );
 }
@@ -1358,12 +1373,13 @@ export function AgentConsole() {
                     )}
                   </div>
 
-                  <div className="at-scene-3d mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  <div className="mt-5 flex flex-col border-t border-hairline">
                     {STARTERS.map((starter, index) => (
-                      <StarterCard
+                      <StarterWaveRow
                         key={starter.prompt}
                         starter={starter}
                         index={index}
+                        reducedMotion={reducedMotion}
                         onSelect={(prompt, label) => void send(prompt, label)}
                       />
                     ))}

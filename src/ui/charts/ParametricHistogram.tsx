@@ -53,10 +53,38 @@ export function ParametricHistogram({
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
+  const hatchPatternId = React.useId().replace(/:/g, '');
   const [measuredWidth, setMeasuredWidth] =
     React.useState<number>(DEFAULT_SVG_WIDTH);
   const [scrubBinIndex, setScrubBinIndex] = React.useState<number | null>(null);
+  const [barsEntered, setBarsEntered] = React.useState<boolean>(() =>
+    typeof window === 'undefined' ? true : reduced,
+  );
   const draggingRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (reduced) {
+      setBarsEntered(true);
+      return undefined;
+    }
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      const id = window.requestAnimationFrame(() => setBarsEntered(true));
+      return () => window.cancelAnimationFrame(id);
+    }
+    setBarsEntered(false);
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setBarsEntered(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [reduced]);
 
   // Reset scrub when switching tests or when bin array shrinks
   const prevTestNumRef = React.useRef(summary.testNum);
@@ -233,8 +261,22 @@ export function ParametricHistogram({
           Math.min(plotWidth, xScale((activeBin.x0 + activeBin.x1) / 2)),
         )
       : null;
+  const scrubRuleY =
+    activeBin !== null
+      ? Math.max(
+          0,
+          Math.min(
+            PLOT_HEIGHT_PX,
+            PLOT_HEIGHT_PX -
+              Math.max(
+                activeBin.count > 0 ? 2 : 0,
+                PLOT_HEIGHT_PX - yScale(activeBin.count),
+              ),
+          ),
+        )
+      : null;
 
-  const barTransitionDuration = reduced ? '0ms' : '160ms';
+  const barTransitionDuration = reduced ? '0ms' : '220ms';
 
   return (
     <div
@@ -312,9 +354,52 @@ export function ParametricHistogram({
             onBlur={() => setScrubBinIndex(null)}
             className="block w-full max-w-full overflow-visible rounded-md focus-visible:shadow-focus-ring focus-visible:outline-none"
           >
+            <defs>
+              <pattern
+                id={hatchPatternId}
+                width="5"
+                height="5"
+                patternTransform="rotate(45 0 0)"
+                patternUnits="userSpaceOnUse"
+              >
+                <rect width="5" height="5" fill="var(--chroma-soft)" />
+                <line
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="5"
+                  stroke="var(--chroma)"
+                  strokeWidth="1.5"
+                />
+              </pattern>
+            </defs>
             <g
               transform={`translate(${HORIZONTAL_INSET_PX}, ${TOP_MARKER_BAND_PX})`}
             >
+              {/* Subtle out-of-spec limit curtains beyond LO_LIMIT and HI_LIMIT (zero ember) */}
+              {loX !== null && loX > 1 ? (
+                <rect
+                  x={0}
+                  y={0}
+                  width={loX}
+                  height={PLOT_HEIGHT_PX}
+                  fill="var(--chroma-soft)"
+                  opacity={0.35}
+                  pointerEvents="none"
+                />
+              ) : null}
+              {hiX !== null && hiX < plotWidth - 1 ? (
+                <rect
+                  x={hiX}
+                  y={0}
+                  width={plotWidth - hiX}
+                  height={PLOT_HEIGHT_PX}
+                  fill="var(--chroma-soft)"
+                  opacity={0.35}
+                  pointerEvents="none"
+                />
+              ) : null}
+
               {/* Baseline hairline */}
               <Line
                 from={{ x: 0, y: PLOT_HEIGHT_PX }}
@@ -334,12 +419,12 @@ export function ParametricHistogram({
                   bin.count > 0 ? 2 : 0,
                   PLOT_HEIGHT_PX - yScale(bin.count),
                 );
-                const scaleY = barH / PLOT_HEIGHT_PX;
+                const scaleY = barsEntered || reduced ? barH / PLOT_HEIGHT_PX : 0;
                 const isScrubbed = activeBin?.index === bin.index;
                 const fill = isScrubbed
                   ? 'var(--ink)'
                   : bin.outOfSpec
-                    ? 'var(--text-secondary)'
+                    ? `url(#${hatchPatternId})`
                     : 'var(--bar-neutral)';
 
                 return (
@@ -365,8 +450,12 @@ export function ParametricHistogram({
                       height={PLOT_HEIGHT_PX}
                       rx={2}
                       fill={fill}
+                      stroke={
+                        !isScrubbed && bin.outOfSpec ? 'var(--chroma)' : undefined
+                      }
+                      strokeWidth={!isScrubbed && bin.outOfSpec ? 0.75 : undefined}
                       fillOpacity={
-                        isScrubbed ? 1 : bin.outOfSpec ? 0.65 : 0.9
+                        isScrubbed ? 1 : bin.outOfSpec ? 0.95 : 0.9
                       }
                     />
                   </g>
@@ -421,17 +510,37 @@ export function ParametricHistogram({
                 </g>
               ) : null}
 
-              {/* Vertical scrub rule (Req 8.5) */}
+              {/* Crosshair scrub cursor: vertical rule + horizontal level guide + bar-cap bead (Req 8.5) */}
               {scrubRuleX !== null ? (
-                <rect
-                  data-testid="parametric-scrub-rule"
-                  x={scrubRuleX - 0.75}
-                  y={0}
-                  width={1.5}
-                  height={PLOT_HEIGHT_PX}
-                  fill="var(--text-primary)"
-                  pointerEvents="none"
-                />
+                <g pointerEvents="none">
+                  {scrubRuleY !== null ? (
+                    <Line
+                      from={{ x: 0, y: scrubRuleY }}
+                      to={{ x: plotWidth, y: scrubRuleY }}
+                      stroke="var(--hairline-strong)"
+                      strokeWidth={1}
+                      strokeDasharray="3 2.5"
+                    />
+                  ) : null}
+                  <rect
+                    data-testid="parametric-scrub-rule"
+                    x={scrubRuleX - 0.75}
+                    y={0}
+                    width={1.5}
+                    height={PLOT_HEIGHT_PX}
+                    fill="var(--text-primary)"
+                  />
+                  {scrubRuleY !== null ? (
+                    <circle
+                      cx={scrubRuleX}
+                      cy={scrubRuleY}
+                      r={3}
+                      fill="var(--chroma)"
+                      stroke="var(--surface)"
+                      strokeWidth={1}
+                    />
+                  ) : null}
+                </g>
               ) : null}
 
               {/* X-axis domain endpoints */}
