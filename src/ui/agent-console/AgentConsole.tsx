@@ -573,6 +573,7 @@ function SpecialistTopologyBar({
             <button
               key={key}
               type="button"
+              aria-pressed={isSelected}
               onMouseEnter={() => setFocusedKey(key)}
               onFocus={() => setFocusedKey(key)}
               onClick={() => setFocusedKey(key)}
@@ -1289,7 +1290,7 @@ export function AgentConsole() {
         <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-hairline" />
       </header>
 
-      <div className="relative z-[1] mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-1 lg:h-[calc(100dvh-52px)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_396px] lg:overflow-hidden">
+      <div className="relative z-[1] grid w-full flex-1 grid-cols-1 lg:h-[calc(100dvh-52px)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_396px] lg:overflow-hidden">
         <section
           aria-label={t('agents.conversation')}
           data-testid="agent-conversation"

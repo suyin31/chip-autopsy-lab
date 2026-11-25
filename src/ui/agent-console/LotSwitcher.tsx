@@ -23,8 +23,8 @@ const PRESET_BADGES: Record<
   DemoPresetId,
   { readonly code: string; readonly dotClass: string }
 > = {
-  'edge-ring-etch': { code: 'SBIN 12', dotClass: 'at-dot-signal' },
-  'handling-scratch': { code: 'SBIN 24', dotClass: 'at-dot-iris' },
+  'edge-ring-etch': { code: 'SBIN 7', dotClass: 'at-dot-signal' },
+  'handling-scratch': { code: 'SBIN 9', dotClass: 'at-dot-iris' },
   'site2-probe-contact': { code: 'SITE 1:2', dotClass: 'at-dot-emerald' },
 };
 

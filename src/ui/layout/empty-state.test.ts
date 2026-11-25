@@ -119,7 +119,7 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(html).toContain('>See how it was found<');
 
     // Compact server-rendered data plots in Bento cards with contact shadow and masked sheen
-    expect(html).toContain('width:112px;height:112px');
+    expect(html).toContain('width:132px;height:132px');
     expect(html).toContain('width:88px;height:88px');
     expect(html).toContain('data-testid="landing-demo-wafer-contact-edge-ring-etch"');
     expect(html).toContain('data-testid="landing-demo-wafer-sheen-edge-ring-etch"');

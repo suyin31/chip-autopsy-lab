@@ -85,7 +85,7 @@ function StageScrollConnector({
  * (`perspective: 1400px`, `transform-style: preserve-3d`) forensic deck:
  * - Z = -34px Backplane: STDF V4 binary record stream (`FAR · MIR · PTR · PRR`) & local privacy meter
  * - Z =   0px Main Obsidian Deck: Live Bin Pareto cascade + Parametric Cpk bell curve + compact 88px data wafer plot
- * - Z = +38px Top-Right Specialist Troupe Floating Card (clickable to `/agents`)
+ * - Z = +38px Specialist Troupe Floating Card below the deck's lower-right corner (links to `/agents`)
  * - Z = +54px Bottom-Left High-Elevation `Example result` Verdict Card with 93.8% radial ring & leader line
  *
  * Driven simultaneously by pointer 3D parallax springs and scroll-driven 3D unfolding.
@@ -256,6 +256,12 @@ export function ExplodedAutopsyStage({
           </div>
         </div>
 
+        {/* Deck anchor: the agent chip hangs off the deck's lower-right corner, so it never
+            covers the backplane or the verdict card whatever their heights are. */}
+        <div
+          style={reduced ? undefined : { transformStyle: 'preserve-3d' }}
+          className="relative max-lg:!transform-none"
+        >
         {/* PLANE 2 (Z = 0px): Main Obsidian Forensic Console Deck */}
         <motion.button
           ref={deckRef}
@@ -311,15 +317,15 @@ export function ExplodedAutopsyStage({
                 <span className="truncate text-[11.5px] font-[500] text-text-secondary">
                   {t('pareto.title')}
                 </span>
-                <Untranslated className="font-mono text-[11px] text-text-tertiary tabular-nums">
+                <Untranslated className="shrink-0 font-mono text-[11px] text-text-tertiary tabular-nums">
                   SBIN
                 </Untranslated>
               </div>
               <div className="mt-2.5 flex flex-col gap-2">
                 {[
                   { code: 'SBIN 7', pct: '91.3%', w: '91%', cls: 'at-bar-signal' },
-                  { code: 'SBIN 3', pct: '5.4%', w: '24%', cls: 'at-bar-iris' },
-                  { code: 'SBIN 12', pct: '3.3%', w: '14%', cls: 'bg-fill-3' },
+                  { code: 'SBIN 11', pct: '5.7%', w: '9%', cls: 'at-bar-iris' },
+                  { code: 'SBIN 9', pct: '1.7%', w: '4%', cls: 'bg-fill-3' },
                 ].map((bar, idx) => (
                   <div key={bar.code} className="flex flex-col gap-1">
                     <div className="flex items-baseline justify-between text-[11px] tabular-nums">
@@ -350,7 +356,7 @@ export function ExplodedAutopsyStage({
                 <span className="truncate text-[11.5px] font-[500] text-text-secondary">
                   {t('parametric.title')}
                 </span>
-                <Untranslated className="font-mono text-[11px] text-text-primary tabular-nums">
+                <Untranslated className="shrink-0 font-mono text-[11px] whitespace-nowrap text-text-primary tabular-nums">
                   Cpk 0.14
                 </Untranslated>
               </div>
@@ -408,7 +414,7 @@ export function ExplodedAutopsyStage({
           </div>
         </motion.button>
 
-        {/* PLANE 3 (Z = +38px): Floating 4-Specialist Agent Troupe Chip (Top Right) */}
+        {/* PLANE 3 (Z = +38px): Floating 4-Specialist Agent Troupe Chip (Lower Right, below the deck) */}
         <motion.div
           style={
             enableLive3D
@@ -421,14 +427,14 @@ export function ExplodedAutopsyStage({
                 ? undefined
                 : { transform: 'translateZ(38px)' }
           }
-          className="mt-3 flex justify-end sm:absolute sm:-top-5 sm:-right-3 sm:z-[4] sm:mt-0 max-lg:!transform-none"
+          className="mt-3 flex justify-end lg:absolute lg:top-[calc(100%+16px)] lg:-right-3 lg:z-[4] lg:mt-0 max-lg:!transform-none"
         >
           <Link
             ref={agentChipRef}
             href="/agents"
             data-testid="landing-hero-agent-chip"
             className={cn(
-              'at-float-card group/chip inline-flex items-center gap-2.5 rounded-2xl px-3.5 py-2 text-left no-underline',
+              'at-float-card group/chip inline-flex max-w-full items-center gap-2.5 rounded-2xl px-3.5 py-2 text-left no-underline lg:max-w-[188px] xl:max-w-[236px]',
               'transition-[transform,scale] duration-200 ease-[var(--ease-out)] [@media(hover:hover)]:hover:-translate-y-0.5 active:scale-[0.98]',
               'focus-visible:shadow-focus-ring focus-visible:outline-none',
             )}
@@ -436,7 +442,7 @@ export function ExplodedAutopsyStage({
             <span className="at-icon-well at-icon-well-iris size-7 shrink-0 rounded-lg">
               <Bot className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
             </span>
-            <span className="min-w-0">
+            <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5 text-[12.5px] font-[540] text-text-primary">
                 <span>{t('nav.agent')}</span>
                 <Sparkles className="size-3 text-text-tertiary" aria-hidden="true" />
@@ -448,6 +454,9 @@ export function ExplodedAutopsyStage({
             </span>
           </Link>
         </motion.div>
+
+        </div>
+
 
         {/* PLANE 4 (Z = +56px): Floating High-Elevation `Example result` Verdict Card (Bottom Left) */}
         <motion.div
@@ -464,17 +473,18 @@ export function ExplodedAutopsyStage({
                 ? undefined
                 : { transform: 'translateZ(56px)' }
           }
-          className="at-float-card relative z-[5] mt-3 w-full p-4 text-left sm:mt-4 sm:w-[348px] lg:-mt-8 lg:-ml-6 max-lg:!transform-none"
+          className="at-float-card relative z-[5] mt-3 w-full p-4 text-left sm:mt-4 sm:w-[348px] lg:-mt-8 lg:-ml-2 lg:w-[320px] xl:-ml-6 xl:w-[348px] max-lg:!transform-none"
         >
           {/* SVG Leader Line connecting the floating verdict card back to the obsidian deck */}
           <svg
             aria-hidden="true"
             width="54"
-            height="28"
-            viewBox="0 0 54 28"
-            className="pointer-events-none absolute -top-6 right-8 hidden lg:block"
+            height="56"
+            viewBox="0 0 54 56"
+            className="pointer-events-none absolute -top-[52px] right-8 hidden lg:block"
           >
-            <path d="M4 26 C 16 10, 34 8, 50 3" className="at-leader" />
+            {/* Ends on the capability curve, above the test-name label, so the dot covers no text */}
+            <path d="M4 54 C 16 30, 34 14, 50 3" className="at-leader" />
             <circle cx="50" cy="3" r="2.5" className="at-leader-dot" />
           </svg>
 

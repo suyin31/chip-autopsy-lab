@@ -18,7 +18,7 @@ import { useProximityRim } from './ProximityPlate';
  * `Tilt` + `Spotlight` and Magic UI `MagicCard` (MIT); zero React Bits source code.
  *
  * - Spring 3D tilt (`maxDeg`, default 7.5°) + hover lift (`-4px`) + `preserve-3d` so child
- *   `.at-bento-pop` badges/icons float physically above the glass surface when tilted.
+ *   `.at-bento-pop-sm` badges/icons float physically above the glass surface when tilted.
  * - 380px cursor spotlight wash inside `.at-bento::before` + shared 1.5px specular rim
  *   across neighbouring cards via `useProximityRim` (`.at-bento::after`).
  * - Zero React re-renders per pointer frame (updates motion values and CSS variables only).
@@ -56,8 +56,12 @@ export interface SpotlightTiltCardProps
   readonly reachPx?: number;
   /** Press scale 0.985 while the card is held (for cards that act as a control). */
   readonly pressable?: boolean;
-  /** Enables `transform-style: preserve-3d` so `.at-bento-pop` children float in Z-space. */
+  /** Enables `transform-style: preserve-3d` so `.at-bento-pop-sm` children float in Z-space. */
   readonly preserve3d?: boolean;
+}
+
+function isInsideRect(rect: DOMRect, x: number, y: number): boolean {
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
 function canFollowPointer(event: React.PointerEvent): boolean {
@@ -95,6 +99,8 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
     const rectRef = React.useRef<DOMRect | null>(null);
     const frameRef = React.useRef<number | null>(null);
     const pointRef = React.useRef<{ x: number; y: number } | null>(null);
+    // Removes the document listeners that keep tracking the pointer after a tilt-induced leave.
+    const releaseTrackRef = React.useRef<(() => void) | null>(null);
 
     useProximityRim(innerRef, { disabled: !rim || Boolean(disabled), reachPx });
 
@@ -133,6 +139,8 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
     }, [maxDeg, rotateXTarget, rotateYTarget, spotlight]);
 
     const rest = React.useCallback(() => {
+      releaseTrackRef.current?.();
+      releaseTrackRef.current = null;
       rectRef.current = null;
       pointRef.current = null;
       if (frameRef.current !== null) {
@@ -161,6 +169,15 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
       onPointerEnter?.(event);
       if (reduced || disabled || !canFollowPointer(event)) return;
       const el = event.currentTarget;
+      // Re-entering while still inside the resting rect: keep that rect. Measuring now would
+      // read the tilted, lifted box and shift the hover edge again.
+      if (releaseTrackRef.current && rectRef.current) {
+        releaseTrackRef.current();
+        releaseTrackRef.current = null;
+        pointRef.current = { x: event.clientX, y: event.clientY };
+        frameRef.current ??= requestAnimationFrame(flush);
+        return;
+      }
       rectRef.current = el.getBoundingClientRect();
       pointRef.current = { x: event.clientX, y: event.clientY };
       liftTarget.set(liftPx);
@@ -177,6 +194,37 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
 
     const handleLeave = (event: React.PointerEvent<HTMLElement>): void => {
       onPointerLeave?.(event);
+      const rect = rectRef.current;
+      // Tilting moves the card's projected edge away from a pointer that rests near it, which
+      // fires `pointerleave` while the pointer is still over the card's resting footprint.
+      // Resting there would flip the tilt back and forth, so keep tracking on the document
+      // until the pointer really leaves the footprint measured on enter.
+      if (
+        rect &&
+        !disabled &&
+        isInsideRect(rect, event.clientX, event.clientY) &&
+        typeof document !== 'undefined'
+      ) {
+        if (releaseTrackRef.current) return;
+        const onDocMove = (e: PointerEvent): void => {
+          if (!isInsideRect(rect, e.clientX, e.clientY)) {
+            rest();
+            return;
+          }
+          pointRef.current = { x: e.clientX, y: e.clientY };
+          frameRef.current ??= requestAnimationFrame(flush);
+        };
+        const onDocLeave = (): void => rest();
+        document.addEventListener('pointermove', onDocMove, { passive: true });
+        document.documentElement.addEventListener('pointerleave', onDocLeave);
+        window.addEventListener('blur', onDocLeave);
+        releaseTrackRef.current = () => {
+          document.removeEventListener('pointermove', onDocMove);
+          document.documentElement.removeEventListener('pointerleave', onDocLeave);
+          window.removeEventListener('blur', onDocLeave);
+        };
+        return;
+      }
       rest();
     };
 

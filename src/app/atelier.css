@@ -1138,15 +1138,7 @@
     transform: translateZ(10px);
   }
 
-  .at-bento-pop {
-    transform: translateZ(18px);
-  }
-
-  .at-bento-pop-lg {
-    transform: translateZ(30px);
-  }
-
-  /* Soft chromatic under-glow beneath悬浮 3D decks and hero Bento modules */
+  /* Soft chromatic under-glow beneath floating 3D decks and hero Bento modules */
   .at-under-glow {
     pointer-events: none;
     background: radial-gradient(
@@ -1288,17 +1280,6 @@
       linear-gradient(#000 0 0);
     mask-composite: exclude;
     opacity: var(--prox-o, 0);
-  }
-
-  /* Sculpted Wafer Stage Enclosure (Loaded Report left sticky column) */
-  .at-stage-enclosure {
-    position: relative;
-    isolation: isolate;
-    border-radius: 28px;
-    background: var(--at-bento-fill);
-    -webkit-backdrop-filter: var(--at-bento-filter);
-    backdrop-filter: var(--at-bento-filter);
-    box-shadow: var(--elev-bento);
   }
 
   /* 3D Card Folder pocket & stacked preview leaves (EvidenceShelf) */
@@ -1445,9 +1426,7 @@
   .at-bento-3d {
     transform-style: flat !important;
   }
-  .at-bento-pop-sm,
-  .at-bento-pop,
-  .at-bento-pop-lg {
+  .at-bento-pop-sm {
     transform: none !important;
   }
   .at-sonar-ring,
@@ -1461,7 +1440,6 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .at-verdict-bento,
-  .at-stage-enclosure,
   .at-folder-leaf,
   .at-folder-lip {
     background: var(--surface);

@@ -414,19 +414,19 @@ function PresetSignatureGraphic({
         <div className="flex flex-col gap-1">
           <div className="flex justify-between text-[10.5px] tabular-nums">
             <Untranslated className="font-mono text-text-tertiary">S1</Untranslated>
-            <Untranslated className="font-mono text-text-secondary">2.1%</Untranslated>
+            <Untranslated className="font-mono text-text-secondary">3.1%</Untranslated>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-pill bg-fill-2">
-            <div className="at-bar-iris h-full w-[14%] rounded-pill" />
+            <div className="at-bar-iris h-full w-[8%] rounded-pill" />
           </div>
         </div>
         <div className="flex flex-col gap-1">
           <div className="flex justify-between text-[10.5px] tabular-nums">
             <Untranslated className="font-mono text-text-primary">S2</Untranslated>
-            <Untranslated className="font-mono text-text-primary">32.3%</Untranslated>
+            <Untranslated className="font-mono text-text-primary">40.6%</Untranslated>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-pill bg-fill-2">
-            <div className="at-bar-signal h-full w-[82%] rounded-pill" />
+            <div className="at-bar-signal h-full w-[81%] rounded-pill" />
           </div>
         </div>
       </div>
@@ -462,7 +462,7 @@ function DemoLotCardButton({
   const { t, formatInteger } = useT();
   const descId = React.useId();
   const isFlagship = presetId === 'edge-ring-etch';
-  const discSize = isFlagship ? 112 : 88;
+  const discSize = isFlagship ? 132 : 88;
 
   const keys = DEMO_CARD_COPY_KEYS[presetId];
   const title = t(keys.title);
@@ -493,8 +493,8 @@ function DemoLotCardButton({
       className={cn(
         'group relative flex w-full cursor-pointer p-3 text-left select-none sm:p-3.5',
         isFlagship
-          ? 'flex-col gap-4 sm:col-span-2 sm:flex-row sm:items-stretch lg:col-span-6'
-          : 'flex-col justify-between gap-3.5 lg:col-span-3',
+          ? 'flex-col gap-4 sm:col-span-2 sm:flex-row sm:items-stretch lg:col-span-12 xl:col-span-6'
+          : 'flex-col justify-between gap-3.5 lg:col-span-6 xl:col-span-3',
         'rounded-[28px] focus-visible:shadow-focus-ring focus-visible:outline-none',
         'disabled:cursor-not-allowed disabled:opacity-40',
       )}
@@ -504,8 +504,8 @@ function DemoLotCardButton({
         data-testid={`demo-tile-${presetId}`}
         data-texture="dots"
         className={cn(
-          'at-obsidian-well relative flex flex-col justify-between overflow-hidden rounded-[20px] p-3.5',
-          isFlagship ? 'sm:w-[196px] sm:shrink-0' : 'w-full',
+          'at-obsidian-well relative flex flex-col overflow-hidden rounded-[20px] p-3.5',
+          isFlagship ? 'sm:w-[196px] sm:shrink-0' : 'w-full justify-between',
         )}
       >
         <div className="flex items-center justify-between gap-2">
@@ -526,7 +526,8 @@ function DemoLotCardButton({
         <div
           className={cn(
             'mt-3 flex items-center gap-3',
-            isFlagship ? 'justify-center py-2' : 'justify-between',
+            // The flagship well stretches to the caption's height; centre the plot in it.
+            isFlagship ? 'flex-1 justify-center py-2' : 'justify-between',
           )}
         >
           <LandingWaferDisc
@@ -557,7 +558,7 @@ function DemoLotCardButton({
           {isFlagship ? (
             <span className="mt-3.5 grid grid-cols-3 gap-2">
               <span className="at-well-crisp flex flex-col rounded-xl px-2.5 py-2">
-                <Untranslated className="at-kpi-number text-[16px] text-text-primary">
+                <Untranslated className="at-kpi-number text-[16px] whitespace-nowrap text-text-primary">
                   82.8%
                 </Untranslated>
                 <span className="mt-0.5 truncate text-[11px] text-text-tertiary">
@@ -565,7 +566,7 @@ function DemoLotCardButton({
                 </span>
               </span>
               <span className="at-well-crisp flex flex-col rounded-xl px-2.5 py-2">
-                <Untranslated className="at-kpi-number text-[16px] text-text-primary">
+                <Untranslated className="at-kpi-number text-[16px] whitespace-nowrap text-text-primary">
                   SBIN 7
                 </Untranslated>
                 <Untranslated className="mt-0.5 truncate font-mono text-[11px] text-text-tertiary">
@@ -573,7 +574,7 @@ function DemoLotCardButton({
                 </Untranslated>
               </span>
               <span className="at-well-crisp flex flex-col rounded-xl px-2.5 py-2">
-                <Untranslated className="at-kpi-number text-[16px] text-text-primary">
+                <Untranslated className="at-kpi-number text-[16px] whitespace-nowrap text-text-primary">
                   0.14
                 </Untranslated>
                 <Untranslated className="mt-0.5 truncate font-mono text-[11px] text-text-tertiary">
@@ -604,21 +605,21 @@ const PIPELINE_LENSES = [
     dies: '2,483',
     share: '91.3%',
     cpk: '0.14',
-    bars: [91, 14, 8] as const,
+    bars: [100, 0, 0] as const,
   },
   {
     query: 'edge 3 rings',
     dies: '2,552',
     share: '93.8%',
     cpk: '0.19',
-    bars: [94, 22, 11] as const,
+    bars: [95, 4, 1] as const,
   },
   {
     query: 'Cpk < 1.33',
     dies: '2,721',
     share: '100.0%',
     cpk: '0.14',
-    bars: [88, 34, 19] as const,
+    bars: [91, 6, 2] as const,
   },
 ] as const;
 
@@ -703,7 +704,7 @@ function LivePipelineBentoCard({
         </div>
 
         <div className="flex flex-col gap-2">
-          {(['SBIN 7', 'SBIN 3', 'SBIN 12'] as const).map((code, barIdx) => (
+          {(['SBIN 7', 'SBIN 11', 'SBIN 9'] as const).map((code, barIdx) => (
             <div key={code} className="flex items-center gap-2.5">
               <Untranslated className="w-14 shrink-0 font-mono text-[11px] text-text-secondary">
                 {code}
@@ -904,7 +905,7 @@ export function EmptyStateCard({
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const sampleHeadingId = React.useId();
 
-  // Silky blur-rise entrance on client mount without mutating SSR text structure
+  // Rise-in on client mount without mutating SSR text structure (transform and opacity only)
   React.useLayoutEffect(() => {
     const el = headlineRef.current;
     if (!el || reduced || cause !== 'first-run') return;
@@ -912,7 +913,7 @@ export function EmptyStateCard({
     markSessionRevealSeen(HERO_HEADLINE_SESSION_KEY);
     const controls = animate(
       el,
-      { opacity: [0, 1], y: [14, 0], filter: ['blur(6px)', 'blur(0px)'] },
+      { opacity: [0, 1], y: [14, 0] },
       { duration: 0.62, ease: [0.22, 1, 0.36, 1] },
     );
     return () => {
