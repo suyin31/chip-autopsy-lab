@@ -80,4 +80,5 @@ export {
 } from './term';
 export { AnimatedCheckmark } from './checkmark';
 export { CopyButton } from './copy-button';
+export { StatusSwap, type StatusSwapProps } from './status-swap';
 export { TactileCard, type TactileCardProps } from './tactile-card';

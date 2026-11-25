@@ -11,6 +11,18 @@ import {
 
 export { MOTION_TOKENS, SPRING_PHYSICS_EQUIVALENTS, SPRING_TOKENS };
 
+/**
+ * Optical-bench springs (UI plan §3.2.5). All three are critically damped (damping ratio >= 1),
+ * so nothing overshoots; they differ only in weight.
+ * - `SPRING_TACTILE`: keycaps, segmented thumbs, press release (~140 ms).
+ * - `SPRING_MORPH`: a trigger growing into its dialog and back (~300 ms, has mass).
+ * - `SPRING_SHELF`: drawers and staggered rows (~360 ms).
+ */
+export const SPRING_TACTILE = { type: 'spring', stiffness: 520, damping: 40, mass: 0.7 } as const;
+export const SPRING_MORPH = { type: 'spring', stiffness: 360, damping: 36, mass: 0.85 } as const;
+export const SPRING_MORPH_RETURN = { type: 'spring', stiffness: 520, damping: 44, mass: 0.85 } as const;
+export const SPRING_SHELF = { type: 'spring', stiffness: 300, damping: 34, mass: 0.9 } as const;
+
 /** Shared-element `layoutId` bridging landing demo wafer -> ingest loading disc -> loaded stage. */
 export const WAFER_MORPH_LAYOUT_ID = 'cal-wafer-disc-morph' as const;
 

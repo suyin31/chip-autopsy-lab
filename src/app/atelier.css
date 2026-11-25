@@ -70,6 +70,107 @@
   --at-grain-opacity: 0.035;
 }
 
+/* --------------------------------------------------------------------------
+ * Optical material. Depth comes from four physical layers, not from boxes:
+ * well (sunk into the bench) -> plate (machined, lit from above) -> keycap ->
+ * floating glass. Every layer is a top specular edge, a sub-pixel rim, and a
+ * two-step contact + ambient shadow. Shadows are never transitioned; hover
+ * states cross-fade a pseudo-element's opacity instead (premium §3.7).
+ * -------------------------------------------------------------------------- */
+:root[data-theme='light'] {
+  --surface-well: rgba(15, 23, 42, 0.038);
+  --surface-plate: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.86) 100%);
+  --surface-plate-solid: rgba(255, 255, 255, 0.92);
+  --at-float-edge: rgba(255, 255, 255, 0.92);
+  --at-prox-rim: rgba(15, 23, 42, 0.2);
+  --at-datum: rgba(15, 23, 42, 0.32);
+  --at-beam-neutral: rgba(10, 21, 30, 0.7);
+
+  --elev-well:
+    inset 0 1.5px 3px rgba(15, 23, 42, 0.065),
+    inset 0 0 0 1px rgba(15, 23, 42, 0.055),
+    0 1px 0 rgba(255, 255, 255, 0.85);
+  --elev-plate:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 10px 24px -8px rgba(15, 23, 42, 0.065);
+  --elev-plate-hover:
+    inset 0 1px 0 #ffffff,
+    0 0 0 1px rgba(15, 23, 42, 0.1),
+    0 4px 10px -2px rgba(15, 23, 42, 0.06),
+    0 20px 38px -12px rgba(15, 23, 42, 0.11);
+  --elev-keycap:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -1.5px 0 rgba(15, 23, 42, 0.07),
+    0 0 0 1px rgba(15, 23, 42, 0.08),
+    0 2px 5px -1px rgba(15, 23, 42, 0.07);
+  --elev-cta:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(15, 23, 42, 0.18),
+    0 10px 22px -6px rgba(15, 23, 42, 0.28);
+  --elev-dialog:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 0 0 1px rgba(15, 23, 42, 0.08),
+    0 12px 28px -6px rgba(15, 23, 42, 0.1),
+    0 36px 80px -16px rgba(15, 23, 42, 0.2);
+  --at-cta-sheen: rgba(255, 255, 255, 0.2);
+  --at-zenith: rgba(255, 255, 255, 0.92);
+  --at-halo-o: 0.045;
+}
+
+:root,
+:root[data-theme='dark'] {
+  --surface-well: rgba(2, 4, 10, 0.58);
+  --surface-plate: linear-gradient(180deg, rgba(24, 29, 41, 0.88) 0%, rgba(16, 20, 30, 0.92) 100%);
+  --surface-plate-solid: rgba(20, 25, 36, 0.92);
+  --at-float-edge: rgba(255, 255, 255, 0.12);
+  --at-prox-rim: rgba(255, 255, 255, 0.42);
+  --at-datum: rgba(255, 255, 255, 0.34);
+  --at-beam-neutral: rgba(255, 255, 255, 0.78);
+
+  --elev-well:
+    inset 0 2px 4px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+    0 1px 0 rgba(255, 255, 255, 0.05);
+  --elev-plate:
+    inset 0 1px 0 rgba(255, 255, 255, 0.11),
+    0 0 0 1px rgba(255, 255, 255, 0.065),
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 16px 32px -10px rgba(0, 0, 0, 0.55);
+  --elev-plate-hover:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 8px 18px -4px rgba(0, 0, 0, 0.45),
+    0 26px 50px -12px rgba(0, 0, 0, 0.72);
+  --elev-keycap:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 3px 8px -2px rgba(0, 0, 0, 0.5);
+  --elev-cta:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.22),
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    0 12px 26px -6px rgba(0, 0, 0, 0.65);
+  --elev-dialog:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 16px 36px -8px rgba(0, 0, 0, 0.6),
+    0 44px 96px -16px rgba(0, 0, 0, 0.82);
+  --at-cta-sheen: rgba(255, 255, 255, 0.7);
+  --at-zenith: rgba(214, 226, 255, 0.07);
+  --at-halo-o: 0.07;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-theme] {
+    --surface-plate: var(--surface);
+    --surface-plate-solid: var(--surface);
+  }
+}
+
 @theme inline {
   --color-chroma: var(--chroma);
   --color-chroma-soft: var(--chroma-soft);
@@ -120,42 +221,67 @@
       0 18px 44px -26px rgba(8, 14, 24, 0.55);
   }
 
-  /* Specular sweep across a plate's top edge — one moving highlight, 9 s loop. */
-  .at-sheen::after {
+  /* ---- Room light (AmbientField): static, one zenith light and one faint signal halo ---- */
+  .at-field-zenith,
+  .at-field-halo {
+    position: absolute;
+    pointer-events: none;
+  }
+  .at-field-zenith {
+    inset: 0;
+    background: radial-gradient(120% 64% at 50% -14%, var(--at-zenith) 0%, transparent 64%);
+  }
+  .at-field-halo {
+    left: 58%;
+    top: 6%;
+    width: min(1180px, 130vw);
+    aspect-ratio: 1.5;
+    translate: -50% 0;
+    background: radial-gradient(closest-side, var(--ember) 0%, transparent 100%);
+    opacity: var(--at-halo-o);
+  }
+  [data-intensity='vivid'] > .at-field-halo {
+    opacity: calc(var(--at-halo-o) * 1.25);
+  }
+
+  /* ---- Optical material classes ------------------------------------------------------ */
+
+  /* L-1 well: a shallow groove cut into the bench (inputs, tracks, trays, code wells). */
+  .at-well {
+    background: var(--surface-well);
+    box-shadow: var(--elev-well);
+  }
+
+  /* L1 machined plate. `::before` holds the hover elevation (opacity cross-fade only);
+     `::after` is the 1 px proximity rim lit by the pointer (see ProximityPlate). */
+  .at-optic {
+    position: relative;
+    isolation: isolate;
+    background: var(--surface-plate);
+    box-shadow: var(--elev-plate);
+  }
+  .at-optic::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: var(--elev-plate-hover);
+    opacity: 0;
+    transition: opacity 120ms var(--ease-out);
+  }
+  .at-optic::after {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    pointer-events: none;
-    background: linear-gradient(
-      104deg,
-      transparent 32%,
-      rgba(255, 255, 255, 0.14) 46%,
-      rgba(255, 255, 255, 0.02) 56%,
-      transparent 70%
-    );
-    background-size: 260% 100%;
-    opacity: 0.7;
-    animation: at-sheen-slide 11s var(--ease-in-out) infinite;
-  }
-
-  .at-beam {
-    position: relative;
-    isolation: isolate;
-  }
-  .at-beam::before {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
     padding: 1px;
-    background: conic-gradient(
-      from var(--beam-angle, 0deg),
-      transparent 0deg,
-      transparent 268deg,
-      var(--chroma) 300deg,
-      var(--ember) 330deg,
-      transparent 356deg
+    pointer-events: none;
+    background: radial-gradient(
+      var(--at-prox-size, 220px) circle at var(--prox-x, -999px) var(--prox-y, -999px),
+      var(--at-prox-rim),
+      transparent 72%
     );
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
@@ -165,14 +291,107 @@
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
     mask-composite: exclude;
-    pointer-events: none;
-    animation: at-beam-spin 3.6s linear infinite;
-    opacity: 0.9;
+    opacity: var(--prox-o, 0);
+  }
+  .at-optic[data-lift] {
+    transition: translate 160ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .at-optic[data-lift]:hover::before,
+    .at-optic[data-lift]:focus-visible::before {
+      opacity: 1;
+      transition-duration: 180ms;
+    }
+    .at-optic[data-lift]:hover {
+      translate: 0 -1.5px;
+      transition-duration: 240ms;
+    }
   }
 
-  .at-beam[data-level='quiet']::before {
-    opacity: 0.4;
-    animation-duration: 6.4s;
+  /* Primary CTA: deep-ink keycap. One cold-white glint crosses it once per hover, then rests. */
+  .at-cta {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .at-cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(
+      105deg,
+      transparent 34%,
+      var(--at-cta-sheen) 50%,
+      transparent 66%
+    );
+    opacity: 0;
+    transform: translateX(-110%);
+  }
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .at-cta:enabled:hover::before {
+      opacity: 0.18;
+      transform: translateX(110%);
+      transition:
+        transform 760ms var(--ease-out),
+        opacity 120ms linear;
+    }
+  }
+
+  /* One optical probe beam travelling a container's edge. Lit only while work runs
+     (drag, parse, agent run); the container keeps its own hairline at rest. */
+  .at-beam-frame {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: var(--beam-width, 1px);
+    pointer-events: none;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+  .at-beam-frame[data-tone='signal'] {
+    --beam-color: var(--ember);
+  }
+  .at-beam-frame[data-tone='neutral'] {
+    --beam-color: var(--at-beam-neutral);
+  }
+  .at-beam-spark {
+    position: absolute;
+    aspect-ratio: 1;
+    offset-anchor: 90% 50%;
+    background: linear-gradient(to left, var(--beam-color), transparent);
+  }
+  @supports not (offset-path: rect(0 auto auto 0)) {
+    .at-beam-spark {
+      display: none;
+    }
+  }
+
+  /* Datum ticks on a specimen tray: 1 px marks, not a dashed box. */
+  .at-datum {
+    stroke: var(--at-datum);
+  }
+
+  /* The source of a morphing dialog hides while its surface is on screen. */
+  [data-morph-source='open'] {
+    opacity: 0;
+  }
+
+  /* The workbench breathes back while a file hovers over the window. */
+  .at-recede {
+    transform-origin: var(--recede-origin, 50% 40vh);
+    transition: transform 240ms var(--ease-out);
+  }
+  .at-recede[data-receded='true'] {
+    transform: scale(0.988);
+    transition-duration: 180ms;
   }
 
   /* Thin leader line from a floating plate to the specimen. */
@@ -184,31 +403,6 @@
   }
   .at-leader-dot {
     fill: var(--chroma);
-  }
-
-  /* Orbital graticule behind the disc: one ring of 5° ticks and one slow rotation. */
-  .at-orbit {
-    position: absolute;
-    inset: 1px;
-    border-radius: 50%;
-    border: 1px solid var(--chroma-line);
-    opacity: 0.55;
-    pointer-events: none;
-  }
-  .at-orbit-ticks {
-    position: absolute;
-    inset: -14px;
-    border-radius: 50%;
-    pointer-events: none;
-    opacity: 0.35;
-    background: repeating-conic-gradient(
-      from 0deg,
-      var(--chroma-line) 0deg 0.4deg,
-      transparent 0.4deg 5deg
-    );
-    -webkit-mask: radial-gradient(closest-side, transparent 93%, #000 93.5%, #000 100%);
-    mask: radial-gradient(closest-side, transparent 93%, #000 93.5%, #000 100%);
-    animation: at-orbit-turn 220s linear infinite;
   }
 
   .at-display {
@@ -338,40 +532,7 @@
   }
 }
 
-@keyframes at-sheen-slide {
-  0%,
-  55% {
-    background-position: 180% 0;
-  }
-  100% {
-    background-position: -80% 0;
-  }
-}
-
-@keyframes at-beam-spin {
-  to {
-    --beam-angle: 360deg;
-  }
-}
-
-@keyframes at-orbit-turn {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@property --beam-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .at-sheen::after,
-  .at-orbit-ticks,
-  .at-beam::before {
-    animation: none !important;
-  }
   .at-word,
   .at-rise {
     opacity: 1;
@@ -381,11 +542,22 @@
   .at-drawer {
     transition: none;
   }
+  .at-optic[data-lift],
+  .at-optic[data-lift]:hover {
+    translate: none;
+    transition: none;
+  }
+  .at-recede,
+  .at-recede[data-receded='true'] {
+    transform: none;
+    transition: none;
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .at-glass,
   .at-plate,
+  .at-optic,
   .at-dock {
     background: var(--surface);
     -webkit-backdrop-filter: none;

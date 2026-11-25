@@ -216,7 +216,7 @@ export function NavBar({
               onClick={onOpenFilePicker}
               className={cn(
                 'lg:ml-3',
-                'max-lg:size-11 max-lg:bg-transparent max-lg:p-0 max-lg:text-text-secondary max-lg:after:inset-0',
+                'max-lg:size-11 max-lg:bg-transparent max-lg:p-0 max-lg:text-text-secondary max-lg:not-focus-visible:shadow-none max-lg:after:inset-0',
                 'max-lg:enabled:hover:bg-fill-1 max-lg:enabled:hover:text-text-primary',
               )}
             >

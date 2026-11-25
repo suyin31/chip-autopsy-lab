@@ -2,8 +2,9 @@ import * as React from 'react';
 import { cn } from './cn';
 
 /**
- * Owned shadcn/ui-pattern `Card` family bound to `#111113` (`bg-panel`),
- * `1 px` `hairline` border, `12 px` panel radius, and zero drop shadows.
+ * Owned shadcn/ui-pattern `Card` family on the machined-plate material (`.at-optic`,
+ * atelier.css): top specular edge, sub-pixel rim, and a two-step contact shadow, `r-xl` 20.
+ * For a plate that catches the shared pointer light, use `ProximityPlate`.
  */
 export const Card = React.forwardRef<
   HTMLDivElement,
@@ -13,7 +14,7 @@ export const Card = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        'rounded-panel border border-hairline bg-panel text-text-primary shadow-none',
+        'at-optic rounded-[20px] text-text-primary',
         className,
       )}
       {...props}

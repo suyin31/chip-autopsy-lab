@@ -2,7 +2,8 @@
 
 import { animate, useReducedMotion } from 'motion/react';
 import * as React from 'react';
-import { MOTION_TOKENS, SPRING_TOKENS } from '@/ui/tokens';
+import { SPRING_TACTILE } from '@/ui/motion/tokens';
+import { MOTION_TOKENS } from '@/ui/tokens';
 import { cn } from './cn';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'text' | 'icon';
@@ -106,7 +107,8 @@ function resolveVariantSurfaceClass(variant: ButtonVariant): string {
   if (variant === 'primary') {
     // `ink` fill, hover #333336 / #FFFFFF, pressed #000000 / #E8E8ED, disabled 0.32 (premium §7.11)
     return cn(
-      'bg-ink text-on-ink',
+      // Deep-ink keycap: top specular lip, bottom bevel, contact shadow; one glint per hover (`.at-cta`)
+      'at-cta bg-ink text-on-ink shadow-[var(--elev-cta)]',
       'enabled:hover:bg-[color-mix(in_oklab,var(--ink)_88%,var(--surface))]',
       'enabled:active:bg-[color-mix(in_oklab,var(--ink)_96%,var(--surface))]',
       'disabled:opacity-32 aria-disabled:opacity-32',
@@ -115,7 +117,8 @@ function resolveVariantSurfaceClass(variant: ButtonVariant): string {
 
   if (variant === 'secondary') {
     return cn(
-      'bg-fill-1 text-text-primary shadow-[inset_0_0_0_1px_var(--hairline),inset_0_1px_0_var(--at-glass-edge)] [backdrop-filter:var(--material-filter)]',
+      // Keycap: 1 px top light, 1.5 px bottom bevel, sub-pixel rim (`--elev-keycap`, atelier.css)
+      'bg-fill-1 text-text-primary shadow-[var(--elev-keycap)] [backdrop-filter:var(--material-filter)]',
       'enabled:hover:bg-fill-2 enabled:active:bg-fill-3',
       'disabled:opacity-32 aria-disabled:opacity-32',
     );
@@ -214,7 +217,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       pressedRef.current = false;
       const el = innerRef.current;
       if (el && !shouldReduceMotion) {
-        animate(el, { scale: 1 }, SPRING_TOKENS.snappy);
+        animate(el, { scale: 1 }, SPRING_TACTILE);
       }
     }, [shouldReduceMotion]);
 

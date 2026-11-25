@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
-import { SPRING_TOKENS } from '@/ui/tokens';
+import { SPRING_TACTILE } from '@/ui/motion/tokens';
 import { cn } from './cn';
 
 export interface SegmentedControlOption<T extends string = string> {
@@ -148,7 +148,8 @@ export function SegmentedControl<T extends string = string>({
       aria-label={ariaLabel}
       data-testid={dataTestId}
       className={cn(
-        'inline-flex items-center rounded-pill bg-fill-2 p-0.5 select-none',
+        // Groove: the track is cut into the bench (`--elev-well`); the thumb sits proud of it
+        'inline-flex items-center rounded-pill bg-fill-2 p-0.5 shadow-[var(--elev-well)] select-none',
         sizeClass,
         disabled && 'opacity-40',
         className,
@@ -205,11 +206,14 @@ export function SegmentedControl<T extends string = string>({
                 transition={
                   shouldReduceMotion || instantTransition
                     ? { duration: 0 }
-                    : SPRING_TOKENS.snappy
+                    : SPRING_TACTILE
                 }
                 data-segmented-thumb=""
                 className="pointer-events-none absolute inset-0 rounded-pill bg-white shadow-thumb dark:bg-[rgba(255,255,255,0.16)] dark:shadow-none"
-              />
+              >
+                {/* Glass pill: a 1 px specular lip on top and a soft bevel underneath */}
+                <span className="absolute inset-0 rounded-[inherit] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(15,23,42,0.06)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.35)]" />
+              </motion.span>
             ) : null}
             <span
               className={cn(

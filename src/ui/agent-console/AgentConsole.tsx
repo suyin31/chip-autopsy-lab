@@ -70,6 +70,7 @@ import {
   useModelSettings,
 } from './model-settings';
 import { AmbientField } from '@/ui/atelier/AmbientField';
+import { BorderBeam } from '@/ui/atelier/BorderBeam';
 import { WaferStage } from './WaferStage';
 
 import { LotSwitcher } from './LotSwitcher';
@@ -1046,11 +1047,9 @@ export function AgentConsole() {
           event.preventDefault();
           void send(draft);
         }}
-        className={cn(
-          'at-dock relative rounded-[22px] p-2 has-[:focus-visible]:shadow-[var(--focus-ring)]',
-          running && 'at-beam',
-        )}
+        className="at-dock relative rounded-[22px] p-2 has-[:focus-visible]:shadow-[var(--focus-ring)]"
       >
+        <BorderBeam active={running} radius={22} />
         <label className="sr-only" htmlFor="agent-input">
           {t('agents.composerLabel')}
         </label>
@@ -1555,11 +1554,9 @@ export function AgentConsole() {
             <div className="relative mt-4">
               <div
                 aria-hidden="true"
-                className={cn(
-                  'pointer-events-none absolute inset-0 z-0 grid place-items-center',
-                  running && 'at-beam rounded-[24px]',
-                )}
+                className="pointer-events-none absolute inset-0 z-0 grid place-items-center rounded-[24px]"
               >
+                <BorderBeam active={running} radius={24} />
                 <div
                   className="aspect-square w-[78%] rounded-full"
                   style={{ background: 'var(--at-stage-glow)', filter: 'blur(12px)' }}

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Button } from './button';
 import { AnimatedCheckmark } from './checkmark';
+import { StatusSwap } from './status-swap';
 
 type CopyState = 'idle' | 'manual' | 'copied' | 'failed';
 type CopyEvent = 'reset' | 'select' | 'success' | 'failure' | 'expire';
@@ -72,13 +73,18 @@ export function CopyButton({ value, label, copiedLabel, className, 'data-testid'
   return (
     <>
       <Button ref={button} variant="text" size="sm" className={className} data-testid={testId} onClick={copy}>
-        <span className="inline-grid place-items-center">
-          <span className="col-start-1 row-start-1" style={{ visibility: copied ? 'hidden' : 'visible' }}>{label}</span>
-          <span className="col-start-1 row-start-1 inline-flex items-center gap-1"
-            style={{ visibility: copied ? 'visible' : 'hidden' }}>
-            <AnimatedCheckmark animate={copied} />{copiedLabel}
-          </span>
-        </span>
+        <StatusSwap
+          value={copied ? 'copied' : 'idle'}
+          states={{
+            idle: label,
+            copied: (
+              <>
+                <AnimatedCheckmark animate={copied} />
+                {copiedLabel}
+              </>
+            ),
+          }}
+        />
       </Button>
       {state === 'manual' && (
         <label className="block">Copy the selected text using your device’s copy command.

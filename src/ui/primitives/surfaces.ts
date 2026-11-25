@@ -3,10 +3,11 @@ import { cn } from './cn';
 /**
  * Floating surfaces (premium §3.8, §7.12): `material-thick` + `blur(24px) saturate(180%)` +
  * `shadow-popover`. `prefers-reduced-transparency: reduce` turns the material into opaque
- * `surface` with no filter through the token variables in `globals.css`.
+ * `surface` with no filter through the token variables in `globals.css`. Every floating surface
+ * also carries a 1 px top specular edge (`--at-float-edge`, atelier.css) so it reads as cut glass.
  */
 export const MATERIAL_THICK_CLASS =
-  'bg-material-thick shadow-popover [backdrop-filter:var(--material-thick-filter)] [-webkit-backdrop-filter:var(--material-thick-filter)]';
+  'bg-material-thick shadow-popover inset-shadow-[0_1px_0_var(--at-float-edge)] [backdrop-filter:var(--material-thick-filter)] [-webkit-backdrop-filter:var(--material-thick-filter)]';
 
 /** Menu (language, appearance, legend "+N more", bin list): `r-2xl`, padding 12; width 200-240 set by the caller; the lot picker overrides padding to 8 (§7.2). */
 export const MENU_SURFACE_CLASS = cn(MATERIAL_THICK_CLASS, 'rounded-2xl p-3');
