@@ -13,15 +13,16 @@ import { cn } from '@/ui/primitives/cn';
 import { useProximityRim } from './ProximityPlate';
 
 /**
- * Glass bento card (UI v2 §4 row 1). Clean-room rewrite of the idea shared by Motion Primitives
- * `Tilt` + `Spotlight` and Magic UI `MagicCard` (both MIT); no React Bits code.
+ * 3D Glass Bento Card with `preserve-3d` inner depth, spring tilt, cursor spotlight wash,
+ * and shared multi-card proximity rim. Clean-room implementation inspired by Motion Primitives
+ * `Tilt` + `Spotlight` and Magic UI `MagicCard` (MIT); zero React Bits source code.
  *
- * - Spring 3D tilt toward the pointer (`maxDeg`, default 7) with a hover lift (-4 px).
- * - A 360 px surface spotlight follows the pointer inside the card (`.at-bento::before`).
- * - A 1.5 px rim lights up as the pointer approaches, shared with every other plate on the page
- *   (`.at-bento::after`, `useProximityRim`), so two neighbouring cards catch the same light.
- * - Writes only motion values and CSS variables while the pointer moves: no React render per frame.
- * - Silent on touch, coarse pointers, and reduced motion (no tilt, lift, light, or press).
+ * - Spring 3D tilt (`maxDeg`, default 7.5°) + hover lift (`-4px`) + `preserve-3d` so child
+ *   `.at-bento-pop` badges/icons float physically above the glass surface when tilted.
+ * - 380px cursor spotlight wash inside `.at-bento::before` + shared 1.5px specular rim
+ *   across neighbouring cards via `useProximityRim` (`.at-bento::after`).
+ * - Zero React re-renders per pointer frame (updates motion values and CSS variables only).
+ * - Gracefully silent on touch, coarse pointers, and `prefers-reduced-motion: reduce`.
  */
 
 const MOTION_TAGS = {
@@ -30,17 +31,18 @@ const MOTION_TAGS = {
   section: motion.section,
   li: motion.li,
   aside: motion.aside,
+  button: motion.button,
 } as const;
 
 export type SpotlightTiltCardTag = keyof typeof MOTION_TAGS;
 
 export interface SpotlightTiltCardProps
   extends Omit<
-    React.HTMLAttributes<HTMLElement>,
+    React.ButtonHTMLAttributes<HTMLElement>,
     'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'
   > {
   readonly as?: SpotlightTiltCardTag;
-  /** `bento` (default) is the L1 glass card; `float` is the higher floating card. */
+  /** `bento` (default) is the L1 glass card; `float` is the Z+2 floating glass card. */
   readonly material?: 'bento' | 'float';
   /** Maximum tilt in degrees; `0` keeps the light but never tilts (dense text rows). */
   readonly maxDeg?: number;
@@ -50,10 +52,12 @@ export interface SpotlightTiltCardProps
   readonly spotlight?: boolean;
   /** Shared proximity rim. */
   readonly rim?: boolean;
-  /** Distance at which the rim starts to catch the pointer (default 180). */
+  /** Distance at which the rim starts to catch the pointer (default 190). */
   readonly reachPx?: number;
   /** Press scale 0.985 while the card is held (for cards that act as a control). */
   readonly pressable?: boolean;
+  /** Enables `transform-style: preserve-3d` so `.at-bento-pop` children float in Z-space. */
+  readonly preserve3d?: boolean;
 }
 
 function canFollowPointer(event: React.PointerEvent): boolean {
@@ -71,8 +75,10 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
       liftPx = BENTO_HOVER_LIFT_PX,
       spotlight = true,
       rim = true,
-      reachPx = 180,
+      reachPx = 190,
       pressable = false,
+      preserve3d = true,
+      disabled,
       className,
       style,
       children,
@@ -90,7 +96,7 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
     const frameRef = React.useRef<number | null>(null);
     const pointRef = React.useRef<{ x: number; y: number } | null>(null);
 
-    useProximityRim(innerRef, { disabled: !rim, reachPx });
+    useProximityRim(innerRef, { disabled: !rim || Boolean(disabled), reachPx });
 
     const rotateXTarget = useMotionValue(0);
     const rotateYTarget = useMotionValue(0);
@@ -141,19 +147,19 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
     }, [liftTarget, rotateXTarget, rotateYTarget]);
 
     React.useEffect(() => {
-      if (reduced) {
+      if (reduced || disabled) {
         rest();
         rotateX.jump(0);
         rotateY.jump(0);
         y.jump(0);
       }
-    }, [reduced, rest, rotateX, rotateY, y]);
+    }, [disabled, reduced, rest, rotateX, rotateY, y]);
 
     React.useEffect(() => rest, [rest]);
 
     const handleEnter = (event: React.PointerEvent<HTMLElement>): void => {
       onPointerEnter?.(event);
-      if (reduced || !canFollowPointer(event)) return;
+      if (reduced || disabled || !canFollowPointer(event)) return;
       const el = event.currentTarget;
       rectRef.current = el.getBoundingClientRect();
       pointRef.current = { x: event.clientX, y: event.clientY };
@@ -164,7 +170,7 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
 
     const handleMove = (event: React.PointerEvent<HTMLElement>): void => {
       onPointerMove?.(event);
-      if (!rectRef.current) return;
+      if (!rectRef.current || disabled) return;
       pointRef.current = { x: event.clientX, y: event.clientY };
       frameRef.current ??= requestAnimationFrame(flush);
     };
@@ -180,13 +186,19 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
     };
 
     const Tag = MOTION_TAGS[as] as React.ElementType;
+    const enable3dChildren = preserve3d && !reduced && maxDeg > 0;
 
     return (
       <Tag
         {...props}
+        {...(as === 'button' ? { disabled } : {})}
         ref={setRef}
         data-bento=""
-        className={cn(material === 'float' ? 'at-float-card' : 'at-bento', className)}
+        className={cn(
+          material === 'float' ? 'at-float-card' : 'at-bento',
+          enable3dChildren && 'at-bento-3d',
+          className,
+        )}
         style={{
           ...style,
           rotateX,
@@ -194,7 +206,7 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
           y,
           transformPerspective: BENTO_PERSPECTIVE_PX,
         }}
-        whileTap={pressable && !reduced ? { scale: 0.985 } : undefined}
+        whileTap={pressable && !reduced && !disabled ? { scale: 0.985 } : undefined}
         onPointerEnter={handleEnter}
         onPointerMove={handleMove}
         onPointerLeave={handleLeave}

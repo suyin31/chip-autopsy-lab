@@ -6,15 +6,14 @@ import { useReducedMotionPreference } from '@/ui/motion/hooks';
 import { MOTION_TOKENS } from '@/ui/tokens';
 
 /**
- * One optical probe beam travelling the edge of its parent (UI plan §4 A, replaces the old
- * rainbow `.at-beam`). Clean-room take on Magic UI `BorderBeam` (MIT): a short comet of a
- * single hue rides `offset-path: rect(...)` inside a 1 px masked ring.
+ * Optical probe beam(s) travelling the edge of a parent container.
+ * Clean-room implementation inspired by Magic UI `BorderBeam` (MIT): one or two
+ * counter-phased comets ride `offset-path: rect(...)` inside a masked sub-pixel ring.
  *
- * - Mounted only while `active` (drag hover, parsing, an agent run); it fades in 240 ms and out
- *   160 ms, so the page is silent at rest.
- * - `tone="signal"` uses the accent (`--ember`, resolved in `atelier.css`); `neutral` uses ink.
- * - Reduced motion: nothing renders; the parent keeps its static hairline.
- * - The parent must be `position: relative` and carry the border radius.
+ * - Mounted only while `active`; fades in 240 ms and out 160 ms.
+ * - `dual` adds a second opposite-phase iris comet so static frames and active drags
+ *   always catch balanced optical highlights on two sides of the chamber.
+ * - Reduced motion: renders nothing; parent keeps its static rim.
  */
 export interface BorderBeamProps {
   readonly active: boolean;
@@ -27,6 +26,8 @@ export interface BorderBeamProps {
   readonly tone?: 'signal' | 'neutral';
   /** Ring thickness in px. */
   readonly width?: number;
+  /** Renders a second opposite-phase chroma comet on the same track. */
+  readonly dual?: boolean;
   readonly className?: string;
   readonly 'data-testid'?: string;
 }
@@ -34,15 +35,17 @@ export interface BorderBeamProps {
 export function BorderBeam({
   active,
   radius = 20,
-  size = 72,
-  durationS = 4.6,
+  size = 96,
+  durationS = 4.2,
   tone = 'signal',
-  width = 1,
+  width = 1.5,
+  dual = false,
   className,
   'data-testid': testId,
 }: BorderBeamProps): React.JSX.Element {
   const reduced = useReducedMotionPreference();
   const show = active && !reduced;
+  const path = `rect(0 auto auto 0 round ${radius}px)`;
 
   return (
     <AnimatePresence initial={false}>
@@ -68,12 +71,24 @@ export function BorderBeam({
             className="at-beam-spark"
             style={{
               width: size,
-              offsetPath: `rect(0 auto auto 0 round ${radius}px)`,
+              offsetPath: path,
             }}
             initial={{ offsetDistance: '0%' }}
             animate={{ offsetDistance: '100%' }}
             transition={{ duration: durationS, ease: 'linear', repeat: Infinity }}
           />
+          {dual ? (
+            <motion.span
+              className="at-beam-spark at-beam-spark-iris"
+              style={{
+                width: Math.round(size * 0.85),
+                offsetPath: path,
+              }}
+              initial={{ offsetDistance: '50%' }}
+              animate={{ offsetDistance: '150%' }}
+              transition={{ duration: durationS, ease: 'linear', repeat: Infinity }}
+            />
+          ) : null}
         </motion.span>
       ) : null}
     </AnimatePresence>

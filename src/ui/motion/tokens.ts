@@ -36,11 +36,19 @@ export const SPRING_BENTO_TILT = { type: 'spring', stiffness: 320, damping: 28, 
 export const SPRING_MAGNETIC = { type: 'spring', stiffness: 420, damping: 30, mass: 1 } as const;
 export const SPRING_FOLDER = { type: 'spring', stiffness: 360, damping: 26, mass: 1 } as const;
 export const SPRING_ODOMETER = { type: 'spring', stiffness: 380, damping: 34, mass: 1 } as const;
+export const SPRING_STAGE_3D = { type: 'spring', stiffness: 210, damping: 26, mass: 0.9 } as const;
 
 /** Bento card tilt limits (plan §4 row 1): degrees, hover lift in px, perspective in px. */
-export const BENTO_TILT_MAX_DEG = 7 as const;
+export const BENTO_TILT_MAX_DEG = 7.5 as const;
 export const BENTO_HOVER_LIFT_PX = -4 as const;
 export const BENTO_PERSPECTIVE_PX = 1000 as const;
+/** True 3D exploded instrument stage constants. */
+export const STAGE_3D_PERSPECTIVE_PX = 1400 as const;
+export const STAGE_3D_REST = {
+  rotateX: 7.5,
+  rotateY: -11,
+  rotateZ: 0.8,
+} as const;
 /** Primary CTA magnetic pull ceiling in px (plan §2.2.6). */
 export const MAGNETIC_MAX_PX = 4 as const;
 

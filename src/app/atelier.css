@@ -219,12 +219,12 @@
   --at-cta-face: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 48%, rgba(58, 79, 208, 0.22) 100%);
   --at-search-ring: 0 0 0 1px rgba(58, 79, 208, 0.36), 0 0 0 4px rgba(58, 79, 208, 0.12);
 
-  --at-aurora-a: radial-gradient(60% 50% at 62% 28%, rgba(58, 79, 208, 0.17) 0%, rgba(92, 148, 255, 0.08) 48%, transparent 100%);
-  --at-aurora-b: radial-gradient(48% 44% at 74% 46%, color-mix(in oklab, var(--ember) 15%, transparent) 0%, transparent 72%);
-  --at-aurora-c: radial-gradient(52% 42% at 18% 16%, rgba(150, 120, 255, 0.12) 0%, transparent 70%);
-  --at-aurora-d: radial-gradient(56% 46% at 12% 82%, rgba(52, 176, 214, 0.11) 0%, transparent 72%);
-  --at-dot-color: rgba(10, 21, 30, 0.2);
-  --at-lattice-o: 0.45;
+  --at-aurora-a: radial-gradient(60% 50% at 62% 26%, rgba(58, 79, 208, 0.22) 0%, rgba(92, 148, 255, 0.1) 50%, transparent 100%);
+  --at-aurora-b: radial-gradient(48% 44% at 74% 46%, color-mix(in oklab, var(--ember) 19%, transparent) 0%, transparent 74%);
+  --at-aurora-c: radial-gradient(52% 42% at 18% 16%, rgba(138, 108, 255, 0.16) 0%, transparent 72%);
+  --at-aurora-d: radial-gradient(56% 46% at 12% 82%, rgba(42, 178, 214, 0.14) 0%, transparent 74%);
+  --at-dot-color: rgba(10, 21, 30, 0.24);
+  --at-lattice-o: 0.52;
 
   --elev-plate: var(--elev-bento);
   --elev-plate-hover: var(--elev-bento-hover);
@@ -271,12 +271,12 @@
   --at-cta-face: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 52%, rgba(124, 140, 255, 0.3) 100%);
   --at-search-ring: 0 0 0 1px rgba(146, 162, 255, 0.5), 0 0 0 4px rgba(124, 140, 255, 0.16);
 
-  --at-aurora-a: radial-gradient(62% 52% at 62% 26%, rgba(96, 118, 255, 0.28) 0%, rgba(52, 196, 214, 0.12) 52%, transparent 100%);
-  --at-aurora-b: radial-gradient(50% 46% at 72% 48%, color-mix(in oklab, var(--ember) 24%, transparent) 0%, transparent 74%);
-  --at-aurora-c: radial-gradient(55% 40% at 24% 18%, rgba(150, 108, 255, 0.16) 0%, transparent 70%);
-  --at-aurora-d: radial-gradient(56% 46% at 10% 84%, rgba(52, 196, 214, 0.1) 0%, transparent 72%);
-  --at-dot-color: rgba(255, 255, 255, 0.16);
-  --at-lattice-o: 0.36;
+  --at-aurora-a: radial-gradient(62% 52% at 62% 26%, rgba(96, 118, 255, 0.34) 0%, rgba(52, 196, 214, 0.15) 54%, transparent 100%);
+  --at-aurora-b: radial-gradient(50% 46% at 72% 48%, color-mix(in oklab, var(--ember) 28%, transparent) 0%, transparent 76%);
+  --at-aurora-c: radial-gradient(55% 40% at 24% 18%, rgba(150, 108, 255, 0.21) 0%, transparent 72%);
+  --at-aurora-d: radial-gradient(56% 46% at 10% 84%, rgba(52, 196, 214, 0.14) 0%, transparent 74%);
+  --at-dot-color: rgba(255, 255, 255, 0.2);
+  --at-lattice-o: 0.42;
 
   --elev-plate: var(--elev-bento);
   --elev-plate-hover: var(--elev-bento-hover);
@@ -464,6 +464,9 @@
     aspect-ratio: 1;
     offset-anchor: 90% 50%;
     background: linear-gradient(to left, var(--beam-color), transparent);
+  }
+  .at-beam-spark-iris {
+    background: linear-gradient(to left, var(--chroma), transparent);
   }
   @supports not (offset-path: rect(0 auto auto 0)) {
     .at-beam-spark {
@@ -1097,8 +1100,9 @@
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-::view-transition-group(cal-wafer-stage) {
-  animation-duration: 360ms;
+::view-transition-group(cal-wafer-stage),
+::view-transition-group(cal-forensic-stage) {
+  animation-duration: 380ms;
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1106,7 +1110,362 @@
   ::view-transition-group(cal-topbar),
   ::view-transition-old(cal-topbar),
   ::view-transition-new(cal-topbar),
-  ::view-transition-group(cal-wafer-stage) {
+  ::view-transition-group(cal-wafer-stage),
+  ::view-transition-group(cal-forensic-stage) {
     animation: none;
+  }
+}
+
+/* ==========================================================================
+ * v3 Carbon Spatial System: True CSS 3D rigs, Z-depth planes, prismatic verdict
+ * chambers, Card Folder pockets, 3D keycaps, sonar ripples & signal pulses.
+ * ========================================================================== */
+@layer components {
+  .at-scene-3d {
+    perspective: 1400px;
+    perspective-origin: 52% 44%;
+  }
+
+  .at-rig-3d {
+    transform-style: preserve-3d;
+  }
+
+  .at-bento-3d {
+    transform-style: preserve-3d;
+  }
+
+  .at-bento-pop-sm {
+    transform: translateZ(10px);
+  }
+
+  .at-bento-pop {
+    transform: translateZ(18px);
+  }
+
+  .at-bento-pop-lg {
+    transform: translateZ(30px);
+  }
+
+  /* Soft chromatic under-glow beneath悬浮 3D decks and hero Bento modules */
+  .at-under-glow {
+    pointer-events: none;
+    background: radial-gradient(
+      62% 58% at 50% 52%,
+      color-mix(in oklab, var(--chroma) 26%, transparent) 0%,
+      color-mix(in oklab, var(--ember) 18%, transparent) 46%,
+      transparent 78%
+    );
+    filter: blur(28px);
+  }
+
+  /* Machined 3D micro-keycap (.STDF / .STD / .GZ / ⌘K) */
+  .at-keycap-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+    padding-inline: 7px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: var(--text-secondary);
+    background: var(--fill-2);
+    box-shadow: var(--elev-keycap);
+    user-select: none;
+  }
+
+  /* Signal / Iris / Emerald micro-visual helpers (no `ember` substring in class names) */
+  .at-dot-signal {
+    background-color: var(--ember);
+    box-shadow: 0 0 10px color-mix(in oklab, var(--ember) 65%, transparent);
+  }
+
+  .at-dot-iris {
+    background-color: var(--chroma);
+    box-shadow: 0 0 10px color-mix(in oklab, var(--chroma) 60%, transparent);
+  }
+
+  .at-dot-emerald {
+    background-color: #22aa78;
+    box-shadow: 0 0 10px rgba(34, 170, 120, 0.55);
+  }
+
+  .at-bar-signal {
+    background: linear-gradient(90deg, var(--ember-mark) 0%, var(--ember) 100%);
+  }
+
+  .at-bar-iris {
+    background: linear-gradient(90deg, var(--chroma) 0%, #56b4ff 100%);
+  }
+
+  .at-stroke-signal {
+    stroke: var(--ember);
+  }
+
+  .at-stroke-iris {
+    stroke: var(--chroma);
+  }
+
+  .at-fill-signal-soft {
+    fill: color-mix(in oklab, var(--ember) 24%, transparent);
+  }
+
+  .at-icon-well {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--fill-1);
+    color: var(--text-secondary);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 0 0 1px var(--hairline);
+  }
+
+  .at-icon-well-signal {
+    background: color-mix(in oklab, var(--ember) 13%, transparent);
+    color: var(--ember-mark);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 0 0 1px color-mix(in oklab, var(--ember) 28%, transparent);
+  }
+
+  .at-icon-well-iris {
+    background: var(--chroma-soft);
+    color: var(--chroma);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 0 0 1px var(--chroma-line);
+  }
+
+  /* Prismatic Verdict Hero Bento chamber (Loaded Report right column top) */
+  .at-verdict-bento {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 26px;
+    background: var(--at-bento-fill);
+    -webkit-backdrop-filter: var(--at-bento-filter);
+    backdrop-filter: var(--at-bento-filter);
+    box-shadow: var(--elev-float-card);
+  }
+  .at-verdict-bento::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 2.5px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      var(--ember-mark) 0%,
+      var(--chroma) 54%,
+      rgba(52, 196, 214, 0.45) 84%,
+      transparent 100%
+    );
+  }
+  .at-verdict-bento::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    pointer-events: none;
+    background: radial-gradient(
+      260px circle at var(--prox-x, -999px) var(--prox-y, -999px),
+      var(--at-prox-rim),
+      transparent 72%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: var(--prox-o, 0);
+  }
+
+  /* Sculpted Wafer Stage Enclosure (Loaded Report left sticky column) */
+  .at-stage-enclosure {
+    position: relative;
+    isolation: isolate;
+    border-radius: 28px;
+    background: var(--at-bento-fill);
+    -webkit-backdrop-filter: var(--at-bento-filter);
+    backdrop-filter: var(--at-bento-filter);
+    box-shadow: var(--elev-bento);
+  }
+
+  /* 3D Card Folder pocket & stacked preview leaves (EvidenceShelf) */
+  .at-folder-pocket {
+    position: relative;
+    isolation: isolate;
+    border-radius: 24px;
+    background: var(--surface-well);
+    box-shadow: var(--elev-well-crisp);
+    perspective: 900px;
+  }
+
+  .at-folder-leaf {
+    border-radius: 16px;
+    background: var(--at-bento-fill);
+    -webkit-backdrop-filter: var(--at-bento-filter);
+    backdrop-filter: var(--at-bento-filter);
+    box-shadow: var(--elev-bento);
+  }
+
+  .at-folder-lip {
+    position: relative;
+    z-index: 4;
+    border-radius: 20px;
+    background: var(--at-bento-fill);
+    -webkit-backdrop-filter: var(--at-bento-filter);
+    backdrop-filter: var(--at-bento-filter);
+    box-shadow: var(--elev-float-card);
+  }
+
+  /* Sonar concentric ripple rings inside FullWindowDropZone */
+  .at-sonar-ring {
+    position: absolute;
+    border-radius: 999px;
+    pointer-events: none;
+    border: 1px solid color-mix(in oklab, var(--chroma) 44%, rgba(255, 255, 255, 0.22));
+    animation: at-sonar-pulse 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+  .at-sonar-ring[data-ring='2'] {
+    animation-delay: -0.93s;
+    border-color: color-mix(in oklab, var(--ember) 40%, rgba(255, 255, 255, 0.16));
+  }
+  .at-sonar-ring[data-ring='3'] {
+    animation-delay: -1.86s;
+  }
+
+  /* Acoustic send burst halo on Agent composer submit */
+  .at-send-halo {
+    position: absolute;
+    inset: -2px;
+    border-radius: 999px;
+    pointer-events: none;
+    border: 1.5px solid var(--chroma);
+    animation: at-send-burst 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Slow optical scan bar inside obsidian telemetry chambers */
+  .at-scanline {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 44px;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(143, 156, 255, 0.09) 55%,
+      rgba(143, 156, 255, 0.2) 100%
+    );
+    animation: at-scan-glide 7.5s ease-in-out infinite alternate;
+  }
+
+  /* Specialist topology animated pulse stroke */
+  .at-pulse-trace {
+    stroke-dasharray: 6 10;
+    animation: at-trace-flow 3.2s linear infinite;
+  }
+
+  /* Gentle breathing status dot */
+  .at-live-pulse {
+    animation: at-dot-breathe 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes at-sonar-pulse {
+  0% {
+    transform: scale(0.72);
+    opacity: 0.78;
+  }
+  100% {
+    transform: scale(1.72);
+    opacity: 0;
+  }
+}
+
+@keyframes at-send-burst {
+  0% {
+    transform: scale(0.88);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(2.25);
+    opacity: 0;
+  }
+}
+
+@keyframes at-scan-glide {
+  0% {
+    transform: translate3d(0, -24px, 0);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate3d(0, 180px, 0);
+    opacity: 0.75;
+  }
+}
+
+@keyframes at-trace-flow {
+  from {
+    stroke-dashoffset: 32;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes at-dot-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .at-scene-3d {
+    perspective: none;
+  }
+  .at-rig-3d,
+  .at-bento-3d {
+    transform-style: flat;
+  }
+  .at-bento-pop-sm,
+  .at-bento-pop,
+  .at-bento-pop-lg {
+    transform: none;
+  }
+  .at-sonar-ring,
+  .at-send-halo,
+  .at-scanline,
+  .at-pulse-trace,
+  .at-live-pulse {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .at-verdict-bento,
+  .at-stage-enclosure,
+  .at-folder-leaf,
+  .at-folder-lip {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
