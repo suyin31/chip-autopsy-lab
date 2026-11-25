@@ -65,7 +65,12 @@ export function EvidenceShelf({
           'focus-visible:shadow-focus-ring focus-visible:outline-none rounded-[24px]',
         )}
       >
-        <span className="at-folder-pocket block w-full px-2.5 pb-2.5 pt-12 transition-opacity duration-[160ms] ease-[var(--ease-out)]">
+        <span
+          className={cn(
+            'at-folder-pocket block w-full px-2.5 pb-2.5 transition-opacity duration-[160ms] ease-[var(--ease-out)]',
+            open ? 'pt-2.5' : 'pt-12',
+          )}
+        >
           {/* Three staggered 3D mini-chart preview leaves peeking out when closed */}
           <span
             aria-hidden="true"

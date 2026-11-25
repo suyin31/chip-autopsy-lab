@@ -10,7 +10,7 @@
  */
 
 import type { MessageKey } from '@/core/i18n';
-import { useT } from '@/ui/i18n';
+import { Untranslated, useT } from '@/ui/i18n';
 import * as React from 'react';
 import { createOpenAICompatibleRouter, type Router } from '../../../public/agent-runtime/agent-runtime.mjs';
 import { Button, cn, SegmentedControl } from '@/ui/primitives';
@@ -18,6 +18,7 @@ import { Button, cn, SegmentedControl } from '@/ui/primitives';
 export interface RouterPreset {
   readonly id: string;
   readonly label: string;
+  readonly shortLabel: string;
   readonly provider: string;
   readonly baseUrl: string;
   readonly model: string;
@@ -28,6 +29,7 @@ export const ROUTER_PRESETS: readonly RouterPreset[] = [
   {
     id: 'otari',
     label: 'Mozilla Otari (challenge default)',
+    shortLabel: 'Otari',
     provider: 'Otari',
     baseUrl: 'https://api.otari.ai/api/v1',
     model: 'alibaba/qwen3.8-flash',
@@ -36,6 +38,7 @@ export const ROUTER_PRESETS: readonly RouterPreset[] = [
   {
     id: 'openai',
     label: 'OpenAI',
+    shortLabel: 'OpenAI',
     provider: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
@@ -44,6 +47,7 @@ export const ROUTER_PRESETS: readonly RouterPreset[] = [
   {
     id: 'openrouter',
     label: 'OpenRouter',
+    shortLabel: 'OpenRouter',
     provider: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'anthropic/claude-sonnet-4',
@@ -52,6 +56,7 @@ export const ROUTER_PRESETS: readonly RouterPreset[] = [
   {
     id: 'ollama',
     label: 'Local (Ollama / vLLM / LM Studio)',
+    shortLabel: 'Ollama / Local',
     provider: 'local',
     baseUrl: 'http://127.0.0.1:11434/v1',
     model: 'qwen3:8b',
@@ -60,6 +65,7 @@ export const ROUTER_PRESETS: readonly RouterPreset[] = [
   {
     id: 'custom',
     label: 'Other OpenAI-compatible endpoint',
+    shortLabel: 'Custom',
     provider: 'custom',
     baseUrl: '',
     model: '',
@@ -102,10 +108,6 @@ function parseStored(raw: string | null): ModelSettings | null {
   }
 }
 
-/**
- * Holds the visitor's router choice. Reading and writing storage happens here
- * so nothing else in the console touches the key.
- */
 export function useModelSettings(): {
   readonly settings: ModelSettings;
   readonly stored: boolean;
@@ -189,8 +191,8 @@ export function ModelSettingsPanel({
     }));
   };
 
-  const fieldClass =
-    'h-11 w-full rounded-control bg-fill-1 px-3 text-[16px] text-text-primary sm:h-10 sm:text-[13px] focus-visible:shadow-focus-ring focus-visible:outline-none';
+  const inputClass =
+    'h-11 w-full bg-transparent px-3.5 text-[16px] text-text-primary sm:h-10 sm:text-[12.5px] focus:outline-none';
 
   return (
     <div className="flex flex-col gap-5">
@@ -205,67 +207,102 @@ export function ModelSettingsPanel({
           ]}
         />
         <p className="type-subhead text-text-tertiary">
-          {draft.mode === 'demo'
-            ? t('agents.model.demoNote')
-            : t('agents.model.ownNote')}
+          {draft.mode === 'demo' ? t('agents.model.demoNote') : t('agents.model.ownNote')}
         </p>
       </div>
 
       {draft.mode === 'byok' ? (
-        <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-1.5">
             <span className="type-subhead text-text-secondary">{t('agents.model.provider')}</span>
-            <select
-              value={draft.presetId}
-              onChange={(event) => selectPreset(event.target.value)}
-              className={cn(fieldClass, 'appearance-none bg-fill-1 text-text-primary')}
+            <div
+              role="radiogroup"
+              aria-label={t('agents.model.provider')}
+              className="flex flex-wrap gap-1.5"
             >
-              {ROUTER_PRESETS.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              {ROUTER_PRESETS.map((entry) => {
+                const active = draft.presetId === entry.id;
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    title={entry.label}
+                    onClick={() => selectPreset(entry.id)}
+                    className={cn(
+                      'cursor-pointer touch-manipulation rounded-pill px-3 py-1.5 type-caption',
+                      'transition-[background-color,color,scale,transform] duration-[120ms] ease-[var(--ease-out)]',
+                      'active:scale-[0.97] motion-reduce:active:scale-100',
+                      'focus-visible:shadow-focus-ring focus-visible:outline-none',
+                      active
+                        ? 'at-pill-iris'
+                        : 'at-well-crisp text-text-secondary [@media(hover:hover)]:hover:bg-fill-2 [@media(hover:hover)]:hover:text-text-primary',
+                    )}
+                  >
+                    <Untranslated>{entry.shortLabel}</Untranslated>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <label className="flex flex-col gap-1.5">
             <span className="type-subhead text-text-secondary">{t('agents.model.baseUrl')}</span>
-            <input
-              value={draft.baseUrl}
-              onChange={(event) => setDraft((current) => ({ ...current, baseUrl: event.target.value }))}
-              placeholder="https://api.example.com/v1"
-              spellCheck={false}
-              autoComplete="off"
-              inputMode="url"
-              className={cn(fieldClass, 'font-mono text-[16px] sm:text-[12px]')}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="type-subhead text-text-secondary">{t('agents.model.model')}</span>
-            <input
-              value={draft.model}
-              onChange={(event) => setDraft((current) => ({ ...current, model: event.target.value }))}
-              placeholder="model-id"
-              spellCheck={false}
-              autoComplete="off"
-              className={cn(fieldClass, 'font-mono text-[16px] sm:text-[12px]')}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="type-subhead text-text-secondary">{t('agents.model.apiKey')}</span>
-            <input
-              type="password"
-              value={draft.apiKey}
-              onChange={(event) => setDraft((current) => ({ ...current, apiKey: event.target.value }))}
-              placeholder="sk-…"
-              autoComplete="off"
-              spellCheck={false}
-              className={cn(fieldClass, 'font-mono text-[16px] sm:text-[12px]')}
-            />
-            <span className="type-caption text-text-tertiary">
-              {t('agents.model.storage')}
+            <span className="at-search-well block">
+              <input
+                value={draft.baseUrl}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, baseUrl: event.target.value }))
+                }
+                placeholder="https://api.example.com/v1"
+                spellCheck={false}
+                autoComplete="off"
+                inputMode="url"
+                className={cn(inputClass, 'font-mono')}
+              />
             </span>
           </label>
-          <p className="type-caption text-text-tertiary">{preset.noteKey === 'agents.model.note.custom' ? t('agents.model.note.custom', { base: '{base}' }) : t(preset.noteKey)}</p>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="type-subhead text-text-secondary">{t('agents.model.model')}</span>
+            <span className="at-search-well block">
+              <input
+                value={draft.model}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, model: event.target.value }))
+                }
+                placeholder="model-id"
+                spellCheck={false}
+                autoComplete="off"
+                className={cn(inputClass, 'font-mono')}
+              />
+            </span>
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="type-subhead text-text-secondary">{t('agents.model.apiKey')}</span>
+            <span className="at-search-well block">
+              <input
+                type="password"
+                value={draft.apiKey}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, apiKey: event.target.value }))
+                }
+                placeholder="sk-…"
+                autoComplete="off"
+                spellCheck={false}
+                className={cn(inputClass, 'font-mono')}
+              />
+            </span>
+            <span className="type-caption text-text-tertiary">{t('agents.model.storage')}</span>
+          </label>
+
+          <p className="type-caption text-text-tertiary">
+            {preset.noteKey === 'agents.model.note.custom'
+              ? t('agents.model.note.custom', { base: '{base}' })
+              : t(preset.noteKey)}
+          </p>
         </div>
       ) : null}
 

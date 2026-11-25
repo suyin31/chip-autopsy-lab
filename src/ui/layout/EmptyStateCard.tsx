@@ -835,7 +835,9 @@ function SpecialistNetworkBentoCard(): React.JSX.Element {
                 className={cn(
                   'flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-[background-color,scale] duration-150 ease-[var(--ease-out)] active:scale-[0.98]',
                   'focus-visible:shadow-focus-ring focus-visible:outline-none',
-                  isLit ? 'bg-fill-3 shadow-[inset_0_0_0_1px_var(--chroma-line)]' : 'bg-fill-1 hover:bg-fill-2',
+                  isLit
+                    ? 'bg-[#1c2336] shadow-[inset_0_0_0_1px_var(--chroma-line)]'
+                    : 'bg-[#131824] hover:bg-[#192030] shadow-[inset_0_0_0_1px_var(--hairline)]',
                 )}
               >
                 <span

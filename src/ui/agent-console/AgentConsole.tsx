@@ -47,7 +47,6 @@ import {
   MOTION_TOKENS,
   PANEL_ENTER_OFFSET_Y_PX,
   SPRING_TOKENS,
-  TILT_TOKENS,
   useReducedMotionPreference,
   useTactileTilt,
 } from '@/ui/motion';
@@ -69,8 +68,10 @@ import {
   useModelSettings,
 } from './model-settings';
 import { AmbientField } from '@/ui/atelier/AmbientField';
-import { MorphingDialog } from '@/ui/primitives/morphing-dialog';
 import { BorderBeam } from '@/ui/atelier/BorderBeam';
+import { SpotlightTiltCard } from '@/ui/atelier/SpotlightTiltCard';
+import { Untranslated } from '@/ui/i18n';
+import { MorphingDialog } from '@/ui/primitives/morphing-dialog';
 import { WaferStage } from './WaferStage';
 
 import { LotSwitcher } from './LotSwitcher';
@@ -501,6 +502,106 @@ function ToolPill({
   );
 }
 
+const SPECIALIST_KEYS = [
+  'autopsy_conductor',
+  'lot_analyst',
+  'pattern_pathologist',
+  'evidence_auditor',
+] as const;
+
+function SpecialistTopologyBar({
+  running,
+  networkSummary,
+}: {
+  readonly running: boolean;
+  readonly networkSummary: {
+    readonly name: string;
+    readonly frontMan: string;
+    readonly agents: { name: string; description: string; tools: number }[];
+  } | null;
+}): React.JSX.Element {
+  const { t, formatInteger } = useT();
+  const [focusedKey, setFocusedKey] = React.useState<string>('autopsy_conductor');
+  const activeAgent = networkSummary?.agents.find((a) => a.name === focusedKey);
+
+  return (
+    <div className="agent-rise at-bento mb-5 rounded-[22px] p-3 sm:px-4 sm:py-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className={cn(
+              'size-2 rounded-full',
+              running ? 'agent-accent-dot agent-live-dot' : 'at-dot-iris at-live-pulse',
+            )}
+          />
+          <Untranslated className="font-mono text-[11px] text-text-secondary">
+            4-AGENT MESH · HOCON
+          </Untranslated>
+        </span>
+        <span className="type-caption text-text-tertiary">
+          {activeAgent ? (
+            <Untranslated className="font-mono text-[11px]">
+              {`${activeAgent.name} · ${formatInteger(activeAgent.tools)} tools`}
+            </Untranslated>
+          ) : (
+            t('agents.title')
+          )}
+        </span>
+      </div>
+
+      <div className="relative mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 400 24"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-x-0 top-1/2 hidden h-5 -translate-y-1/2 sm:block"
+        >
+          <path
+            d="M96 12h8M196 12h8M296 12h8"
+            fill="none"
+            className="at-stroke-iris opacity-65"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+
+        {SPECIALIST_KEYS.map((key, idx) => {
+          const isSelected = focusedKey === key;
+          const isLead = idx === 0;
+          return (
+            <button
+              key={key}
+              type="button"
+              onMouseEnter={() => setFocusedKey(key)}
+              onFocus={() => setFocusedKey(key)}
+              onClick={() => setFocusedKey(key)}
+              className={cn(
+                'relative z-[1] flex cursor-pointer touch-manipulation items-center gap-2 rounded-[13px] bg-surface px-2.5 py-2 text-left',
+                'transition-[background-color,scale,transform] duration-[140ms] ease-[var(--ease-out)]',
+                'active:scale-[0.98] motion-reduce:active:scale-100',
+                'focus-visible:shadow-focus-ring focus-visible:outline-none',
+                isSelected ? 'at-well-crisp ring-1 ring-[var(--chroma-line)]' : 'at-well-crisp opacity-85 [@media(hover:hover)]:hover:opacity-100',
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'size-1.5 shrink-0 rounded-full',
+                  isLead ? 'at-dot-signal' : isSelected ? 'at-dot-iris' : 'bg-text-disabled',
+                )}
+              />
+              <span className="min-w-0 truncate type-caption text-text-primary">
+                {t(AGENT_ROLES[key])}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function StarterCard({
   starter,
   index,
@@ -511,45 +612,59 @@ function StarterCard({
   readonly onSelect: (prompt: string, label: string) => void;
 }): React.JSX.Element {
   const { t } = useT();
-  const cardRef = React.useRef<HTMLButtonElement | null>(null);
-  useTactileTilt(cardRef, { maxDeg: TILT_TOKENS.maxDegCard });
   const Icon = starter.icon;
   const label = t(starter.labelKey);
+  const isFlagship = index === 0;
 
   return (
-    // `.agent-rise` fills `transform: translateY(0)` forwards, which outranks inline tilt
-    // transforms in the CSS cascade; keeping entrance on the wrapper lets tilt own the button.
-    <div className="agent-rise" style={{ animationDelay: `${120 + index * 60}ms` }}>
-      <button
-        ref={cardRef}
+    <div
+      className={cn('agent-rise', isFlagship && 'sm:col-span-2')}
+      style={{ animationDelay: `${120 + index * 60}ms` }}
+    >
+      <SpotlightTiltCard
+        as="button"
         type="button"
-        data-tactile=""
-        data-spotlight="true"
+        maxDeg={6.5}
+        liftPx={-4}
+        pressable
+        preserve3d
         onClick={() => onSelect(starter.prompt, label)}
         className={cn(
-          'cal-tactile group relative flex w-full cursor-pointer touch-manipulation items-center gap-3 rounded-2xl border border-hairline bg-surface p-3.5 text-left shadow-card sm:p-4',
-          'transition-[transform,scale,background-color] duration-[200ms] ease-[var(--ease-out)]',
-          'active:scale-[0.985] motion-reduce:active:scale-100',
+          'group relative flex h-full w-full cursor-pointer touch-manipulation items-start gap-3.5 rounded-[22px] p-4 text-left sm:items-center sm:p-4.5',
           'focus-visible:shadow-focus-ring focus-visible:outline-none',
         )}
       >
         <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-hairline-strong opacity-0 transition-opacity duration-[160ms] ease-[var(--ease-out)] [@media(hover:hover)]:group-hover:opacity-100 group-focus-visible:opacity-100"
-        />
-        <span className="agent-accent-soft flex size-9 shrink-0 items-center justify-center rounded-xl">
-          <Icon className="size-4" strokeWidth={1.7} aria-hidden="true" />
+          className={cn(
+            'at-bento-pop-sm size-10 shrink-0 rounded-[14px]',
+            isFlagship
+              ? 'at-icon-well-signal'
+              : index === 1
+                ? 'at-icon-well-iris'
+                : 'at-icon-well',
+          )}
+        >
+          <Icon className="size-4.5" strokeWidth={1.75} aria-hidden="true" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block type-callout text-text-primary">{label}</span>
-          <span className="mt-0.5 block type-caption text-text-tertiary">{t(starter.hintKey)}</span>
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="type-callout text-text-primary">{label}</span>
+            {isFlagship ? (
+              <Untranslated className="at-pill-signal rounded-pill px-2 py-0.5 font-mono text-[10px]">
+                E2E
+              </Untranslated>
+            ) : null}
+          </span>
+          <span className="mt-1 block type-caption text-text-tertiary">
+            {t(starter.hintKey)}
+          </span>
         </span>
         <ArrowRight
           aria-hidden="true"
-          className="size-4 shrink-0 text-text-tertiary opacity-45 transition-[transform,translate,opacity] duration-[200ms] ease-[var(--ease-out)] [@media(hover:hover)]:motion-safe:group-hover:translate-x-0.5 [@media(hover:hover)]:group-hover:opacity-100"
-          strokeWidth={1.7}
+          className="at-bento-pop-sm mt-1 size-4 shrink-0 text-text-tertiary opacity-55 transition-[transform,translate,opacity] duration-[200ms] ease-[var(--ease-out)] sm:mt-0 [@media(hover:hover)]:motion-safe:group-hover:translate-x-0.5 [@media(hover:hover)]:group-hover:opacity-100"
+          strokeWidth={1.75}
         />
-      </button>
+      </SpotlightTiltCard>
     </div>
   );
 }
@@ -568,7 +683,7 @@ function FactRowButton({
   readonly onSelect: () => void;
 }): React.JSX.Element {
   const rowRef = React.useRef<HTMLButtonElement | null>(null);
-  useTactileTilt(rowRef, { maxDeg: 2, liftPx: 3 });
+  useTactileTilt(rowRef, { maxDeg: 2, liftPx: 2 });
 
   return (
     <button
@@ -579,12 +694,12 @@ function FactRowButton({
       onClick={onSelect}
       aria-pressed={active}
       className={cn(
-        'cal-tactile relative flex w-full cursor-pointer touch-manipulation items-start gap-2 rounded-control px-2.5 py-2 text-left',
+        'cal-tactile relative flex w-full cursor-pointer touch-manipulation items-start gap-2.5 rounded-[14px] px-3 py-2.5 text-left',
         'transition-[background-color,scale,transform] duration-[120ms] ease-[var(--ease-out)]',
         '[@media(hover:hover)]:hover:bg-fill-1',
         'active:scale-[0.985] motion-reduce:active:scale-100',
         'focus-visible:shadow-focus-ring focus-visible:outline-none',
-        active && 'bg-fill-2',
+        active && 'at-well-crisp ring-1 ring-[var(--chroma-line)]',
       )}
     >
       <span className="min-w-0 flex-1">
@@ -595,7 +710,7 @@ function FactRowButton({
           {summary}
         </span>
       </span>
-      <span className="mt-0.5 shrink-0 type-caption tabular-nums text-text-tertiary">
+      <span className="at-pill mt-0.5 shrink-0 tabular-nums text-text-secondary">
         {dieCount}
       </span>
     </button>
@@ -621,6 +736,7 @@ export function AgentConsole() {
   const [transcript, setTranscript] = React.useState<TranscriptItem[]>([]);
   const [draft, setDraft] = React.useState('');
   const [running, setRunning] = React.useState(false);
+  const [sendBurstKey, setSendBurstKey] = React.useState(0);
   const [streamText, setStreamText] = React.useState('');
   const [trace, setTrace] = React.useState<TraceEntry[]>([]);
   const [seenFactsLots, setSeenFactsLots] = React.useState<ReadonlySet<string>>(() => new Set());
@@ -893,6 +1009,7 @@ export function AgentConsole() {
     const runtime = runtimeRef.current;
     if (!trimmed || running || loadLock.current || !runtime) return;
     setDraft('');
+    setSendBurstKey((k) => k + 1);
     append({ id: nextId('user'), kind: 'user', text: displayedText ?? trimmed });
     setRunning(true);
     setStreamText('');
@@ -1055,7 +1172,7 @@ export function AgentConsole() {
         }}
         className="at-dock relative rounded-[22px] p-2 has-[:focus-visible]:shadow-[var(--focus-ring)]"
       >
-        <BorderBeam active={running} radius={22} />
+        <BorderBeam active={running} dual radius={22} />
         <label className="sr-only" htmlFor="agent-input">
           {t('agents.composerLabel')}
         </label>
@@ -1080,27 +1197,32 @@ export function AgentConsole() {
                   : t('agents.composerPlaceholder')
             }
             className={cn(
-              'max-h-[168px] min-h-[40px] flex-1 resize-none bg-transparent px-2 py-2 text-[16px] leading-[1.45] text-text-primary sm:text-[15px]',
+              'max-h-[168px] min-h-[40px] flex-1 resize-none bg-transparent px-2.5 py-2 text-[16px] leading-[1.45] text-text-primary sm:text-[15px]',
               'placeholder:text-text-tertiary focus:outline-none focus-visible:shadow-none',
             )}
           />
-          <button
-            type="submit"
-            disabled={running || loading || draft.trim() === ''}
-            aria-label={t('agents.composerSend')}
-            data-ready={!running && !loading && draft.trim() !== '' ? 'true' : undefined}
-            className={cn(
-              'mb-0.5 inline-flex size-9 shrink-0 touch-manipulation items-center justify-center rounded-full pointer-coarse:size-11',
-              'transition-[background-color,color,opacity,scale,transform] duration-[160ms] ease-[var(--ease-out)]',
-              'enabled:active:scale-[0.92] motion-reduce:enabled:active:scale-100',
-              draft.trim() !== '' && !running
-                ? 'agent-accent-fill [@media(hover:hover)]:enabled:hover:opacity-90'
-                : 'bg-fill-2 text-text-tertiary',
-              'focus-visible:shadow-focus-ring focus-visible:outline-none',
-            )}
-          >
-            <ArrowUp className="size-4" strokeWidth={2.2} aria-hidden="true" />
-          </button>
+          <span className="relative mb-0.5 inline-flex shrink-0">
+            {sendBurstKey > 0 && !reducedMotion ? (
+              <span key={sendBurstKey} aria-hidden="true" className="at-send-halo" />
+            ) : null}
+            <button
+              type="submit"
+              disabled={running || loading || draft.trim() === ''}
+              aria-label={t('agents.composerSend')}
+              data-ready={!running && !loading && draft.trim() !== '' ? 'true' : undefined}
+              className={cn(
+                'relative z-[1] inline-flex size-9 shrink-0 touch-manipulation items-center justify-center rounded-full pointer-coarse:size-11',
+                'transition-[background-color,color,opacity,scale,transform] duration-[160ms] ease-[var(--ease-out)]',
+                'enabled:active:scale-[0.92] motion-reduce:enabled:active:scale-100',
+                draft.trim() !== '' && !running
+                  ? 'agent-accent-fill [@media(hover:hover)]:enabled:hover:opacity-90'
+                  : 'bg-fill-2 text-text-tertiary',
+                'focus-visible:shadow-focus-ring focus-visible:outline-none',
+              )}
+            >
+              <ArrowUp className="size-4" strokeWidth={2.2} aria-hidden="true" />
+            </button>
+          </span>
         </div>
       </form>
       <div className="mt-2 flex items-center gap-2 px-1 max-lg:hidden">
@@ -1190,24 +1312,26 @@ export function AgentConsole() {
                     duration: MOTION_TOKENS.dur1Ms / 1000,
                     ease: MOTION_TOKENS.easeOutTuple,
                   }}
-                  className="mx-auto flex min-h-full w-full max-w-[680px] flex-col justify-center py-10 sm:py-14"
+                  className="mx-auto flex min-h-full w-full max-w-[700px] flex-col justify-center py-6 sm:py-8"
                 >
+                  <SpecialistTopologyBar running={running} networkSummary={networkSummary} />
+
                   <h2 className="agent-rise type-display-l text-text-primary">
                     {renderAccentPhrase(t('agents.empty.headline'), t('agents.empty.headlineAccent'), !isCjkLocale(locale))}
                   </h2>
                   <p
-                    className="agent-rise mt-3 max-w-[52ch] type-body text-text-secondary"
+                    className="agent-rise mt-2.5 max-w-[54ch] type-body text-text-secondary"
                     style={{ animationDelay: '60ms' }}
                   >
                     {t('agents.empty.subline')}
                   </p>
 
-                  <div className="mt-5 grid gap-2">
+                  <div className="agent-rise at-bento mt-4 grid gap-2.5 rounded-[26px] p-3 sm:p-3.5" style={{ animationDelay: '90ms' }}>
                     <LotSwitcher variant="empty" {...switcherProps} />
                     {!hasConversation && <StdfDropZone variant="inline" {...uploadProps} />}
                   </div>
 
-                  <div className="mt-7 grid grid-cols-1 gap-2.5 sm:gap-3">
+                  <div className="at-scene-3d mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     {STARTERS.map((starter, index) => (
                       <StarterCard
                         key={starter.prompt}
@@ -1219,7 +1343,7 @@ export function AgentConsole() {
                   </div>
 
                   <p
-                    className="agent-rise mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 type-subhead text-text-tertiary"
+                    className="agent-rise mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 type-subhead text-text-tertiary"
                     style={{ animationDelay: '340ms' }}
                   >
                     {settings.mode === 'demo'
@@ -1234,7 +1358,7 @@ export function AgentConsole() {
                     </button>
                   </p>
 
-                  <div className="agent-rise mt-7" style={{ animationDelay: '300ms' }}>
+                  <div className="agent-rise mt-4" style={{ animationDelay: '300ms' }}>
                     {renderComposer(false)}
                   </div>
                 </motion.div>
@@ -1318,7 +1442,7 @@ export function AgentConsole() {
                           }
                           className="flex justify-end"
                         >
-                          <p className="max-w-[85%] rounded-2xl bg-fill-2 px-4 py-2.5 type-callout text-text-primary">
+                          <p className="at-bento max-w-[85%] rounded-2xl px-4 py-2.5 type-callout text-text-primary">
                             {item.text}
                           </p>
                         </motion.div>
@@ -1406,8 +1530,9 @@ export function AgentConsole() {
                           ? { duration: MOTION_TOKENS.dur1Ms / 1000, ease: MOTION_TOKENS.easeOutTuple }
                           : { duration: 0.3, ease: MOTION_TOKENS.easeOutTuple }
                       }
-                      className="rounded-2xl bg-surface p-5 shadow-card"
+                      className="at-float-card relative rounded-[24px] p-5"
                     >
+                      <BorderBeam active dual radius={24} />
                       <h2
                         id="agent-consent-title"
                         className="flex items-center gap-2 type-headline text-text-primary"
@@ -1523,7 +1648,7 @@ export function AgentConsole() {
         <aside
           aria-label={t('agents.rail.aria')}
           data-testid="agent-rail"
-          className="relative z-[1] flex flex-col border-t border-hairline bg-[color-mix(in_oklab,var(--surface)_66%,transparent)] [backdrop-filter:var(--material-filter)] lg:min-h-0 lg:overflow-hidden lg:border-t-0 lg:border-l"
+          className="relative z-[1] flex flex-col border-t border-hairline bg-[color-mix(in_oklab,var(--surface)_72%,transparent)] [backdrop-filter:var(--at-bento-filter)] [-webkit-backdrop-filter:var(--at-bento-filter)] lg:min-h-0 lg:overflow-hidden lg:border-t-0 lg:border-l lg:[view-transition-name:cal-forensic-stage]"
         >
           <div className="px-5 pt-5 pb-4">
             <div className="mb-2 lg:hidden"><LotSwitcher variant="header" {...switcherProps} /></div>

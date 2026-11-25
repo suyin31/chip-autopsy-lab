@@ -17,6 +17,7 @@ import {
   type YieldMetrics,
 } from '@/core/analytics';
 import { type LotModel, packWaferCoord } from '@/core/model';
+import { useProximityRim } from '@/ui/atelier/ProximityPlate';
 import { Untranslated, useT } from '@/ui/i18n';
 import {
   Button,
@@ -117,6 +118,8 @@ export function StackedWaferPanel({
   const { t, tPlural, formatInteger, formatPercent } = useT();
   const headingId = React.useId();
   const layoutGroupId = React.useId();
+  const sectionRef = React.useRef<HTMLElement | null>(null);
+  useProximityRim(sectionRef, { reachPx: 220 });
   const shouldReduceMotion = useReducedMotion();
   const reduced = readPrefersReducedMotionSync(shouldReduceMotion);
   const highContrast = usePrefersMoreContrast();
@@ -701,6 +704,7 @@ export function StackedWaferPanel({
 
   return (
     <section
+      ref={sectionRef}
       aria-labelledby={headingId}
       data-testid="stacked-wafer-panel"
       data-view-mode={viewMode}
@@ -708,7 +712,7 @@ export function StackedWaferPanel({
       data-reduced-motion={reduced ? 'true' : 'false'}
       data-wafer-count={lot.wafers.length}
       className={cn(
-        'rounded-2xl bg-surface p-4 shadow-card sm:p-6',
+        'at-bento rounded-[24px] p-5 sm:p-6',
         className,
       )}
     >

@@ -8,6 +8,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { computeBinPareto } from '@/core/analytics';
 import type { BinMode, LotModel } from '@/core/model';
 import type { GlossaryTermId } from '@/core/i18n';
+import { useProximityRim } from '@/ui/atelier/ProximityPlate';
 import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import { Button } from '@/ui/primitives/button';
@@ -68,6 +69,8 @@ export function BinParetoChart({
   const { t, tPlural, formatInteger, formatPercent } = useT();
   const headingId = React.useId();
   const chartLabelId = React.useId();
+  const sectionRef = React.useRef<HTMLElement | null>(null);
+  useProximityRim(sectionRef, { reachPx: 220 });
 
   const {
     storeLot,
@@ -217,12 +220,13 @@ export function BinParetoChart({
 
   return (
     <section
+      ref={sectionRef}
       aria-labelledby={headingId}
       data-testid="bin-pareto"
       data-mode={mode}
       {...{ [DISCLOSURE_SCOPE_ATTR]: '' }}
       className={cn(
-        'rounded-2xl bg-surface p-4 shadow-card sm:p-6',
+        'at-bento rounded-[24px] p-5 sm:p-6',
         className,
       )}
     >
@@ -263,21 +267,37 @@ export function BinParetoChart({
             })}
           </p>
 
-          <p
-            data-testid="bin-pareto-loss"
-            className="mt-6 flex items-baseline gap-2"
-          >
-            <span className="type-stat-s text-text-primary tabular-nums">
-              <CountUp
-                value={lossRatio}
-                format={formatPercent}
-                playKey={lot.lotId}
-              />
+          <div className="at-well-crisp mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[16px] px-4 py-3">
+            <p
+              data-testid="bin-pareto-loss"
+              className="flex items-baseline gap-2"
+            >
+              <span className="type-stat-s text-text-primary tabular-nums">
+                <CountUp
+                  value={lossRatio}
+                  format={formatPercent}
+                  playKey={lot.lotId}
+                />
+              </span>
+              <span className="type-subhead text-text-tertiary">
+                {t('pareto.lossLabel')}
+              </span>
+            </p>
+            <span aria-hidden="true" className="inline-flex items-center gap-1">
+              {Array.from({ length: 12 }, (_, idx) => {
+                const filled = idx < Math.max(1, Math.round(lossRatio * 12));
+                return (
+                  <span
+                    key={idx}
+                    className={cn(
+                      'h-2.5 w-1.5 rounded-[2px]',
+                      filled ? 'bg-ember-mark' : 'bg-fill-2',
+                    )}
+                  />
+                );
+              })}
             </span>
-            <span className="type-subhead text-text-tertiary">
-              {t('pareto.lossLabel')}
-            </span>
-          </p>
+          </div>
 
           <div className="mt-6 flex items-baseline justify-between gap-4 type-subhead text-text-tertiary">
             <span id={chartLabelId}>

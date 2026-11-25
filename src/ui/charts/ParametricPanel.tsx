@@ -13,6 +13,7 @@ import {
 import type { GlossaryTermId } from '@/core/i18n';
 import type { LotModel } from '@/core/model';
 import { evaluateSelection } from '@/core/query';
+import { useProximityRim } from '@/ui/atelier/ProximityPlate';
 import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/primitives/cn';
@@ -55,6 +56,8 @@ export function ParametricPanel({
 }: ParametricPanelProps): React.JSX.Element | null {
   const { t, formatInteger, formatDecimal2, formatParametricValue } = useT();
   const headingId = React.useId();
+  const sectionRef = React.useRef<HTMLElement | null>(null);
+  useProximityRim(sectionRef, { reachPx: 220 });
 
   const {
     storeLot,
@@ -243,10 +246,11 @@ export function ParametricPanel({
 
   return (
     <section
+      ref={sectionRef}
       aria-labelledby={headingId}
       data-testid="parametric-panel"
       className={cn(
-        'min-w-0 max-w-full overflow-x-clip rounded-2xl bg-surface p-4 shadow-card sm:p-6',
+        'at-bento min-w-0 max-w-full overflow-x-clip rounded-[24px] p-5 sm:p-6',
         className,
       )}
     >
@@ -301,7 +305,9 @@ export function ParametricPanel({
 
       {/* Selected test distribution histogram with LO/HI limit markers and top-margin scrub */}
       {selectedSummary && histogram ? (
-        <ParametricHistogram summary={selectedSummary} histogram={histogram} />
+        <div className="at-well-crisp mt-5 rounded-[18px] px-3 pt-1 pb-3.5 sm:px-4">
+          <ParametricHistogram summary={selectedSummary} histogram={histogram} />
+        </div>
       ) : null}
 
       {/* Sortable parametric test catalog (Req 8.1) */}

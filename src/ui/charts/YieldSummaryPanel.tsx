@@ -10,6 +10,7 @@ import type { YieldMetrics, YieldSummary } from '@/core/analytics';
 import type { LotModel } from '@/core/model';
 import type { EngineFact } from '@/core/report';
 import type { GlossaryTermId } from '@/core/i18n';
+import { useProximityRim } from '@/ui/atelier/ProximityPlate';
 import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { Button } from '@/ui/primitives/button';
 import { cn } from '@/ui/primitives/cn';
@@ -78,6 +79,8 @@ export function YieldSummaryPanel({
   const { locale, t, formatInteger, formatPercent } = useT();
   const headingId = React.useId();
   const wafersListId = React.useId();
+  const sectionRef = React.useRef<HTMLElement | null>(null);
+  useProximityRim(sectionRef, { reachPx: 220 });
 
   const {
     storeLot,
@@ -267,9 +270,10 @@ export function YieldSummaryPanel({
 
   return (
     <section
+      ref={sectionRef}
       aria-labelledby={headingId}
       data-testid="yield-summary"
-      className={cn('rounded-2xl bg-surface p-4 shadow-card sm:p-6', className)}
+      className={cn('at-bento rounded-[24px] p-5 sm:p-6', className)}
     >
       <h2
         id={headingId}
@@ -289,7 +293,7 @@ export function YieldSummaryPanel({
 
       <dl
         data-testid="yield-lot-stats"
-        className="mt-6 grid grid-cols-3 gap-6"
+        className="mt-5 grid grid-cols-3 gap-2.5 sm:gap-4"
       >
         {[
           {
@@ -313,7 +317,7 @@ export function YieldSummaryPanel({
         ].map((stat) => (
           <div
             key={stat.id}
-            className="flex min-w-0 flex-col-reverse justify-end gap-1.5"
+            className="at-well-crisp flex min-w-0 flex-col-reverse justify-end gap-1.5 rounded-[16px] px-3 py-3 sm:px-4"
           >
             <dt className="type-subhead text-pretty text-text-secondary">
               <GlossaryText text={stat.label} terms={stat.terms} />

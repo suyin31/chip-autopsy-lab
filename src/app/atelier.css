@@ -1439,23 +1439,23 @@
 
 @media (prefers-reduced-motion: reduce) {
   .at-scene-3d {
-    perspective: none;
+    perspective: none !important;
   }
   .at-rig-3d,
   .at-bento-3d {
-    transform-style: flat;
+    transform-style: flat !important;
   }
   .at-bento-pop-sm,
   .at-bento-pop,
   .at-bento-pop-lg {
-    transform: none;
+    transform: none !important;
   }
   .at-sonar-ring,
   .at-send-halo,
   .at-scanline,
   .at-pulse-trace,
   .at-live-pulse {
-    animation: none;
+    animation: none !important;
   }
 }
 
