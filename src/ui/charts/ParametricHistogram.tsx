@@ -198,11 +198,16 @@ export function ParametricHistogram({
     [],
   );
 
-  const handlePointerLeave = React.useCallback((): void => {
-    if (!draggingRef.current) {
-      setScrubBinIndex(null);
-    }
-  }, []);
+  const handlePointerLeave = React.useCallback(
+    (event: React.PointerEvent<SVGRectElement>): void => {
+      // Touch: the reading stays where the finger lifted (tap elsewhere to blur and clear)
+      if (event.pointerType === 'touch') return;
+      if (!draggingRef.current) {
+        setScrubBinIndex(null);
+      }
+    },
+    [],
+  );
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<SVGSVGElement>): void => {
@@ -571,6 +576,7 @@ export function ParametricHistogram({
                 width={plotWidth}
                 height={PLOT_HEIGHT_PX}
                 fill="transparent"
+                style={{ touchAction: 'pan-y' }}
                 className="cursor-crosshair"
                 onPointerMove={handlePointerMove}
                 onPointerDown={handlePointerDown}

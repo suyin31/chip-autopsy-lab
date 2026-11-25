@@ -2,6 +2,7 @@
 
 import { useMemo, type ReactNode } from 'react';
 import { useT } from '@/ui/i18n';
+import { useTouchMotion } from '@/ui/motion/use-touch-motion';
 import { cn, CountUp } from '@/ui/primitives';
 import type { AutopsyWorkerLoadedPayload } from '@/workers';
 import { worstCpk } from './brief-markdown';
@@ -74,6 +75,8 @@ export function LotKpiStrip({
 }) {
   const { t, formatDecimal2, formatInteger, formatPercent } = useT();
   const cpk = useMemo(() => payload && worstCpk(payload), [payload]);
+  // Touch: the strip sits below the chat on a phone, so its numbers count when scrolled to
+  const countOnVisible = useTouchMotion();
   const unavailable = (
     <span className="text-text-tertiary" aria-label={t('agents.kpi.unavailable')}>
       —
@@ -81,7 +84,12 @@ export function LotKpiStrip({
   );
   const count = (value: number | undefined | null, format: (n: number) => string) =>
     payload && value != null && Number.isFinite(value) ? (
-      <CountUp playKey={payload.lot.lotId} value={value} format={format} />
+      <CountUp
+        playKey={payload.lot.lotId}
+        value={value}
+        format={format}
+        triggerOnVisible={countOnVisible}
+      />
     ) : (
       unavailable
     );

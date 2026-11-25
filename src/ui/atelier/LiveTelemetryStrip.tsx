@@ -12,7 +12,16 @@ import {
   LANDING_IDDQ_SPECTRUM_BINS,
   LANDING_TELEMETRY_LENSES,
 } from '@/ui/layout/landing-layout';
-import { SPRING_TACTILE, useReducedMotionPreference } from '@/ui/motion';
+import {
+  computeTouchGrowDelayMs,
+  SPRING_TACTILE,
+  TOUCH_BUS_PULSE_MS,
+  TOUCH_GROW_DURATION_MS,
+  useReducedMotionPreference,
+  useTapPulse,
+  useTouchGrowOnEnter,
+  useTouchReveal,
+} from '@/ui/motion';
 import { Button, cn, SlidingNumber } from '@/ui/primitives';
 import { PulseBusSvg } from './PulseBusSvg';
 
@@ -80,6 +89,14 @@ export function LiveTelemetryStrip({
   const [activeSpec, setActiveSpec] = React.useState(0);
   const [hoveredBus, setHoveredBus] = React.useState(false);
   const svgRef = React.useRef<SVGSVGElement | null>(null);
+  const zonesRef = React.useRef<HTMLDivElement | null>(null);
+  const scrubPointerRef = React.useRef<number | null>(null);
+
+  // Touch: the three zones rise in once, the spectrum grows from its baseline left to right,
+  // and a tapped specialist lights the signal bus for a moment instead of on hover.
+  useTouchReveal(zonesRef, { selector: ':scope > div' });
+  const growPhase = useTouchGrowOnEnter(svgRef, LANDING_IDDQ_SPECTRUM_BINS.length);
+  const [busPulse, triggerBusPulse] = useTapPulse(TOUCH_BUS_PULSE_MS);
 
   const lens = LANDING_TELEMETRY_LENSES[lensIdx] ?? LANDING_TELEMETRY_LENSES[0]!;
   const scrubbedBin =
@@ -87,17 +104,44 @@ export function LiveTelemetryStrip({
 
   const hiLimitX = toSvgX(LANDING_IDDQ_HI_LIMIT_UA);
 
-  const handleSpectrumMove = (event: React.PointerEvent<SVGSVGElement>): void => {
+  const scrubAt = (clientX: number): void => {
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
     if (rect.width <= 0) return;
-    const relX = (event.clientX - rect.left) / rect.width;
+    const relX = (clientX - rect.left) / rect.width;
     const idx = Math.min(
       LANDING_IDDQ_SPECTRUM_BINS.length - 1,
       Math.max(0, Math.floor(relX * LANDING_IDDQ_SPECTRUM_BINS.length)),
     );
     setScrubIdx(idx);
+  };
+
+  const handleSpectrumMove = (event: React.PointerEvent<SVGSVGElement>): void => {
+    // A finger scrubs only while it is down; a mouse scrubs on hover.
+    if (event.pointerType === 'touch' && scrubPointerRef.current !== event.pointerId) return;
+    scrubAt(event.clientX);
+  };
+
+  // Touch: tap or drag sideways to place the crosshair; the reading stays after the finger lifts.
+  const handleSpectrumDown = (event: React.PointerEvent<SVGSVGElement>): void => {
+    if (event.pointerType !== 'touch') return;
+    scrubPointerRef.current = event.pointerId;
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Synthetic events may not support capture
+    }
+    scrubAt(event.clientX);
+  };
+
+  const handleSpectrumUp = (event: React.PointerEvent<SVGSVGElement>): void => {
+    if (scrubPointerRef.current === event.pointerId) scrubPointerRef.current = null;
+  };
+
+  const handleSpectrumLeave = (event: React.PointerEvent<SVGSVGElement>): void => {
+    if (event.pointerType === 'touch') return;
+    setScrubIdx(null);
   };
 
   return (
@@ -106,7 +150,10 @@ export function LiveTelemetryStrip({
       aria-label={`${t('pareto.title')} · ${t('parametric.title')}`}
       className="at-ruler mt-12 py-6 lg:mt-16 lg:py-7"
     >
-      <div className="grid grid-cols-1 gap-7 lg:grid-cols-12 lg:items-center lg:gap-7">
+      <div
+        ref={zonesRef}
+        className="grid grid-cols-1 gap-7 lg:grid-cols-12 lg:items-center lg:gap-7"
+      >
         {/* Zone 1 (cols 1-4): Fluid Lens Capsule Slider + Oversized Spring Odometer */}
         <div className="flex min-w-0 flex-col justify-between gap-3 lg:col-span-4">
           <div
@@ -224,7 +271,11 @@ export function LiveTelemetryStrip({
             data-testid="telemetry-spectrum-svg"
             viewBox={`0 0 ${SVG_W} ${SVG_H}`}
             onPointerMove={handleSpectrumMove}
-            onPointerLeave={() => setScrubIdx(null)}
+            onPointerDown={handleSpectrumDown}
+            onPointerUp={handleSpectrumUp}
+            onPointerCancel={handleSpectrumUp}
+            onPointerLeave={handleSpectrumLeave}
+            style={{ touchAction: 'pan-y' }}
             className="block h-[88px] w-full cursor-crosshair select-none overflow-visible"
           >
             <defs>
@@ -296,16 +347,28 @@ export function LiveTelemetryStrip({
                     ? 0.95
                     : 0.82;
 
+              const growing = growPhase === 'growing';
               return (
                 <g
                   key={idx}
                   style={{
                     transformBox: 'fill-box',
                     transformOrigin: 'center bottom',
-                    transform: `scaleY(${Number(targetScaleY.toFixed(3))})`,
+                    transform:
+                      growPhase === 'hidden'
+                        ? 'scaleY(0)'
+                        : `scaleY(${Number(targetScaleY.toFixed(3))})`,
                     opacity,
-                    transitionProperty: reduced ? 'none' : 'transform, opacity',
-                    transitionDuration: reduced ? '0ms' : '220ms',
+                    transitionProperty:
+                      reduced || growPhase === 'hidden' ? 'none' : 'transform, opacity',
+                    transitionDuration: reduced
+                      ? '0ms'
+                      : growing
+                        ? `${TOUCH_GROW_DURATION_MS}ms`
+                        : '220ms',
+                    transitionDelay: growing
+                      ? `${computeTouchGrowDelayMs(idx, LANDING_IDDQ_SPECTRUM_BINS.length)}ms`
+                      : undefined,
                     transitionTimingFunction: 'var(--ease-out)',
                   }}
                 >
@@ -403,7 +466,7 @@ export function LiveTelemetryStrip({
           <PulseBusSvg
             variant="mesh"
             activeIndex={activeSpec}
-            active={hoveredBus}
+            active={hoveredBus || busPulse}
             className="my-0.5"
           />
 
@@ -417,6 +480,10 @@ export function LiveTelemetryStrip({
                   aria-pressed={isLit}
                   onPointerEnter={() => setActiveSpec(idx)}
                   onFocus={() => setActiveSpec(idx)}
+                  onPointerDown={(event) => {
+                    // A tap has no hover; light the bus toward the tapped role for a moment
+                    if (event.pointerType === 'touch') triggerBusPulse();
+                  }}
                   onClick={() => setActiveSpec(idx)}
                   className={cn(
                     'flex min-w-0 cursor-pointer touch-manipulation items-center gap-1.5 rounded-sm py-0.5 text-left',

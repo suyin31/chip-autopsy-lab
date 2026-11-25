@@ -18,6 +18,7 @@ import {
   STAGE_3D_PERSPECTIVE_PX,
   STAGE_3D_REST,
   useReducedMotionPreference,
+  useTouchScrollDepth,
 } from '@/ui/motion';
 import { Button, cn, CountUp } from '@/ui/primitives';
 import { BorderBeam } from './BorderBeam';
@@ -111,6 +112,11 @@ export function ExplodedAutopsyStage({
   useProximityRim(verdictCardRef, { reachPx: 220 });
 
   const [hoveredDeck, setHoveredDeck] = React.useState(false);
+
+  // Touch: no pointer tilt, so the two planes separate a few pixels as the hero scrolls away
+  // (the verdict card rises, the deck sinks); `translate` only, so the press scale still applies.
+  const touchDeckDepth = useTouchScrollDepth(heroSectionRef, 0.4);
+  const touchCardDepth = useTouchScrollDepth(heroSectionRef, -1);
 
   // Pointer normalized [-1, 1] -> spring-smoothed 3D rig angles capped at ±4° + scroll flattening
   const pointerNX = useMotionValue(0);
@@ -263,7 +269,14 @@ export function ExplodedAutopsyStage({
           onPointerEnter={() => setHoveredDeck(true)}
           onPointerLeave={() => setHoveredDeck(false)}
           whileTap={reduced || disabled ? undefined : { scale: 0.985 }}
-          style={reduced ? undefined : { transform: 'translateZ(0px)' }}
+          style={
+            reduced
+              ? undefined
+              : {
+                  transform: 'translateZ(0px)',
+                  ...(touchDeckDepth ? { translate: touchDeckDepth } : {}),
+                }
+          }
           className={cn(
             'vt-route-stage at-obsidian-well group/deck relative block w-full cursor-pointer overflow-hidden rounded-[26px] p-4 text-left sm:p-5',
             'focus-visible:shadow-focus-ring focus-visible:outline-none',
@@ -386,7 +399,10 @@ export function ExplodedAutopsyStage({
                 }
               : reduced
                 ? undefined
-                : { transform: 'translateZ(48px)' }
+                : {
+                    transform: 'translateZ(48px)',
+                    ...(touchCardDepth ? { translate: touchCardDepth } : {}),
+                  }
           }
           className="at-float-card relative z-[5] mt-3 w-full p-4 text-left sm:mt-4 sm:w-[348px] lg:-mt-7 lg:-ml-2 lg:w-[320px] xl:-ml-6 xl:w-[348px] max-lg:!transform-none"
         >

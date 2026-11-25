@@ -89,6 +89,7 @@ import {
   computeStageDiscLayerRects,
 } from './stage-layers';
 import {
+  bindScrollLightSheen,
   canSheenFollow,
   computeSheenTarget,
   createSheenFollower,
@@ -452,6 +453,19 @@ function WaferMapCanvasImpl({
       sheenPointerRef.current = null;
       sheenFollowerRef.current?.snapToRest();
     }
+  }, [prefersReduced]);
+
+  // Touch screens: the sheen follows an overhead scroll light instead of a hovering pointer
+  React.useEffect(() => {
+    const follower = sheenFollowerRef.current;
+    if (prefersReduced || !follower) {
+      return undefined;
+    }
+    return bindScrollLightSheen({
+      getDisc: () => sheenRef.current,
+      follower,
+      amplitudeD: SHEEN_STAGE_AMPLITUDE_D,
+    });
   }, [prefersReduced]);
 
   React.useEffect(

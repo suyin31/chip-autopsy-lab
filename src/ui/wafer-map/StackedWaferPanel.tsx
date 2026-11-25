@@ -550,6 +550,9 @@ export function StackedWaferPanel({
       summary.cellByCoord,
     );
     if (hit === null) {
+      if (event.pointerType === 'touch' && hoveredCellRef.current !== null) {
+        setHoveredCell(null);
+      }
       if (activeBrush !== null) {
         store.getState().setBrush(null);
       }
@@ -574,7 +577,11 @@ export function StackedWaferPanel({
     store.getState().setBrush(nextBrush);
   };
 
-  const handleStagePointerLeave = (): void => {
+  const handleStagePointerLeave = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ): void => {
+    // Touch: the tapped cell's readout stays after the finger lifts
+    if (event.pointerType === 'touch') return;
     if (dragRef.current !== null) return;
     if (hoveredCellRef.current !== null) {
       setHoveredCell(null);

@@ -105,3 +105,15 @@ export {
   type ViewTransitionHandle,
 } from './view-switch';
 export { runViewSwitch } from './use-view-switch';
+
+export * from './touch-motion';
+export {
+  type TouchGrowPhase,
+  type TouchRevealOptions,
+  useCoarsePointer,
+  useTapPulse,
+  useTouchGrowOnEnter,
+  useTouchMotion,
+  useTouchReveal,
+  useTouchScrollDepth,
+} from './use-touch-motion';

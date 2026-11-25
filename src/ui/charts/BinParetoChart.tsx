@@ -11,6 +11,7 @@ import type { GlossaryTermId } from '@/core/i18n';
 import { GlossaryText, Untranslated, useT } from '@/ui/i18n';
 import { cn } from '@/ui/primitives/cn';
 import { Button } from '@/ui/primitives/button';
+import { useTouchMotion } from '@/ui/motion/use-touch-motion';
 import { CountUp } from '@/ui/primitives/count-up';
 import {
   DISCLOSURE_SCOPE_ATTR,
@@ -99,6 +100,8 @@ export function BinParetoChart({
   const [mode, setMode] = React.useState<BinMode>('SBIN');
   // Premium §8.6: "Show all N bins" mounts the rows with a fade; the toggle glides
   const reduced = Boolean(useReducedMotion());
+  // Touch: the shelf opens below the fold, so numbers count when they scroll into view
+  const countOnVisible = useTouchMotion();
   const disclosure = useDisclosureList(reduced);
   const { expanded } = disclosure;
 
@@ -275,6 +278,7 @@ export function BinParetoChart({
                   value={lossRatio}
                   format={formatPercent}
                   playKey={lot.lotId}
+                  triggerOnVisible={countOnVisible}
                 />
               </span>
               <span className="type-subhead text-text-tertiary">
@@ -410,6 +414,7 @@ export function BinParetoChart({
                         format={formatPercent}
                         playKey={lot.lotId}
                         play={playPills}
+                        triggerOnVisible={countOnVisible}
                       />
                     </span>
                   </button>

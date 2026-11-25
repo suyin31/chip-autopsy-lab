@@ -35,6 +35,7 @@ import {
   resolveViewMorphTransition,
   SAMPLE_CARD_TILT_MAX_DEG,
   useReducedMotionPreference,
+  useTouchReveal,
   WAFER_MORPH_LAYOUT_ID,
 } from '@/ui/motion';
 import {
@@ -50,6 +51,7 @@ import { renderWithUntranslatedTokens } from '@/ui/report/render-untranslated';
 import { useAccent } from '@/ui/state';
 import { getFailDieColor, WAFER_TOKENS } from '@/ui/tokens';
 import {
+  bindScrollLightSheen,
   canSheenFollow,
   computeSheenTarget,
   createSheenFollower,
@@ -175,12 +177,21 @@ function useLandingSheenFollow(
         ),
       );
     };
-    const onLeave = (): void => follower.setTarget(SHEEN_REST);
+    const onLeave = (event: PointerEvent): void => {
+      if (event.pointerType !== 'touch') follower.setTarget(SHEEN_REST);
+    };
     host.addEventListener('pointermove', onMove);
     host.addEventListener('pointerleave', onLeave);
+    // Touch screens: an overhead scroll light moves the sheen as the card scrolls by
+    const unbindScrollLight = bindScrollLightSheen({
+      getDisc: () => sheenRef.current,
+      follower,
+      amplitudeD: SHEEN_CARD_AMPLITUDE_D,
+    });
     return () => {
       host.removeEventListener('pointermove', onMove);
       host.removeEventListener('pointerleave', onLeave);
+      unbindScrollLight();
       follower.dispose();
     };
   }, [frameRef, sheenRef, ellipseRef]);
@@ -627,6 +638,9 @@ export function EmptyStateCard({
   const headlineRef = React.useRef<HTMLHeadingElement | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const sampleHeadingId = React.useId();
+  const demoCardsRef = React.useRef<HTMLDivElement | null>(null);
+  // Touch: sample cards that start below the fold rise in once, 60 ms apart
+  useTouchReveal(demoCardsRef, { selector: ':scope > button' });
 
   // Rise-in on client mount without mutating SSR text structure (transform and opacity only)
   React.useLayoutEffect(() => {
@@ -947,6 +961,7 @@ export function EmptyStateCard({
             </h2>
 
             <div
+              ref={demoCardsRef}
               data-testid="landing-demo-cards"
               className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-5"
             >

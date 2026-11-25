@@ -3,6 +3,7 @@
 import { Activity } from 'lucide-react';
 import * as React from 'react';
 import { Untranslated } from '@/ui/i18n';
+import { useTouchReveal } from '@/ui/motion/use-touch-motion';
 import { cn } from '@/ui/primitives/cn';
 
 export interface EvidenceShelfProps {
@@ -33,6 +34,10 @@ export function EvidenceShelf({
 }: EvidenceShelfProps): React.JSX.Element {
   const [open, setOpen] = React.useState(defaultOpen);
   const panelId = React.useId();
+  const bodyRef = React.useRef<HTMLDivElement | null>(null);
+  // Touch: once the shelf is open, panels below the fold rise in as they scroll into view.
+  // The closed drawer only clips its content, so the panels already sit at their final place.
+  useTouchReveal(bodyRef, { selector: ':scope > *', enabled: open });
 
   return (
     <section
@@ -133,7 +138,9 @@ export function EvidenceShelf({
         aria-hidden={open ? undefined : 'true'}
       >
         <div>
-          <div className="pt-6 pb-6">{children}</div>
+          <div ref={bodyRef} className="pt-6 pb-6">
+            {children}
+          </div>
         </div>
       </div>
     </section>

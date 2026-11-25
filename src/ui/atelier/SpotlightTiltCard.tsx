@@ -22,7 +22,8 @@ import { useProximityRim } from './ProximityPlate';
  * - 380px cursor spotlight wash inside `.at-bento::before` + shared 1.5px specular rim
  *   across neighbouring cards via `useProximityRim` (`.at-bento::after`).
  * - Zero React re-renders per pointer frame (updates motion values and CSS variables only).
- * - Gracefully silent on touch, coarse pointers, and `prefers-reduced-motion: reduce`.
+ * - Tilt and pointer spotlight stay silent on touch and coarse pointers; there the spotlight
+ *   lights under the finger while pressed. Everything is off under `prefers-reduced-motion`.
  */
 
 const MOTION_TAGS = {
@@ -90,6 +91,8 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
       onPointerMove,
       onPointerLeave,
       onPointerCancel,
+      onPointerDown,
+      onPointerUp,
       ...props
     },
     forwardedRef,
@@ -194,6 +197,7 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
 
     const handleLeave = (event: React.PointerEvent<HTMLElement>): void => {
       onPointerLeave?.(event);
+      releasePressLight(event);
       const rect = rectRef.current;
       // Tilting moves the card's projected edge away from a pointer that rests near it, which
       // fires `pointerleave` while the pointer is still over the card's resting footprint.
@@ -230,7 +234,31 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
 
     const handleCancel = (event: React.PointerEvent<HTMLElement>): void => {
       onPointerCancel?.(event);
+      releasePressLight(event);
       rest();
+    };
+
+    // Touch: no hover to follow, so the spotlight answers the press instead. The wash lights
+    // under the finger while it is down and fades out (opacity only) when it lifts.
+    const handleDown = (event: React.PointerEvent<HTMLElement>): void => {
+      onPointerDown?.(event);
+      if (event.pointerType !== 'touch' || !spotlight || reduced || disabled) return;
+      const el = event.currentTarget;
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      el.style.setProperty('--spot-x', `${Math.round(event.clientX - rect.left)}px`);
+      el.style.setProperty('--spot-y', `${Math.round(event.clientY - rect.top)}px`);
+      el.dataset.spot = 'on';
+    };
+
+    const releasePressLight = (event: React.PointerEvent<HTMLElement>): void => {
+      if (event.pointerType !== 'touch') return;
+      delete event.currentTarget.dataset.spot;
+    };
+
+    const handleUp = (event: React.PointerEvent<HTMLElement>): void => {
+      onPointerUp?.(event);
+      releasePressLight(event);
     };
 
     const Tag = MOTION_TAGS[as] as React.ElementType;
@@ -259,6 +287,8 @@ export const SpotlightTiltCard = React.forwardRef<HTMLElement, SpotlightTiltCard
         onPointerMove={handleMove}
         onPointerLeave={handleLeave}
         onPointerCancel={handleCancel}
+        onPointerDown={handleDown}
+        onPointerUp={handleUp}
       >
         {children}
       </Tag>

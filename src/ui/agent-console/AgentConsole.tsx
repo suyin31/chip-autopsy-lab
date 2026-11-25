@@ -47,6 +47,7 @@ import {
   SPRING_TACTILE,
   SPRING_TOKENS,
   useReducedMotionPreference,
+  useTouchReveal,
 } from '@/ui/motion';
 import {
   AnimatedCheckmark,
@@ -752,6 +753,9 @@ export function AgentConsole() {
   const workerRef = React.useRef<AutopsyWorkerClient | null>(null);
 
   const consoleRef = React.useRef<HTMLDivElement>(null);
+  const railRef = React.useRef<HTMLElement | null>(null);
+  // Touch: the evidence rail sits below the chat on a phone; its blocks rise in once on scroll
+  useTouchReveal(railRef, { selector: ':scope > *' });
   const loadLock = React.useRef(false);
   const [loadingPresetId, setLoadingPresetId] = React.useState<DemoPresetId | null>(null);
   const [lotError, setLotError] = React.useState<{ presetId: DemoPresetId; message: string } | null>(null);
@@ -1693,6 +1697,7 @@ export function AgentConsole() {
         </section>
 
         <aside
+          ref={railRef}
           aria-label={t('agents.rail.aria')}
           data-testid="agent-rail"
           className="relative z-[1] flex flex-col border-t border-hairline bg-[color-mix(in_oklab,var(--surface)_72%,transparent)] [backdrop-filter:var(--at-bento-filter)] [-webkit-backdrop-filter:var(--at-bento-filter)] lg:min-h-0 lg:overflow-hidden lg:border-t-0 lg:border-l vt-route-stage-lg"

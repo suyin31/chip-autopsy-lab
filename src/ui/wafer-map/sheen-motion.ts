@@ -9,6 +9,7 @@
  * writes one `transform`; nothing redraws a canvas.
  */
 
+import { computeScrollLightPoint } from '@/ui/motion/touch-motion';
 import { SPRING_TOKENS, WAFER_TOKENS } from '@/ui/tokens';
 
 /** Main stage amplitude, in disc diameters (§8.11). */
@@ -273,5 +274,80 @@ export function readSheenFollowEnvironment(): SheenFollowEnvironment {
     hoverCapable: mq('(hover: hover)'),
     reducedMotion: mq('(prefers-reduced-motion: reduce)'),
     reducedTransparency: mq('(prefers-reduced-transparency: reduce)'),
+  };
+}
+
+/**
+ * Touch screens have no hovering pointer, so the sheen answers scroll instead: an overhead
+ * light at `TOUCH_SCROLL_LIGHT_Y` of the viewport, and the sheen slides as the disc passes
+ * under it. Same spring, same amplitude, never under reduced motion or transparency.
+ */
+export function canSheenFollowScroll(env: SheenFollowEnvironment): boolean {
+  return !env.hoverCapable && !env.reducedMotion && !env.reducedTransparency;
+}
+
+/** Sheen target for a disc box (client px) under the overhead scroll light. */
+export function computeScrollLightSheenTarget(
+  disc: { readonly left: number; readonly top: number; readonly width: number; readonly height: number },
+  viewport: { readonly width: number; readonly height: number },
+  amplitudeD: number,
+): SheenOffset {
+  const light = computeScrollLightPoint(viewport);
+  return computeSheenTarget(
+    light.x,
+    light.y,
+    disc.left + disc.width / 2,
+    disc.top + disc.height / 2,
+    disc.width / 2,
+    amplitudeD,
+  );
+}
+
+export interface ScrollLightSheenOptions {
+  readonly getDisc: () => Element | null;
+  readonly follower: Pick<SheenFollower, 'setTarget'>;
+  readonly amplitudeD: number;
+}
+
+/**
+ * Binds the scroll light on a touch screen: one rAF-throttled retarget per scroll frame, and
+ * nothing at all when the screen can hover. Returns the cleanup.
+ */
+export function bindScrollLightSheen({
+  getDisc,
+  follower,
+  amplitudeD,
+}: ScrollLightSheenOptions): () => void {
+  if (typeof window === 'undefined' || !canSheenFollowScroll(readSheenFollowEnvironment())) {
+    return () => {};
+  }
+  let frame: number | null = null;
+  const apply = (): void => {
+    frame = null;
+    const env = readSheenFollowEnvironment();
+    if (!canSheenFollowScroll(env)) {
+      follower.setTarget(SHEEN_REST);
+      return;
+    }
+    const el = getDisc();
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.bottom < 0 || r.top > window.innerHeight) return;
+    follower.setTarget(
+      computeScrollLightSheenTarget(
+        r,
+        { width: window.innerWidth, height: window.innerHeight },
+        amplitudeD,
+      ),
+    );
+  };
+  const onScroll = (): void => {
+    frame ??= window.requestAnimationFrame(apply);
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  return () => {
+    window.removeEventListener('scroll', onScroll);
+    if (frame !== null) window.cancelAnimationFrame(frame);
   };
 }
