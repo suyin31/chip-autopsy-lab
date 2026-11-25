@@ -45,11 +45,12 @@ export const BENTO_HOVER_LIFT_PX = -3 as const;
 export const BENTO_PERSPECTIVE_PX = 1000 as const;
 /** True 3D exploded instrument stage constants (v3: strictly capped at 4 deg). */
 export const STAGE_3D_PERSPECTIVE_PX = 1400 as const;
-export const STAGE_3D_MAX_TILT_DEG = 4 as const;
+// Hero stage sits flat (owner, 2026-11-26: the top-right hero cards must not be tilted).
+export const STAGE_3D_MAX_TILT_DEG = 0 as const;
 export const STAGE_3D_REST = {
-  rotateX: 4,
-  rotateY: -5.5,
-  rotateZ: 0.35,
+  rotateX: 0,
+  rotateY: 0,
+  rotateZ: 0,
 } as const;
 /** Primary CTA magnetic pull ceiling in px (plan §2.2.6). */
 export const MAGNETIC_MAX_PX = 4 as const;
