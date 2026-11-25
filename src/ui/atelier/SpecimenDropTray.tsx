@@ -111,18 +111,46 @@ export function SpecimenDropTray({
   'data-testid': testId,
 }: SpecimenDropTrayProps): React.JSX.Element {
   const plateRef = React.useRef<HTMLDivElement | null>(null);
-  useProximityRim(plateRef, { disabled: variant !== 'inline', reachPx: 200 });
+  useProximityRim(plateRef, { disabled: true, reachPx: 200 });
+
+  if (variant === 'inline') {
+    return (
+      <div
+        ref={plateRef}
+        data-testid={testId}
+        data-variant={variant}
+        data-armed={armed ? 'true' : undefined}
+        data-texture="dots"
+        className={cn(
+          'at-obsidian-well relative overflow-hidden rounded-[20px]',
+          className,
+          wellClassName,
+        )}
+      >
+        <DatumTicks />
+        <BorderBeam
+          active={armed}
+          dual
+          radius={20}
+          size={104}
+          width={1.5}
+          durationS={3.8}
+        />
+        {children}
+        {showFormatCaps ? (
+          <FormatKeycaps className="pointer-events-none absolute bottom-3.5 left-1/2 z-[2] -translate-x-1/2" />
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={plateRef}
       data-testid={testId}
       data-variant={variant}
       data-armed={armed ? 'true' : undefined}
-      className={cn(
-        variant === 'overlay' ? 'at-float-card' : 'at-bento',
-        'rounded-[28px] p-2',
-        className,
-      )}
+      className={cn('at-float-card rounded-[28px] p-2', className)}
     >
       <div
         data-texture="dots"
@@ -133,9 +161,9 @@ export function SpecimenDropTray({
           active={armed}
           dual
           radius={20}
-          size={variant === 'overlay' ? 140 : 104}
+          size={140}
           width={1.5}
-          durationS={variant === 'overlay' ? 3.2 : 3.8}
+          durationS={3.2}
         />
         {children}
         {showFormatCaps ? (

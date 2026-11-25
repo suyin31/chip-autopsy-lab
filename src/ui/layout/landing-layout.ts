@@ -110,3 +110,108 @@ export function computeLandingReticleTickLines(
  * checks it against the engine's `stats.edgeShare` value.
  */
 export const LANDING_EXAMPLE_EDGE_SHARE = 0.938 as const;
+
+export interface LandingTelemetryLens {
+  readonly id: 'all-fails' | 'outer-3-rings' | 'only-bin-7' | 'site-1-2';
+  readonly query: string;
+  readonly lotCode: string;
+  readonly dies: number;
+  readonly diesFormatted: string;
+  readonly primaryStat: string;
+  readonly secondaryStat: string;
+  /** Visual emphasis mode on the 28-bin IDDQ_LEAK spectrum. */
+  readonly spectrumFocus: 'all' | 'excursion' | 'nominal';
+}
+
+/**
+ * Real engine-derived filter lenses for `LiveTelemetryStrip` (`src/ui/atelier/LiveTelemetryStrip.tsx`).
+ * Verified against `ingestDemoPreset` in `landing-layout.test.ts`.
+ */
+export const LANDING_TELEMETRY_LENSES: readonly LandingTelemetryLens[] = [
+  {
+    id: 'all-fails',
+    query: 'all fails',
+    lotCode: 'CAL-ER-2401',
+    dies: 2721,
+    diesFormatted: '2,721',
+    primaryStat: '82.8%',
+    secondaryStat: 'Cpk 0.14',
+    spectrumFocus: 'all',
+  },
+  {
+    id: 'outer-3-rings',
+    query: 'outer 3 rings',
+    lotCode: 'CAL-ER-2401',
+    dies: 2552,
+    diesFormatted: '2,552',
+    primaryStat: '93.8%',
+    secondaryStat: '46.4% edge',
+    spectrumFocus: 'excursion',
+  },
+  {
+    id: 'only-bin-7',
+    query: 'only bin 7',
+    lotCode: 'CAL-ER-2401',
+    dies: 2483,
+    diesFormatted: '2,483',
+    primaryStat: '91.3%',
+    secondaryStat: 'SBIN 7',
+    spectrumFocus: 'excursion',
+  },
+  {
+    id: 'site-1-2',
+    query: 'site 1:2',
+    lotCode: 'CAL-S2-2403',
+    dies: 1604,
+    diesFormatted: '1,604',
+    primaryStat: '40.6%',
+    secondaryStat: '89.5% yield',
+    spectrumFocus: 'nominal',
+  },
+] as const;
+
+export interface LandingIddqSpectrumBin {
+  readonly loUa: number;
+  readonly hiUa: number;
+  readonly count: number;
+  readonly outOfSpec: boolean;
+}
+
+export const LANDING_IDDQ_HI_LIMIT_UA = 15.0 as const;
+export const LANDING_IDDQ_MEAN_UA = 10.22 as const;
+export const LANDING_IDDQ_MAX_BIN_COUNT = 7706 as const;
+
+/**
+ * Exact 28-bin `computeParametricHistogram` output for `edge-ring-etch` `IDDQ_LEAK` (`#204`).
+ * Asserted bin-for-bin against the live STDF engine in `landing-layout.test.ts`.
+ */
+export const LANDING_IDDQ_SPECTRUM_BINS: readonly LandingIddqSpectrumBin[] = [
+  { loUa: 1.2, hiUa: 3.1, count: 971, outOfSpec: false },
+  { loUa: 3.1, hiUa: 4.9, count: 7706, outOfSpec: false },
+  { loUa: 4.9, hiUa: 6.8, count: 1683, outOfSpec: false },
+  { loUa: 6.8, hiUa: 8.6, count: 468, outOfSpec: false },
+  { loUa: 8.6, hiUa: 10.4, count: 1240, outOfSpec: false },
+  { loUa: 10.4, hiUa: 12.3, count: 933, outOfSpec: false },
+  { loUa: 12.3, hiUa: 14.1, count: 307, outOfSpec: false },
+  { loUa: 14.1, hiUa: 16.0, count: 34, outOfSpec: true },
+  { loUa: 16.0, hiUa: 17.8, count: 0, outOfSpec: true },
+  { loUa: 17.8, hiUa: 19.7, count: 0, outOfSpec: true },
+  { loUa: 19.7, hiUa: 21.5, count: 17, outOfSpec: true },
+  { loUa: 21.5, hiUa: 23.4, count: 29, outOfSpec: true },
+  { loUa: 23.4, hiUa: 25.2, count: 58, outOfSpec: true },
+  { loUa: 25.2, hiUa: 27.1, count: 90, outOfSpec: true },
+  { loUa: 27.1, hiUa: 28.9, count: 131, outOfSpec: true },
+  { loUa: 28.9, hiUa: 30.7, count: 217, outOfSpec: true },
+  { loUa: 30.7, hiUa: 32.6, count: 253, outOfSpec: true },
+  { loUa: 32.6, hiUa: 34.4, count: 267, outOfSpec: true },
+  { loUa: 34.4, hiUa: 36.3, count: 293, outOfSpec: true },
+  { loUa: 36.3, hiUa: 38.1, count: 265, outOfSpec: true },
+  { loUa: 38.1, hiUa: 40.0, count: 263, outOfSpec: true },
+  { loUa: 40.0, hiUa: 41.8, count: 212, outOfSpec: true },
+  { loUa: 41.8, hiUa: 43.7, count: 152, outOfSpec: true },
+  { loUa: 43.7, hiUa: 45.5, count: 111, outOfSpec: true },
+  { loUa: 45.5, hiUa: 47.3, count: 61, outOfSpec: true },
+  { loUa: 47.3, hiUa: 49.2, count: 37, outOfSpec: true },
+  { loUa: 49.2, hiUa: 51.0, count: 17, outOfSpec: true },
+  { loUa: 51.0, hiUa: 52.9, count: 10, outOfSpec: true },
+] as const;

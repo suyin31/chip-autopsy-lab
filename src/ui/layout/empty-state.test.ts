@@ -102,8 +102,12 @@ describe('R4 landing hero, drag overlay, §3.7 parse error codes, and §3.8 bins
     expect(html).toMatch(/data-testid="demo-chip-edge-ring-etch"[^>]*>Edge ring</);
     expect(html).toMatch(/data-testid="demo-chip-handling-scratch"[^>]*>Scratch</);
     expect(html).toMatch(/data-testid="demo-chip-site2-probe-contact"[^>]*>Probe site</);
-    expect(html).toContain('data-testid="bento-capability-pipeline"');
-    expect(html).toContain('data-testid="bento-capability-agents"');
+    // UI v3: mid-page 12-col frameless interactive telemetry strip replaces the 2 capability Bento boxes
+    expect(html).toContain('data-testid="landing-telemetry-strip"');
+    expect(html).toContain('data-testid="telemetry-spectrum-svg"');
+    expect(html).toContain('2,721');
+    expect(html).not.toContain('data-testid="bento-capability-pipeline"');
+    expect(html).not.toContain('data-testid="bento-capability-agents"');
 
     // Hero right: 3D Exploded Forensic Stage (no 440 px decorative hero wafer; compact 84 px data plot only)
     expect(html).toContain('data-testid="landing-hero-stage-3d"');

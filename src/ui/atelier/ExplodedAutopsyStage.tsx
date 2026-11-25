@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpRight, Bot, Sparkles } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import {
   motion,
   useMotionValue,
@@ -9,18 +9,19 @@ import {
   useTransform,
   type MotionValue,
 } from 'motion/react';
-import Link from 'next/link';
 import * as React from 'react';
 import { Untranslated, useT } from '@/ui/i18n';
 import { LANDING_EXAMPLE_EDGE_SHARE } from '@/ui/layout/landing-layout';
 import {
   SPRING_STAGE_3D,
+  STAGE_3D_MAX_TILT_DEG,
   STAGE_3D_PERSPECTIVE_PX,
   STAGE_3D_REST,
   useReducedMotionPreference,
 } from '@/ui/motion';
 import { Button, cn, CountUp } from '@/ui/primitives';
 import { BorderBeam } from './BorderBeam';
+import { ProbeTraceCanvas } from './ProbeTraceCanvas';
 import { useProximityRim } from './ProximityPlate';
 
 export interface ExplodedAutopsyStageProps {
@@ -79,16 +80,14 @@ function StageScrollConnector({
 }
 
 /**
- * True 3D Exploded Forensic Instrument Stage (`src/ui/atelier/ExplodedAutopsyStage.tsx`).
+ * Dual-Plane 3D Forensic Instrument Stage (`src/ui/atelier/ExplodedAutopsyStage.tsx`, UI v3).
  *
- * Replaces the old 440px decorative hero wafer circle with a genuine multi-plane CSS 3D
- * (`perspective: 1400px`, `transform-style: preserve-3d`) forensic deck:
- * - Z = -34px Backplane: STDF V4 binary record stream (`FAR · MIR · PTR · PRR`) & local privacy meter
- * - Z =   0px Main Obsidian Deck: Live Bin Pareto cascade + Parametric Cpk bell curve + compact 88px data wafer plot
- * - Z = +38px Specialist Troupe Floating Card below the deck's lower-right corner (links to `/agents`)
- * - Z = +54px Bottom-Left High-Elevation `Example result` Verdict Card with 93.8% radial ring & leader line
- *
- * Driven simultaneously by pointer 3D parallax springs and scroll-driven 3D unfolding.
+ * Streamlined from 4 stacked cards down to a clean, authoritative dual-plane rig
+ * (`perspective: 1400px`, pointer tilt capped at `±4°`, flattening to `0°` on scroll):
+ * - Frameless top STDF V4 binary stream eyebrow (`FAR · MIR · PTR · PRR` + `STDF V4 · 25W · 15,825D`)
+ * - Z =   0px Main Obsidian Deck: Live Bin Pareto cascade + Live 2D Canvas `IDDQ_LEAK` Probe
+ *   Oscilloscope (`Cpk 0.14`) + compact 84px data wafer plot
+ * - Z = +48px Bottom-Left High-Elevation `Example result` Verdict Card (`93.8%` radial ring & leader line)
  */
 export function ExplodedAutopsyStage({
   disabled,
@@ -108,14 +107,12 @@ export function ExplodedAutopsyStage({
   const sceneRef = React.useRef<HTMLDivElement | null>(null);
   const deckRef = React.useRef<HTMLButtonElement | null>(null);
   const verdictCardRef = React.useRef<HTMLDivElement | null>(null);
-  const agentChipRef = React.useRef<HTMLAnchorElement | null>(null);
 
   useProximityRim(verdictCardRef, { reachPx: 220 });
-  useProximityRim(agentChipRef, { reachPx: 180 });
 
   const [hoveredDeck, setHoveredDeck] = React.useState(false);
 
-  // Pointer normalized [-1, 1] -> spring-smoothed 3D rig angles + multi-plane parallax
+  // Pointer normalized [-1, 1] -> spring-smoothed 3D rig angles capped at ±4° + scroll flattening
   const pointerNX = useMotionValue(0);
   const pointerNY = useMotionValue(0);
   const scrollProgress = useMotionValue(0);
@@ -125,31 +122,30 @@ export function ExplodedAutopsyStage({
 
   const rigRotateX = useTransform(
     [smoothNY, scrollProgress],
-    ([ny, sp]: number[]) =>
-      STAGE_3D_REST.rotateX - (ny ?? 0) * 6.5 + (sp ?? 0) * 8.5,
+    ([ny, sp]: number[]) => {
+      const flatten = 1 - Math.min(1, Math.max(0, sp ?? 0));
+      return (STAGE_3D_REST.rotateX - (ny ?? 0) * STAGE_3D_MAX_TILT_DEG) * flatten;
+    },
   );
   const rigRotateY = useTransform(
     [smoothNX, scrollProgress],
-    ([nx, sp]: number[]) =>
-      STAGE_3D_REST.rotateY + (nx ?? 0) * 8.5 + (sp ?? 0) * 7.5,
+    ([nx, sp]: number[]) => {
+      const flatten = 1 - Math.min(1, Math.max(0, sp ?? 0));
+      return (STAGE_3D_REST.rotateY + (nx ?? 0) * STAGE_3D_MAX_TILT_DEG) * flatten;
+    },
   );
   const rigRotateZ = useTransform(
     scrollProgress,
     [0, 1],
     [STAGE_3D_REST.rotateZ, 0],
   );
-  const rigY = useTransform(scrollProgress, [0, 1], [0, 22]);
+  const rigY = useTransform(scrollProgress, [0, 1], [0, 18]);
 
-  // Parallax counter-drift for floating foreground cards
-  const floatCardX = useTransform(smoothNX, (nx) => nx * 9);
+  // Subtle parallax counter-drift for the single foreground verdict card
+  const floatCardX = useTransform(smoothNX, (nx) => nx * 6);
   const floatCardY = useTransform(
     [smoothNY, scrollProgress],
-    ([ny, sp]: number[]) => (ny ?? 0) * 7 - (sp ?? 0) * 16,
-  );
-  const agentChipX = useTransform(smoothNX, (nx) => nx * -8);
-  const agentChipY = useTransform(
-    [smoothNY, scrollProgress],
-    ([ny, sp]: number[]) => (ny ?? 0) * -6 - (sp ?? 0) * 10,
+    ([ny, sp]: number[]) => (ny ?? 0) * 5 - (sp ?? 0) * 12,
   );
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>): void => {
@@ -227,11 +223,10 @@ export function ExplodedAutopsyStage({
         }
         className="at-rig-3d relative z-[1] w-full max-w-[560px] max-lg:!transform-none"
       >
-        {/* PLANE 1 (Z = -34px): STDF V4 Binary Stream Backplane */}
+        {/* Frameless STDF V4 Binary Record Eyebrow Ruler (unboxed from Plane 1) */}
         <div
           aria-hidden="true"
-          style={reduced ? undefined : { transform: 'translateZ(-34px) translateY(-18px) scale(0.96)' }}
-          className="at-bento pointer-events-none hidden flex-col gap-2.5 rounded-[24px] px-5 py-3.5 opacity-92 sm:flex max-lg:!transform-none max-lg:mb-3"
+          className="pointer-events-none mb-3 hidden flex-col gap-2 border-b border-hairline px-1 pb-2.5 sm:flex"
         >
           <div className="flex items-center justify-between gap-3">
             <span className="inline-flex items-center gap-2 text-[12px] font-[500] text-text-secondary">
@@ -256,13 +251,7 @@ export function ExplodedAutopsyStage({
           </div>
         </div>
 
-        {/* Deck anchor: the agent chip hangs off the deck's lower-right corner, so it never
-            covers the backplane or the verdict card whatever their heights are. */}
-        <div
-          style={reduced ? undefined : { transformStyle: 'preserve-3d' }}
-          className="relative max-lg:!transform-none"
-        >
-        {/* PLANE 2 (Z = 0px): Main Obsidian Forensic Console Deck */}
+        {/* PLANE 1 (Z = 0px): Main Obsidian Forensic Console Deck */}
         <motion.button
           ref={deckRef}
           type="button"
@@ -309,8 +298,8 @@ export function ExplodedAutopsyStage({
             </span>
           </div>
 
-          {/* 3-View Coordinated Forensic Readout (Pareto + Cpk Curve + Compact Data Map) */}
-          <div className="relative z-[1] mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)_auto] sm:items-center">
+          {/* 3-View Coordinated Forensic Readout (Pareto + Live Probe Oscilloscope + Compact Data Map) */}
+          <div className="relative z-[1] mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_auto] sm:items-center">
             {/* View A: Bin Loss Cascade */}
             <div className="rounded-2xl bg-fill-1 p-3 shadow-[inset_0_0_0_1px_var(--hairline)]">
               <div className="flex items-baseline justify-between gap-2">
@@ -350,7 +339,7 @@ export function ExplodedAutopsyStage({
               </div>
             </div>
 
-            {/* View B: Parametric Capability Curve (IDDQ_LEAK Cpk 0.14) */}
+            {/* View B: Live Parametric Probe Oscilloscope (IDDQ_LEAK Cpk 0.14) */}
             <div className="rounded-2xl bg-fill-1 p-3 shadow-[inset_0_0_0_1px_var(--hairline)]">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="truncate text-[11.5px] font-[500] text-text-secondary">
@@ -360,49 +349,20 @@ export function ExplodedAutopsyStage({
                   Cpk 0.14
                 </Untranslated>
               </div>
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 132 58"
-                className="mt-2 h-[54px] w-full overflow-visible"
-              >
-                {/* Out-of-spec tail fill beyond HI limit */}
-                <path
-                  d="M84 48 L84 22 Q98 30 112 42 Q120 47 128 48 Z"
-                  className="at-fill-signal-soft"
-                />
-                {/* Shifted distribution curve */}
-                <path
-                  d="M6 48 Q32 47 48 34 Q66 10 80 18 Q98 30 114 43 Q122 47 128 48"
-                  fill="none"
-                  strokeWidth="1.75"
-                  className="at-stroke-iris"
-                />
-                {/* HI_LIMIT vertical dashed line */}
-                <line
-                  x1="84"
-                  y1="6"
-                  x2="84"
-                  y2="50"
-                  stroke="rgba(255,255,255,0.55)"
-                  strokeWidth="1.2"
-                  strokeDasharray="3 2.5"
-                />
-                <line
-                  x1="4"
-                  y1="48"
-                  x2="128"
-                  y2="48"
-                  stroke="rgba(255,255,255,0.14)"
-                  strokeWidth="1"
-                />
-              </svg>
+              <ProbeTraceCanvas
+                mode="single"
+                channelIndex={1}
+                height={54}
+                className="mt-2"
+                data-testid="landing-hero-probe-trace"
+              />
               <div className="mt-1 flex items-center justify-between text-[10.5px] text-text-tertiary tabular-nums">
                 <Untranslated className="truncate font-mono">IDDQ_LEAK</Untranslated>
                 <Untranslated className="font-mono">HI 15 uA</Untranslated>
               </div>
             </div>
 
-            {/* View C: Compact Data-Scale Wafer Plot (strictly data sub-view, 88px) */}
+            {/* View C: Compact Data-Scale Wafer Plot (strictly data sub-view, 84px) */}
             <div className="flex flex-col items-center justify-center gap-1.5 self-stretch rounded-2xl bg-fill-1 px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--hairline)]">
               <div className="relative flex items-center justify-center rounded-full p-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
                 {compactDataPlot}
@@ -414,51 +374,7 @@ export function ExplodedAutopsyStage({
           </div>
         </motion.button>
 
-        {/* PLANE 3 (Z = +38px): Floating 4-Specialist Agent Troupe Chip (Lower Right, below the deck) */}
-        <motion.div
-          style={
-            enableLive3D
-              ? {
-                  x: agentChipX,
-                  y: agentChipY,
-                  z: 38,
-                }
-              : reduced
-                ? undefined
-                : { transform: 'translateZ(38px)' }
-          }
-          className="mt-3 flex justify-end lg:absolute lg:top-[calc(100%+16px)] lg:-right-3 lg:z-[4] lg:mt-0 max-lg:!transform-none"
-        >
-          <Link
-            ref={agentChipRef}
-            href="/agents"
-            data-testid="landing-hero-agent-chip"
-            className={cn(
-              'at-float-card group/chip inline-flex max-w-full items-center gap-2.5 rounded-2xl px-3.5 py-2 text-left no-underline lg:max-w-[188px] xl:max-w-[236px]',
-              'transition-[transform,scale] duration-200 ease-[var(--ease-out)] [@media(hover:hover)]:hover:-translate-y-0.5 active:scale-[0.98]',
-              'focus-visible:shadow-focus-ring focus-visible:outline-none',
-            )}
-          >
-            <span className="at-icon-well at-icon-well-iris size-7 shrink-0 rounded-lg">
-              <Bot className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1.5 text-[12.5px] font-[540] text-text-primary">
-                <span>{t('nav.agent')}</span>
-                <Sparkles className="size-3 text-text-tertiary" aria-hidden="true" />
-              </span>
-              <span className="block truncate text-[11px] text-text-tertiary">
-                {t('agents.role.autopsy_conductor')} · {t('agents.role.pattern_pathologist')} ·{' '}
-                {t('agents.role.evidence_auditor')}
-              </span>
-            </span>
-          </Link>
-        </motion.div>
-
-        </div>
-
-
-        {/* PLANE 4 (Z = +56px): Floating High-Elevation `Example result` Verdict Card (Bottom Left) */}
+        {/* PLANE 2 (Z = +48px): Floating High-Elevation `Example result` Verdict Card (Bottom Left) */}
         <motion.div
           ref={verdictCardRef}
           data-testid="landing-example-card"
@@ -467,13 +383,13 @@ export function ExplodedAutopsyStage({
               ? {
                   x: floatCardX,
                   y: floatCardY,
-                  z: 56,
+                  z: 48,
                 }
               : reduced
                 ? undefined
-                : { transform: 'translateZ(56px)' }
+                : { transform: 'translateZ(48px)' }
           }
-          className="at-float-card relative z-[5] mt-3 w-full p-4 text-left sm:mt-4 sm:w-[348px] lg:-mt-8 lg:-ml-2 lg:w-[320px] xl:-ml-6 xl:w-[348px] max-lg:!transform-none"
+          className="at-float-card relative z-[5] mt-3 w-full p-4 text-left sm:mt-4 sm:w-[348px] lg:-mt-7 lg:-ml-2 lg:w-[320px] xl:-ml-6 xl:w-[348px] max-lg:!transform-none"
         >
           {/* SVG Leader Line connecting the floating verdict card back to the obsidian deck */}
           <svg
