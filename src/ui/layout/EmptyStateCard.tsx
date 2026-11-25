@@ -1,6 +1,6 @@
 'use client';
 
-import { Download } from 'lucide-react';
+import { ArrowDown, Download } from 'lucide-react';
 import {
   animate,
   type AnimationPlaybackControls,
@@ -71,6 +71,8 @@ import {
   paintLandingCardWafer,
   resolveCanvasPixelSize,
 } from '@/ui/wafer-map/wafer-geometry';
+import { useProximityRim } from '@/ui/atelier/ProximityPlate';
+import { SpecimenDropTray, SpecimenSeat } from '@/ui/atelier/SpecimenDropTray';
 import { ErrorDetailsSheet } from './ErrorDetailsSheet';
 import {
   computeLandingReticleTickLines,
@@ -505,6 +507,8 @@ const LANDING_CARD_STAGGER_STEP_MS = 60;
 const LANDING_CARD_STAGGER_MAX_WINDOW_MS = 120;
 /** Vertical rise offset for landing sample cards (`translateY(10px) -> 0`). */
 const LANDING_CARD_REVEAL_OFFSET_Y_PX = 10;
+/** Maximum tilt of a specimen case card (UI plan §4 B: restrained, text stays readable). */
+const SPECIMEN_CASE_TILT_DEG = 2.5;
 
 interface DemoLotCardButtonProps {
   readonly presetId: DemoPresetId;
@@ -561,10 +565,13 @@ function DemoLotCardButton({
     disabled: reduced || revealDisabled,
   });
 
+  // Specimen case cards keep only a trace of tilt (2.5°) so the text never sways; the edge light
+  // comes from the shared proximity rim instead.
   useTactileTilt(buttonRef, {
-    maxDeg: TILT_TOKENS.maxDegCard,
+    maxDeg: SPECIMEN_CASE_TILT_DEG,
     disabled: disabled || !revealed || pressed,
   });
+  useProximityRim(buttonRef, { disabled });
 
   const setButtonRef = React.useCallback(
     (node: HTMLButtonElement | null): void => {
@@ -700,7 +707,7 @@ function DemoLotCardButton({
       disabled={disabled}
       aria-disabled={disabled ? 'true' : undefined}
       data-testid={`demo-card-${presetId}`}
-      data-spotlight="true"
+      data-lift=""
       aria-label={t('demo.openAria', { title })}
       aria-describedby={descId}
       onPointerDown={handlePointerDown}
@@ -710,21 +717,23 @@ function DemoLotCardButton({
       onBlur={releasePress}
       onClick={() => onLoadDemoLot(presetId)}
       className={cn(
-        // premium §11.2 sample card: a `fill-1` tile holding only the disc, with the text below
-        // it on the page bg; mobile 300 px carousel item, sm full-width stack, 3-up from 1024
-        'cal-tactile group relative flex w-[300px] shrink-0 snap-start cursor-pointer flex-col text-left select-none sm:w-full',
+        // Specimen case: a machined plate (r 32, padding 8) holding the `fill-1` well with the
+        // disc (r 24, concentric) and the label plate under it; mobile 300 px carousel item, sm
+        // full-width stack, 3-up from 1024
+        'at-optic cal-tactile group relative flex w-[300px] shrink-0 snap-start cursor-pointer flex-col p-2 text-left select-none sm:w-full',
         // §8.9 hover lift -2 px (the tile cross-fades its `shadow-card`)
         'transition-[translate] duration-[160ms] ease-[var(--ease-out)] [@media(hover:hover)]:enabled:hover:duration-[240ms]',
         '[@media(hover:hover)]:motion-safe:enabled:hover:-translate-y-0.5',
-        'rounded-2xl focus-visible:shadow-focus-ring focus-visible:outline-none',
+        'rounded-[32px] focus-visible:shadow-focus-ring focus-visible:outline-none',
         'disabled:cursor-not-allowed disabled:opacity-40',
       )}
     >
       <div
         data-testid={`demo-tile-${presetId}`}
         className={cn(
-          // `r-2xl`, no shadow at rest; `shadow-card` on hover through a pseudo-element's opacity
-          'relative flex w-full items-center justify-center rounded-2xl bg-fill-1 py-10',
+          // `r-2xl` well sunk into the case (`--elev-well`); `shadow-card` on hover through a
+          // pseudo-element's opacity
+          'relative flex w-full items-center justify-center rounded-2xl bg-fill-1 py-10 shadow-[var(--elev-well)]',
           "before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:opacity-0 before:shadow-card before:content-['']",
           'before:transition-opacity before:duration-[160ms] before:ease-[var(--ease-out)]',
           '[@media(hover:hover)]:group-enabled:group-hover:before:opacity-100 [@media(hover:hover)]:group-enabled:group-hover:before:duration-[240ms]',
@@ -753,13 +762,14 @@ function DemoLotCardButton({
       <div
         id={descId}
         data-testid={`demo-caption-${presetId}`}
-        className="mt-4 flex w-full min-w-0 flex-col"
+        className="flex w-full min-w-0 flex-col px-3 pt-4 pb-3"
       >
         <span className="truncate type-headline text-text-primary">{title}</span>
         <span className="mt-1 truncate type-callout text-text-secondary lg:max-xl:line-clamp-2 lg:max-xl:whitespace-normal">
           {description}
         </span>
-        <span className="mt-2 truncate type-subhead text-text-tertiary">
+        {/* Label plate: the specimen's count, ruled off like a case label */}
+        <span className="mt-3 truncate border-t border-hairline pt-3 type-subhead text-text-tertiary tabular-nums">
           {meta}
         </span>
       </div>
@@ -1281,27 +1291,40 @@ export function EmptyStateCard({
               >
                 {t('landing.primary')}
               </Button>
+            </div>
 
+            {/* Surprise #1, at rest: the specimen slot. A well cut into a plate with datum marks;
+                your own log goes here (or anywhere on the page, see FullWindowDropZone). */}
+            <SpecimenDropTray
+              variant="inline"
+              data-testid="landing-drop-tray"
+              className="mt-5 w-full max-w-[520px]"
+              wellClassName="flex flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:gap-4 sm:py-3 sm:pr-6 sm:pl-7"
+            >
+              <span className="flex min-w-0 flex-1 items-center gap-3">
+                <SpecimenSeat size={36} className="max-sm:hidden">
+                  <ArrowDown className="size-3.5 text-text-tertiary" strokeWidth={1.75} aria-hidden="true" />
+                </SpecimenSeat>
+                <p
+                  data-testid="landing-hint"
+                  className="min-w-0 type-subhead text-text-secondary"
+                >
+                  <span className="sm:hidden">{t('landing.hintShort')}</span>
+                  <span className="max-sm:hidden">{t('landing.hint')}</span>
+                </p>
+              </span>
               <Button
                 variant="secondary"
-                size="lg"
+                size="md"
                 data-testid="landing-open-stdf-button"
                 aria-controls="cal-file-picker"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled}
-                className="h-11 w-full sm:h-12 sm:w-auto"
+                className="w-full shrink-0 sm:w-auto"
               >
                 {t('landing.secondary')}
               </Button>
-            </div>
-
-            <p
-              data-testid="landing-hint"
-              className="mt-4 type-subhead text-text-tertiary"
-            >
-              <span className="sm:hidden">{t('landing.hintShort')}</span>
-              <span className="max-sm:hidden">{t('landing.hint')}</span>
-            </p>
+            </SpecimenDropTray>
           </div>
 
           {/* The specimen: the sample lot's disc, lit, with its finding pinned to it. */}

@@ -130,6 +130,10 @@ export function AppShell({
   const [downloadingPresetId, setDownloadingPresetId] =
     React.useState<DemoPresetId | null>(null);
   const [paletteOpen, setPaletteOpen] = React.useState(false);
+  // The nav pill that opened the palette (morph origin); `null` when opened from the keyboard.
+  const [paletteOrigin, setPaletteOrigin] = React.useState<HTMLElement | null>(null);
+  const paletteOpenRef = React.useRef(false);
+  paletteOpenRef.current = paletteOpen;
   const [liveAnnouncement, setLiveAnnouncement] = React.useState('');
 
   const navFileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -204,7 +208,10 @@ export function AppShell({
           return;
         }
         event.preventDefault();
-        setPaletteOpen((prev) => !prev);
+        if (!paletteOpenRef.current) {
+          setPaletteOrigin(null);
+        }
+        setPaletteOpen(!paletteOpenRef.current);
         return;
       }
       if (
@@ -693,6 +700,10 @@ export function AppShell({
         onSelectDemoPreset={(presetId) => handleLoadDemoLot(presetId)}
         onSelectRecentLot={handleSelectRecentLot}
         onOpenFilePicker={handleOpenFilePicker}
+        onOpenCommandPalette={(origin) => {
+          setPaletteOrigin(origin);
+          setPaletteOpen(true);
+        }}
         disabled={isLoading}
       />
 
@@ -797,6 +808,7 @@ export function AppShell({
       {/* Task 17: Instant (0 ms) Cmd-K / Ctrl-K Command Palette */}
       <CommandPalette
         open={paletteOpen}
+        origin={paletteOrigin}
         onClose={() => setPaletteOpen(false)}
         lot={workspace.status === 'ready' ? workspace.payload.lot : null}
         presets={presets}

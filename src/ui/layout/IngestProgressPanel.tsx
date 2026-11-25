@@ -2,6 +2,7 @@
 
 import { motion } from 'motion/react';
 import * as React from 'react';
+import { BorderBeam } from '@/ui/atelier/BorderBeam';
 import { Untranslated, useT } from '@/ui/i18n';
 import {
   resolveViewMorphTransition,
@@ -145,8 +146,9 @@ function LoadingDisc(): React.JSX.Element {
  * - Stage column: header caption "Reading…" (`subhead` tertiary), the bare disc at the fit
  *   diameter, and space reserved for the control row and strip from 1024.
  * - Verdict column at the verdict position: `headline` file name (1 line, ellipsis); 8 px;
- *   `body` secondary status; 20 px; 2 px `fill-3` track, 320 wide (full width below 640),
- *   `ink` fill scaled by `transform: scaleX(p)` from the left; 8 px; `subhead` tertiary bytes.
+ *   `body` secondary status; 20 px; a readout well holding the 2 px `fill-3` track, 320 wide
+ *   (full width below 640), `ink` fill scaled by `transform: scaleX(p)` from the left, the
+ *   `subhead` tertiary bytes and the percent; one signal beam travels the well's edge.
  * - No skeletons, no spinners.
  */
 export function IngestProgressPanel({
@@ -205,30 +207,43 @@ export function IngestProgressPanel({
           ) : null}
         </p>
 
+        {/* Readout well: the track sits in a groove, and one probe beam runs its edge while the
+            worker reads. The beam goes dark the moment parsing ends (the panel unmounts). */}
         <div
-          role="progressbar"
-          data-testid="ingest-progress-track"
-          aria-label={t('loading.progressAria', {
-            percent: pctLabel ?? '0%',
-          })}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={pct !== null ? Math.round(pct) : undefined}
-          aria-valuetext={valueText}
-          className="mt-5 h-0.5 w-full overflow-hidden rounded-pill bg-fill-3 sm:w-80"
+          data-testid="ingest-readout"
+          className="at-well relative mt-5 w-full rounded-[16px] px-4 pt-4 pb-3 sm:w-[352px]"
         >
+          <BorderBeam active radius={16} size={64} durationS={3.2} data-testid="ingest-beam" />
           <div
-            style={{
-              transform: `scaleX(${ratio !== null ? Number(ratio.toFixed(4)) : 0.15})`,
-              transformOrigin: 'left',
-            }}
-            className="h-full w-full rounded-pill bg-ink transition-transform duration-[120ms] ease-[var(--ease-out)]"
-          />
-        </div>
+            role="progressbar"
+            data-testid="ingest-progress-track"
+            aria-label={t('loading.progressAria', {
+              percent: pctLabel ?? '0%',
+            })}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={pct !== null ? Math.round(pct) : undefined}
+            aria-valuetext={valueText}
+            className="h-0.5 w-full overflow-hidden rounded-pill bg-fill-3 sm:w-80"
+          >
+            <div
+              style={{
+                transform: `scaleX(${ratio !== null ? Number(ratio.toFixed(4)) : 0.15})`,
+                transformOrigin: 'left',
+              }}
+              className="h-full w-full rounded-pill bg-ink transition-transform duration-[120ms] ease-[var(--ease-out)]"
+            />
+          </div>
 
-        <p className="mt-2 type-subhead text-text-tertiary tabular-nums">
-          {bytesCopy}
-        </p>
+          <p className="mt-2.5 flex items-baseline justify-between gap-3 type-subhead text-text-tertiary tabular-nums">
+            <span>{bytesCopy}</span>
+            {pctLabel !== null ? (
+              <span aria-hidden="true" className="text-text-secondary">
+                {pctLabel}
+              </span>
+            ) : null}
+          </p>
+        </div>
       </div>
 
       {/* Stage column position (§6.2): same sticky box, header, and wafer area as the loaded stage */}

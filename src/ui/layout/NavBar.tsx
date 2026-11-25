@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, FolderOpen } from 'lucide-react';
+import { Bot, FolderOpen, Search } from 'lucide-react';
 import { motion, useScroll } from 'motion/react';
 import Link from 'next/link';
 import * as React from 'react';
@@ -27,8 +27,58 @@ export interface NavBarProps {
   readonly onSelectDemoPreset: (presetId: DemoPresetId) => void;
   readonly onSelectRecentLot: (recentId: string) => void;
   readonly onOpenFilePicker: () => void;
+  /** Opens the command palette from the visible search pill; the pill is the morph origin. */
+  readonly onOpenCommandPalette?: (origin: HTMLElement) => void;
   readonly disabled?: boolean;
   readonly className?: string;
+}
+
+/**
+ * Visible ⌘K pill (UI plan §4 D): a shallow well holding a search glyph, a plain label, and the
+ * shortcut on a keycap. Clicking it grows the command palette out of the pill itself.
+ */
+function CommandSearchPill({
+  disabled,
+  onOpen,
+}: {
+  readonly disabled: boolean;
+  readonly onOpen: (origin: HTMLElement) => void;
+}): React.JSX.Element {
+  const { t } = useT();
+  const [modKey, setModKey] = React.useState('Ctrl');
+  React.useEffect(() => {
+    if (/mac|iphone|ipad|ipod/i.test(navigator.platform || navigator.userAgent)) {
+      setModKey('⌘');
+    }
+  }, []);
+  return (
+    <button
+      type="button"
+      data-testid="nav-command-pill"
+      aria-label={t('palette.ariaLabel')}
+      aria-haspopup="dialog"
+      aria-keyshortcuts="Meta+K Control+K"
+      disabled={disabled}
+      onClick={(event) => onOpen(event.currentTarget)}
+      className={cn(
+        'at-well relative mr-2 inline-flex h-8 cursor-pointer items-center gap-2 rounded-pill pr-1 pl-3 type-control text-text-tertiary select-none max-sm:hidden',
+        "after:absolute after:inset-x-0 after:-inset-y-1 after:content-['']",
+        'transition-[color,scale] duration-[120ms] ease-[var(--ease-out)] [@media(hover:hover)]:enabled:hover:text-text-primary',
+        'motion-safe:enabled:active:scale-[0.97]',
+        'focus-visible:shadow-focus-ring focus-visible:outline-none',
+        'disabled:cursor-not-allowed disabled:opacity-40',
+      )}
+    >
+      <Search className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+      <span className="max-xl:hidden">{t('palette.placeholder')}</span>
+      <kbd
+        aria-hidden="true"
+        className="inline-flex h-6 min-w-6 items-center justify-center rounded-pill bg-surface px-1.5 text-[12px] leading-none font-[500] text-text-secondary shadow-[var(--elev-keycap)] dark:bg-fill-2"
+      >
+        {modKey}K
+      </kbd>
+    </button>
+  );
 }
 
 function NavScrollProgress(): React.JSX.Element {
@@ -59,6 +109,7 @@ export function NavBar({
   onSelectDemoPreset,
   onSelectRecentLot,
   onOpenFilePicker,
+  onOpenCommandPalette,
   disabled = false,
   className,
 }: NavBarProps): React.JSX.Element {
@@ -188,11 +239,14 @@ export function NavBar({
 
         {/* Right: language, 4 px, theme, 12 px, Open file (hidden on landing, which has its own) */}
         <div className="flex items-center justify-self-end">
+          {activeLot !== null && onOpenCommandPalette ? (
+            <CommandSearchPill disabled={disabled} onOpen={onOpenCommandPalette} />
+          ) : null}
           <Link
             href="/agents"
             data-testid="nav-agent-console"
             className={cn(
-              'mr-2 inline-flex h-9 items-center rounded-pill px-3 type-control text-text-secondary no-underline',
+              'mr-2 inline-flex h-9 items-center rounded-pill px-3 type-control whitespace-nowrap text-text-secondary no-underline',
               'max-sm:size-11 max-sm:justify-center max-sm:px-0',
               'transition-[background-color,color] duration-[120ms] ease-[var(--ease-out)] hover:bg-fill-1 hover:text-text-primary',
               'focus-visible:shadow-focus-ring focus-visible:outline-none',

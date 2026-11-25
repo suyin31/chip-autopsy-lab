@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   X,
 } from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import type { StoreApi } from 'zustand';
@@ -29,6 +30,7 @@ import {
 } from '@/core/query';
 import { useT } from '@/ui/i18n';
 import { cn, MATERIAL_THICK_CLASS } from '@/ui/primitives';
+import { MorphingLayer, MorphingPanel, MorphingScrim } from '@/ui/primitives/morphing-dialog';
 import {
   type SelectionStoreState,
   useSelectionStore,
@@ -79,6 +81,11 @@ export interface CommandPaletteProps {
   readonly initialParseError?: string | null;
   /** Disable React portal mounting for SSR / static markup tests. */
   readonly disablePortal?: boolean;
+  /**
+   * Element the palette grows out of (the nav search pill). `null` (keyboard shortcut) opens and
+   * closes in place at 0 ms.
+   */
+  readonly origin?: HTMLElement | null;
 }
 
 type PaletteItemKind =
@@ -299,6 +306,7 @@ export function CommandPalette({
   initialQuery = '',
   initialParseError = null,
   disablePortal = false,
+  origin = null,
 }: CommandPaletteProps): React.JSX.Element | null {
   const { t } = useT();
   const baseId = React.useId();
@@ -752,36 +760,35 @@ export function CommandPalette({
     }
   }, [open, activeOption]);
 
-  if (!open) {
-    return null;
-  }
-
   let runningIndex = 0;
 
-  const paletteTree = (
-    <div
-      className="fixed inset-0 z-[var(--z-sheets)] flex items-start justify-center overscroll-contain px-4 pt-[min(14vh,120px)] pb-6"
+  const paletteTree = open ? (
+    <MorphingLayer
+      key="command-palette"
+      className="z-[var(--z-sheets)] flex items-start justify-center overscroll-contain px-4 pt-[min(14vh,120px)] pb-6"
       onKeyDown={handleKeyDown}
     >
       {/* Subtle translucent backdrop using existing scrim token */}
-      <div
-        aria-hidden="true"
+      <MorphingScrim
+        instant={origin === null}
         data-testid="command-palette-scrim"
         onClick={onClose}
         className="sheet-scrim-surface absolute inset-0"
       />
 
-      {/* Command palette surface: 0 ms open, material-thick, r-2xl, shadow-popover */}
-      <div
+      {/* Command palette surface: material-thick, r-2xl, shadow-popover. Opened from the nav pill
+          it grows out of the pill and returns to it; opened from the keyboard it is there at 0 ms. */}
+      <MorphingPanel
         ref={dialogRef}
+        origin={origin}
+        radius={24}
         role="dialog"
         aria-modal="true"
         aria-label={t('palette.ariaLabel')}
         data-testid="command-palette"
-        className={cn(
-          'relative z-10 flex w-full max-w-[580px] flex-col overflow-hidden rounded-2xl text-text-primary outline-none',
-          MATERIAL_THICK_CLASS,
-        )}
+        surfaceClassName={cn('rounded-2xl', MATERIAL_THICK_CLASS)}
+        contentClassName="flex flex-col overflow-hidden rounded-2xl"
+        className="z-10 w-full max-w-[580px] text-text-primary outline-none"
       >
         {/* Top search / DSL command input row */}
         <div className="flex h-14 items-center gap-3 border-b border-hairline px-4">
@@ -981,13 +988,15 @@ export function CommandPalette({
             <kbd className={KBD_CAP_CLASS}>K</kbd>
           </div>
         </div>
-      </div>
-    </div>
-  );
+      </MorphingPanel>
+    </MorphingLayer>
+  ) : null;
+
+  const presence = <AnimatePresence>{paletteTree}</AnimatePresence>;
 
   if (disablePortal || !isClientMounted || typeof document === 'undefined') {
-    return paletteTree;
+    return presence;
   }
 
-  return createPortal(paletteTree, document.body);
+  return createPortal(presence, document.body);
 }

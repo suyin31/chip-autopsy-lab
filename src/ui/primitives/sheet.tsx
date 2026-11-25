@@ -53,7 +53,7 @@ const useIsomorphicLayoutEffect =
  * Accessible modal / mobile bottom sheet primitive (premium §7.16; `redesign.md` §2.4, §2.5, §5.9):
  * - `scrim` backdrop at `z-[var(--z-sheets)]` (`60`)
  * - Desktop (`>= 768px`): centred dialog, 480 wide (`size="wide"`: 560), `surface`, `r-2xl`,
- *   `shadow-popover`, padding 32, `spring-ui`; icon button "Close" (`x`) 16 / 16 from the top-right
+ *   `--elev-dialog` (top specular edge + layered shadow), padding 32, `spring-ui`; icon button "Close" (`x`) 16 / 16 from the top-right
  * - Mobile (`< 768px`): full-width bottom sheet (`rounded-t-[24px]`), `36 x 5 px` drag handle,
  *   `y: 100% -> 0` `spring-ui` + 1:1 ref-driven drag-to-dismiss (`velocity > 500 px/s` or `> 30%` height)
  * - Deterministic initial focus (`initialFocusRef`), Tab focus trap, Escape & scrim dismissal
@@ -313,7 +313,9 @@ export function ModalSheet({
             }
             className={cn(
               // premium §7.16: `surface`, `r-2xl`, `shadow-popover`; mobile padding 24 16 + safe area
-              'relative z-10 w-full rounded-t-2xl bg-surface px-4 pt-0 pb-[calc(24px+env(safe-area-inset-bottom))] text-text-primary shadow-popover outline-none',
+              // premium §7.16 surface on floating glass elevation: 1 px top specular edge, rim,
+              // contact + ambient shadow (`--elev-dialog`, atelier.css)
+              'relative z-10 w-full rounded-t-2xl bg-surface px-4 pt-0 pb-[calc(24px+env(safe-area-inset-bottom))] text-text-primary shadow-[var(--elev-dialog)] outline-none',
               size === 'wide' ? 'md:w-[560px]' : 'md:w-[480px]',
               'md:max-w-[calc(100vw-32px)] md:rounded-2xl md:p-8',
               className,
@@ -343,7 +345,20 @@ export function ModalSheet({
               </Button>
             </span>
 
-            {children}
+            {/* Content settles a beat after the panel (fade + 6 px rise), so the sheet reads as
+                one object arriving rather than a box popping in; reduced motion shows it at once */}
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                transition: shouldReduceMotion
+                  ? { duration: 0 }
+                  : { ...SPRING_TOKENS.ui, delay: 0.04 },
+              }}
+            >
+              {children}
+            </motion.div>
           </motion.div>
         </div>
       ) : null}

@@ -56,7 +56,6 @@ import {
   Button,
   cn,
   CopyButton,
-  ModalSheet,
   renderAccentPhrase,
   SegmentedControl,
 } from '@/ui/primitives';
@@ -70,6 +69,7 @@ import {
   useModelSettings,
 } from './model-settings';
 import { AmbientField } from '@/ui/atelier/AmbientField';
+import { MorphingDialog } from '@/ui/primitives/morphing-dialog';
 import { BorderBeam } from '@/ui/atelier/BorderBeam';
 import { WaferStage } from './WaferStage';
 
@@ -632,6 +632,12 @@ export function AgentConsole() {
   }>({ ids: new Set<string>() });
   const [waferIndex, setWaferIndex] = React.useState(0);
   const [showSettings, setShowSettings] = React.useState(false);
+  // The control that opened the model dialog; the dialog grows out of it and returns to it.
+  const [settingsOrigin, setSettingsOrigin] = React.useState<HTMLElement | null>(null);
+  const openSettings = React.useCallback((event: React.MouseEvent<HTMLElement>) => {
+    setSettingsOrigin(event.currentTarget);
+    setShowSettings(true);
+  }, []);
   const [peerUrl, setPeerUrl] = React.useState('https://agent-atlas-phi.vercel.app/agent_atlas');
   const [peers, setPeers] = React.useState<{ url: string; network: string; origin: string }[]>([]);
   const [activePeer, setActivePeer] = React.useState<string | null>(null);
@@ -1103,7 +1109,7 @@ export function AgentConsole() {
         </p>
         <button
           type="button"
-          onClick={() => setShowSettings(true)}
+          onClick={openSettings}
           className="ml-auto cursor-pointer touch-manipulation rounded-sm type-caption text-text-tertiary transition-[color,scale,transform] duration-[120ms] ease-[var(--ease-out)] [@media(hover:hover)]:hover:text-text-primary active:scale-[0.97] motion-reduce:active:scale-100 focus-visible:shadow-focus-ring focus-visible:outline-none"
         >
           {modelLabel}
@@ -1148,7 +1154,7 @@ export function AgentConsole() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setShowSettings(true)}
+              onClick={openSettings}
               className="ml-3 max-sm:w-8 max-sm:px-0"
               aria-label={t('agents.modelAria', { model: modelLabel })}
             >
@@ -1220,7 +1226,7 @@ export function AgentConsole() {
                       : t('agents.router.model', { model: modelLabel })}
                     <button
                       type="button"
-                      onClick={() => setShowSettings(true)}
+                      onClick={openSettings}
                       className="cursor-pointer touch-manipulation rounded-sm type-subhead text-text-secondary underline decoration-hairline-strong underline-offset-4 transition-[color,scale,transform] duration-[120ms] ease-[var(--ease-out)] [@media(hover:hover)]:hover:text-text-primary active:scale-[0.97] motion-reduce:active:scale-100 focus-visible:shadow-focus-ring focus-visible:outline-none"
                     >
                       {settings.mode === 'demo' ? t('agents.addModel') : t('agents.modelSettings')}
@@ -1729,12 +1735,11 @@ export function AgentConsole() {
         </aside>
       </div>
 
-      <ModalSheet
+      <MorphingDialog
         open={showSettings}
+        origin={settingsOrigin}
         onClose={() => setShowSettings(false)}
         titleId="agent-model-title"
-        closeLabel={t('sheet.close')}
-        size="wide"
         data-testid="agent-model-sheet"
       >
         <div className="flex flex-col gap-5">
@@ -1754,7 +1759,7 @@ export function AgentConsole() {
             onClose={() => setShowSettings(false)}
           />
         </div>
-      </ModalSheet>
+      </MorphingDialog>
     </div>
   );
 }

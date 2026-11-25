@@ -53,6 +53,15 @@ export {
   type SegmentedControlProps,
   type SegmentedKeyStepResult,
 } from './segmented-control';
+export {
+  MorphingDialog,
+  type MorphingDialogProps,
+  MorphingLayer,
+  MorphingPanel,
+  type MorphingPanelProps,
+  MorphingScrim,
+  type MorphingScrimProps,
+} from './morphing-dialog';
 export { ModalSheet, type ModalSheetProps } from './sheet';
 export {
   MATERIAL_THICK_CLASS,
