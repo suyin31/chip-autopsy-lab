@@ -347,6 +347,7 @@ export function StatRow({
     <dl
       ref={rowRef}
       data-testid="verdict-stat-row"
+      data-vt-enter="1"
       className={cn(
         'at-ruler relative grid grid-cols-1 max-sm:divide-y max-sm:divide-hairline sm:grid-cols-3 sm:divide-x sm:divide-hairline',
         className,

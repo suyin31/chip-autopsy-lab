@@ -189,6 +189,7 @@ export function ExplodedAutopsyStage({
     <div
       ref={sceneRef}
       data-testid="landing-hero"
+      data-vt-scope="default"
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       style={
@@ -262,12 +263,9 @@ export function ExplodedAutopsyStage({
           onPointerEnter={() => setHoveredDeck(true)}
           onPointerLeave={() => setHoveredDeck(false)}
           whileTap={reduced || disabled ? undefined : { scale: 0.985 }}
-          style={{
-            viewTransitionName: 'cal-forensic-stage',
-            ...(reduced ? {} : { transform: 'translateZ(0px)' }),
-          }}
+          style={reduced ? undefined : { transform: 'translateZ(0px)' }}
           className={cn(
-            'at-obsidian-well group/deck relative block w-full cursor-pointer overflow-hidden rounded-[26px] p-4 text-left sm:p-5',
+            'vt-route-stage at-obsidian-well group/deck relative block w-full cursor-pointer overflow-hidden rounded-[26px] p-4 text-left sm:p-5',
             'focus-visible:shadow-focus-ring focus-visible:outline-none',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}
@@ -378,6 +376,7 @@ export function ExplodedAutopsyStage({
         <motion.div
           ref={verdictCardRef}
           data-testid="landing-example-card"
+          data-vt="verdict"
           style={
             enableLive3D
               ? {

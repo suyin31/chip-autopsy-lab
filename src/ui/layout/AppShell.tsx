@@ -12,7 +12,7 @@ import type { ParseFatalError, ParseMode } from '@/core/stdf';
 import { AmbientField } from '@/ui/atelier/AmbientField';
 import { CommandPalette } from '@/ui/command-palette';
 import { useT } from '@/ui/i18n';
-import { WORKSPACE_LAYOUT_GROUP_ID } from '@/ui/motion';
+import { runViewSwitch, WORKSPACE_LAYOUT_GROUP_ID } from '@/ui/motion';
 import { ClinicalToaster, cn } from '@/ui/primitives';
 import {
   type AutopsyWorkerClient,
@@ -144,6 +144,16 @@ export function AppShell({
   const previousStableViewRef = React.useRef<BaseViewState>({ status: 'empty' });
 
   const isLoading = workspace.status === 'loading';
+  const workspaceStatusRef = React.useRef<BaseViewState['status']>(workspace.status);
+  workspaceStatusRef.current = workspace.status;
+  /** Kind of view switch that leaves the current view for a loading or loaded one. */
+  const resolveLeaveKind = React.useCallback(
+    (): 'open' | 'switch' =>
+      workspaceStatusRef.current === 'ready' || workspaceStatusRef.current === 'loading'
+        ? 'switch'
+        : 'open',
+    [],
+  );
 
   const getWorkerClient = React.useCallback((): AutopsyWorkerClient => {
     if (clientRef.current === null) {
@@ -235,6 +245,11 @@ export function AppShell({
       }
 
       if (response.kind === 'ok') {
+        // Loading -> report: the disc settles into the stage and the report blocks rise in.
+        runViewSwitch('switch', () => {
+        if (requestId !== activeRequestIdRef.current) {
+          return;
+        }
         setLargeFilePrompt(null);
         const origin = pendingOriginRef.current;
         activeLoadedOriginRef.current = origin;
@@ -335,6 +350,7 @@ export function AppShell({
             yield: formatPercent(response.yieldSummary.overall.finalYield ?? 0),
           }),
         );
+        });
         return;
       }
 
@@ -365,8 +381,13 @@ export function AppShell({
           : {}),
       };
       previousStableViewRef.current = failedState;
-      setActiveNavLot(null);
-      setWorkspace(failedState);
+      runViewSwitch('close', () => {
+        if (requestId !== activeRequestIdRef.current) {
+          return;
+        }
+        setActiveNavLot(null);
+        setWorkspace(failedState);
+      });
       setLiveAnnouncement(
         resolveParseErrorViewModel(response.error, locale).title,
       );
@@ -391,8 +412,13 @@ export function AppShell({
         ...(fileName !== undefined ? { fileName } : {}),
       };
       previousStableViewRef.current = failedState;
-      setActiveNavLot(null);
-      setWorkspace(failedState);
+      runViewSwitch('close', () => {
+        if (requestId !== activeRequestIdRef.current) {
+          return;
+        }
+        setActiveNavLot(null);
+        setWorkspace(failedState);
+      });
       setLiveAnnouncement(
         resolveParseErrorViewModel(fallbackError, locale).title,
       );
@@ -414,10 +440,15 @@ export function AppShell({
       activeRequestIdRef.current = requestId;
       const label = preset.title;
 
-      setWorkspace({
+      const loadingState: BaseViewState = {
         status: 'loading',
         label,
         progress: { ...INITIAL_PROGRESS, phase: 'generating-demo' },
+      };
+      runViewSwitch(resolveLeaveKind(), () => {
+        if (requestId === activeRequestIdRef.current) {
+          setWorkspace(loadingState);
+        }
       });
       setLiveAnnouncement(t('a11y.opening', { name: preset.title }));
 
@@ -429,17 +460,22 @@ export function AppShell({
             if (requestId !== activeRequestIdRef.current) {
               return;
             }
-            setWorkspace({
-              status: 'loading',
-              label,
-              progress: {
-                phase: progress.phase,
-                bytesProcessed: progress.bytesProcessed,
-                totalBytes: progress.totalBytes,
-                recordsDecoded: progress.recordsDecoded,
-                diesResolved: progress.diesResolved,
-              },
-            });
+            // Progress lands only once the loading view is in place (never mid-switch).
+            setWorkspace((prev) =>
+              prev.status === 'loading'
+                ? {
+                    status: 'loading',
+                    label,
+                    progress: {
+                      phase: progress.phase,
+                      bytesProcessed: progress.bytesProcessed,
+                      totalBytes: progress.totalBytes,
+                      recordsDecoded: progress.recordsDecoded,
+                      diesResolved: progress.diesResolved,
+                    },
+                  }
+                : prev,
+            );
           },
         })
         .then((response) => applyWorkerResponse(requestId, response))
@@ -450,6 +486,7 @@ export function AppShell({
       getWorkerClient,
       handleUnexpectedWorkerError,
       largeFilePrompt,
+      resolveLeaveKind,
       t,
     ],
   );
@@ -473,13 +510,18 @@ export function AppShell({
       activeRequestIdRef.current = requestId;
       const label = file.name;
 
-      setWorkspace({
+      const loadingState: BaseViewState = {
         status: 'loading',
         label,
         progress: {
           ...INITIAL_PROGRESS,
           totalBytes: file.size > 0 ? file.size : null,
         },
+      };
+      runViewSwitch(resolveLeaveKind(), () => {
+        if (requestId === activeRequestIdRef.current) {
+          setWorkspace(loadingState);
+        }
       });
       setLiveAnnouncement(t('a11y.opening', { name: file.name }));
 
@@ -491,17 +533,22 @@ export function AppShell({
             if (requestId !== activeRequestIdRef.current) {
               return;
             }
-            setWorkspace({
-              status: 'loading',
-              label,
-              progress: {
-                phase: progress.phase,
-                bytesProcessed: progress.bytesProcessed,
-                totalBytes: progress.totalBytes,
-                recordsDecoded: progress.recordsDecoded,
-                diesResolved: progress.diesResolved,
-              },
-            });
+            // Progress lands only once the loading view is in place (never mid-switch).
+            setWorkspace((prev) =>
+              prev.status === 'loading'
+                ? {
+                    status: 'loading',
+                    label,
+                    progress: {
+                      phase: progress.phase,
+                      bytesProcessed: progress.bytesProcessed,
+                      totalBytes: progress.totalBytes,
+                      recordsDecoded: progress.recordsDecoded,
+                      diesResolved: progress.diesResolved,
+                    },
+                  }
+                : prev,
+            );
           },
         })
         .then((response) => applyWorkerResponse(requestId, response))
@@ -514,6 +561,7 @@ export function AppShell({
       getWorkerClient,
       handleUnexpectedWorkerError,
       largeFilePrompt,
+      resolveLeaveKind,
       t,
     ],
   );
@@ -545,8 +593,10 @@ export function AppShell({
     setLargeFilePrompt(null);
     const emptyState: BaseViewState = { status: 'empty' };
     previousStableViewRef.current = emptyState;
-    setActiveNavLot(null);
-    setWorkspace(emptyState);
+    runViewSwitch('close', () => {
+      setActiveNavLot(null);
+      setWorkspace(emptyState);
+    });
   }, [largeFilePrompt]);
 
   const handleSelectRecentLot = React.useCallback(
@@ -556,6 +606,7 @@ export function AppShell({
         return;
       }
       activeRequestIdRef.current += 1;
+      const requestId = activeRequestIdRef.current;
       setLargeFilePrompt(null);
       activeLoadedOriginRef.current = {
         kind: 'file',
@@ -564,18 +615,23 @@ export function AppShell({
         byteSize: matched.entry.byteSize,
         ...(matched.file !== undefined ? { file: matched.file } : {}),
       };
-      setActiveNavLot({
+      const navLot: ActiveNavLotInfo = {
         lotId: matched.entry.lotId,
         presetId: null,
         recentId: matched.entry.id,
         customTitle: matched.entry.fileName,
-      });
+      };
       const readyState: BaseViewState = {
         status: 'ready',
         payload: matched.payload,
       };
       previousStableViewRef.current = readyState;
-      setWorkspace(readyState);
+      runViewSwitch('switch', () => {
+        if (requestId === activeRequestIdRef.current) {
+          setActiveNavLot(navLot);
+          setWorkspace(readyState);
+        }
+      });
     },
     [cachedRecents],
   );
@@ -587,10 +643,15 @@ export function AppShell({
       activeRequestIdRef.current = requestId;
       const label = fileName ?? 'large.stdf';
 
-      setWorkspace({
+      const loadingState: BaseViewState = {
         status: 'loading',
         label,
         progress: INITIAL_PROGRESS,
+      };
+      runViewSwitch(resolveLeaveKind(), () => {
+        if (requestId === activeRequestIdRef.current) {
+          setWorkspace(loadingState);
+        }
       });
 
       const client = getWorkerClient();
@@ -599,24 +660,28 @@ export function AppShell({
           if (requestId !== activeRequestIdRef.current) {
             return;
           }
-          setWorkspace({
-            status: 'loading',
-            label,
-            progress: {
-              phase: progress.phase,
-              bytesProcessed: progress.bytesProcessed,
-              totalBytes: progress.totalBytes,
-              recordsDecoded: progress.recordsDecoded,
-              diesResolved: progress.diesResolved,
-            },
-          });
+          setWorkspace((prev) =>
+            prev.status === 'loading'
+              ? {
+                  status: 'loading',
+                  label,
+                  progress: {
+                    phase: progress.phase,
+                    bytesProcessed: progress.bytesProcessed,
+                    totalBytes: progress.totalBytes,
+                    recordsDecoded: progress.recordsDecoded,
+                    diesResolved: progress.diesResolved,
+                  },
+                }
+              : prev,
+          );
         })
         .then((response) => applyWorkerResponse(requestId, response))
         .catch((err: unknown) =>
           handleUnexpectedWorkerError(requestId, err, fileName),
         );
     },
-    [applyWorkerResponse, getWorkerClient, handleUnexpectedWorkerError],
+    [applyWorkerResponse, getWorkerClient, handleUnexpectedWorkerError, resolveLeaveKind],
   );
 
   const handleParseEverythingFromNotice = React.useCallback((): void => {

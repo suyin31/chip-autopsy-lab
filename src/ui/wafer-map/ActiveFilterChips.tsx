@@ -64,8 +64,9 @@ function stampAck(event: React.PointerEvent<HTMLElement>): void {
   }
 }
 
+// `at-chip-enter`: a new chip settles in from 0.94 (opacity + scale, spring-ui curve).
 const CHIP_CLASS =
-  'inline-flex h-7 max-w-full items-center gap-1.5 rounded-pill border border-hairline-strong bg-surface pl-2.5 pr-1 type-caption text-text-primary shadow-card';
+  'at-chip-enter inline-flex h-7 max-w-full items-center gap-1.5 rounded-pill border border-hairline-strong bg-surface pl-2.5 pr-1 type-caption text-text-primary shadow-card';
 
 const CHIP_REMOVE_BUTTON_CLASS = cn(
   'relative inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-pill text-text-secondary outline-none',

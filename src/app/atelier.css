@@ -657,43 +657,6 @@
   }
 }
 
-/* Route transitions (`/` <-> `/agents`, React `<ViewTransition>`): one directional pass, no
-   flash of white between two differently-lit rooms. */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 320ms;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-::view-transition-old(root) {
-  animation-name: at-vt-out;
-}
-
-::view-transition-new(root) {
-  animation-name: at-vt-in;
-}
-
-@keyframes at-vt-out {
-  to {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.995);
-  }
-}
-
-@keyframes at-vt-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.995);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none;
-  }
-}
-
 /* ==========================================================================
  * v2 components: aurora light field, glass bento, neutral dark well, search well,
  * luminous CTA, gradient accent word, named route-transition groups.
@@ -1086,8 +1049,34 @@
   }
 }
 
-/* Named route-transition groups: the top bar holds still while the room cross-fades; a stage
-   that exists on both routes scales and moves between its two positions. */
+/* ==========================================================================
+ * View transitions (native API). One motion family for every switch:
+ * 440 ms groups on the spring-ui curve, complementary root cross-fades (old and new
+ * opacity always sum to 1, so no backdrop flash), transform + opacity only.
+ *
+ * 1. Route switch `/` <-> `/agents` (React `<ViewTransition enter exit>` classes):
+ *    a depth push. Going to the console the old room drifts toward the viewer and the
+ *    new one rises out of depth; going back reverses it (`data-route-dir`). The top bar
+ *    holds still; a stage present on both routes morphs between its two positions.
+ * 2. Workspace switch (`runViewSwitch`, `:root[data-vt-kind]`): landing -> loading ->
+ *    report, lot switch, back home, the console's lot install. Shared roles get
+ *    `cal-vt-<role>` names for one switch only.
+ * ========================================================================== */
+.vt-route-stage {
+  view-transition-name: cal-forensic-stage;
+}
+
+@media (min-width: 1024px) {
+  .vt-route-stage-lg {
+    view-transition-name: cal-forensic-stage;
+  }
+}
+
+:root[data-vt-kind] .vt-route-stage,
+:root[data-vt-kind] .vt-route-stage-lg {
+  view-transition-name: none;
+}
+
 ::view-transition-group(cal-topbar) {
   animation-duration: 0s;
 }
@@ -1095,22 +1084,232 @@
 ::view-transition-old(cal-topbar),
 ::view-transition-new(cal-topbar) {
   animation-duration: 180ms;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-timing-function: var(--ease-out);
 }
 
-::view-transition-group(cal-wafer-stage),
 ::view-transition-group(cal-forensic-stage) {
+  animation-duration: 440ms;
+  animation-timing-function: var(--ease-spring-ui);
+}
+
+::view-transition-old(.cal-page-exit),
+::view-transition-new(.cal-page-enter) {
+  transform-origin: 50% 0;
   animation-duration: 380ms;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-timing-function: var(--ease-out);
+  animation-fill-mode: both;
+}
+
+::view-transition-old(.cal-page-exit) {
+  animation-name: cal-route-exit;
+}
+
+::view-transition-new(.cal-page-enter) {
+  animation-name: cal-route-enter;
+}
+
+:root[data-route-dir='back']::view-transition-old(.cal-page-exit) {
+  animation-name: cal-route-exit-back;
+}
+
+:root[data-route-dir='back']::view-transition-new(.cal-page-enter) {
+  animation-name: cal-route-enter-back;
+}
+
+@keyframes cal-route-exit {
+  to {
+    opacity: 0;
+    transform: scale(1.018);
+  }
+}
+
+@keyframes cal-route-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.972) translateY(10px);
+  }
+}
+
+@keyframes cal-route-exit-back {
+  to {
+    opacity: 0;
+    transform: scale(0.972) translateY(10px);
+  }
+}
+
+@keyframes cal-route-enter-back {
+  from {
+    opacity: 0;
+    transform: scale(1.018);
+  }
+}
+
+/* Workspace switches */
+:root[data-vt-kind]::view-transition-group(*) {
+  animation-duration: 440ms;
+  animation-timing-function: var(--ease-spring-ui);
+}
+
+:root[data-vt-kind]::view-transition-group(cal-topbar) {
+  animation-duration: 0s;
+}
+
+:root[data-vt-kind]::view-transition-old(root),
+:root[data-vt-kind]::view-transition-new(root) {
+  animation-duration: 380ms;
+  animation-timing-function: var(--ease-out);
+  animation-fill-mode: both;
+}
+
+:root[data-vt-kind='open']::view-transition-old(root) {
+  animation-name: cal-vt-recede;
+}
+
+:root[data-vt-kind='open']::view-transition-new(root) {
+  animation-name: cal-vt-rise;
+}
+
+:root[data-vt-kind='close']::view-transition-old(root) {
+  animation-name: cal-vt-sink;
+}
+
+:root[data-vt-kind='close']::view-transition-new(root) {
+  animation-name: cal-vt-surface;
+}
+
+:root[data-vt-kind='switch']::view-transition-old(root) {
+  animation-name: cal-vt-fade-out;
+}
+
+:root[data-vt-kind='switch']::view-transition-new(root) {
+  animation-name: cal-vt-rise-short;
+}
+
+/* A lot switch keeps the live top bar, so the lot picker's own label roll reads. */
+:root[data-vt-kind='switch']::view-transition-old(cal-topbar) {
+  animation: none;
+  opacity: 0;
+}
+
+:root[data-vt-kind='switch']::view-transition-new(cal-topbar) {
+  animation: none;
+}
+
+/* The console's lot install: only the stage and the KPI ruler move; the chat stays live. */
+:root[data-vt-kind='agents-lot']::view-transition-old(root) {
+  animation: none;
+  opacity: 0;
+}
+
+:root[data-vt-kind='agents-lot']::view-transition-new(root) {
+  animation: none;
+}
+
+/* The disc keeps its proportions while its box changes shape (card well -> stage). */
+:root[data-vt-kind]::view-transition-old(cal-vt-wafer),
+:root[data-vt-kind]::view-transition-new(cal-vt-wafer),
+:root[data-vt-kind]::view-transition-old(cal-vt-agent-wafer),
+:root[data-vt-kind]::view-transition-new(cal-vt-agent-wafer) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Report blocks with no counterpart rise in after the stage, 40 ms apart. */
+:root[data-vt-kind]::view-transition-new(cal-vt-enter-1),
+:root[data-vt-kind]::view-transition-new(cal-vt-enter-2),
+:root[data-vt-kind]::view-transition-new(cal-vt-enter-3) {
+  animation: cal-vt-enter 300ms var(--ease-spring-ui) both;
+}
+
+:root[data-vt-kind]::view-transition-new(cal-vt-enter-1) {
+  animation-delay: 60ms;
+}
+
+:root[data-vt-kind]::view-transition-new(cal-vt-enter-2) {
+  animation-delay: 100ms;
+}
+
+:root[data-vt-kind]::view-transition-new(cal-vt-enter-3) {
+  animation-delay: 140ms;
+}
+
+@keyframes cal-vt-recede {
+  to {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+@keyframes cal-vt-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes cal-vt-sink {
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes cal-vt-surface {
+  from {
+    opacity: 0;
+    transform: scale(1.012);
+  }
+}
+
+@keyframes cal-vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes cal-vt-rise-short {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes cal-vt-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* Micro: a filter chip that appears settles in instead of popping (opacity + scale only). */
+@media (prefers-reduced-motion: no-preference) {
+  .at-chip-enter {
+    animation: cal-chip-enter 280ms var(--ease-spring-ui) both;
+  }
+}
+
+@keyframes cal-chip-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+/* Browsers without view transitions: the new view still rises in, opacity + transform only. */
+@supports not (view-transition-name: none) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-view-enter] {
+      animation: cal-vt-rise 360ms var(--ease-out) both;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(cal-topbar),
-  ::view-transition-old(cal-topbar),
-  ::view-transition-new(cal-topbar),
-  ::view-transition-group(cal-wafer-stage),
-  ::view-transition-group(cal-forensic-stage) {
-    animation: none;
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 

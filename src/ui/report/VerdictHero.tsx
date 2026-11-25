@@ -222,7 +222,7 @@ export function VerdictHero({
     ) : null;
 
   return (
-    <div data-testid="verdict-hero">
+    <div data-testid="verdict-hero" data-vt="verdict">
       {renderRiseBlock ? renderRiseBlock('headline', headlineNode) : headlineNode}
       {sublineNode
         ? renderRiseBlock

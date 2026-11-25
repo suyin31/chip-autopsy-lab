@@ -95,6 +95,7 @@ export function LotKpiStrip({
     <dl
       className="at-ruler mt-3.5 grid grid-cols-2 sm:max-lg:grid-cols-4"
       data-testid="agent-kpi-strip"
+      data-vt="agent-kpi"
       aria-label={t('agents.kpi.aria')}
       aria-busy={loading}
     >

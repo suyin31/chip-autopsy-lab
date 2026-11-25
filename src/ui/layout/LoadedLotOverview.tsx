@@ -338,6 +338,7 @@ export function LoadedLotOverview({
       ) : null}
       <div
         data-testid="verdict-wafer-hero-grid"
+        data-view-enter=""
         className="flex w-full flex-col sm:max-lg:mx-auto sm:max-lg:max-w-[640px] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(380px,440px)] lg:items-start lg:gap-x-8 xl:grid-cols-[minmax(0,1fr)_480px] xl:gap-x-12"
       >
       <AutopsyReportCard
@@ -400,10 +401,7 @@ export function LoadedLotOverview({
         data-testid="stage-column"
         className="order-2 -mx-4 mt-5 w-[calc(100%+2rem)] sm:mx-0 sm:w-full lg:sticky lg:top-[52px] lg:order-none lg:col-start-1 lg:row-start-1 lg:mt-0 lg:h-[calc(100dvh-52px)] lg:min-h-[640px] lg:pt-4 lg:pb-4"
       >
-        <div
-          style={{ viewTransitionName: 'cal-forensic-stage' }}
-          className="relative h-full w-full sm:p-3"
-        >
+        <div className="vt-route-stage relative h-full w-full sm:p-3">
           <div className="max-sm:hidden">
             <DatumTicks />
           </div>

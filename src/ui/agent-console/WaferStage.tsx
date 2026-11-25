@@ -72,7 +72,7 @@ const WaferDiscFrame = React.forwardRef<
   { readonly className?: string; readonly children: React.ReactNode }
 >(function WaferDiscFrame({ className, children }, forwardedRef) {
   return (
-    <div ref={forwardedRef} className={className}>
+    <div ref={forwardedRef} data-vt="agent-wafer" className={className}>
       {children}
     </div>
   );

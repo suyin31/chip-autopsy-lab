@@ -713,6 +713,7 @@ export function AutopsyReportCard({
         )}
 
         <div
+          data-vt-enter="2"
           className={cn(
             'mt-8 md:mt-12',
             splitForMobileStage && 'order-4 lg:order-none',

@@ -17,7 +17,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     resolvedParams,
   );
   return (
-    <ViewTransition>
+    <ViewTransition enter="cal-page-enter" exit="cal-page-exit" default="none">
       <AppShell narrationEnabled={narrationEnabled} />
     </ViewTransition>
   );

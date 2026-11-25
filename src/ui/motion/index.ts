@@ -91,3 +91,17 @@ export {
 export { ScrollReveal, useScrollReveal, type ScrollRevealOptions, type ScrollRevealProps } from './scroll-reveal';
 export * from './tilt';
 export { useTactileTilt, type TactileTiltOptions } from './use-tactile-tilt';
+
+export {
+  createViewSwitcher,
+  nameViewSwitchElements,
+  VIEW_SWITCH_ENTER_SLOTS,
+  VIEW_SWITCH_ROLES,
+  type ViewSwitchDocument,
+  type ViewSwitchElement,
+  type ViewSwitcher,
+  type ViewSwitcherOptions,
+  type ViewSwitchKind,
+  type ViewTransitionHandle,
+} from './view-switch';
+export { runViewSwitch } from './use-view-switch';

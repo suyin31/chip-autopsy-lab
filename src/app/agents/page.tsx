@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function AgentsPage() {
   return (
-    <ViewTransition>
+    <ViewTransition enter="cal-page-enter" exit="cal-page-exit" default="none">
       <AgentConsole />
     </ViewTransition>
   );

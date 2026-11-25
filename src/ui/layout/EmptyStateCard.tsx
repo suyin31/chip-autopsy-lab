@@ -314,6 +314,7 @@ function LandingWaferDisc({
     <div
       ref={frameRef}
       data-testid={testId('frame')}
+      data-vt="wafer"
       style={{ width: `${size}px`, height: `${size}px` }}
       className="relative shrink-0"
     >
@@ -482,6 +483,7 @@ function DemoLotCardButton({
       maxDeg={SAMPLE_CARD_TILT_MAX_DEG}
       aria-disabled={disabled ? 'true' : undefined}
       data-testid={`demo-card-${presetId}`}
+      data-vt-scope="card"
       aria-label={t('demo.openAria', { title })}
       aria-describedby={descId}
       onPointerDown={(e) => {
@@ -550,7 +552,9 @@ function DemoLotCardButton({
         className="at-bento-pop-sm flex min-w-0 flex-1 flex-col justify-between px-1.5 py-1"
       >
         <div>
-          <span className="block truncate type-headline text-text-primary">{title}</span>
+          <span data-vt="verdict" className="block truncate type-headline text-text-primary">
+            {title}
+          </span>
           <span className="mt-1 line-clamp-2 block type-callout text-text-secondary">
             {description}
           </span>

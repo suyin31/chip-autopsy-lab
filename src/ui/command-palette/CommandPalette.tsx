@@ -16,7 +16,7 @@ import {
   SlidersHorizontal,
   X,
 } from 'lucide-react';
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import type { StoreApi } from 'zustand';
@@ -30,6 +30,7 @@ import {
 } from '@/core/query';
 import { useT } from '@/ui/i18n';
 import { cn, MATERIAL_THICK_CLASS } from '@/ui/primitives';
+import { SPRING_TACTILE, useReducedMotionPreference } from '@/ui/motion';
 import { MorphingLayer, MorphingPanel, MorphingScrim } from '@/ui/primitives/morphing-dialog';
 import {
   type SelectionStoreState,
@@ -320,6 +321,9 @@ export function CommandPalette({
     initialRecents !== undefined ? initialRecents : readPaletteRecents(),
   );
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const reducedMotion = useReducedMotionPreference();
+  // The highlight glides under the pointer; keys and typing move it at 0 ms (premium §8).
+  const [highlightGlides, setHighlightGlides] = React.useState(false);
   const [isClientMounted, setIsClientMounted] = React.useState(false);
 
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -663,6 +667,9 @@ export function CommandPalette({
   );
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (highlightGlides) {
+      setHighlightGlides(false);
+    }
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
@@ -765,6 +772,7 @@ export function CommandPalette({
   const paletteTree = open ? (
     <MorphingLayer
       key="command-palette"
+      data-vt="overlay"
       className="z-[var(--z-sheets)] flex items-start justify-center overscroll-contain px-4 pt-[min(14vh,120px)] pb-6"
       onKeyDown={handleKeyDown}
     >
@@ -884,7 +892,8 @@ export function CommandPalette({
         ) : null}
 
         {/* Grouped results listbox (p-3 + r-md = concentric with r-2xl outer radius) */}
-        <div
+        <motion.div
+          layoutScroll
           id={listboxId}
           role="listbox"
           aria-label={t('palette.ariaLabel')}
@@ -925,7 +934,10 @@ export function CommandPalette({
                       aria-selected={isActive}
                       data-testid={item.testId}
                       data-selected={isActive ? 'true' : undefined}
-                      onMouseEnter={() => setActiveIndex(itemIndex)}
+                      onMouseEnter={() => {
+                        setHighlightGlides(true);
+                        setActiveIndex(itemIndex);
+                      }}
                       onPointerDown={(event) => {
                         stampAck(event);
                         // Keep focus on the combobox input when selecting by pointer
@@ -933,13 +945,22 @@ export function CommandPalette({
                       }}
                       onClick={() => executeEntry(item)}
                       className={cn(
-                        'flex min-h-[40px] cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 select-none',
+                        'relative isolate flex min-h-[40px] cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 select-none',
                         'transition-[background-color,color] duration-[var(--dur-1)] ease-[var(--ease-out)]',
-                        isActive
-                          ? 'bg-fill-2 text-text-primary shadow-[inset_0_0_0_1px_var(--hairline)]'
-                          : 'text-text-primary hover:bg-fill-1',
+                        isActive ? 'text-text-primary' : 'text-text-primary hover:bg-fill-1',
                       )}
                     >
+                      {isActive ? (
+                        <motion.span
+                          aria-hidden="true"
+                          layoutId={`${baseId}-active-row`}
+                          data-testid="palette-active-highlight"
+                          transition={
+                            highlightGlides && !reducedMotion ? SPRING_TACTILE : { duration: 0 }
+                          }
+                          className="pointer-events-none absolute inset-0 -z-10 rounded-md bg-fill-2 shadow-[inset_0_0_0_1px_var(--hairline)]"
+                        />
+                      ) : null}
                       <Icon
                         aria-hidden="true"
                         size={15}
@@ -975,7 +996,7 @@ export function CommandPalette({
               </div>
             </div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Quiet keyboard legend footer */}
         <div

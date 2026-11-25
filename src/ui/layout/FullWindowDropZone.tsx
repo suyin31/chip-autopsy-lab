@@ -290,6 +290,7 @@ export function FullWindowDropZone({
             key="drop-overlay"
             aria-hidden="true"
             data-testid="full-window-drop-overlay"
+            data-vt="overlay"
             data-drag-kind={dragKind}
             initial={{ opacity: shouldReduceMotion ? 1 : 0 }}
             animate={{ opacity: 1, transition: shouldReduceMotion ? { duration: 0 } : fade }}

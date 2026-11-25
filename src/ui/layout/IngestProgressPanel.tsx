@@ -104,6 +104,7 @@ function LoadingDisc(): React.JSX.Element {
       ref={areaRef}
       aria-hidden="true"
       data-testid="ingest-loading-disc"
+      data-vt="wafer"
       data-wafer-diameter-px={Math.round(diameter)}
       className="relative aspect-square w-full lg:aspect-auto lg:min-h-0 lg:flex-1"
     >
@@ -181,12 +182,14 @@ export function IngestProgressPanel({
   return (
     <div
       data-testid="ingest-loading-view"
+      data-view-enter=""
       aria-busy="true"
       className="flex w-full flex-col sm:max-lg:mx-auto sm:max-lg:max-w-[640px] lg:grid lg:grid-cols-[540px_minmax(0,1fr)] lg:items-start lg:gap-x-5 xl:grid-cols-12 xl:gap-x-6"
     >
       {/* Verdict column position (§6.2 padding-top 72, 84 at 1440) */}
       <div
         data-testid="ingest-progress-column"
+        data-vt="verdict"
         className="order-1 flex w-full min-w-0 flex-col lg:order-none lg:col-start-2 lg:row-start-1 lg:pt-[72px] xl:col-span-5 xl:col-start-8 min-[90rem]:pt-[84px]"
       >
         <p

@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown, File } from 'lucide-react';
-import { motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import * as React from 'react';
 import {
   type DemoPresetId,
@@ -195,15 +195,30 @@ export function LotPicker({
             className,
           )}
         >
-          <Untranslated className="shrink-0 whitespace-nowrap type-control font-mono-id text-text-primary group-disabled:text-text-disabled">
-            {cleanLotId}
-          </Untranslated>
+          {/* A lot switch rolls the label: the old one lifts away, the new one rises in. */}
+          <span className="relative flex min-w-0 overflow-hidden">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={`${cleanLotId}:${triggerTitle ?? ''}`}
+                data-testid="lot-picker-label"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={shouldReduceMotion ? { duration: 0 } : SPRING_TOKENS.ui}
+                className="flex min-w-0 items-center"
+              >
+                <Untranslated className="shrink-0 whitespace-nowrap type-control font-mono-id text-text-primary group-disabled:text-text-disabled">
+                  {cleanLotId}
+                </Untranslated>
 
-          {triggerTitle ? (
-            <span className="ml-2 hidden min-w-0 truncate type-control text-text-secondary group-disabled:text-text-disabled lg:inline">
-              {triggerTitle}
-            </span>
-          ) : null}
+                {triggerTitle ? (
+                  <span className="ml-2 hidden min-w-0 truncate type-control text-text-secondary group-disabled:text-text-disabled lg:inline">
+                    {triggerTitle}
+                  </span>
+                ) : null}
+              </motion.span>
+            </AnimatePresence>
+          </span>
 
           <motion.span
             aria-hidden="true"

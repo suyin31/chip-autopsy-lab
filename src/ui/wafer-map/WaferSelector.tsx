@@ -486,7 +486,7 @@ export const WaferSelector = React.memo(function WaferSelector({
   );
 
   return (
-    <div className={cn("relative w-full", className)}>
+    <div data-vt-enter="3" className={cn("relative w-full", className)}>
       <div
         ref={listRef}
         role="listbox"

@@ -43,6 +43,7 @@ import {
   computeStaggerDelayMs,
   MOTION_TOKENS,
   PANEL_ENTER_OFFSET_Y_PX,
+  runViewSwitch,
   SPRING_TACTILE,
   SPRING_TOKENS,
   useReducedMotionPreference,
@@ -816,11 +817,14 @@ export function AgentConsole() {
 
   const installLot = React.useCallback((loaded: AutopsyWorkerLoadedPayload) => {
     payloadRef.current = loaded;
-    setPayload(loaded);
-    setHighlight({ ids: new Set<string>() });
-    setWaferIndex(0);
-    setLotError(null);
-    setFileError(null);
+    // The stage and the KPI ruler cross-dissolve into the new lot (native view transition).
+    runViewSwitch('agents-lot', () => {
+      setPayload(loaded);
+      setHighlight({ ids: new Set<string>() });
+      setWaferIndex(0);
+      setLotError(null);
+      setFileError(null);
+    });
   }, []);
 
   const loadDemoLot = React.useCallback(async (presetId: DemoPresetId) => {
@@ -1691,7 +1695,7 @@ export function AgentConsole() {
         <aside
           aria-label={t('agents.rail.aria')}
           data-testid="agent-rail"
-          className="relative z-[1] flex flex-col border-t border-hairline bg-[color-mix(in_oklab,var(--surface)_72%,transparent)] [backdrop-filter:var(--at-bento-filter)] [-webkit-backdrop-filter:var(--at-bento-filter)] lg:min-h-0 lg:overflow-hidden lg:border-t-0 lg:border-l lg:[view-transition-name:cal-forensic-stage]"
+          className="relative z-[1] flex flex-col border-t border-hairline bg-[color-mix(in_oklab,var(--surface)_72%,transparent)] [backdrop-filter:var(--at-bento-filter)] [-webkit-backdrop-filter:var(--at-bento-filter)] lg:min-h-0 lg:overflow-hidden lg:border-t-0 lg:border-l vt-route-stage-lg"
         >
           <div className="px-5 pt-5 pb-4">
             <div className="mb-2 lg:hidden"><LotSwitcher variant="header" {...switcherProps} /></div>

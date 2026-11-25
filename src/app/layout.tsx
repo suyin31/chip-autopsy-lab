@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { en } from '@/core/i18n';
 import { I18nProvider, LOCALE_INIT_SCRIPT } from '@/ui/i18n';
+import { RouteDirection } from '@/ui/motion/route-direction';
 import {
   ACCENT_INIT_SCRIPT,
   THEME_INIT_SCRIPT,
@@ -84,6 +85,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-bg text-text-primary antialiased">
         <ThemeController />
+        <RouteDirection />
         <I18nProvider>{children}</I18nProvider>
       </body>
     </html>

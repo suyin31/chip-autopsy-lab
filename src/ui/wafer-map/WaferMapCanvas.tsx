@@ -2400,6 +2400,7 @@ function WaferMapCanvasImpl({
             fails: formatInteger(failCount),
           })}
           data-testid="wafer-stage"
+          data-vt="wafer"
           data-sweep="done"
           data-render-count={renderCountRef.current}
           data-wafer-diameter-px={Math.round(fitWaferDiameter)}
