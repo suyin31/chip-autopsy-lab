@@ -19,12 +19,17 @@ Test, product, and yield engineers at small fabless teams and OSATs routinely tr
 - **`Cmd-K` / `Ctrl-K` filter palette**: Opens an instant `cmdk` command palette backed by a typed Filter DSL and an offline natural-language grammar supporting queries such as `only bin 7`, `edge 3 rings`, `tests with Cpk < 1.33`, and `show edge failures with Cpk < 1.33`.
 - **Optional LLM narrator with citation validation**: Routes optional prose rephrasing through a server-only `/api/autopsy/narrate` handler (`LLM_API_KEY`) that receives aggregate engine facts only, validates every cited fact ID and numeric claim on the client, and falls back deterministically to the offline template when unconfigured or if validation fails.
 - **Internationalization, appearance, and accessibility**: Ships 5 UI languages (`English`, `简体中文`, `繁體中文`, `日本語`, `한국어`), System/Light/Dark themes with 4 accent colours (`Ember`, `Cobalt`, `Jade`, `Violet`), inline hover definitions for ATE terminology, WCAG 2.2 AA contrast, full keyboard navigation with screen-reader data tables and `aria-live` announcements, and complete `prefers-reduced-motion` support.
+- **A forensic interface, not a dashboard**: a tilted 3D sample deck and live telemetry strip on the landing page, a verdict screen that puts the cause of death beside the wafer map, an Evidence shelf that opens into the Pareto, yield, wafer-gallery and parametric charts in place, view transitions between every screen, and tap, press and scroll motion on phones.
 
 ## Try it
 
 Live demo: `https://chip-autopsy-lab.vercel.app`
 
 Demo video: https://youtu.be/h5vQuVODXHA
+
+### Measured on a real log
+
+Dropped the way a visitor would drop it, a real third-party STDF V4 log (`sr_a595.stdf`, not in this repo) opened with about 1.7 s from drop to verdict: 78.3% yield, `SBIN 4` (`DELAY`) as the bin that costs the most, and `Delay Line #07` the weakest test at `Cpk` 0.48. The author measured this on the deployed site; the log is someone else's data and is not redistributed here.
 
 ### Demo lots
 
@@ -37,6 +42,20 @@ Three seeded, deterministic synthetic STDF V4 demo lots are loadable in one clic
 | **Site 2 Probe Contact** | `site2-probe-contact` / `CAL-S2-2403` | Oxidized `Head 1 / Site 2` probe needles causing `VDD_CONT_R` contact opens and retest recovery (`SBIN 5`, spatially `Random` with a Test Site `1:2` anomaly). |
 
 All demo lots are 100% synthetic. No proprietary foundry, OSAT, or product data is included.
+
+## The interface
+
+The interface is Carbon, the third design pass: a forensic bench rather than a dashboard. The landing page sets the sample lot on a tilted 3D deck over a 12-column telemetry strip; opening a lot unboxes the cause of death next to the wafer map; the Evidence shelf opens into the Pareto, yield, wafer gallery and parametric charts in place, without leaving the screen. Every screen switch runs as a view transition, and on a phone the same surfaces answer to tap, press and scroll instead of hover.
+
+![The landing page, light mode](docs/screenshots/01-home-carbon-light.png)
+
+![The verdict screen beside the wafer map](docs/screenshots/03-verdict-wafer.png)
+
+![Where the yield went, and yield by test site](docs/screenshots/06-pareto-yield.png)
+
+![The agent console after an audit: the tool timeline on the left, the cited dies lit on the wafer](docs/screenshots/04-agents-timeline.png)
+
+Also in `docs/screenshots/`: the dark landing page (`02-home-carbon-dark.png`), the parametric histogram (`07-parametric-histogram.png`), the network page (`05-network-page.png`), and the verdict screen in dark mode (`08-verdict-wafer-dark.png`).
 
 ## Agent layer (Open Agentic Web)
 
@@ -122,29 +141,64 @@ Chip Autopsy Lab is local-first by design:
   - **Request-body scan** (`e2e/gates-t20.spec.ts` and `src/core/report/llm-payload-privacy.prop.test.ts`): asserts no outbound request body contains STDF `FAR` headers, gzip magic bytes, die IDs, or per-die coordinate/measurement fields.
   - **Bundle secret scan** (`pnpm scan:secrets` via `tools/scan-bundle-secrets.mjs`) and an ESLint rule (`eslint.config.mjs`) blocking any `NEXT_PUBLIC_LLM_*` reference.
 
+## Built with Kiro
+
+Kiro's agent wrote the spec, the steering, the hooks and the task list, ran the tasks, and verified each one; the section below is the process story, with one requirement traced from spec to property test to hook.
+
+- Kiro artifacts: [`.kiro/`](.kiro/) — specs, steering, hooks, skills, MCP settings
+- Process story and ["Where Kiro surprised us"](docs/devpost-submission.md#how-kiro-was-used)
+- [Self-review against the judging criteria](docs/judging-review.md)
+
 ## How Kiro was used
+
+Kiro's agent ran the build loop from the IDE, and every step left a file in this repo.
+
+1. **Spec.** The spec has 17 EARS requirements, a design with 14 correctness properties, and a task list where every task cites its requirement ids. Kiro sent the first requirements and design drafts to Gemini through the Carbon MCP tool (`logs/phase2.log`, commits `af42af8`, `9076b54`), then reviewed them itself: one pass made 48 edits to `requirements.md` (`logs/kiro-review-req.log`), and another wrote `tasks.md` (`logs/kiro-tasks.log`, commit `e8af9c1`).
+2. **Steering.** Four always-included files hold the product scope, the locked stack and STDF V4 decoding rules, the repo layout, and the design tokens. A fifth, `submission.md`, loads only when submission copy is edited.
+3. **Hooks.** Saving a file under `src/` runs lint and typecheck. Saving under `src/core/` runs that file's unit and property tests. Saving an i18n file checks key parity across all 5 locales. Editing a spec `design.md` reruns every property suite. One manual hook rebuilds the table below from `.kiro/`.
+4. **Agent tasks.** Tasks ran one at a time. Each prompt is in `logs/prompt-*.txt`, each run log is in `logs/`, each result is in `logs/progress.md`. Of the 194 commits in `git log`, 63 subjects end in `(Kiro <model>)` and 48 carry `(Carbon)`, meaning Kiro handed that task to Gemini through the Carbon MCP server and checked the result.
+5. **Verification.** A task is ticked only after lint, typecheck, `pnpm test`, and its Playwright spec pass. The suite is 555 Vitest tests in 92 files, 16 of them `fast-check` property suites, plus 54 Playwright spec files in `e2e/`.
+
+One trace you can follow:
+
+- **Requirement 1.5** (`requirements.md`): check that the first record is `FAR` with `STDF_VER = 4`, then read numbers big-endian when `FAR.CPU_TYPE = 1` and little-endian when it is `2`.
+- **Task 2.2** (`tasks.md`) builds `src/core/stdf/stdf-parser.ts` and cites Requirement 1.5. Sub-task 2.4 adds the property test.
+- **Property 1** (`design.md`, "Validates: Requirements 1.3, 1.5, ...") says any generated lot, written in either byte order, parses back to an equal lot model. `src/core/stdf/stdf-roundtrip.prop.test.ts` checks it with `fast-check`.
+- **Hooks.** `core-unit-tests-on-save.kiro.hook` runs that suite whenever a file in `src/core/stdf/` is saved, and it is told never to weaken a design property to make a test pass. `spec-properties-on-design-edit.kiro.hook` runs it again whenever `design.md` changes.
+
+### Kiro features in this repo
 
 | Kiro feature | Where in repo | How it shaped the project |
 |---|---|---|
-| **Spec-driven development** | `.kiro/specs/chip-autopsy-lab/` (`requirements.md`, `design.md`, `tasks.md`, `redesign.md`, `premium.md`) | EARS acceptance criteria in `requirements.md`, 14 formal correctness properties in `design.md`, incremental task tracking in `tasks.md`, and the visual/interaction specifications in `redesign.md` and `premium.md` governed every module and acceptance gate. |
-| **Steering** | `.kiro/steering/` (`product.md`, `tech.md`, `structure.md`, `design-language.md`) | Always-included steering files enforced product scope, STDF V4 binary decoding rules, framework-free core isolation, design tokens, copy restraint, and repository conventions across sessions. |
-| **Agent skills** | `.kiro/skills/` (`accessibility`, `animation-performance`, `apple-design`, `claude-api`, `doc-coauthoring`, `frontend-design`, `make-interfaces-feel-better`, `prompt-optimizer`, `react-best-practices`, `receiving-code-review`, `systematic-debugging`, `test-driven-development`, `verification-before-completion`, `webapp-testing`) | Reusable domain skills guided WCAG 2.2 AA compliance, composite-only 60 fps motion, tactile wafer and surface craft, test-driven implementation, debugging, and Playwright audits. |
-| **MCP** | `.kiro/settings/mcp.json`, `tools/carbon-mcp/carbon_mcp.py` | Local stdio MCP server exposing `carbon_task` and `carbon_ask` let Kiro delegate implementation, drafting, and review turns while keeping phase logs tracked in `logs/`. |
-| **Property-based testing** | 16 `*.prop.test.ts` suites across `src/core/` and `src/ui/` | Mapped all 14 spec correctness properties (`Property 1`–`Property 14`: STDF round-trip, parser bounds/truncation safety, retest determinism, yield additivity, Pareto conservation, stacked heatmap conservation, `Cp`/`Cpk` invariants, WM-811K D4 robustness, demo determinism, report claim integrity, citation validator soundness, selection filter algebra, Filter DSL codec round-trip, and outbound LLM payload privacy) plus 2 UI property suites (`palette.prop.test.ts`, `sheen-motion.prop.test.ts`) to `fast-check` runs. |
+| **Specs** | `.kiro/specs/chip-autopsy-lab/` (`requirements.md`, `design.md`, `tasks.md`, `redesign.md`, `premium.md`), `.kiro/specs/judging-polish/` | 17 EARS requirements, 14 correctness properties, and a task list where each task cites its requirements. The visual and interaction rules in `redesign.md` and `premium.md` governed every module and acceptance gate; the polish spec covers the submission round itself. |
+| **Steering, always included** | `.kiro/steering/` (`product.md`, `tech.md`, `structure.md`, `design-language.md`) | Product scope, STDF V4 binary decoding rules, framework-free core isolation, design tokens, copy restraint, and repository conventions across sessions. |
+| **Steering, file match** | `.kiro/steering/submission.md` | Rules for submission copy: traceable facts, the Vercel URL as the only demo link, all five judging criteria. Loads for `docs/**/*.md` and `README.md` only. |
+| **Hooks** | `.kiro/hooks/` (5 hooks) | Lint and typecheck on every `src/` save, unit and property tests on every `src/core/` save, i18n key parity across 5 locales, every property suite on a `design.md` edit, and one manual hook that rebuilds the usage table. Details below. |
+| **Agent skills** | `.kiro/skills/` (14 skills) | `accessibility`, `animation-performance`, `apple-design`, `claude-api`, `doc-coauthoring`, `frontend-design`, `make-interfaces-feel-better`, `prompt-optimizer`, `react-best-practices`, `receiving-code-review`, `systematic-debugging`, `test-driven-development`, `verification-before-completion`, `webapp-testing` — WCAG 2.2 AA, composite-only 60 fps motion, tactile surface craft, test-first work, debugging and Playwright audits. |
+| **Property-based tests** | 16 `*.prop.test.ts` suites across `src/core/` and `src/ui/` | 14 suites map the 14 design properties (`Property 1`–`Property 14`: STDF round-trip, parser bounds and truncation safety, retest determinism, yield additivity, Pareto conservation, stacked heatmap conservation, `Cp`/`Cpk` invariants, WM-811K D4 robustness, demo determinism, report claim integrity, citation validator soundness, selection filter algebra, Filter DSL codec round-trip, outbound LLM payload privacy); 2 UI suites cover palette and sheen math. |
+| **MCP** | `.kiro/settings/mcp.json`, `tools/carbon-mcp/carbon_mcp.py` | A local stdio server with `carbon_task` and `carbon_ask`, so Kiro could hand a drafting or review turn to another model and read the result back, with phase logs kept in `logs/`. |
 
-### Workflow
+### Where Kiro surprised us
 
-Development followed a strict spec -> tasks -> agent implementation -> verification loop logged in `logs/progress.md`. Each task in `.kiro/specs/chip-autopsy-lab/tasks.md` referenced specific EARS requirements and design properties, implemented pure logic in `src/core/` before wiring `src/workers/` and `src/ui/`, and required clean `pnpm typecheck`, `pnpm lint`, Vitest unit/property suites, and Playwright browser checks before completion. The repository currently verifies **542 unit and property tests across 90 test files** (including **16 `fast-check` property suites**) and **54 Playwright E2E spec files** in `e2e/`.
+- **It found that our spec broke its own rules.** Reviewing `requirements.md`, Kiro reported: "the spec said it must be a single sentence, but its own example is two sentences." In the same pass it caught a privacy leak in the design: "the URL stored the Wafer ID, a string from the STDF file, which the privacy rule forbids. It now stores a wafer index." (`logs/kiro-review-req.log`)
+- **It explained why our fixes seemed to change nothing.** During redesign task R8, Kiro found: "Playwright serves the existing production build from `.next` and rebuilds only if that build is missing. Until you run `pnpm build`, `pnpm e2e` tests old code." It then traced the remaining slow frame to the wafer-strip ArrowRight handler: "It spends 31 ms in script and 8 ms forcing a layout". (`logs/redesign-R8-kiro.log`)
+- **It told us what it had not checked.** After writing the first three hooks, Kiro said: "I haven't watched them fire in Kiro, and I wrote the hook format from memory without checking it against the Kiro docs." It also noted that the parity test covered `ja` and `ko` while the hook named only the two Chinese tables. This round fixed that hook. (`logs/t22-hooks.log`)
+
+### Other agents
+
+The interface is the part that used other models, and the commit subjects say which. The Carbon redesign and its three-step v3 pass carry `(agy Gemini 4 Carbon)` (`59a879e`, `da64e4c`, `c9b4866`, `a82dce9`, `fafff5b`, `d9fce1f`), and Kiro reviewed that work in `0f5bf0a` (`Kiro claude-opus-5.5`). The view transitions (`0bf931e`) and the touch and scroll motion (`87bf4d4`) are Kiro's own, written with `claude-opus-5.5`. Earlier, Gemini took drafting turns through the Carbon MCP server (48 `(Carbon)` commits), the Antigravity CLI wrote tasks 12 and 13 (`logs/progress.md`), and Opus 4.6 did a second design review (`a96ab93`). The specs, the steering, the hooks, the task list and the verification of every task ran in Kiro.
 
 ### Hooks
 
-Agent hooks in `.kiro/hooks/` run on file save:
+Agent hooks in `.kiro/hooks/` run on file save, or on demand for the last one:
 
 | Hook file | Trigger | What the agent does |
 |---|---|---|
 | `lint-typecheck-on-save.kiro.hook` | `src/**/*.ts`, `src/**/*.tsx` | Runs ESLint on the saved file and `pnpm typecheck`, then fixes errors the change introduced. |
 | `core-unit-tests-on-save.kiro.hook` | `src/core/**/*.ts` | Runs the colocated `*.test.ts` and `*.prop.test.ts` suites and fixes the source or updates the tests. |
-| `i18n-key-parity-on-save.kiro.hook` | `src/core/i18n/**`, `src/ui/i18n/**` | Runs `src/core/i18n/i18n.test.ts` and checks that `en`, `zh-CN`, and `zh-TW` have matching keys and placeholders. |
+| `i18n-key-parity-on-save.kiro.hook` | `src/core/i18n/**`, `src/ui/i18n/**` | Runs `src/core/i18n/i18n.test.ts` and checks that `en`, `zh-CN`, `zh-TW`, `ja`, and `ko` have matching keys and placeholders. |
+| `spec-properties-on-design-edit.kiro.hook` | `.kiro/specs/**/design.md` | Runs all 16 `*.prop.test.ts` suites and reports any design property without a matching test. |
+| `kiro-usage-table-refresh.kiro.hook` | Manual (user-triggered) | Recounts `.kiro/` artifacts and tests and rewrites the usage tables in this README and `docs/devpost-submission.md`. |
 
 ## Real-data accuracy (WM-811K)
 
