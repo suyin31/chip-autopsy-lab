@@ -1331,8 +1331,15 @@
     transform-style: preserve-3d;
   }
 
+  /* Flat at rest so caption text stays on the pixel grid (a resting translateZ under
+     perspective rasterizes it ~1% scaled and blurry); it lifts only while the card tilts. */
   .at-bento-pop-sm {
-    transform: translateZ(10px);
+    transform: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .at-bento-3d:hover .at-bento-pop-sm {
+      transform: translateZ(10px);
+    }
   }
 
   /* Soft chromatic under-glow beneath floating 3D decks and hero Bento modules */

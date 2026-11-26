@@ -145,13 +145,14 @@ export function ExplodedAutopsyStage({
     [0, 1],
     [STAGE_3D_REST.rotateZ, 0],
   );
-  const rigY = useTransform(scrollProgress, [0, 1], [0, 18]);
+  const rigY = useTransform(scrollProgress, (p) => Math.round((p ?? 0) * 18));
 
   // Subtle parallax counter-drift for the single foreground verdict card
-  const floatCardX = useTransform(smoothNX, (nx) => nx * 6);
+  // Whole-pixel offsets keep the glass card's text on the pixel grid (fractional offsets blur it).
+  const floatCardX = useTransform(smoothNX, (nx) => Math.round(nx * 6));
   const floatCardY = useTransform(
     [smoothNY, scrollProgress],
-    ([ny, sp]: number[]) => (ny ?? 0) * 5 - (sp ?? 0) * 12,
+    ([ny, sp]: number[]) => Math.round((ny ?? 0) * 5 - (sp ?? 0) * 12),
   );
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>): void => {
@@ -395,12 +396,10 @@ export function ExplodedAutopsyStage({
               ? {
                   x: floatCardX,
                   y: floatCardY,
-                  z: 48,
                 }
               : reduced
                 ? undefined
                 : {
-                    transform: 'translateZ(48px)',
                     ...(touchCardDepth ? { translate: touchCardDepth } : {}),
                   }
           }
