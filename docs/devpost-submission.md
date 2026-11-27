@@ -29,16 +29,11 @@ I'm an IC design undergraduate training as an ATE test engineer. The users are A
 
 You drop an STDF V4 file (plain or gzip) into the browser, or open one of three built-in demo lots. The app opens with one sentence, such as "Cause of death: Edge-Ring failure", followed by the yield and the bin that lost the most dies.
 
-- Every claim links to evidence. Clicking the verdict or a finding lights up its dies on the wafer map and its bar in the bin Pareto.
-- Wafer maps in Pass/Fail, hard bin, soft bin, and parametric modes, with a hover magnifier, zoom, and pan.
-- A stacked heatmap across all wafers in a lot shows hot spots that come back wafer after wafer.
-- Yield by lot, wafer, and test site, with first-pass yield, final yield, retest counts, and single-site anomaly detection.
-- Parametric histograms with test limits, plus mean, sigma, `Cp`, and `Cpk`.
-- A classifier for the 9 WM-811K spatial classes, with confidence and possible causes.
-- Brushing a region of the wafer filters the Pareto, yield, and parametric views live.
-- A `Cmd-K` palette understands queries like "show edge failures with Cpk < 1.33" with an offline grammar.
-- An agent console at `/agents` that runs a published four-agent network over the same engine, on a demo router when no key is set, with every claim tied to a fact id.
-- 5 UI languages, light and dark themes, keyboard navigation, and reduced-motion support.
+- **Verdict first, with die-level proof.** Clicking the cause-of-death headline or any finding lights up the exact dies on the wafer map — Pass/Fail, hard bin, soft bin, parametric, or the stacked lot heatmap — and its bar in the bin Pareto.
+- **Yield and parametric forensics in one place.** First-pass vs. final yield, retest counts, multi-site anomalies, `Cp`/`Cpk` histograms against their test limits, and a 9-class WM-811K spatial classifier at 97.8% accuracy and 0.885 macro-F1.
+- **Live filtering and a `Cmd-K` DSL.** Brushing any region of a wafer filters every chart at once, and `Cmd-K` answers offline queries like "show edge failures with Cpk < 1.33".
+- **A published four-agent console at `/agents`.** It runs the site's open agentic web network over the same deterministic engine — a no-key demo router or the visitor's own key — and ties every claim to a fact id.
+- **A Carbon 3D interface in 5 languages.** Light and dark themes, keyboard navigation, reduced-motion support, and tap, press and scroll on phones instead of hover.
 
 The interface is Carbon, the third design pass. The landing page sets the sample lot on a tilted 3D deck over a telemetry strip; opening a lot unboxes the verdict next to the wafer map; an Evidence shelf opens into the Pareto, yield, wafer-gallery and parametric charts without leaving the screen. Every screen switch runs as a view transition, and on a phone the same surfaces answer to tap, press and scroll instead of hover.
 
