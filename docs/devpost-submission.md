@@ -84,9 +84,7 @@ typescript, next.js, react, tailwindcss, canvas, css-3d, view-transitions, web-w
 - Live demo: https://chip-autopsy-lab.vercel.app
 - Agent console: https://chip-autopsy-lab.vercel.app/agents
 - Repository: https://github.com/suyin31/chip-autopsy-lab
-- Video: https://youtu.be/h5vQuVODXHA
-
-TODO(owner): the linked demo video was recorded before the Carbon interface, so it shows the old look. Re-record it against `51cc080` (or later) before the deadline, or say plainly in the Devpost text that the video predates the interface.
+- Video: https://youtu.be/ynIbq1NvfpU — the Carbon v3 cut, 2:04, recorded against the live deployment, with burned-in captions and an uploaded English `.srt`.
 
 ## How Kiro was used
 

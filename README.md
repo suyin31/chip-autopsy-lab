@@ -25,7 +25,7 @@ Test, product, and yield engineers at small fabless teams and OSATs routinely tr
 
 Live demo: `https://chip-autopsy-lab.vercel.app`
 
-Demo video: https://youtu.be/h5vQuVODXHA
+Demo video: https://youtu.be/ynIbq1NvfpU
 
 ### Measured on a real log
 
